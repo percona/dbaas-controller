@@ -16,8 +16,8 @@ jobs:
 
     strategy:
       matrix:
-        # FIXME add ubuntu-latest, remove macos-latest: https://jira.percona.com/browse/PMM-6166
-        os: [macos-latest]
+        # FIXME remove macos-latest: https://jira.percona.com/browse/PMM-6166
+        os: [ubuntu-latest, macos-latest]
         go-version: [1.14.x]
         kubernetes_version: [1.16.8]  # TODO add other versions
         build_tags: ['', 'saas']
