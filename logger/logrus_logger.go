@@ -1,0 +1,86 @@
+// +build !saas
+
+package logger
+
+import (
+	"fmt"
+	"path/filepath"
+	"runtime"
+
+	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/grpclog"
+)
+
+// SetupGlobal sets up global logrus logger.
+func SetupGlobal() {
+	logrus.SetFormatter(&logrus.TextFormatter{
+		// Enable multiline-friendly formatter in both development (with terminal) and production (without terminal):
+		// https://github.com/sirupsen/logrus/blob/839c75faf7f98a33d445d181f3018b5c3409a45e/text_formatter.go#L176-L178
+		ForceColors:     true,
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02T15:04:05.000-07:00",
+
+		CallerPrettyfier: func(f *runtime.Frame) (function string, file string) {
+			_, function = filepath.Split(f.Function)
+
+			// keep a single directory name as a compromise between brevity and unambiguity
+			var dir string
+			dir, file = filepath.Split(f.File)
+			dir = filepath.Base(dir)
+			file = fmt.Sprintf("%s/%s:%d", dir, file, f.Line)
+
+			return
+		},
+	})
+}
+
+type logrusGrpcLoggerV2 struct {
+	*logrus.Entry
+}
+
+func (l *logrusGrpcLoggerV2) V(level int) bool {
+	return int(l.Level) >= level
+}
+
+// NewLogger returns new LogrusLogger.
+func NewLogger() Logger {
+	l := logrus.NewEntry(logrus.New())
+	return &LogrusLogger{
+		l: l,
+	}
+}
+
+// LogrusLogger iz a wrapper for logrus .Logger.
+type LogrusLogger struct {
+	l *logrus.Entry
+}
+
+// Sync calls the underlying Core's Sync method, flushing any buffered log
+// entries. Applications should take care to call Sync before exiting.
+func (z *LogrusLogger) Sync() error {
+	return nil
+}
+
+// GRPCLogger wraps zap.Logger in grpc compatible wrapper and returns it.
+func (z *LogrusLogger) GRPCLogger() grpclog.LoggerV2 {
+	return &logrusGrpcLoggerV2{Entry: z.l}
+}
+
+// WithField Add a single field to the Logger.
+func (z *LogrusLogger) WithField(key string, value interface{}) Logger {
+	return &LogrusLogger{l: z.l.WithField(key, value)}
+}
+
+func (z *LogrusLogger) Info(args ...interface{}) { z.l.Info(args...) } // nolint:golint
+
+func (z *LogrusLogger) Debugf(format string, args ...interface{}) { z.l.Debugf(format, args...) } // nolint:golint
+func (z *LogrusLogger) Infof(format string, args ...interface{})  { z.l.Infof(format, args...) }  // nolint:golint
+func (z *LogrusLogger) Warnf(format string, args ...interface{})  { z.l.Warnf(format, args...) }  // nolint:golint
+func (z *LogrusLogger) Errorf(format string, args ...interface{}) { z.l.Errorf(format, args...) } // nolint:golint
+func (z *LogrusLogger) Fatalf(format string, args ...interface{}) { z.l.Fatalf(format, args...) } // nolint:golint
+func (z *LogrusLogger) Panicf(format string, args ...interface{}) { z.l.Panicf(format, args...) } // nolint:golint
+
+// check interfaces.
+var (
+	_ Logger = (*LogrusLogger)(nil)
+)

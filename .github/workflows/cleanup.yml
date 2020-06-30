@@ -1,0 +1,56 @@
+---
+name: Cleanup
+on:
+  schedule:
+    # run every day
+    - cron: "0 0 * * *"
+
+jobs:
+  clean:
+    name: Clean caches
+    timeout-minutes: 5
+
+    strategy:
+      matrix:
+        go-version: [1.14.x]
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      GOFLAGS: -v -mod=readonly
+      GOPRIVATE: github.com/percona-platform
+
+    steps:
+      - name: Configure git for private modules
+        env:
+          ROBOT_TOKEN: ${{ secrets.ROBOT_TOKEN }}
+        run: git config --global url."https://percona-platform-robot:${ROBOT_TOKEN}@github.com".insteadOf "https://github.com"
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: percona-platform/setup-go@v2.0.3
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Check out code into the Go module directory
+        uses: percona-platform/checkout@v2.3.1
+
+      - name: Enable Go modules cache
+        uses: percona-platform/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-
+
+      - name: Enable Go build cache
+        uses: percona-platform/cache@v2
+        with:
+          path: ~/.cache/go-build
+          key: ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-${{ hashFiles('**') }}
+          restore-keys: |
+            ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-
+            ${{ matrix.os }}-go-${{ matrix.go-version }}-build-
+
+      - name: Clean Go modules cache
+        run: go clean -modcache
