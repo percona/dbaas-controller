@@ -16,8 +16,7 @@ jobs:
 
     strategy:
       matrix:
-        # FIXME remove macos-latest: https://jira.percona.com/browse/PMM-6166
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
         go-version: [1.14.x]
         kubernetes_version: [1.16.8]  # TODO add other versions
         build_tags: ['', 'saas']
@@ -30,6 +29,7 @@ jobs:
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
       KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
       MINIKUBE_IN_STYLE: 1
+      CHANGE_MINIKUBE_NONE_USER: true
 
     steps:
       - name: Configure git for private modules
@@ -45,18 +45,11 @@ jobs:
       - name: Check out code into the Go module directory
         uses: percona-platform/checkout@v2.3.1
 
-      - name: Configure minikube on Ubuntu
-        if: ${{ matrix.os == 'ubuntu-latest'}}
+      - name: Configure minikube
         run: |
           sudo apt install -y conntrack
           minikube config set driver none
-          #sudo minikube config set driver none
-
-      - name: Configure minikube on macOS
-        if: ${{ matrix.os == 'macos-latest'}}
-        run: |
-          brew install minikube
-          minikube config set driver virtualbox
+          sudo -E minikube config set driver none
 
       # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
       - name: Apply common minikube configuration
@@ -94,9 +87,7 @@ jobs:
         run: make install
 
       - name: Start development environment
-        env:
-          CHANGE_MINIKUBE_NONE_USER: 'true'
-        run: make env-up
+        run: sudo -E make env-up
 
       - name: Run tests
         run: |
