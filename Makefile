@@ -28,6 +28,8 @@ release:                          ## Build dbaas-controller release binaries.
 	env CGO_ENABLED=0 go build -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
 
 init:                             ## Install development tools
+	go build -o bin/check-license ./.github/check-license.go
+
 	go build -modfile=tools/go.mod -o bin/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
 	go build -modfile=tools/go.mod -o bin/go-consistent github.com/quasilyte/go-consistent
 	go build -modfile=tools/go.mod -o bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
@@ -41,6 +43,7 @@ format:                           ## Format source code
 	bin/goimports -local github.com/percona-platform/dbaas-controller -l -w .
 
 check:                            ## Run checks/linters for the whole project
+	bin/check-license
 	bin/go-consistent -pedantic ./...
 	bin/golangci-lint run
 
