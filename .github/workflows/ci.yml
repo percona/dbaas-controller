@@ -109,9 +109,9 @@ jobs:
           name: debugdata
           path: ./debugdata
 
-      # - name: Setup tmate session on failure
-      #   if: ${{ failure() }}
-      #   uses: percona-platform/action-tmate@v2
+      - name: Setup tmate session on failure
+        if: ${{ failure() }}
+        uses: percona-platform/action-tmate@v2
 
       - name: Check that there are no source code changes
         run: |
