@@ -18,7 +18,10 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         go-version: [1.14.x]
-        kubernetes_version: [1.16.8]  # TODO add other versions
+        kubernetes_version:
+          # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
+          - 1.15.11
+          - 1.16.8
         build_tags: ['', 'saas']
 
     runs-on: ${{ matrix.os }}
