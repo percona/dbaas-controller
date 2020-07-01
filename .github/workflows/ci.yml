@@ -28,7 +28,6 @@ jobs:
       # no `-mod=readonly` to test PRs made by @dependabot;
       # `git diff --exit-code` step below still checks what we need
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
-      GOPRIVATE: github.com/percona-platform
       KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
       MINIKUBE_IN_STYLE: 1
 
@@ -145,8 +144,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     env:
-      GOFLAGS: -v -mod=readonly
-      GOPRIVATE: github.com/percona-platform
+      # no `-mod=readonly` to test PRs made by @dependabot;
+      # `git diff --exit-code` step below still checks what we need
+      GOFLAGS: -v
 
     steps:
       - name: Configure git for private modules
