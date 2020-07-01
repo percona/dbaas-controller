@@ -92,12 +92,7 @@ jobs:
       - name: Install binaries
         run: make install
 
-      - name: Start development environment on Ubuntu
-        if: ${{ matrix.os == 'ubuntu-latest'}}
-        run: sudo make env-up
-
-      - name: Start development environment on macOS
-        if: ${{ matrix.os == 'macos-latest'}}
+      - name: Start development environment
         run: make env-up
 
       - name: Run tests
