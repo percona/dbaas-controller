@@ -19,7 +19,7 @@ require (
 	github.com/percona-platform/dbaas-api v0.0.0-20200629201908-dfd511a99763
 	github.com/percona-platform/saas v0.0.0-20200629200043-f77bafe09147
 	github.com/percona/percona-xtradb-cluster-operator v1.4.0
-	github.com/percona/pmm v2.7.1-0.20200610194542-2785bb4d1a6b+incompatible
+	github.com/percona/pmm v2.8.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.6.0

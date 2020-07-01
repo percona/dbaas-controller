@@ -265,8 +265,8 @@ github.com/percona-platform/saas v0.0.0-20200629200043-f77bafe09147 h1:WHoz+jWmi
 github.com/percona-platform/saas v0.0.0-20200629200043-f77bafe09147/go.mod h1:Z8S9CbN/RDTGH62wDVE+9gkhgiCZGZyVqQyPJ3wMwt8=
 github.com/percona/percona-xtradb-cluster-operator v1.4.0 h1:Rlsng4OsC1gZ3a8omui0PSprubolBY47QuPjzt9MraI=
 github.com/percona/percona-xtradb-cluster-operator v1.4.0/go.mod h1:QvGXz1h9lhCsGHDkKlbmRDEsQVEyZUZ2cQda+MwqYTY=
-github.com/percona/pmm v2.7.1-0.20200610194542-2785bb4d1a6b+incompatible h1:7G5Bs8swRPmoa6sxaaw88jbVtdFQzBdMEMb4iMKXUMM=
-github.com/percona/pmm v2.7.1-0.20200610194542-2785bb4d1a6b+incompatible/go.mod h1:nN14kK4Dfl2Ub1k05aOnAHv7SmLEQtCsYX+DEfLgrkU=
+github.com/percona/pmm v2.8.0+incompatible h1:cxKOXd4zbUK/BJk/mGLf2VqFWEPcTd+tueetIXZETCg=
+github.com/percona/pmm v2.8.0+incompatible/go.mod h1:nN14kK4Dfl2Ub1k05aOnAHv7SmLEQtCsYX+DEfLgrkU=
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
