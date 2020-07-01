@@ -63,7 +63,7 @@ env-up:                           ## Start development environment
 env-up-start:
 	minikube config set kubernetes-version $(KUBERNETES_VERSION)
 	minikube config view
-	minikube start
+	minikube start --no-vtx-check
 	minikube profile list
 	minikube addons list
 	minikube kubectl -- version

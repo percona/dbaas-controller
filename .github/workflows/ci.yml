@@ -48,9 +48,8 @@ jobs:
       - name: Configure minikube on Ubuntu
         if: ${{ matrix.os == 'ubuntu-latest'}}
         run: |
-          sudo apt install -y conntrack
-          minikube config set driver none
-          sudo minikube config set driver none
+          sudo apt install -y conntrack virtualbox
+          minikube config set driver virtualbox
 
       - name: Configure minikube on macOS
         if: ${{ matrix.os == 'macos-latest'}}
