@@ -4,9 +4,11 @@ go 1.14
 
 // Use for local development, but do not commit:
 // replace github.com/percona/pmm => ../pmm
+// replace github.com/percona-platform/dbaas-api => ../dbaas-api
 
 // Update with:
 // go get -v github.com/percona/pmm@PMM-2.0
+// go get -v github.com/percona-platform/dbaas-api@main
 
 require (
 	github.com/AlekSi/pointer v1.1.0
@@ -14,6 +16,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-version v1.2.1 // indirect
+	github.com/percona-platform/dbaas-api v0.0.0-20200629201908-dfd511a99763
 	github.com/percona-platform/saas v0.0.0-20200629200043-f77bafe09147
 	github.com/percona/percona-xtradb-cluster-operator v1.4.0
 	github.com/percona/pmm v2.7.1-0.20200610194542-2785bb4d1a6b+incompatible
