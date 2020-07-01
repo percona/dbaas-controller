@@ -71,7 +71,7 @@ env-up-start:
 	curl -sSf https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/secrets.yaml | minikube kubectl -- apply -f -
 
 env-up-wait:
-	minikube kubectl -- wait --timeout=120s --for=condition=Available deployment percona-xtradb-cluster-operator
+	minikube kubectl -- wait --for=condition=Available deployment percona-xtradb-cluster-operator
 
 env-down:                         ## Stop development environment
 	minikube delete
