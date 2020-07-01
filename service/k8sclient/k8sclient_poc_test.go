@@ -16,7 +16,9 @@
 
 package k8sclient
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestExample(t *testing.T) {
 	example()

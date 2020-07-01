@@ -17,7 +17,9 @@
 // Package logger contains interface and implementations for logging.
 package logger
 
-import "google.golang.org/grpc/grpclog"
+import (
+	"google.golang.org/grpc/grpclog"
+)
 
 // Logger contains all methods related to zap and logrus loggers.
 type Logger interface {

@@ -16,7 +16,9 @@
 
 package logger
 
-import "github.com/prometheus/client_golang/prometheus/promhttp"
+import (
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+)
 
 // PromHTTP is a compatibility wrapper between Logger interface and Prometheus HTTP logger interface.
 type PromHTTP struct {

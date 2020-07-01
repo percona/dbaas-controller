@@ -16,7 +16,9 @@
 
 package logger
 
-import "context"
+import (
+	"context"
+)
 
 // key is unexported to prevent collisions - it is different from any other type in other packages
 //nolint:gochecknoglobals
