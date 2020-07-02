@@ -28,11 +28,11 @@ jobs:
       - name: Check out code into the Go module directory
         uses: percona-platform/checkout@v2.3.1
 
-      # If this run was triggered by a pull request event, then checkout
-      # the head of the pull request instead of the merge commit.
-      - name: Check out correct tree
-        if: ${{ github.event_name == 'pull_request' }}
-        run: git checkout HEAD^2
+      # # If this run was triggered by a pull request event, then checkout
+      # # the head of the pull request instead of the merge commit.
+      # - name: Check out correct tree
+      #   if: ${{ github.event_name == 'pull_request' }}
+      #   run: git checkout HEAD^2
 
       - name: Initialize CodeQL tools
         uses: percona-platform/codeql-action/init@v1
@@ -57,11 +57,11 @@ jobs:
       - name: Check out code into the Go module directory
         uses: percona-platform/checkout@v2.3.1
 
-      # If this run was triggered by a pull request event, then checkout
-      # the head of the pull request instead of the merge commit.
-      - name: Check out correct tree
-        if: ${{ github.event_name == 'pull_request' }}
-        run: git checkout HEAD^2
+      # # If this run was triggered by a pull request event, then checkout
+      # # the head of the pull request instead of the merge commit.
+      # - name: Check out correct tree
+      #   if: ${{ github.event_name == 'pull_request' }}
+      #   run: git checkout HEAD^2
 
       - name: Install .NET
         uses: percona-platform/setup-dotnet@v1
