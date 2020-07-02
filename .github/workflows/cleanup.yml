@@ -12,8 +12,9 @@ jobs:
 
     strategy:
       matrix:
+        # FIXME remove macos-latest: https://jira.percona.com/browse/PMM-6166
+        os: [macos-latest, ubuntu-latest]
         go-version: [1.14.x]
-        os: [ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
 
