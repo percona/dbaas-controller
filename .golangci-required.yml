@@ -19,8 +19,8 @@ linters:
   enable:
     - depguard
     - goimports
-    - ineffassign
     - govet
+    - ineffassign
     - staticcheck
 
 issues:

@@ -14,10 +14,6 @@ linters-settings:
   goimports:
     local-prefixes: github.com/percona-platform/dbaas-controller
 
-  lll:
-    line-length: 120
-    tab-width: 4
-
   unused:
     check-exported: true
 
@@ -27,8 +23,10 @@ linters-settings:
 linters:
   enable-all: true
   disable:
-    - gomnd # too annoying
-    - wsl   # too annoying
+    - goerr113  # we use pkg/errors for stack traces
+    - gomnd     # too annoying
+    - lll       # gRPC types are long
+    - wsl       # too annoying
 
 issues:
   exclude-use-default: false
@@ -36,6 +34,5 @@ issues:
     - path: _test\.go
       linters:
         - funlen       # tests may be long
-        - lll          # tests contain long lines
-        - unused       # very annoying false positive: https://github.com/golangci/golangci-lint/issues/791
         - testpackage  # senseless
+        - unused       # very annoying false positive: https://github.com/golangci/golangci-lint/issues/791
