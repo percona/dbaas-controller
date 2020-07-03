@@ -53,6 +53,12 @@ install:                          ## Install binaries
 test:                             ## Run tests
 	go test -race -timeout=10m ./...
 
+test-cover:                       ## Run tests and collect per-package coverage information
+	go test -race -timeout=10m -count=1 -coverprofile=cover.out -covermode=atomic ./...
+
+test-crosscover:                  ## Run tests and collect cross-package coverage information
+	go test -race -timeout=10m -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
+
 run: install                      ## Run dbaas-controller
 	bin/dbaas-controller
 
@@ -68,8 +74,8 @@ env-up-start:
 	minikube profile list
 	minikube addons list
 	minikube kubectl -- version
-	curl -sSf https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/bundle.yaml  | minikube kubectl -- apply -f -
-	curl -sSf https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/secrets.yaml | minikube kubectl -- apply -f -
+	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/bundle.yaml  | minikube kubectl -- apply -f -
+	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/secrets.yaml | minikube kubectl -- apply -f -
 	minikube kubectl -- get nodes
 	minikube kubectl -- get pods
 

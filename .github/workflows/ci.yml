@@ -33,6 +33,7 @@ jobs:
       KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
       MINIKUBE_IN_STYLE: 1
       CHANGE_MINIKUBE_NONE_USER: true
+      CODECOV_ENV: GO_VERSION,KUBERNETES_VERSION
 
     steps:
       - name: Configure git for private modules
@@ -44,6 +45,9 @@ jobs:
         uses: percona-platform/setup-go@v2.0.3
         with:
           go-version: ${{ matrix.go-version }}
+
+      - name: Set GO_VERSION environment variable
+        run: echo ::set-env name=GO_VERSION::$(go version)
 
       - name: Check out code into the Go module directory
         uses: percona-platform/checkout@v2.3.1
@@ -92,7 +96,14 @@ jobs:
       - name: Run tests
         run: |
           go clean -testcache
-          make test
+          make test-crosscover
+
+      - name: Upload coverage results
+        run: |
+          curl -sSf -m 30 https://codecov.io/bash > codecov
+          chmod +x codecov
+          timeout -s KILL 30 ./codecov -f crosscover.out -F crosscover -X fix
+          rm codecov
 
       - name: Collect debugdata
         if: ${{ always() }}
