@@ -64,17 +64,23 @@ env-up-start:
 	minikube config set kubernetes-version $(KUBERNETES_VERSION)
 	minikube config view
 	minikube start
+	minikube status
 	minikube profile list
 	minikube addons list
 	minikube kubectl -- version
 	curl -sSf https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/bundle.yaml  | minikube kubectl -- apply -f -
 	curl -sSf https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/secrets.yaml | minikube kubectl -- apply -f -
+	minikube kubectl -- get nodes
+	minikube kubectl -- get pods
 
 env-up-wait:
 	minikube kubectl -- wait --for=condition=Available deployment percona-xtradb-cluster-operator
 
-env-down:                         ## Stop development environment
-	minikube delete
+env-down:
+	#
+	# Please use `minikube stop` to stop Kubernetes cluster, or `minikube delete` to fully delete it.
+	# Not picking one for you.
+	#
 
 collect-debugdata:                ## Collect debugdata
 	rm -fr debugdata
