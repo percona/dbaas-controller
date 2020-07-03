@@ -53,6 +53,12 @@ install:                          ## Install binaries
 test:                             ## Run tests
 	go test -race -timeout=10m ./...
 
+test-cover:                       ## Run tests and collect per-package coverage information
+	go test -race -timeout=10m -count=1 -coverprofile=cover.out -covermode=atomic ./...
+
+test-crosscover:                  ## Run tests and collect cross-package coverage information
+	go test -race -timeout=10m -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
+
 run: install                      ## Run dbaas-controller
 	bin/dbaas-controller
 
