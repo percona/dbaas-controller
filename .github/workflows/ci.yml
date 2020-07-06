@@ -36,11 +36,6 @@ jobs:
       CODECOV_ENV: GO_VERSION,KUBERNETES_VERSION
 
     steps:
-      - name: Configure git for private modules
-        env:
-          ROBOT_TOKEN: ${{ secrets.ROBOT_TOKEN }}
-        run: git config --global url."https://percona-platform-robot:${ROBOT_TOKEN}@github.com".insteadOf "https://github.com"
-
       - name: Set up Go ${{ matrix.go-version }}
         uses: percona-platform/setup-go@v2.0.3
         with:
@@ -157,11 +152,6 @@ jobs:
       GOFLAGS: -v
 
     steps:
-      - name: Configure git for private modules
-        env:
-          ROBOT_TOKEN: ${{ secrets.ROBOT_TOKEN }}
-        run: git config --global url."https://percona-platform-robot:${ROBOT_TOKEN}@github.com".insteadOf "https://github.com"
-
       - name: Set up Go ${{ matrix.go-version }}
         uses: percona-platform/setup-go@v2.0.3
         with:
@@ -200,8 +190,8 @@ jobs:
           # use GITHUB_TOKEN because only it has access to GitHub Checks API
           bin/golangci-lint run -c=.golangci-required.yml --out-format=line-number | env REVIEWDOG_GITHUB_API_TOKEN=${{ secrets.GITHUB_TOKEN }} bin/reviewdog -f=golangci-lint -name='Required checks' -reporter=github-pr-check
 
-          # use ROBOT_TOKEN for better reviewer's name
-          bin/golangci-lint run --out-format=line-number | env REVIEWDOG_GITHUB_API_TOKEN=${{ secrets.ROBOT_TOKEN }} bin/reviewdog -f=golangci-lint -name='Linters' -reporter=github-pr-review
+          # we can't use ROBOT_TOKEN in public repo; use GITHUB_TOKEN there too
+          bin/golangci-lint run --out-format=line-number | env REVIEWDOG_GITHUB_API_TOKEN=${{ secrets.GITHUB_TOKEN }} bin/reviewdog -f=golangci-lint -name='Linters' -reporter=github-pr-review
 
           # run it like that until some of those issues/PRs are resolved:
           # * https://github.com/quasilyte/go-consistent/issues/33
