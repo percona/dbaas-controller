@@ -54,7 +54,7 @@ func (s *Service) DeleteXtraDBCluster(ctx context.Context, req *controllerv1beta
 	return nil, status.Errorf(codes.Unimplemented, "This method is not implemented yet.")
 }
 
-// Check interface.
+// Check interface
 var (
 	_ controllerv1beta1.XtraDBClusterAPIServer = (*Service)(nil)
 )
