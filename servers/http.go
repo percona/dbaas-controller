@@ -53,7 +53,7 @@ func RunHTTPServer(ctx context.Context, opts *RunHTTPServerOpts) { //nolint:unus
 		opts.ShutdownTimeout = 3 * time.Second
 	}
 
-	l.Infof("Starting server on http://%s/", opts.Addr)
+	l.Infof("Starting HTTP server on http://%s/", opts.Addr)
 
 	server := &http.Server{
 		Addr: opts.Addr,

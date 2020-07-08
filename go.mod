@@ -25,7 +25,13 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.6.1
 	go.uber.org/zap v1.15.0
+	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
+	golang.org/x/mod v0.3.0 // indirect
+	golang.org/x/net v0.0.0-20200301022130-244492dfa37a // indirect
 	golang.org/x/sys v0.0.0-20200622214017-ed371f2e16b4
+	golang.org/x/text v0.3.3
+	golang.org/x/tools v0.0.0-20200702044944-0cc1aa72b347 // indirect
+	google.golang.org/genproto v0.0.0-20200311144346-b662892dd51b // indirect
 	google.golang.org/grpc v1.30.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776

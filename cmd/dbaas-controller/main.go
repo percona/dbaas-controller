@@ -17,11 +17,14 @@
 package main
 
 import (
-	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 	"google.golang.org/grpc/grpclog"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/percona-platform/dbaas-controller/app"
+	_ "github.com/percona-platform/dbaas-controller/catalog"
 	"github.com/percona-platform/dbaas-controller/logger"
 	"github.com/percona-platform/dbaas-controller/servers"
 	"github.com/percona-platform/dbaas-controller/service/cluster"
@@ -55,7 +58,8 @@ func main() {
 		l.Fatalf("Failed to create gRPC server: %s.", err)
 	}
 
-	controllerv1beta1.RegisterXtraDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.New())
+	i18nPrinter := message.NewPrinter(language.English)
+	controllerv1beta1.RegisterXtraDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.New(*i18nPrinter))
 
 	go servers.RunDebugServer(ctx, &servers.RunDebugServerOpts{
 		Addr: flags.DebugAddr,

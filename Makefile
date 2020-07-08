@@ -34,9 +34,11 @@ init:                             ## Install development tools
 	go build -modfile=tools/go.mod -o bin/go-consistent github.com/quasilyte/go-consistent
 	go build -modfile=tools/go.mod -o bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
 	go build -modfile=tools/go.mod -o bin/goimports golang.org/x/tools/cmd/goimports
+	go build -modfile=tools/go.mod -o bin/gotext golang.org/x/text/cmd/gotext
 
 gen:                              ## Generate code
 	make format
+	go generate -v ./...
 
 format:                           ## Format source code
 	gofmt -w -s .
@@ -46,6 +48,7 @@ check:                            ## Run checks/linters for the whole project
 	bin/check-license
 	bin/go-consistent -pedantic ./...
 	bin/golangci-lint run
+	diff catalog/locales/en/{messages,out}.gotext.json -q
 
 install:                          ## Install binaries
 	go build -race -o bin/dbaas-controller ./cmd/dbaas-controller
