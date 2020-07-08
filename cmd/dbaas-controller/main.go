@@ -17,12 +17,12 @@
 package main
 
 import (
+	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/grpclog"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/percona-platform/dbaas-controller/app"
 	_ "github.com/percona-platform/dbaas-controller/catalog"
 	"github.com/percona-platform/dbaas-controller/logger"

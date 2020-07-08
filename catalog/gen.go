@@ -18,4 +18,4 @@
 // The goal is to fix syntax, grammar and other mistakes and improve readability in messages.
 package catalog
 
-//go:generate gotext update -out=./catalog.go -lang=en github.com/percona-platform/dbaas-controller/cmd/dbaas-controller
+//go:generate ../bin/gotext update -out=./catalog.go -lang=en github.com/percona-platform/dbaas-controller/cmd/dbaas-controller
