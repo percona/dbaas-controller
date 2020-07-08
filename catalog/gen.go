@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package catalog contains proper and user visible text of messages.
+// The goal is to fix syntax, grammar and other mistakes and improve readability in messages.
 package catalog
 
 //go:generate gotext update -out=./catalog.go -lang=en github.com/percona-platform/dbaas-controller/cmd/dbaas-controller
