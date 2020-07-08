@@ -53,6 +53,12 @@ install:                          ## Install binaries
 test:                             ## Run tests
 	go test -race -timeout=10m ./...
 
+test-cover:                       ## Run tests and collect per-package coverage information
+	go test -race -timeout=10m -count=1 -coverprofile=cover.out -covermode=atomic ./...
+
+test-crosscover:                  ## Run tests and collect cross-package coverage information
+	go test -race -timeout=10m -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
+
 run: install                      ## Run dbaas-controller
 	bin/dbaas-controller
 
@@ -64,17 +70,23 @@ env-up-start:
 	minikube config set kubernetes-version $(KUBERNETES_VERSION)
 	minikube config view
 	minikube start
+	minikube status
 	minikube profile list
 	minikube addons list
 	minikube kubectl -- version
-	curl -sSf https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/bundle.yaml  | minikube kubectl -- apply -f -
-	curl -sSf https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/secrets.yaml | minikube kubectl -- apply -f -
+	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/bundle.yaml  | minikube kubectl -- apply -f -
+	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/secrets.yaml | minikube kubectl -- apply -f -
+	minikube kubectl -- get nodes
+	minikube kubectl -- get pods
 
 env-up-wait:
 	minikube kubectl -- wait --for=condition=Available deployment percona-xtradb-cluster-operator
 
-env-down:                         ## Stop development environment
-	minikube delete
+env-down:
+	#
+	# Please use `minikube stop` to stop Kubernetes cluster, or `minikube delete` to fully delete it.
+	# Not picking one for you.
+	#
 
 collect-debugdata:                ## Collect debugdata
 	rm -fr debugdata

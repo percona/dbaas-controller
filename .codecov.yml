@@ -1,0 +1,7 @@
+---
+coverage:
+  range: "10...50"
+  status:
+    patch:
+      default:
+        threshold: 1
