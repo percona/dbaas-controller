@@ -23,25 +23,26 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona-platform/dbaas-controller/logger"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
 
 func TestCreateCluster(t *testing.T) {
 	l := logger.NewLogger()
 	ctx := context.TODO()
 
-	deleteCluster := NewClusterDelete(l, "test-cluster", 2)
-	deleteCluster.Start(ctx) // nolint:errcheck
-	deleteCluster.Wait(ctx)  // nolint:errcheck
+	kubeCtl := kubectl.NewKubeCtl(l)
 
-	createCluster := NewClusterCreate(l, "test-cluster", 2) // FIXME cluster is not start when we create it second time.
+	deleteCluster := NewClusterDelete(kubeCtl, "test-cluster")
+	_ = deleteCluster.Start(ctx)
+
+	// TODO: wait until cluster is actually deleted and all pods are terminated.
+	// List all clusters and check that there no "test-cluster"
+	createCluster := NewClusterCreate(kubeCtl, "test-cluster", 2) // FIXME cluster is not start when we create it second time.
 	err := createCluster.Start(ctx)
 	require.NoError(t, err)
-
-	err = createCluster.Wait(ctx)
-	require.NoError(t, err)
+	// TODO: wait until cluster is created and ready.
 
 	err = deleteCluster.Start(ctx)
 	require.NoError(t, err)
-	err = deleteCluster.Wait(ctx)
-	require.NoError(t, err)
+	// TODO: wait until cluster is actually deleted.
 }

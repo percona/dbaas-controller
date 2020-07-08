@@ -14,48 +14,76 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package kubectl provides kubectl client.
 package kubectl
 
 import (
 	"bytes"
 	"context"
-	"io"
+	"encoding/json"
 	"os/exec"
-	"time"
+
+	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 
 	"github.com/percona-platform/dbaas-controller/logger"
 )
 
-var cmd = []string{"minikube", "kubectl", "--"} //nolint:gochecknoglobals
-
 // NewKubeCtl returns new KubeCtl object.
 func NewKubeCtl(l logger.Logger) *KubeCtl {
-	return &KubeCtl{l: l.WithField("component", "kubectl")}
+	var cmd = []string{"minikube", "kubectl", "--"}
+
+	return &KubeCtl{
+		l:   l.WithField("component", "kubectl"),
+		cmd: cmd, // TODO: select kubectl
+	}
 }
 
 // KubeCtl is a wrapper for kubectl cli command.
 type KubeCtl struct {
-	l logger.Logger
+	l   logger.Logger
+	cmd []string
 }
 
-// Run runs kubectl commands in cli.
-func (k *KubeCtl) Run(ctx context.Context, args []string, stdin io.Reader) ([]byte, error) {
+// run runs kubectl commands in cli.
+func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]byte, []byte, error) {
+	var stdOutBuf bytes.Buffer
+	var stdErrBuf bytes.Buffer
+	args = append(k.cmd, args...)
+
 	var buf bytes.Buffer
-	var errBuf bytes.Buffer
-	args = append(cmd, args...)
-	k.l.Debugf("%v", args)
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
-	cmd.Stdin = stdin
-	cmd.Stdout = &buf
-	cmd.Stderr = &errBuf
-	if err := cmd.Run(); err != nil {
-		return errBuf.Bytes(), err
+	e := json.NewEncoder(&buf)
+	if err := e.Encode(stdin); err != nil {
+		return nil, nil, err
 	}
-	return buf.Bytes(), nil
+	k.l.Debugf("%v : %s", args, buf.String())
+
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...) // nolint:gosec
+	cmd.Stdin = &buf
+	cmd.Stdout = &stdOutBuf
+	cmd.Stderr = &stdErrBuf
+	defer func() {
+		k.l.Debugf("%s\n%s", stdOutBuf.String(), stdErrBuf.String())
+	}()
+	if err := cmd.Run(); err != nil {
+		return stdOutBuf.Bytes(), stdErrBuf.Bytes(), err
+	}
+	return stdOutBuf.Bytes(), stdErrBuf.Bytes(), nil
 }
 
-// Wait runs kubectl wait command in cli.
-func (k *KubeCtl) Wait(ctx context.Context, kind, name, condition string, timeout time.Duration) ([]byte, error) {
-	res, err := k.Run(ctx, []string{"wait", "--for=" + condition, "--timeout=" + timeout.String(), kind, name}, nil)
-	return res, err
+// Apply runs kubectl apply command.
+func (k *KubeCtl) Apply(ctx context.Context, res *pxc.PerconaXtraDBCluster) error {
+	_, _, err := k.run(ctx, []string{"apply", "-f", "-"}, res)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Delete runs kubectl delete command.
+func (k *KubeCtl) Delete(ctx context.Context, res *pxc.PerconaXtraDBCluster) error {
+	_, _, err := k.run(ctx, []string{"Delete", "-f", "-"}, res)
+	if err != nil {
+		return err
+	}
+	return nil
 }

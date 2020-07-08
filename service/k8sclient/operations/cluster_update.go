@@ -15,13 +15,3 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 package operations
-
-import (
-	"context"
-)
-
-// Operation is a common interface for all kubernetes related operations.
-type Operation interface {
-	Start(ctx context.Context) error
-	Wait(ctx context.Context) error
-}

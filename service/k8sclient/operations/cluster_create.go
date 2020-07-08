@@ -14,14 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package operations provides kubernetes operations.
 package operations
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"log"
-	"time"
 
 	"github.com/AlekSi/pointer"
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
@@ -29,31 +26,30 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/percona-platform/dbaas-controller/logger"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
 
+const backupImage = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0-backup"
+const pxcImage = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0"
+const backupStorageName = "test-backup-storage"
+
 // NewClusterCreate returns new object of ClusterCreate.
-func NewClusterCreate(l logger.Logger, name string, size int32) *ClusterCreate {
+func NewClusterCreate(kubeCtl *kubectl.KubeCtl, name string, size int32) *ClusterCreate {
 	return &ClusterCreate{
-		kubectl:  kubectl.NewKubeCtl(l),
-		l:        l,
-		name:     name,
-		size:     size,
-		pxcImage: "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0",
-		kind:     "PerconaXtraDBCluster",
+		kubeCtl: kubeCtl,
+		name:    name,
+		size:    size,
+		kind:    "PerconaXtraDBCluster",
 	}
 }
 
 // ClusterCreate creates new kubernetes cluster.
 type ClusterCreate struct {
-	kubectl *kubectl.KubeCtl
-	l       logger.Logger
+	kubeCtl *kubectl.KubeCtl
 
-	name     string
-	size     int32
-	pxcImage string
-	kind     string
+	name string
+	size int32
+	kind string
 }
 
 // Start starts new cluster creating process.
@@ -72,7 +68,7 @@ func (c *ClusterCreate) Start(ctx context.Context) error {
 
 			PXC: &pxc.PodSpec{
 				Size:  c.size,
-				Image: c.pxcImage,
+				Image: pxcImage,
 				VolumeSpec: &pxc.VolumeSpec{
 					PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
 						Resources: core.ResourceRequirements{
@@ -109,84 +105,31 @@ func (c *ClusterCreate) Start(ctx context.Context) error {
 				Enabled: false,
 			},
 
-			//Backup: &pxc.PXCScheduledBackup{
-			//	Image: backupImage,
-			//	Schedule: []pxc.PXCScheduledBackupSchedule{{
-			//		Name:        "test",
-			//		Schedule:    "*/1 * * * *",
-			//		Keep:        3,
-			//		StorageName: backupStorageName,
-			//	}},
-			//	Storages: map[string]*pxc.BackupStorageSpec{
-			//		backupStorageName: {
-			//			Type: pxc.BackupStorageFilesystem,
-			//			Volume: &pxc.VolumeSpec{
-			//				PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
-			//					Resources: core.ResourceRequirements{
-			//						Requests: core.ResourceList{
-			//							core.ResourceStorage: resource.MustParse("1Gi"),
-			//						},
-			//					},
-			//				},
-			//			},
-			//		},
-			//	},
-			//	ServiceAccountName: "percona-xtradb-cluster-operator",
-			//},
+			Backup: &pxc.PXCScheduledBackup{
+				Image: backupImage,
+				Schedule: []pxc.PXCScheduledBackupSchedule{{
+					Name:        "test",
+					Schedule:    "*/1 * * * *",
+					Keep:        3,
+					StorageName: backupStorageName,
+				}},
+				Storages: map[string]*pxc.BackupStorageSpec{
+					backupStorageName: {
+						Type: pxc.BackupStorageFilesystem,
+						Volume: &pxc.VolumeSpec{
+							PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
+								Resources: core.ResourceRequirements{
+									Requests: core.ResourceList{
+										core.ResourceStorage: resource.MustParse("1Gi"),
+									},
+								},
+							},
+						},
+					},
+				},
+				ServiceAccountName: "percona-xtradb-cluster-operator",
+			},
 		},
 	}
-	return c.apply(ctx, res)
-}
-
-// Wait waits until cluster is ready.
-func (c *ClusterCreate) Wait(ctx context.Context) error {
-	_, err := c.kubectl.Wait(ctx, c.kind, c.name, "condition=Ready", time.Minute)
-	if err != nil {
-		c.l.Errorf(err.Error())
-	}
-	// TODO: fail after timeout.
-
-	for {
-		res, err := c.get(ctx, c.kind, c.name)
-		if err != nil {
-			c.l.Errorf("%v", err)
-			continue
-		}
-
-		if res.Status.Status == pxc.AppStateReady {
-			return nil
-		}
-		c.l.Infof("status.state != 'ready', will wait")
-		time.Sleep(30 * time.Second)
-	}
-}
-
-func (c *ClusterCreate) get(ctx context.Context, kind, name string) (*pxc.PerconaXtraDBCluster, error) {
-	b, err := c.kubectl.Run(ctx, []string{"get", "-o=json", kind, name}, nil)
-	if err != nil {
-		return nil, err
-	}
-	var res pxc.PerconaXtraDBCluster
-	c.l.Infof("%s", string(b))
-	if err := json.Unmarshal(b, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *ClusterCreate) apply(ctx context.Context, res *pxc.PerconaXtraDBCluster) error {
-	var buf bytes.Buffer
-	e := json.NewEncoder(&buf)
-	e.SetIndent("", "  ")
-	if err := e.Encode(res); err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("apply:\n%s", buf.String())
-
-	b, err := c.kubectl.Run(ctx, []string{"apply", "-f", "-"}, &buf)
-	if err != nil {
-		return err
-	}
-	log.Printf("%s", b)
-	return nil
+	return c.kubeCtl.Apply(ctx, res)
 }
