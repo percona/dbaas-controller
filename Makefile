@@ -37,8 +37,8 @@ init:                             ## Install development tools
 	go build -modfile=tools/go.mod -o bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
 
 gen:                              ## Generate code
-	make format
 	go generate -v ./...
+	make format
 
 format:                           ## Format source code
 	gofmt -w -s .
