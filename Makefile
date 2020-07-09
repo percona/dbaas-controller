@@ -39,8 +39,7 @@ init:                             ## Install development tools
 gen:                              ## Generate code
 	go generate -v ./...
 	# add blank lines at EOF
-	@echo '' >> catalog/locales/en/messages.gotext.json
-	@echo '' >> catalog/locales/en/out.gotext.json
+	tail -c1 catalog/locales/en/out.gotext.json | grep '^$$' ||  printf '\n' >> catalog/locales/en/out.gotext.json
 	make format
 
 format:                           ## Format source code
