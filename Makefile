@@ -38,14 +38,14 @@ init:                             ## Install development tools
 
 gen:                              ## Generate code
 	go generate -v ./...
+	# add blank lines at EOF
+	@echo '' >> catalog/locales/en/messages.gotext.json
+	@echo '' >> catalog/locales/en/out.gotext.json
 	make format
 
 format:                           ## Format source code
 	gofmt -w -s .
 	bin/goimports -local github.com/percona-platform/dbaas-controller -l -w .
-	# add blank lines to EOF
-	@echo '' >> catalog/locales/en/messages.gotext.json
-	@echo '' >> catalog/locales/en/out.gotext.json
 
 check:                            ## Run checks/linters for the whole project
 	bin/check-license
