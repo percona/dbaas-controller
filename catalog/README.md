@@ -11,3 +11,9 @@ To translate, we need to follow the next steps.
 - In the next step, we need to copy `out.gotext.json` into messages.gotext.json and fill in all required translation values.
 - When we run `make gen` again, it generate `catalog.go` with all-new translation.
 - Now after 'make release', new translated messages will be used in a binary file.
+
+## Files
+
+- `messages.gotext.json` contains translated messages.
+- `out.gotext.json` is intermidiate file; contains merged entities from `messages.gotext.json` and parsed messages from soure code.
+- `catalog.go` generated file; includes content of `messages.gotext.json`. BDaaS-controller use it by to choose right translation.
