@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package operations provides kubernetes operations.
 package operations
 
 import (
@@ -29,17 +28,12 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
 
-const backupImage = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0-backup"
-const pxcImage = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0"
-const backupStorageName = "test-backup-storage"
-
 // NewClusterCreate returns new object of ClusterCreate.
 func NewClusterCreate(kubeCtl *kubectl.KubeCtl, name string, size int32) *ClusterCreate {
 	return &ClusterCreate{
 		kubeCtl: kubeCtl,
 		name:    name,
 		size:    size,
-		kind:    "PerconaXtraDBCluster",
 	}
 }
 
@@ -49,7 +43,6 @@ type ClusterCreate struct {
 
 	name string
 	size int32
-	kind string
 }
 
 // Start starts new cluster creating process.
@@ -57,7 +50,7 @@ func (c *ClusterCreate) Start(ctx context.Context) error {
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: meta.TypeMeta{
 			APIVersion: "pxc.percona.com/v1-4-0",
-			Kind:       c.kind,
+			Kind:       clusterKind,
 		},
 		ObjectMeta: meta.ObjectMeta{
 			Name: c.name,

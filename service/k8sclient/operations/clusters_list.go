@@ -15,3 +15,72 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 package operations
+
+import (
+	"context"
+	"encoding/json"
+
+	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
+)
+
+// Cluster contains information related to cluster.
+type Cluster struct {
+	Name   string
+	Status string
+}
+
+// NewClusterList returns new object of ClusterList
+func NewClusterList(kubeCtl *kubectl.KubeCtl) *ClusterList {
+	return &ClusterList{
+		kubeCtl: kubeCtl,
+	}
+}
+
+// ClusterList contains all logic related to getting cluster list.
+type ClusterList struct {
+	kubeCtl *kubectl.KubeCtl
+}
+
+// GetClusters returns clusters list.
+func (c *ClusterList) GetClusters(ctx context.Context) ([]Cluster, error) {
+	perconaXtraDBClusters, err := c.getPerconaXtraDBClusters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]Cluster, len(perconaXtraDBClusters))
+	for i, cluster := range perconaXtraDBClusters {
+		val := Cluster{
+			Name:   cluster.Name,
+			Status: string(cluster.Status.Status),
+		}
+
+		res[i] = val
+	}
+	return res, nil
+}
+
+func (c *ClusterList) getPerconaXtraDBClusters(ctx context.Context) ([]*pxc.PerconaXtraDBCluster, error) {
+	stdout, err := c.kubeCtl.Get(ctx, clusterKind, "")
+	if err != nil {
+		return nil, err
+	}
+
+	var list meta.List
+	if err := json.Unmarshal(stdout, &list); err != nil {
+		return nil, err
+	}
+
+	res := make([]*pxc.PerconaXtraDBCluster, len(list.Items))
+	for _, item := range list.Items {
+		var cluster pxc.PerconaXtraDBCluster
+		if err := json.Unmarshal(item.Raw, &cluster); err != nil {
+			return nil, err
+		}
+		res = append(res, &cluster)
+	}
+	return res, nil
+}

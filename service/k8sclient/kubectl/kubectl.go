@@ -21,12 +21,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"os/exec"
+	"strings"
 
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 
 	"github.com/percona-platform/dbaas-controller/logger"
 )
+
+var ErrNotFound = errors.New("object not found")
 
 // NewKubeCtl returns new KubeCtl object.
 func NewKubeCtl(l logger.Logger) *KubeCtl {
@@ -86,4 +90,20 @@ func (k *KubeCtl) Delete(ctx context.Context, res *pxc.PerconaXtraDBCluster) err
 		return err
 	}
 	return nil
+}
+
+func (k *KubeCtl) Get(ctx context.Context, kind string, name string) ([]byte, error) {
+	args := []string{"get", "-o=json", kind}
+	if name != "" {
+		args = append(args, name)
+	}
+	stdout, stderr, err := k.run(ctx, args, nil)
+	if err != nil {
+		if strings.Contains(string(stderr), "not found") {
+			return nil, ErrNotFound
+		}
+		k.l.Infof("%s", stderr)
+		return nil, err
+	}
+	return stdout, nil
 }

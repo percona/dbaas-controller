@@ -18,38 +18,24 @@ package operations
 
 import (
 	"context"
+	"testing"
 
-	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/stretchr/testify/require"
 
+	"github.com/percona-platform/dbaas-controller/logger"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
 
-// NewClusterDelete returns new object of ClusterDelete.
-func NewClusterDelete(kubeCtl *kubectl.KubeCtl, name string) *ClusterDelete {
-	return &ClusterDelete{
-		kubeCtl: kubeCtl,
-		name:    name,
-	}
-}
+func TestClusterListGetPerconaXtraDBClusters(t *testing.T) {
+	t.Run("getPerconaXtraDBClusters", func(t *testing.T) {
+		l := logger.NewLogger()
+		ctx := context.TODO()
 
-// ClusterDelete deletes kubernetes cluster.
-type ClusterDelete struct {
-	kubeCtl *kubectl.KubeCtl
+		kubeCtl := kubectl.NewKubeCtl(l)
+		c := NewClusterList(kubeCtl)
 
-	name string
-}
-
-// Start starts cluster deleting process.
-func (c *ClusterDelete) Start(ctx context.Context) error {
-	res := &pxc.PerconaXtraDBCluster{
-		TypeMeta: meta.TypeMeta{
-			APIVersion: "pxc.percona.com/v1-4-0",
-			Kind:       clusterKind,
-		},
-		ObjectMeta: meta.ObjectMeta{
-			Name: c.name,
-		},
-	}
-	return c.kubeCtl.Delete(ctx, res)
+		clusters, err := c.getPerconaXtraDBClusters(ctx)
+		require.NoError(t, err)
+		require.NotNil(t, clusters)
+	})
 }
