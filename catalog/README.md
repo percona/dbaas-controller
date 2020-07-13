@@ -1,6 +1,6 @@
 # Catalog
 
-This package holds i18n for DBaaS Controller.
+This package holds i18n for dbaas-controller.
 
 [gotext](https://pkg.go.dev/golang.org/x/text@v0.3.3/cmd/gotext?tab=doc)
 
@@ -15,5 +15,5 @@ To translate, we need to follow the next steps.
 ## Files
 
 - `messages.gotext.json` contains translated messages.
-- `out.gotext.json` is intermidiate file; contains merged entities from `messages.gotext.json` and parsed messages from soure code.
-- `catalog.go` generated file; includes content of `messages.gotext.json`. BDaaS-controller use it by to choose right translation.
+- `out.gotext.json` is an intermediate file; contains merged entities from `messages.gotext.json` and parsed messages from source code.
+- `catalog.go` generated file; includes the content of `messages.gotext.json`. dbaas-controller uses it to choose the right translation.
