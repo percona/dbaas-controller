@@ -37,7 +37,7 @@ init:                             ## Install development tools
 	go build -modfile=tools/go.mod -o bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
 
 gen:                              ## Generate code
-	go generate -v ./...
+	go generate ./catalog
 	mv catalog/locales/en/out.gotext.json catalog/locales/en/messages.gotext.json
 	# add blank line at EOF
 	echo >> catalog/locales/en/messages.gotext.json
