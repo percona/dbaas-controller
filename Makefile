@@ -38,8 +38,9 @@ init:                             ## Install development tools
 
 gen:                              ## Generate code
 	go generate -v ./...
+	mv catalog/locales/en/{out,messages}.gotext.json
 	# add blank line at EOF
-	echo >> catalog/locales/en/out.gotext.json
+	echo >> catalog/locales/en/messages.gotext.json
 	make format
 
 format:                           ## Format source code
