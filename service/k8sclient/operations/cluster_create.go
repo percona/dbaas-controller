@@ -98,30 +98,30 @@ func (c *ClusterCreate) Start(ctx context.Context) error {
 				Enabled: false,
 			},
 
-			Backup: &pxc.PXCScheduledBackup{
-				Image: backupImage,
-				Schedule: []pxc.PXCScheduledBackupSchedule{{
-					Name:        "test",
-					Schedule:    "*/1 * * * *",
-					Keep:        3,
-					StorageName: backupStorageName,
-				}},
-				Storages: map[string]*pxc.BackupStorageSpec{
-					backupStorageName: {
-						Type: pxc.BackupStorageFilesystem,
-						Volume: &pxc.VolumeSpec{
-							PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
-								Resources: core.ResourceRequirements{
-									Requests: core.ResourceList{
-										core.ResourceStorage: resource.MustParse("1Gi"),
-									},
-								},
-							},
-						},
-					},
-				},
-				ServiceAccountName: "percona-xtradb-cluster-operator",
-			},
+			//Backup: &pxc.PXCScheduledBackup{
+			//	Image: backupImage,
+			//	Schedule: []pxc.PXCScheduledBackupSchedule{{
+			//		Name:        "test",
+			//		Schedule:    "*/1 * * * *",
+			//		Keep:        3,
+			//		StorageName: backupStorageName,
+			//	}},
+			//	Storages: map[string]*pxc.BackupStorageSpec{
+			//		backupStorageName: {
+			//			Type: pxc.BackupStorageFilesystem,
+			//			Volume: &pxc.VolumeSpec{
+			//				PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
+			//					Resources: core.ResourceRequirements{
+			//						Requests: core.ResourceList{
+			//							core.ResourceStorage: resource.MustParse("1Gi"),
+			//						},
+			//					},
+			//				},
+			//			},
+			//		},
+			//	},
+			//	ServiceAccountName: "percona-xtradb-cluster-operator",
+			//},
 		},
 	}
 	return c.kubeCtl.Apply(ctx, res)

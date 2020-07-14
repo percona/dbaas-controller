@@ -24,21 +24,20 @@ import (
 	"errors"
 	"os/exec"
 	"strings"
+	"sync"
 
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 
 	"github.com/percona-platform/dbaas-controller/logger"
 )
 
+// ErrNotFound is an error in case of object not found.
 var ErrNotFound = errors.New("object not found")
 
 // NewKubeCtl returns new KubeCtl object.
 func NewKubeCtl(l logger.Logger) *KubeCtl {
-	var cmd = []string{"minikube", "kubectl", "--"}
-
 	return &KubeCtl{
-		l:   l.WithField("component", "kubectl"),
-		cmd: cmd, // TODO: select kubectl
+		l: l.WithField("component", "kubectl"),
 	}
 }
 
@@ -46,10 +45,13 @@ func NewKubeCtl(l logger.Logger) *KubeCtl {
 type KubeCtl struct {
 	l   logger.Logger
 	cmd []string
+
+	once sync.Once
 }
 
 // run runs kubectl commands in cli.
 func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]byte, []byte, error) {
+	k.once.Do(k.init)
 	var stdOutBuf bytes.Buffer
 	var stdErrBuf bytes.Buffer
 	args = append(k.cmd, args...)
@@ -85,13 +87,14 @@ func (k *KubeCtl) Apply(ctx context.Context, res *pxc.PerconaXtraDBCluster) erro
 
 // Delete runs kubectl delete command.
 func (k *KubeCtl) Delete(ctx context.Context, res *pxc.PerconaXtraDBCluster) error {
-	_, _, err := k.run(ctx, []string{"Delete", "-f", "-"}, res)
+	_, _, err := k.run(ctx, []string{"delete", "-f", "-"}, res)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+// Get runs kubectl get command and returns `ErrNotFound` if object not found.
 func (k *KubeCtl) Get(ctx context.Context, kind string, name string) ([]byte, error) {
 	args := []string{"get", "-o=json", kind}
 	if name != "" {
@@ -102,8 +105,18 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string) ([]byte, er
 		if strings.Contains(string(stderr), "not found") {
 			return nil, ErrNotFound
 		}
-		k.l.Infof("%s", stderr)
 		return nil, err
 	}
 	return stdout, nil
+}
+
+func (k *KubeCtl) init() {
+	var cmd = []string{"kubectl"}
+
+	path, err := exec.LookPath("kubectl")
+	k.l.Debugf("path: %s, err: %v", path, err)
+	if e, ok := err.(*exec.Error); err != nil && ok && e.Err == exec.ErrNotFound {
+		cmd = []string{"minikube", "kubectl", "--"}
+	}
+	k.cmd = cmd
 }

@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
+	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
@@ -29,10 +31,11 @@ import (
 // Cluster contains information related to cluster.
 type Cluster struct {
 	Name   string
+	Size   int32
 	Status string
 }
 
-// NewClusterList returns new object of ClusterList
+// NewClusterList returns new object of ClusterList.
 func NewClusterList(kubeCtl *kubectl.KubeCtl) *ClusterList {
 	return &ClusterList{
 		kubeCtl: kubeCtl,
@@ -56,17 +59,26 @@ func (c *ClusterList) GetClusters(ctx context.Context) ([]Cluster, error) {
 		val := Cluster{
 			Name:   cluster.Name,
 			Status: string(cluster.Status.Status),
+			Size:   cluster.Spec.ProxySQL.Size,
 		}
 
 		res[i] = val
 	}
+
+	deletingClusters, err := c.getDeletingClusters(ctx, res)
+	if err != nil {
+		return nil, err
+	}
+
+	res = append(res, deletingClusters...)
+
 	return res, nil
 }
 
 func (c *ClusterList) getPerconaXtraDBClusters(ctx context.Context) ([]*pxc.PerconaXtraDBCluster, error) {
 	stdout, err := c.kubeCtl.Get(ctx, clusterKind, "")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't get percona xtradb clusters")
 	}
 
 	var list meta.List
@@ -75,12 +87,49 @@ func (c *ClusterList) getPerconaXtraDBClusters(ctx context.Context) ([]*pxc.Perc
 	}
 
 	res := make([]*pxc.PerconaXtraDBCluster, len(list.Items))
-	for _, item := range list.Items {
+	for i, item := range list.Items {
 		var cluster pxc.PerconaXtraDBCluster
 		if err := json.Unmarshal(item.Raw, &cluster); err != nil {
 			return nil, err
 		}
-		res = append(res, &cluster)
+		res[i] = &cluster
+	}
+	return res, nil
+}
+
+func (c *ClusterList) getDeletingClusters(ctx context.Context, runningClusters []Cluster) ([]Cluster, error) {
+	stdout, err := c.kubeCtl.Get(ctx, "pods", "")
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get kuberneters pods")
+	}
+	exists := make(map[string]struct{}, len(runningClusters))
+	for _, cluster := range runningClusters {
+		exists[cluster.Name] = struct{}{}
+	}
+
+	var list meta.List
+	if err := json.Unmarshal(stdout, &list); err != nil {
+		return nil, err
+	}
+
+	var res []Cluster
+
+	for _, item := range list.Items {
+		var pod v1.Pod
+		if err := json.Unmarshal(item.Raw, &pod); err != nil {
+			return nil, err
+		}
+		name := pod.Labels["app.kubernetes.io/instance"]
+		if _, ok := exists[name]; ok {
+			continue
+		}
+		cluster := Cluster{
+			Status: "deleting",
+			Name:   name,
+		}
+		res = append(res, cluster)
+
+		exists[name] = struct{}{}
 	}
 	return res, nil
 }
