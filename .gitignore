@@ -4,4 +4,3 @@
 /bin/
 /debugdata/
 *.out
-/catalog/locales/*/out.gotext.json
