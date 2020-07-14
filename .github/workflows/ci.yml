@@ -97,7 +97,7 @@ jobs:
         run: |
           curl -sSf -m 30 https://codecov.io/bash > codecov
           chmod +x codecov
-          timeout -s KILL 30 ./codecov -f crosscover.out -F crosscover -X fix
+          timeout --preserve-status --kill-after=60s --verbose 45 ./codecov -f crosscover.out -F crosscover -X fix
           rm codecov
 
       - name: Collect debugdata
