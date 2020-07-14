@@ -51,7 +51,6 @@ check:                            ## Run checks/linters for the whole project
 	bin/check-license
 	bin/go-consistent -pedantic ./...
 	bin/golangci-lint run
-	diff catalog/locales/en/{messages,out}.gotext.json -q
 
 install:                          ## Install binaries
 	go build -race -o bin/dbaas-controller ./cmd/dbaas-controller
