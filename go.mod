@@ -26,6 +26,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	go.uber.org/zap v1.15.0
 	golang.org/x/sys v0.0.0-20200622214017-ed371f2e16b4
+	golang.org/x/text v0.3.3
 	google.golang.org/grpc v1.30.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776

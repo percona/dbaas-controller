@@ -30,12 +30,17 @@ release:                          ## Build dbaas-controller release binaries.
 init:                             ## Install development tools
 	go build -o bin/check-license ./.github/check-license.go
 
-	go build -modfile=tools/go.mod -o bin/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
 	go build -modfile=tools/go.mod -o bin/go-consistent github.com/quasilyte/go-consistent
-	go build -modfile=tools/go.mod -o bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
 	go build -modfile=tools/go.mod -o bin/goimports golang.org/x/tools/cmd/goimports
+	go build -modfile=tools/go.mod -o bin/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
+	go build -modfile=tools/go.mod -o bin/gotext golang.org/x/text/cmd/gotext
+	go build -modfile=tools/go.mod -o bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
 
 gen:                              ## Generate code
+	go generate ./catalog
+	mv catalog/locales/en/out.gotext.json catalog/locales/en/messages.gotext.json
+	# add blank line at EOF
+	echo >> catalog/locales/en/messages.gotext.json
 	make format
 
 format:                           ## Format source code

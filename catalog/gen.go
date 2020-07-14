@@ -14,14 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// +build tools
+// Package catalog contains proper and user visible text of messages.
+// The goal is to fix syntax, grammar and other mistakes and improve readability in messages.
+package catalog
 
-package tools
-
-import (
-	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	_ "github.com/quasilyte/go-consistent"
-	_ "github.com/reviewdog/reviewdog/cmd/reviewdog"
-	_ "golang.org/x/text/cmd/gotext"
-	_ "golang.org/x/tools/cmd/goimports"
-)
+//go:generate ../bin/gotext update -out=./catalog.go -lang=en github.com/percona-platform/dbaas-controller/cmd/dbaas-controller
