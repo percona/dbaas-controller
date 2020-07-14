@@ -59,7 +59,7 @@ func main() {
 	}
 
 	i18nPrinter := message.NewPrinter(language.English)
-	controllerv1beta1.RegisterXtraDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.New(*i18nPrinter))
+	controllerv1beta1.RegisterXtraDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.New(i18nPrinter))
 
 	go servers.RunDebugServer(ctx, &servers.RunDebugServerOpts{
 		Addr: flags.DebugAddr,

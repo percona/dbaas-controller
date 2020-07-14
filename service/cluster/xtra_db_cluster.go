@@ -29,11 +29,11 @@ import (
 
 // Service implements methods of gRPC server and other business logic.
 type Service struct {
-	p message.Printer
+	p *message.Printer
 }
 
 // New returns new Service instance.
-func New(p message.Printer) *Service {
+func New(p *message.Printer) *Service {
 	return &Service{p: p}
 }
 
