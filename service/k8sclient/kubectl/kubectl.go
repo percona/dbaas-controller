@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 
+	_ "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	"github.com/pkg/errors"
 
