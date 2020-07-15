@@ -20,38 +20,42 @@ package cluster
 import (
 	"context"
 
-	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 )
 
 // Service implements methods of gRPC server and other business logic.
 type Service struct {
+	p *message.Printer
 }
 
 // New returns new Service instance.
-func New() *Service {
-	return new(Service)
+func New(p *message.Printer) *Service {
+	return &Service{p: p}
 }
 
 // ListXtraDBClusters returns a list of XtraDB clusters.
 func (s *Service) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1.ListXtraDBClustersRequest) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "This method is not implemented yet.")
+	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("not implemented"))
 }
 
 // CreateXtraDBCluster creates a new XtraDB cluster.
 func (s *Service) CreateXtraDBCluster(ctx context.Context, req *controllerv1beta1.CreateXtraDBClusterRequest) (*controllerv1beta1.CreateXtraDBClusterResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "This method is not implemented yet.")
+	methodName := "CreateXtraDBCluster"
+	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("%s is not implemented", methodName))
 }
 
 // UpdateXtraDBCluster updates existing XtraDB cluster.
 func (s *Service) UpdateXtraDBCluster(ctx context.Context, req *controllerv1beta1.UpdateXtraDBClusterRequest) (*controllerv1beta1.UpdateXtraDBClusterResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "This method is not implemented yet.")
+	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("This method is not implemented yet."))
 }
 
 // DeleteXtraDBCluster deletes XtraDB cluster.
 func (s *Service) DeleteXtraDBCluster(ctx context.Context, req *controllerv1beta1.DeleteXtraDBClusterRequest) (*controllerv1beta1.DeleteXtraDBClusterResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "This method is not implemented yet.")
+	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("This method is not implemented yet."))
 }
 
 // Check interface.

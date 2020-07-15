@@ -33,7 +33,6 @@ jobs:
       KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
       MINIKUBE_IN_STYLE: 1
       CHANGE_MINIKUBE_NONE_USER: true
-      CODECOV_ENV: GO_VERSION,KUBERNETES_VERSION
 
     steps:
       - name: Set up Go ${{ matrix.go-version }}
@@ -94,11 +93,12 @@ jobs:
           make test-crosscover
 
       - name: Upload coverage results
-        run: |
-          curl -sSf -m 30 https://codecov.io/bash > codecov
-          chmod +x codecov
-          timeout -s KILL 30 ./codecov -f crosscover.out -F crosscover -X fix
-          rm codecov
+        uses: percona-platform/codecov-action@v1.0.10
+        with:
+          file: crosscover.out
+          flags: crosscover
+          env_vars: GO_VERSION,KUBERNETES_VERSION
+          fail_ci_if_error: false
 
       - name: Collect debugdata
         if: ${{ always() }}

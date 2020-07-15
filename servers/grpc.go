@@ -114,7 +114,7 @@ func (s *grpcServer) Run(ctx context.Context) {
 	grpc_prometheus.EnableHandlingTimeHistogram()
 	grpc_prometheus.Register(s.grpc)
 
-	s.l.Infof("Starting server on https://%s/ ...", s.addr)
+	s.l.Infof("Starting gRPC server on https://%s/ ...", s.addr)
 	listener, err := net.Listen("tcp", s.addr)
 	if err != nil {
 		s.l.Panicf(err.Error())

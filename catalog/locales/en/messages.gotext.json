@@ -1,0 +1,30 @@
+{
+    "language": "en",
+    "messages": [
+        {
+            "id": "not implemented",
+            "message": "not implemented",
+            "translation": "This method is not implemented yet."
+        },
+        {
+            "id": "{MethodName} is not implemented",
+            "message": "{MethodName} is not implemented",
+            "translation": "{MethodName} is not implemented",
+            "placeholders": [
+                {
+                    "id": "MethodName",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "methodName"
+                }
+            ]
+        },
+        {
+            "id": "This method is not implemented yet.",
+            "message": "This method is not implemented yet.",
+            "translation": ""
+        }
+    ]
+}
