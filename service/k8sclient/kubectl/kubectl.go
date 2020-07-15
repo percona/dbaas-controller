@@ -21,12 +21,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"os/exec"
 	"strings"
 	"sync"
 
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
+	"github.com/pkg/errors"
 
 	"github.com/percona-platform/dbaas-controller/logger"
 )
