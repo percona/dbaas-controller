@@ -18,6 +18,7 @@ package main
 
 import (
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"github.com/percona/pmm/version"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/grpclog"
@@ -31,13 +32,15 @@ import (
 )
 
 func main() {
+	if version.Version == "" {
+		panic("dbaas-controller version is not set during build.")
+	}
+
 	logger.SetupGlobal()
 
 	ctx := app.Context()
 	l := logger.Get(ctx).WithField("component", "main")
 	defer l.Sync() //nolint:errcheck
-
-	l.Infof("Starting...")
 
 	flags, err := app.Setup(&app.SetupOpts{
 		Name: "dbaas-controller",
@@ -47,6 +50,8 @@ func main() {
 	}
 
 	kingpin.Parse()
+
+	l.Infof("Starting...")
 
 	// Setup grpc server
 	grpclog.SetLoggerV2(l.GRPCLogger())
