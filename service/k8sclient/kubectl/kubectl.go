@@ -25,9 +25,8 @@ import (
 	"strings"
 	"sync"
 
-	_ "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
-	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	"github.com/pkg/errors"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/percona-platform/dbaas-controller/logger"
 )
@@ -79,7 +78,7 @@ func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]
 }
 
 // Apply runs kubectl apply command.
-func (k *KubeCtl) Apply(ctx context.Context, res *pxc.PerconaXtraDBCluster) error {
+func (k *KubeCtl) Apply(ctx context.Context, res meta.Object) error {
 	_, _, err := k.run(ctx, []string{"apply", "-f", "-"}, res)
 	if err != nil {
 		return err
@@ -88,7 +87,7 @@ func (k *KubeCtl) Apply(ctx context.Context, res *pxc.PerconaXtraDBCluster) erro
 }
 
 // Delete runs kubectl delete command.
-func (k *KubeCtl) Delete(ctx context.Context, res *pxc.PerconaXtraDBCluster) error {
+func (k *KubeCtl) Delete(ctx context.Context, res meta.Object) error {
 	_, _, err := k.run(ctx, []string{"delete", "-f", "-"}, res)
 	if err != nil {
 		return err

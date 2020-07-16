@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package operations
+package k8sclient
 
 import (
 	"context"
@@ -25,22 +25,23 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona-platform/dbaas-controller/logger"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
 
-func TestOperations(t *testing.T) {
+func TestK8Client(t *testing.T) {
 	l := logger.NewLogger()
 	ctx := context.TODO()
 
-	kubeCtl := kubectl.NewKubeCtl(l)
+	client := NewK8Client(l)
 
 	name := "test-cluster"
-	deleteCluster := NewClusterDelete(kubeCtl, name)
-	_ = deleteCluster.Start(ctx)
+	deleteParams := DeleteParams{
+		Name: name,
+		Kind: perconaXtradbClusterKind,
+	}
+	_ = client.DeleteCluster(ctx, deleteParams)
 
-	list := NewClusterList(kubeCtl)
 	for {
-		clusters, err := list.GetClusters(ctx)
+		clusters, err := client.ListClusters(ctx)
 		require.NoError(t, err)
 
 		if findCluster(clusters, name) == nil {
@@ -49,11 +50,14 @@ func TestOperations(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}
 
-	createCluster := NewClusterCreate(kubeCtl, name, 2)
-	err := createCluster.Start(ctx)
+	err := client.CreateCluster(ctx, CreateParams{
+		Name: name,
+		Kind: perconaXtradbClusterKind,
+		Size: 2,
+	})
 	require.NoError(t, err)
 	for {
-		clusters, err := list.GetClusters(ctx)
+		clusters, err := client.ListClusters(ctx)
 		require.NoError(t, err)
 
 		if cluster := findCluster(clusters, name); cluster != nil && cluster.Status == "ready" {
@@ -62,11 +66,14 @@ func TestOperations(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}
 
-	createUpdate := NewClusterUpdate(kubeCtl, name, 3)
-	err = createUpdate.Start(ctx)
+	err = client.UpdateCluster(ctx, UpdateParams{
+		Name: name,
+		Kind: perconaXtradbClusterKind,
+		Size: 3,
+	})
 	require.NoError(t, err)
 	for {
-		clusters, err := list.GetClusters(ctx)
+		clusters, err := client.ListClusters(ctx)
 		require.NoError(t, err)
 
 		cluster := findCluster(clusters, name)
@@ -77,10 +84,10 @@ func TestOperations(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}
 
-	err = deleteCluster.Start(ctx)
+	err = client.DeleteCluster(ctx, deleteParams)
 	require.NoError(t, err)
 	for {
-		clusters, err := list.GetClusters(ctx)
+		clusters, err := client.ListClusters(ctx)
 		require.NoError(t, err)
 
 		if findCluster(clusters, name) == nil {
@@ -88,7 +95,7 @@ func TestOperations(t *testing.T) {
 		}
 		time.Sleep(1 * time.Second)
 	}
-	clusters, err := list.GetClusters(ctx)
+	clusters, err := client.ListClusters(ctx)
 	require.NoError(t, err)
 	assert.Nil(t, findCluster(clusters, name))
 }
