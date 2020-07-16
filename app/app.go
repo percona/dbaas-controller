@@ -18,7 +18,7 @@
 package app
 
 import (
-	pmmversion "github.com/percona/pmm/version"
+	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -32,10 +32,6 @@ type Flags struct {
 	GRPCAddr string
 	// Debug listen address
 	DebugAddr string
-}
-
-func version() string {
-	return pmmversion.PMMVersion
 }
 
 // SetupOpts contains options required for app.
@@ -55,7 +51,7 @@ func Setup(opts *SetupOpts) (*Flags, error) {
 
 	kingpin.CommandLine.Name = opts.Name
 	kingpin.CommandLine.DefaultEnvars()
-	kingpin.Version(version())
+	kingpin.Version(version.FullInfo())
 	kingpin.HelpFlag.Short('h')
 
 	var flags Flags
