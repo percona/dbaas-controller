@@ -14,7 +14,7 @@ PMM_RELEASE_TIMESTAMP ?= $(shell date '+%s')
 PMM_RELEASE_FULLCOMMIT ?= $(shell git rev-parse HEAD)
 PMM_RELEASE_BRANCH ?= $(shell git describe --always --contains --all)
 
-# FIXME make it work without vendoring
+# FIXME make it work without vendoring https://jira.percona.com/browse/PMM-6306
 PMM_LD_FLAGS = -ldflags " \
 			-X 'github.com/percona-platform/dbaas-controller/vendor/github.com/percona/pmm/version.ProjectName=dbaas-controller' \
 			-X 'github.com/percona-platform/dbaas-controller/vendor/github.com/percona/pmm/version.Version=$(PMM_RELEASE_VERSION)' \
