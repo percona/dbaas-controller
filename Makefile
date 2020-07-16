@@ -9,19 +9,19 @@ help:                             ## Display this help message
 
 # `cut` is used to remove first `v` from `git describe` output
 PMM_RELEASE_PATH ?= bin
+PMM_RELEASE_COMPONENT_VERSION ?= $(shell git describe --always --dirty | cut -b2-)
 PMM_RELEASE_VERSION ?= $(shell git describe --always --dirty | cut -b2-)
 PMM_RELEASE_TIMESTAMP ?= $(shell date '+%s')
 PMM_RELEASE_FULLCOMMIT ?= $(shell git rev-parse HEAD)
 PMM_RELEASE_BRANCH ?= $(shell git describe --always --contains --all)
 
-# FIXME make it work without vendoring https://jira.percona.com/browse/PMM-6306
 PMM_LD_FLAGS = -ldflags " \
-			-X 'github.com/percona-platform/dbaas-controller/vendor/github.com/percona/pmm/version.ProjectName=dbaas-controller' \
-			-X 'github.com/percona-platform/dbaas-controller/vendor/github.com/percona/pmm/version.Version=$(PMM_RELEASE_VERSION)' \
-			-X 'github.com/percona-platform/dbaas-controller/vendor/github.com/percona/pmm/version.PMMVersion=$(PMM_RELEASE_VERSION)' \
-			-X 'github.com/percona-platform/dbaas-controller/vendor/github.com/percona/pmm/version.Timestamp=$(PMM_RELEASE_TIMESTAMP)' \
-			-X 'github.com/percona-platform/dbaas-controller/vendor/github.com/percona/pmm/version.FullCommit=$(PMM_RELEASE_FULLCOMMIT)' \
-			-X 'github.com/percona-platform/dbaas-controller/vendor/github.com/percona/pmm/version.Branch=$(PMM_RELEASE_BRANCH)' \
+			-X 'github.com/percona/pmm/version.ProjectName=dbaas-controller' \
+			-X 'github.com/percona/pmm/version.Version=$(PMM_RELEASE_COMPONENT_VERSION)' \
+			-X 'github.com/percona/pmm/version.PMMVersion=$(PMM_RELEASE_VERSION)' \
+			-X 'github.com/percona/pmm/version.Timestamp=$(PMM_RELEASE_TIMESTAMP)' \
+			-X 'github.com/percona/pmm/version.FullCommit=$(PMM_RELEASE_FULLCOMMIT)' \
+			-X 'github.com/percona/pmm/version.Branch=$(PMM_RELEASE_BRANCH)' \
 			"
 
 release:                          ## Build dbaas-controller release binaries.
