@@ -108,7 +108,7 @@ func (c *ClusterList) getDeletingClusters(ctx context.Context, runningClusters [
 		}
 		clusterName := pod.Labels["app.kubernetes.io/instance"]
 		deploymentName := pod.Labels["app.kubernetes.io/name"]
-		if _, ok := exists[clusterName]; ok && deploymentName == "percona-xtradb-cluster" {
+		if _, ok := exists[clusterName]; ok || deploymentName != "percona-xtradb-cluster" {
 			continue
 		}
 		cluster := Cluster{
