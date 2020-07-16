@@ -69,7 +69,8 @@ func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]
 	cmd.Stdout = &stdOutBuf
 	cmd.Stderr = &stdErrBuf
 	defer func() {
-		k.l.Debugf("%s\n%s", stdOutBuf.String(), stdErrBuf.String())
+		k.l.Debugf(stdOutBuf.String())
+		k.l.Debugf(stdErrBuf.String())
 	}()
 	if err := cmd.Run(); err != nil {
 		return stdOutBuf.Bytes(), stdErrBuf.Bytes(), err
@@ -96,7 +97,7 @@ func (k *KubeCtl) Delete(ctx context.Context, res *pxc.PerconaXtraDBCluster) err
 }
 
 // Get runs kubectl get command and returns `ErrNotFound` if object not found.
-func (k *KubeCtl) Get(ctx context.Context, kind string, name string) ([]byte, error) {
+func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interface{}) error {
 	args := []string{"get", "-o=json", kind}
 	if name != "" {
 		args = append(args, name)
@@ -104,17 +105,19 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string) ([]byte, er
 	stdout, stderr, err := k.run(ctx, args, nil)
 	if err != nil {
 		if strings.Contains(string(stderr), "not found") {
-			return nil, ErrNotFound
+			return ErrNotFound
 		}
-		return nil, err
+		return err
 	}
-	return stdout, nil
+
+	return json.Unmarshal(stdout, res)
 }
 
+// init selects available kubectl in current system.
 func (k *KubeCtl) init() {
-	var cmd = []string{"kubectl"}
+	var cmd = []string{"dbaas-kubectl-1.16"}
 
-	path, err := exec.LookPath("kubectl")
+	path, err := exec.LookPath("dbaas-kubectl-1.16")
 	k.l.Debugf("path: %s, err: %v", path, err)
 	if e, ok := err.(*exec.Error); err != nil && ok && e.Err == exec.ErrNotFound {
 		cmd = []string{"minikube", "kubectl", "--"}

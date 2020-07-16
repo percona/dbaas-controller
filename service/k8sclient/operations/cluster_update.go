@@ -18,8 +18,6 @@ package operations
 
 import (
 	"context"
-	"encoding/json"
-
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
@@ -56,12 +54,9 @@ func (c *ClusterUpdate) Start(ctx context.Context) error {
 }
 
 func (c *ClusterUpdate) getPerconaXtraDBCluster(ctx context.Context, name string) (*pxc.PerconaXtraDBCluster, error) {
-	stdout, err := c.kubeCtl.Get(ctx, clusterKind, name)
-	if err != nil {
-		return nil, err
-	}
 	var res pxc.PerconaXtraDBCluster
-	if err := json.Unmarshal(stdout, &res); err != nil {
+	err := c.kubeCtl.Get(ctx, clusterKind, name, &res)
+	if err != nil {
 		return nil, err
 	}
 	return &res, nil
