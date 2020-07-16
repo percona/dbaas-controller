@@ -29,12 +29,20 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.6.1
 	go.uber.org/zap v1.15.0
-	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae
+	golang.org/x/sys v0.0.0-20200615200032-f1bc736245b1
 	golang.org/x/text v0.3.3
 	google.golang.org/grpc v1.30.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	k8s.io/api v0.18.5
-	k8s.io/apimachinery v0.18.5
-	k8s.io/client-go v11.0.0+incompatible // indirect
+	k8s.io/api v0.18.4
+	k8s.io/apimachinery v0.18.4
 	sigs.k8s.io/controller-runtime v0.6.1 // indirect
+)
+
+// Use the same versions as operators:
+// * https://github.com/percona/percona-xtradb-cluster-operator/blob/master/go.mod
+// * https://github.com/percona/percona-server-mongodb-operator/blob/master/go.mod
+replace (
+	k8s.io/api => k8s.io/api v0.17.4
+	k8s.io/apimachinery => k8s.io/apimachinery v0.17.4
+	k8s.io/client-go => k8s.io/client-go v0.17.4
 )
