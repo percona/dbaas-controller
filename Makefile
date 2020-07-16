@@ -26,6 +26,7 @@ PMM_LD_FLAGS = -ldflags " \
 
 release:                          ## Build dbaas-controller release binaries.
 	env CGO_ENABLED=0 go build -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
+	$(PMM_RELEASE_PATH)/dbaas-controller --version
 
 init:                             ## Install development tools
 	go build -o bin/check-license ./.github/check-license.go
