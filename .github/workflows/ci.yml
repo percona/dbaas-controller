@@ -32,7 +32,6 @@ jobs:
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
       KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
       MINIKUBE_IN_STYLE: 1
-      CHANGE_MINIKUBE_NONE_USER: true
 
     steps:
       - name: Set up Go release
@@ -63,13 +62,11 @@ jobs:
         uses: percona-platform/checkout@v2.3.1
 
       # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
-      # https://minikube.sigs.k8s.io/docs/drivers/none/
       - name: Configure minikube
         run: |
           sudo apt install -y conntrack
-          sudo -E minikube config set driver none
-          sudo -E minikube config set cpus 2
-          sudo -E minikube config set memory 4096
+          minikube config set cpus 2
+          minikube config set memory 4096
 
       - name: Enable Go modules cache
         uses: percona-platform/cache@v2
@@ -101,7 +98,7 @@ jobs:
         run: make release install
 
       - name: Start development environment
-        run: sudo -E make env-up
+        run: make env-up
 
       - name: Run tests
         run: |
