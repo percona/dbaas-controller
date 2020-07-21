@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/AlekSi/pointer"
-	_ "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
+	_ "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1" // We will use it later
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
@@ -264,11 +264,11 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]Cluster, err
 
 // getPSMDBClusters returns Percona Server MongoDB clusters.
 func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]Cluster, error) {
-	var list meta.List
-	err := c.kubeCtl.Get(ctx, perconaServerMongoDBKind, "", &list)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get percona server MongoDB clusters")
-	}
+	//var list meta.List
+	//err := c.kubeCtl.Get(ctx, perconaServerMongoDBKind, "", &list)
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "couldn't get percona server MongoDB clusters")
+	//}
 
 	res := make([]Cluster, 0)
 	//for i, item := range list.Items {
