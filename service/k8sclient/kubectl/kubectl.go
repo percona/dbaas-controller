@@ -114,7 +114,7 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 
 // init selects available kubectl in current system.
 func (k *KubeCtl) init() {
-	var cmd = []string{"dbaas-kubectl-1.16"}
+	cmd := []string{"dbaas-kubectl-1.16"}
 
 	path, err := exec.LookPath("dbaas-kubectl-1.16")
 	k.l.Debugf("path: %s, err: %v", path, err)

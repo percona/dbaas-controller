@@ -38,9 +38,11 @@ type ClusterKind string
 
 const perconaXtradbClusterKind = ClusterKind("PerconaXtraDBCluster")
 
-const pxcBackupImage = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0-backup"
-const pxcImage = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0"
-const pxcBackupStorageName = "test-backup-storage"
+const (
+	pxcBackupImage       = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0-backup"
+	pxcImage             = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0"
+	pxcBackupStorageName = "test-backup-storage"
+)
 
 // CreateXtraDBParams contains all parameters required to create percona xtradb cluster.
 type CreateXtraDBParams struct {
