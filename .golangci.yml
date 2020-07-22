@@ -27,6 +27,7 @@ linters:
     - gomnd     # too annoying
     - lll       # gRPC types are long
     - wsl       # too annoying
+    - unused    # too many false positives
 
 issues:
   exclude-use-default: false

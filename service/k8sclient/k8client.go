@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package k8sclient provides client for kubernetes.
 package k8sclient
 
 import (
@@ -29,15 +30,17 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/percona-platform/dbaas-controller/logger"
-	kubectl2 "github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
 
-const backupImage = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0-backup"
-const pxcImage = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0"
-const backupStorageName = "test-backup-storage"
+// ClusterKind is a kind of a cluster.
+type ClusterKind string
 
-const perconaXtradbClusterKind = "PerconaXtraDBCluster"
-const perconaServerMongoDBKind = "PerconaServerMongoDB"
+const perconaXtradbClusterKind = ClusterKind("PerconaXtraDBCluster")
+
+const pxcBackupImage = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0-backup"
+const pxcImage = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0"
+const pxcBackupStorageName = "test-backup-storage"
 
 // CreateXtraDBParams contains all parameters required to create percona xtradb cluster.
 type CreateXtraDBParams struct {
@@ -51,15 +54,15 @@ type UpdateXtraDBParams struct {
 	Size int32
 }
 
-// DeleteParams contains all parameters required to delete cluster.
-type DeleteParams struct {
+// DeleteClusterParams contains all parameters required to delete cluster.
+type DeleteClusterParams struct {
 	Name string
 }
 
 // Cluster contains information related to cluster.
 type Cluster struct {
 	Name   string
-	Kind   string
+	Kind   ClusterKind
 	Size   int32
 	Status string
 }
@@ -67,13 +70,13 @@ type Cluster struct {
 // NewK8Client returns new K8Client object.
 func NewK8Client(logger logger.Logger) *K8Client {
 	return &K8Client{
-		kubeCtl: kubectl2.NewKubeCtl(logger),
+		kubeCtl: kubectl.NewKubeCtl(logger),
 	}
 }
 
 // K8Client is a client for Kubernetes.
 type K8Client struct {
-	kubeCtl *kubectl2.KubeCtl
+	kubeCtl *kubectl.KubeCtl
 }
 
 // CreateXtraDBCluster creates percona xtradb cluster with provided parameters.
@@ -81,7 +84,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params CreateXtraDBP
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: meta.TypeMeta{
 			APIVersion: "pxc.percona.com/v1-4-0",
-			Kind:       perconaXtradbClusterKind,
+			Kind:       string(perconaXtradbClusterKind),
 		},
 		ObjectMeta: meta.ObjectMeta{
 			Name: params.Name,
@@ -129,30 +132,30 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params CreateXtraDBP
 				Enabled: false,
 			},
 
-			//Backup: &pxc.PXCScheduledBackup{
-			//	Image: backupImage,
-			//	Schedule: []pxc.PXCScheduledBackupSchedule{{
-			//		Name:        "test",
-			//		Schedule:    "*/1 * * * *",
-			//		Keep:        3,
-			//		StorageName: backupStorageName,
-			//	}},
-			//	Storages: map[string]*pxc.BackupStorageSpec{
-			//		backupStorageName: {
-			//			Type: pxc.BackupStorageFilesystem,
-			//			Volume: &pxc.VolumeSpec{
-			//				PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
-			//					Resources: core.ResourceRequirements{
-			//						Requests: core.ResourceList{
-			//							core.ResourceStorage: resource.MustParse("1Gi"),
-			//						},
-			//					},
-			//				},
-			//			},
-			//		},
-			//	},
-			//	ServiceAccountName: "percona-xtradb-cluster-operator",
-			//},
+			Backup: &pxc.PXCScheduledBackup{
+				Image: pxcBackupImage,
+				Schedule: []pxc.PXCScheduledBackupSchedule{{
+					Name:        "test",
+					Schedule:    "*/1 * * * *",
+					Keep:        3,
+					StorageName: pxcBackupStorageName,
+				}},
+				Storages: map[string]*pxc.BackupStorageSpec{
+					pxcBackupStorageName: {
+						Type: pxc.BackupStorageFilesystem,
+						Volume: &pxc.VolumeSpec{
+							PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
+								Resources: core.ResourceRequirements{
+									Requests: core.ResourceList{
+										core.ResourceStorage: resource.MustParse("1Gi"),
+									},
+								},
+							},
+						},
+					},
+				},
+				ServiceAccountName: "percona-xtradb-cluster-operator",
+			},
 		},
 	}
 	return c.kubeCtl.Apply(ctx, res)
@@ -161,7 +164,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params CreateXtraDBP
 // UpdateXtraDBCluster changes size of provided percona xtradb cluster.
 func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params UpdateXtraDBParams) error {
 	var cluster pxc.PerconaXtraDBCluster
-	err := c.kubeCtl.Get(ctx, perconaXtradbClusterKind, params.Name, &cluster)
+	err := c.kubeCtl.Get(ctx, string(perconaXtradbClusterKind), params.Name, &cluster)
 	if err != nil {
 		return err
 	}
@@ -173,11 +176,11 @@ func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params UpdateXtraDBP
 }
 
 // DeleteXtraDBCluster deletes percona xtradb cluster with provided name.
-func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, params DeleteParams) error {
+func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, params DeleteClusterParams) error {
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: meta.TypeMeta{
 			APIVersion: "pxc.percona.com/v1-4-0",
-			Kind:       perconaXtradbClusterKind,
+			Kind:       string(perconaXtradbClusterKind),
 		},
 		ObjectMeta: meta.ObjectMeta{
 			Name: params.Name,
@@ -193,7 +196,7 @@ func (c *K8Client) ListClusters(ctx context.Context) ([]Cluster, error) {
 		return nil, err
 	}
 
-	// TODO: get PSMDB clusters.
+	// TODO: Get PSMDB clusters.
 
 	deletingClusters, err := c.getDeletingClusters(ctx, perconaXtraDBClusters)
 	if err != nil {
@@ -207,7 +210,7 @@ func (c *K8Client) ListClusters(ctx context.Context) ([]Cluster, error) {
 // getPerconaXtraDBClusters returns percona xtradb clusters.
 func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]Cluster, error) {
 	var list meta.List
-	err := c.kubeCtl.Get(ctx, perconaXtradbClusterKind, "", &list)
+	err := c.kubeCtl.Get(ctx, string(perconaXtradbClusterKind), "", &list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get percona xtradb clusters")
 	}
@@ -234,7 +237,7 @@ func (c *K8Client) getDeletingClusters(ctx context.Context, runningClusters []Cl
 	var list meta.List
 	err := c.kubeCtl.Get(ctx, "pods", "", &list)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get kuberneters pods")
+		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
 
 	exists := make(map[string]struct{}, len(runningClusters))
@@ -242,7 +245,7 @@ func (c *K8Client) getDeletingClusters(ctx context.Context, runningClusters []Cl
 		exists[cluster.Name] = struct{}{}
 	}
 
-	var res []Cluster
+	res := make([]Cluster, 0)
 	for _, item := range list.Items {
 		var pod core.Pod
 		if err := json.Unmarshal(item.Raw, &pod); err != nil {
@@ -254,13 +257,10 @@ func (c *K8Client) getDeletingClusters(ctx context.Context, runningClusters []Cl
 			continue
 		}
 
-		var kind string
-		deploymentName := pod.Labels["app.kubernetes.io/name"]
-		switch deploymentName {
+		var kind ClusterKind
+		switch pod.Labels["app.kubernetes.io/name"] {
 		case "percona-xtradb-cluster":
 			kind = perconaXtradbClusterKind
-		case "psmdb-cluster":
-			kind = perconaServerMongoDBKind
 		default:
 			continue
 		}

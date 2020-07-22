@@ -18,6 +18,8 @@ package k8sclient
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -33,8 +35,8 @@ func TestK8Client(t *testing.T) {
 
 	client := NewK8Client(l)
 
-	name := "test-cluster"
-	deleteParams := DeleteParams{
+	name := fmt.Sprintf("test-cluster-%d", rand.Int31())
+	deleteParams := DeleteClusterParams{
 		Name: name,
 	}
 	_ = client.DeleteXtraDBCluster(ctx, deleteParams)
