@@ -36,9 +36,8 @@ func TestK8Client(t *testing.T) {
 	name := "test-cluster"
 	deleteParams := DeleteParams{
 		Name: name,
-		Kind: perconaXtradbClusterKind,
 	}
-	_ = client.DeleteCluster(ctx, deleteParams)
+	_ = client.DeleteXtraDBCluster(ctx, deleteParams)
 
 	for {
 		clusters, err := client.ListClusters(ctx)
@@ -50,9 +49,8 @@ func TestK8Client(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}
 
-	err := client.CreateCluster(ctx, CreateParams{
+	err := client.CreateXtraDBCluster(ctx, CreateXtraDBParams{
 		Name: name,
-		Kind: perconaXtradbClusterKind,
 		Size: 2,
 	})
 	require.NoError(t, err)
@@ -66,9 +64,8 @@ func TestK8Client(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}
 
-	err = client.UpdateCluster(ctx, UpdateParams{
+	err = client.UpdateXtraDBCluster(ctx, UpdateXtraDBParams{
 		Name: name,
-		Kind: perconaXtradbClusterKind,
 		Size: 3,
 	})
 	require.NoError(t, err)
@@ -84,7 +81,7 @@ func TestK8Client(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}
 
-	err = client.DeleteCluster(ctx, deleteParams)
+	err = client.DeleteXtraDBCluster(ctx, deleteParams)
 	require.NoError(t, err)
 	for {
 		clusters, err := client.ListClusters(ctx)

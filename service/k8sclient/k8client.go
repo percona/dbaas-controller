@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/AlekSi/pointer"
-	_ "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1" // We will use it later
+	psmdb "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
@@ -39,29 +39,39 @@ const backupStorageName = "test-backup-storage"
 const perconaXtradbClusterKind = "PerconaXtraDBCluster"
 const perconaServerMongoDBKind = "PerconaServerMongoDB"
 
-// CreateParams contains all parameters required to create cluster.
-type CreateParams struct {
+// CreateXtraDBParams contains all parameters required to create percona xtradb cluster.
+type CreateXtraDBParams struct {
 	Name string
-	Kind string
 	Size int32
 }
 
-// UpdateParams contains all parameters required to update cluster.
-type UpdateParams struct {
+// UpdateXtraDBParams contains all parameters required to update percona xtradb cluster.
+type UpdateXtraDBParams struct {
 	Name string
-	Kind string
+	Size int32
+}
+
+// CreatePSMDBParams contains all parameters required to create percona server for mongodb cluster.
+type CreatePSMDBParams struct {
+	Name string
+	Size int32
+}
+
+// UpdatePSMDBParams contains all parameters required to update percona server for mongodb cluster.
+type UpdatePSMDBParams struct {
+	Name string
 	Size int32
 }
 
 // DeleteParams contains all parameters required to delete cluster.
 type DeleteParams struct {
 	Name string
-	Kind string
 }
 
 // Cluster contains information related to cluster.
 type Cluster struct {
 	Name   string
+	Kind   string
 	Size   int32
 	Status string
 }
@@ -78,20 +88,8 @@ type K8Client struct {
 	kubeCtl *kubectl2.KubeCtl
 }
 
-// CreateCluster creates cluster with provided name and size.
-func (c *K8Client) CreateCluster(ctx context.Context, params CreateParams) error {
-	var res meta.Object
-	switch params.Kind {
-	case perconaXtradbClusterKind:
-		res = c.xtradbSpecs(params)
-	default:
-		return errors.New("unexpected cluster kind")
-	}
-	return c.kubeCtl.Apply(ctx, res)
-}
-
-// xtradbSpecs returns specs for percona xtradb cluster.
-func (c *K8Client) xtradbSpecs(params CreateParams) *pxc.PerconaXtraDBCluster {
+// CreateXtraDBCluster creates percona xtradb cluster with provided parameters.
+func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params CreateXtraDBParams) error {
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: meta.TypeMeta{
 			APIVersion: "pxc.percona.com/v1-4-0",
@@ -169,21 +167,11 @@ func (c *K8Client) xtradbSpecs(params CreateParams) *pxc.PerconaXtraDBCluster {
 			//},
 		},
 	}
-	return res
+	return c.kubeCtl.Apply(ctx, res)
 }
 
-// UpdateCluster changes size of provided cluster.
-func (c *K8Client) UpdateCluster(ctx context.Context, params UpdateParams) error {
-	switch params.Kind {
-	case perconaXtradbClusterKind:
-		return c.updatePerconaXtraDBCluster(ctx, params)
-	default:
-		return errors.New("unexpected object kind")
-	}
-}
-
-// updatePerconaXtraDBCluster updates percona xtradb cluster.
-func (c *K8Client) updatePerconaXtraDBCluster(ctx context.Context, params UpdateParams) error {
+// UpdateXtraDBCluster changes size of provided percona xtradb cluster.
+func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params UpdateXtraDBParams) error {
 	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, perconaXtradbClusterKind, params.Name, &cluster)
 	if err != nil {
@@ -196,22 +184,136 @@ func (c *K8Client) updatePerconaXtraDBCluster(ctx context.Context, params Update
 	return c.kubeCtl.Apply(ctx, &cluster)
 }
 
-// DeleteCluster deletes cluster with provided name.
-func (c *K8Client) DeleteCluster(ctx context.Context, params DeleteParams) error {
-	var res meta.Object
-	switch params.Kind {
-	case perconaXtradbClusterKind:
-		res = &pxc.PerconaXtraDBCluster{
-			TypeMeta: meta.TypeMeta{
-				APIVersion: "pxc.percona.com/v1-4-0",
-				Kind:       perconaXtradbClusterKind,
+// DeleteXtraDBCluster deletes percona xtradb cluster with provided name.
+func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, params DeleteParams) error {
+	res := &pxc.PerconaXtraDBCluster{
+		TypeMeta: meta.TypeMeta{
+			APIVersion: "pxc.percona.com/v1-4-0",
+			Kind:       perconaXtradbClusterKind,
+		},
+		ObjectMeta: meta.ObjectMeta{
+			Name: params.Name,
+		},
+	}
+	return c.kubeCtl.Delete(ctx, res)
+}
+
+// CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
+func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params CreatePSMDBParams) error {
+	res := &psmdb.PerconaServerMongoDB{
+		TypeMeta: meta.TypeMeta{
+			APIVersion: "psmdb.percona.com/v1",
+			Kind:       perconaServerMongoDBKind,
+		},
+		ObjectMeta: meta.ObjectMeta{
+			Name: params.Name,
+		},
+		Spec: psmdb.PerconaServerMongoDBSpec{
+			Mongod: &psmdb.MongodSpec{
+				Net: &psmdb.MongodSpecNet{
+					Port: 27017,
+				},
+				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
+					Mode:              psmdb.OperationProfilingModeSlowOp,
+					SlowOpThresholdMs: 100,
+					RateLimit:         1,
+				},
+				Security: &psmdb.MongodSpecSecurity{
+					RedactClientLogData: false,
+					EnableEncryption:    pointer.ToBool(true),
+				},
+				SetParameter: &psmdb.MongodSpecSetParameter{
+					TTLMonitorSleepSecs:                   60,
+					WiredTigerConcurrentReadTransactions:  128,
+					WiredTigerConcurrentWriteTransactions: 128,
+				},
+				Storage: &psmdb.MongodSpecStorage{
+					Engine: psmdb.StorageEngineWiredTiger,
+					InMemory: &psmdb.MongodSpecInMemory{
+						EngineConfig: &psmdb.MongodSpecInMemoryEngineConfig{
+							InMemorySizeRatio: 0.9,
+						}},
+					MMAPv1: &psmdb.MongodSpecMMAPv1{
+						NsSize:     16,
+						Smallfiles: false,
+					},
+					WiredTiger: &psmdb.MongodSpecWiredTiger{
+						CollectionConfig: &psmdb.MongodSpecWiredTigerCollectionConfig{
+							BlockCompressor: &psmdb.WiredTigerCompressorSnappy,
+						},
+						EngineConfig: &psmdb.MongodSpecWiredTigerEngineConfig{
+							CacheSizeRatio:      0.5,
+							DirectoryForIndexes: false,
+							JournalCompressor:   &psmdb.WiredTigerCompressorSnappy,
+						},
+						IndexConfig: &psmdb.MongodSpecWiredTigerIndexConfig{
+							PrefixCompression: true,
+						},
+					},
+				},
 			},
-			ObjectMeta: meta.ObjectMeta{
-				Name: params.Name,
+			Replsets: []*psmdb.ReplsetSpec{
+				{
+					Name: "rs0",
+					Resources: &psmdb.ResourcesSpec{
+						Limits: &psmdb.ResourceSpecRequirements{
+							CPU:    "500m",
+							Memory: "0.5G",
+						},
+						Requests: &psmdb.ResourceSpecRequirements{
+							CPU:    "100m",
+							Memory: "0.1G",
+						},
+					},
+					Size: params.Size,
+					VolumeSpec: &psmdb.VolumeSpec{
+						PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
+							Resources: core.ResourceRequirements{
+								Requests: core.ResourceList{
+									core.ResourceStorage: resource.MustParse("1Gi"),
+								},
+							},
+						},
+					},
+					MultiAZ: psmdb.MultiAZ{Affinity: &psmdb.PodAffinity{
+						TopologyKey: pointer.ToString(psmdb.AffinityOff),
+					}},
+				},
 			},
-		}
-	default:
-		return errors.New("unexpected cluster kind")
+
+			PMM: psmdb.PMMSpec{
+				Enabled: false,
+			},
+		},
+	}
+	return c.kubeCtl.Apply(ctx, res)
+}
+
+// UpdatePSMDBCluster changes size of provided percona server for mongodb cluster.
+func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params UpdatePSMDBParams) error {
+	var cluster psmdb.PerconaServerMongoDB
+	err := c.kubeCtl.Get(ctx, perconaXtradbClusterKind, params.Name, &cluster)
+	if err != nil {
+		return err
+	}
+
+	for i := range cluster.Spec.Replsets {
+		cluster.Spec.Replsets[i].Size = params.Size
+	}
+
+	return c.kubeCtl.Apply(ctx, &cluster)
+}
+
+// DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
+func (c *K8Client) DeletePSMDBCluster(ctx context.Context, params DeleteParams) error {
+	res := &psmdb.PerconaServerMongoDB{
+		TypeMeta: meta.TypeMeta{
+			APIVersion: "psmdb.percona.com/v1",
+			Kind:       perconaServerMongoDBKind,
+		},
+		ObjectMeta: meta.ObjectMeta{
+			Name: params.Name,
+		},
 	}
 	return c.kubeCtl.Delete(ctx, res)
 }
@@ -255,6 +357,7 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]Cluster, err
 		val := Cluster{
 			Name:   cluster.Name,
 			Status: string(cluster.Status.Status),
+			Kind:   perconaXtradbClusterKind,
 			Size:   cluster.Spec.ProxySQL.Size,
 		}
 		res[i] = val
@@ -262,7 +365,7 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]Cluster, err
 	return res, nil
 }
 
-// getPSMDBClusters returns Percona Server MongoDB clusters.
+// getPSMDBClusters returns Percona Server for MongoDB clusters.
 func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]Cluster, error) {
 	//var list meta.List
 	//err := c.kubeCtl.Get(ctx, perconaServerMongoDBKind, "", &list)
@@ -279,6 +382,7 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]Cluster, error) {
 	//	val := Cluster{
 	//		Name:   cluster.Name,
 	//		Status: string(cluster.Status.Status),
+	//		Kind:   perconaServerMongoDBKind,
 	//		Size:   cluster.Spec.Replsets[0].Size,
 	//	}
 	//	res[i] = val
@@ -311,15 +415,20 @@ func (c *K8Client) getDeletingClusters(ctx context.Context, runningClusters []Cl
 			continue
 		}
 
+		var kind string
 		deploymentName := pod.Labels["app.kubernetes.io/name"]
 		switch deploymentName {
-		case "percona-xtradb-cluster", "psmdb-cluster":
+		case "percona-xtradb-cluster":
+			kind = perconaXtradbClusterKind
+		case "psmdb-cluster":
+			kind = perconaServerMongoDBKind
 		default:
 			continue
 		}
 
 		cluster := Cluster{
 			Status: "deleting",
+			Kind:   kind,
 			Name:   clusterName,
 		}
 		res = append(res, cluster)
