@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/AlekSi/pointer"
-	psmdb "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
+	_ "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1" // It'll be implemented later.
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
@@ -47,18 +47,6 @@ type CreateXtraDBParams struct {
 
 // UpdateXtraDBParams contains all parameters required to update percona xtradb cluster.
 type UpdateXtraDBParams struct {
-	Name string
-	Size int32
-}
-
-// CreatePSMDBParams contains all parameters required to create percona server for mongodb cluster.
-type CreatePSMDBParams struct {
-	Name string
-	Size int32
-}
-
-// UpdatePSMDBParams contains all parameters required to update percona server for mongodb cluster.
-type UpdatePSMDBParams struct {
 	Name string
 	Size int32
 }
@@ -198,126 +186,6 @@ func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, params DeleteParams)
 	return c.kubeCtl.Delete(ctx, res)
 }
 
-// CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
-func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params CreatePSMDBParams) error {
-	res := &psmdb.PerconaServerMongoDB{
-		TypeMeta: meta.TypeMeta{
-			APIVersion: "psmdb.percona.com/v1",
-			Kind:       perconaServerMongoDBKind,
-		},
-		ObjectMeta: meta.ObjectMeta{
-			Name: params.Name,
-		},
-		Spec: psmdb.PerconaServerMongoDBSpec{
-			Mongod: &psmdb.MongodSpec{
-				Net: &psmdb.MongodSpecNet{
-					Port: 27017,
-				},
-				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
-					Mode:              psmdb.OperationProfilingModeSlowOp,
-					SlowOpThresholdMs: 100,
-					RateLimit:         1,
-				},
-				Security: &psmdb.MongodSpecSecurity{
-					RedactClientLogData: false,
-					EnableEncryption:    pointer.ToBool(true),
-				},
-				SetParameter: &psmdb.MongodSpecSetParameter{
-					TTLMonitorSleepSecs:                   60,
-					WiredTigerConcurrentReadTransactions:  128,
-					WiredTigerConcurrentWriteTransactions: 128,
-				},
-				Storage: &psmdb.MongodSpecStorage{
-					Engine: psmdb.StorageEngineWiredTiger,
-					InMemory: &psmdb.MongodSpecInMemory{
-						EngineConfig: &psmdb.MongodSpecInMemoryEngineConfig{
-							InMemorySizeRatio: 0.9,
-						}},
-					MMAPv1: &psmdb.MongodSpecMMAPv1{
-						NsSize:     16,
-						Smallfiles: false,
-					},
-					WiredTiger: &psmdb.MongodSpecWiredTiger{
-						CollectionConfig: &psmdb.MongodSpecWiredTigerCollectionConfig{
-							BlockCompressor: &psmdb.WiredTigerCompressorSnappy,
-						},
-						EngineConfig: &psmdb.MongodSpecWiredTigerEngineConfig{
-							CacheSizeRatio:      0.5,
-							DirectoryForIndexes: false,
-							JournalCompressor:   &psmdb.WiredTigerCompressorSnappy,
-						},
-						IndexConfig: &psmdb.MongodSpecWiredTigerIndexConfig{
-							PrefixCompression: true,
-						},
-					},
-				},
-			},
-			Replsets: []*psmdb.ReplsetSpec{
-				{
-					Name: "rs0",
-					Resources: &psmdb.ResourcesSpec{
-						Limits: &psmdb.ResourceSpecRequirements{
-							CPU:    "500m",
-							Memory: "0.5G",
-						},
-						Requests: &psmdb.ResourceSpecRequirements{
-							CPU:    "100m",
-							Memory: "0.1G",
-						},
-					},
-					Size: params.Size,
-					VolumeSpec: &psmdb.VolumeSpec{
-						PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
-							Resources: core.ResourceRequirements{
-								Requests: core.ResourceList{
-									core.ResourceStorage: resource.MustParse("1Gi"),
-								},
-							},
-						},
-					},
-					MultiAZ: psmdb.MultiAZ{Affinity: &psmdb.PodAffinity{
-						TopologyKey: pointer.ToString(psmdb.AffinityOff),
-					}},
-				},
-			},
-
-			PMM: psmdb.PMMSpec{
-				Enabled: false,
-			},
-		},
-	}
-	return c.kubeCtl.Apply(ctx, res)
-}
-
-// UpdatePSMDBCluster changes size of provided percona server for mongodb cluster.
-func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params UpdatePSMDBParams) error {
-	var cluster psmdb.PerconaServerMongoDB
-	err := c.kubeCtl.Get(ctx, perconaXtradbClusterKind, params.Name, &cluster)
-	if err != nil {
-		return err
-	}
-
-	for i := range cluster.Spec.Replsets {
-		cluster.Spec.Replsets[i].Size = params.Size
-	}
-
-	return c.kubeCtl.Apply(ctx, &cluster)
-}
-
-// DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
-func (c *K8Client) DeletePSMDBCluster(ctx context.Context, params DeleteParams) error {
-	res := &psmdb.PerconaServerMongoDB{
-		TypeMeta: meta.TypeMeta{
-			APIVersion: "psmdb.percona.com/v1",
-			Kind:       perconaServerMongoDBKind,
-		},
-		ObjectMeta: meta.ObjectMeta{
-			Name: params.Name,
-		},
-	}
-	return c.kubeCtl.Delete(ctx, res)
-}
-
 // ListClusters returns list of clusters and their statuses.
 func (c *K8Client) ListClusters(ctx context.Context) ([]Cluster, error) {
 	perconaXtraDBClusters, err := c.getPerconaXtraDBClusters(ctx)
@@ -325,17 +193,13 @@ func (c *K8Client) ListClusters(ctx context.Context) ([]Cluster, error) {
 		return nil, err
 	}
 
-	perconaServerMongoDBClusters, err := c.getPSMDBClusters(ctx)
-	if err != nil {
-		return nil, err
-	}
-	res := append(perconaXtraDBClusters, perconaServerMongoDBClusters...)
+	// TODO: get PSMDB clusters.
 
 	deletingClusters, err := c.getDeletingClusters(ctx, perconaXtraDBClusters)
 	if err != nil {
 		return nil, err
 	}
-	res = append(res, deletingClusters...)
+	res := append(perconaXtraDBClusters, deletingClusters...)
 
 	return res, nil
 }
@@ -362,31 +226,6 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]Cluster, err
 		}
 		res[i] = val
 	}
-	return res, nil
-}
-
-// getPSMDBClusters returns Percona Server for MongoDB clusters.
-func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]Cluster, error) {
-	//var list meta.List
-	//err := c.kubeCtl.Get(ctx, perconaServerMongoDBKind, "", &list)
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "couldn't get percona server MongoDB clusters")
-	//}
-
-	res := make([]Cluster, 0)
-	//for i, item := range list.Items {
-	//	var cluster psmdb.PerconaServerMongoDB
-	//	if err := json.Unmarshal(item.Raw, &cluster); err != nil {
-	//		return nil, err
-	//	}
-	//	val := Cluster{
-	//		Name:   cluster.Name,
-	//		Status: string(cluster.Status.Status),
-	//		Kind:   perconaServerMongoDBKind,
-	//		Size:   cluster.Spec.Replsets[0].Size,
-	//	}
-	//	res[i] = val
-	//}
 	return res, nil
 }
 
