@@ -18,8 +18,6 @@ package k8sclient
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
 	"testing"
 	"time"
 
@@ -30,12 +28,13 @@ import (
 )
 
 func TestK8Client(t *testing.T) {
+	logger.SetupGlobal()
 	l := logger.NewLogger()
 	ctx := context.TODO()
 
 	client := NewK8Client(l)
 
-	name := fmt.Sprintf("test-cluster-%d", rand.Int31())
+	name := "test-cluster"
 	deleteParams := DeleteClusterParams{
 		Name: name,
 	}
