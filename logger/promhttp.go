@@ -25,7 +25,7 @@ type PromHTTP struct {
 	L Logger
 }
 
-func (p *PromHTTP) Println(args ...interface{}) { p.L.Info(args...) } // nolint:golint
+func (p *PromHTTP) Println(args ...interface{}) { p.L.Info(args...) } //nolint:golint
 
 // check interfaces.
 var (
