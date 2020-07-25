@@ -17,9 +17,10 @@
 package dbaascontroller
 
 import (
+	"bytes"
 	"fmt"
 	"go/build"
-	"os"
+	"io/ioutil"
 	"sort"
 	"strings"
 	"testing"
@@ -51,24 +52,10 @@ func TestImports(t *testing.T) {
 
 	allImports := make(map[string]map[string]struct{})
 	for path, c := range constraints {
-		p, err := build.Import(path, ".", 0)
-		require.NoError(t, err)
-
-		if allImports[path] == nil {
-			allImports[path] = make(map[string]struct{})
-		}
-		for _, i := range p.Imports {
-			allImports[path][i] = struct{}{}
-		}
-		for _, i := range p.TestImports {
-			allImports[path][i] = struct{}{}
-		}
-		for _, i := range p.XTestImports {
-			allImports[path][i] = struct{}{}
-		}
+		imports := packageImports(t, path)
 
 		for _, b := range c.blacklistPrefixes {
-			for i := range allImports[path] {
+			for i := range imports {
 				// whitelist own subpackages
 				if strings.HasPrefix(i, path) {
 					continue
@@ -80,13 +67,39 @@ func TestImports(t *testing.T) {
 				}
 			}
 		}
+
+		allImports[path] = imports
 	}
 
-	f, err := os.Create("packages.dot")
+	err := ioutil.WriteFile("packages.dot", graph(allImports), 0644) //nolint:gosec
 	require.NoError(t, err)
-	defer func() { require.NoError(t, f.Close()) }()
+}
 
-	fmt.Fprintf(f, "digraph packages {\n")
+// packageImports returns all packages imported by a given package (non-recursively).
+func packageImports(t *testing.T, path string) map[string]struct{} {
+	p, err := build.Import(path, ".", 0)
+	require.NoError(t, err)
+
+	res := make(map[string]struct{})
+
+	for _, i := range p.Imports {
+		res[i] = struct{}{}
+	}
+	for _, i := range p.TestImports {
+		res[i] = struct{}{}
+	}
+	for _, i := range p.XTestImports {
+		res[i] = struct{}{}
+	}
+
+	return res
+}
+
+// graph returns a Graphviz dot dependency graph for given imports
+// with some nodes and edges removed for simplicity.
+func graph(allImports map[string]map[string]struct{}) []byte {
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "digraph packages {\n")
 
 	packages := make([]string, 0, len(allImports))
 	for p := range allImports {
@@ -111,10 +124,11 @@ func TestImports(t *testing.T) {
 			}
 			if strings.HasPrefix(i, "github.com/percona-platform/dbaas-controller") {
 				i = strings.TrimPrefix(i, "github.com/percona-platform/dbaas-controller")
-				fmt.Fprintf(f, "\t%q -> %q;\n", p, i)
+				fmt.Fprintf(&buf, "\t%q -> %q;\n", p, i)
 			}
 		}
 	}
 
-	fmt.Fprintf(f, "}\n")
+	fmt.Fprintf(&buf, "}\n")
+	return buf.Bytes()
 }
