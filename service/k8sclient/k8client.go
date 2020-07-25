@@ -43,21 +43,10 @@ const (
 	pxcBackupStorageName = "test-backup-storage"
 )
 
-// CreateXtraDBParams contains all parameters required to create percona xtradb cluster.
-type CreateXtraDBParams struct {
+// XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
+type XtraDBParams struct {
 	Name string
 	Size int32
-}
-
-// UpdateXtraDBParams contains all parameters required to update percona xtradb cluster.
-type UpdateXtraDBParams struct {
-	Name string
-	Size int32
-}
-
-// DeleteClusterParams contains all parameters required to delete cluster.
-type DeleteClusterParams struct {
-	Name string
 }
 
 // Cluster contains information related to cluster.
@@ -80,8 +69,8 @@ type K8Client struct {
 	kubeCtl *kubeCtl
 }
 
-// CreateXtraDBCluster creates percona xtradb cluster with provided parameters.
-func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params CreateXtraDBParams) error {
+// CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
+func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: meta.TypeMeta{
 			APIVersion: "pxc.percona.com/v1-4-0",
@@ -162,8 +151,8 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params CreateXtraDBP
 	return c.kubeCtl.apply(ctx, res)
 }
 
-// UpdateXtraDBCluster changes size of provided percona xtradb cluster.
-func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params UpdateXtraDBParams) error {
+// UpdateXtraDBCluster changes size of provided Percona XtraDB cluster.
+func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
 	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.get(ctx, string(perconaXtradbClusterKind), params.Name, &cluster)
 	if err != nil {
@@ -176,15 +165,15 @@ func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params UpdateXtraDBP
 	return c.kubeCtl.apply(ctx, &cluster)
 }
 
-// DeleteXtraDBCluster deletes percona xtradb cluster with provided name.
-func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, params DeleteClusterParams) error {
+// DeleteXtraDBCluster deletes Percona XtraDB cluster with provided name.
+func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, name string) error {
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: meta.TypeMeta{
 			APIVersion: "pxc.percona.com/v1-4-0",
 			Kind:       string(perconaXtradbClusterKind),
 		},
 		ObjectMeta: meta.ObjectMeta{
-			Name: params.Name,
+			Name: name,
 		},
 	}
 	return c.kubeCtl.delete(ctx, res)
@@ -208,12 +197,12 @@ func (c *K8Client) ListClusters(ctx context.Context) ([]Cluster, error) {
 	return res, nil
 }
 
-// getPerconaXtraDBClusters returns percona xtradb clusters.
+// getPerconaXtraDBClusters returns Percona XtraDB clusters.
 func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]Cluster, error) {
 	var list meta.List
 	err := c.kubeCtl.get(ctx, string(perconaXtradbClusterKind), "", &list)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get percona xtradb clusters")
+		return nil, errors.Wrap(err, "couldn't get Percona XtraDB clusters")
 	}
 
 	res := make([]Cluster, len(list.Items))
@@ -233,7 +222,7 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]Cluster, err
 	return res, nil
 }
 
-// getDeletingClusters returns percona xtradb clusters which are not fully deleted yet.
+// getDeletingClusters returns Percona XtraDB clusters which are not fully deleted yet.
 func (c *K8Client) getDeletingClusters(ctx context.Context, runningClusters []Cluster) ([]Cluster, error) {
 	var list meta.List
 	err := c.kubeCtl.get(ctx, "pods", "", &list)
