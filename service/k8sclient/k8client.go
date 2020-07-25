@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/percona-platform/dbaas-controller/service/kubectl"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 

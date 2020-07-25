@@ -20,11 +20,13 @@ package cluster
 import (
 	"context"
 
+	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // Service implements methods of gRPC server and other business logic.
@@ -39,6 +41,9 @@ func New(p *message.Printer) *Service {
 
 // ListXtraDBClusters returns a list of XtraDB clusters.
 func (s *Service) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1.ListXtraDBClustersRequest) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
+	client := k8sclient.NewK8Client(logger.Get(ctx))
+	defer client.Cleanup()
+
 	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("not implemented"))
 }
 

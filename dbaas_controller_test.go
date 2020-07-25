@@ -36,10 +36,17 @@ func TestImports(t *testing.T) {
 	constraints := make(map[string]constraint)
 
 	// kubectl should not import Operator-specific APIs
-	constraints["github.com/percona-platform/dbaas-controller/service/kubectl"] = constraint{
+	constraints["github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"] = constraint{
 		blacklistPrefixes: []string{
 			"github.com/percona/percona-server-mongodb-operator/pkg/apis",
 			"github.com/percona/percona-xtradb-cluster-operator/pkg/apis",
+		},
+	}
+
+	// client should not import cluster
+	constraints["github.com/percona-platform/dbaas-controller/service/k8sclient"] = constraint{
+		blacklistPrefixes: []string{
+			"github.com/percona-platform/dbaas-controller/service/cluster",
 		},
 	}
 
@@ -71,7 +78,7 @@ func TestImports(t *testing.T) {
 		allImports[path] = imports
 	}
 
-	err := ioutil.WriteFile("packages.dot", graph(allImports), 0644) //nolint:gosec
+	err := ioutil.WriteFile("packages.dot", graph(allImports), 0o644) //nolint:gosec
 	require.NoError(t, err)
 }
 
@@ -118,14 +125,17 @@ func graph(allImports map[string]map[string]struct{}) []byte {
 		if p == "" {
 			p = "/"
 		}
+
 		for _, i := range imports {
 			if strings.Contains(i, "/utils/") {
 				continue
 			}
-			if strings.HasPrefix(i, "github.com/percona-platform/dbaas-controller") {
-				i = strings.TrimPrefix(i, "github.com/percona-platform/dbaas-controller")
-				fmt.Fprintf(&buf, "\t%q -> %q;\n", p, i)
+			if !strings.HasPrefix(i, "github.com/percona-platform/dbaas-controller") {
+				continue
 			}
+
+			i = strings.TrimPrefix(i, "github.com/percona-platform/dbaas-controller")
+			fmt.Fprintf(&buf, "\t%q -> %q;\n", p, i)
 		}
 	}
 
