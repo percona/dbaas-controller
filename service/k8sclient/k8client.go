@@ -29,8 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/percona-platform/dbaas-controller/logger"
 	"github.com/percona-platform/dbaas-controller/service/kubectl"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // ClusterKind is a kind of a cluster.

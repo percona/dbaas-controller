@@ -1,3 +1,2 @@
 digraph packages {
-	"/service/kubectl" -> "/logger";
 }

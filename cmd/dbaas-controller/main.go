@@ -26,9 +26,9 @@ import (
 
 	"github.com/percona-platform/dbaas-controller/app"
 	_ "github.com/percona-platform/dbaas-controller/catalog"
-	"github.com/percona-platform/dbaas-controller/logger"
 	"github.com/percona-platform/dbaas-controller/servers"
 	"github.com/percona-platform/dbaas-controller/service/cluster"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 func main() {

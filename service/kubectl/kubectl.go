@@ -29,7 +29,7 @@ import (
 	"golang.org/x/sys/unix"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/percona-platform/dbaas-controller/logger"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // errNotFound is an error in case of object not found.
