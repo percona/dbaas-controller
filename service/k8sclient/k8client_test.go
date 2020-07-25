@@ -45,7 +45,7 @@ func TestK8Client(t *testing.T) {
 		if findCluster(clusters, name) == nil {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
 	err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
@@ -60,7 +60,7 @@ func TestK8Client(t *testing.T) {
 		if cluster := findCluster(clusters, name); cluster != nil && cluster.Status == "ready" {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
 	err = client.UpdateXtraDBCluster(ctx, &XtraDBParams{
@@ -77,7 +77,7 @@ func TestK8Client(t *testing.T) {
 			assert.Equal(t, int32(3), cluster.Size)
 			break
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
 	err = client.DeleteXtraDBCluster(ctx, name)
@@ -89,7 +89,7 @@ func TestK8Client(t *testing.T) {
 		if findCluster(clusters, name) == nil {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 	clusters, err := client.ListClusters(ctx)
 	require.NoError(t, err)
