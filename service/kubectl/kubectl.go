@@ -45,7 +45,9 @@ type KubeCtl struct {
 func NewKubeCtl(l logger.Logger) *KubeCtl {
 	// TODO accept and handle version
 	// TODO find correct kubectl binary for given version
+
 	// TODO accept and handle kubeconfig
+	// https://jira.percona.com/browse/PMM-6347
 
 	cmd := []string{"dbaas-kubectl-1.16"}
 	path, err := exec.LookPath(cmd[0])
