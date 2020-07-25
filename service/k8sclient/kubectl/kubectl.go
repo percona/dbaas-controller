@@ -102,6 +102,7 @@ func (k *KubeCtl) Delete(ctx context.Context, res meta.Object) error {
 // and returns stdout, stderr and execution error.
 func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]byte, []byte, error) {
 	args = append(k.cmd, args...)
+	argsString := strings.Join(args, " ")
 
 	var inBuf bytes.Buffer
 	if stdin != nil {
@@ -110,9 +111,9 @@ func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]
 		if err := e.Encode(stdin); err != nil {
 			return nil, nil, err
 		}
-		k.l.Debugf("Running %s with input:\n%s", strings.Join(args, " "), inBuf.String())
+		k.l.Debugf("Running %s with input:\n%s", argsString, inBuf.String())
 	} else {
-		k.l.Debugf("Running %s", strings.Join(args, " "))
+		k.l.Debugf("Running %s", argsString)
 	}
 
 	var outBuf bytes.Buffer
@@ -123,6 +124,13 @@ func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
 	err := cmd.Run()
+	if err != nil {
+		err = &kubeCtlError{
+			err:    errors.WithStack(err),
+			cmd:    argsString,
+			stderr: errBuf.String(),
+		}
+	}
 
 	k.l.Debugf(outBuf.String()) // FIXME
 	k.l.Debugf(errBuf.String())

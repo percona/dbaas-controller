@@ -36,7 +36,7 @@ import (
 // ClusterKind is a kind of a cluster.
 type ClusterKind string
 
-const perconaXtraDBClusterKind = ClusterKind("percona-xtradb-cluster")
+const perconaXtraDBClusterKind = ClusterKind("PerconaXtraDBCluster")
 
 const (
 	pxcBackupImage       = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0-backup"
@@ -253,9 +253,10 @@ func (c *K8Client) getDeletingClusters(ctx context.Context, runningClusters []Cl
 			continue
 		}
 
-		kind := ClusterKind(pod.Labels["app.kubernetes.io/name"])
-		switch kind {
-		case perconaXtraDBClusterKind:
+		var kind ClusterKind
+		switch pod.Labels["app.kubernetes.io/managed-by"] {
+		case "percona-xtradb-cluster-operator":
+			kind = perconaXtraDBClusterKind
 		default:
 			continue
 		}
