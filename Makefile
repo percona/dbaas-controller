@@ -33,7 +33,7 @@ init:                             ## Install development tools
 	go build -o bin/check-license ./.github/check-license.go
 
 	go build -modfile=tools/go.mod -o bin/go-consistent github.com/quasilyte/go-consistent
-	go build -modfile=tools/go.mod -o bin/goimports golang.org/x/tools/cmd/goimports
+	go build -modfile=tools/go.mod -o bin/gofumports mvdan.cc/gofumpt/gofumports
 	go build -modfile=tools/go.mod -o bin/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
 	go build -modfile=tools/go.mod -o bin/gotext golang.org/x/text/cmd/gotext
 	go build -modfile=tools/go.mod -o bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
@@ -47,7 +47,7 @@ gen:                              ## Generate code
 
 format:                           ## Format source code
 	gofmt -w -s .
-	bin/goimports -local github.com/percona-platform/dbaas-controller -l -w .
+	bin/gofumports -local github.com/percona-platform/dbaas-controller -l -w .
 
 check:                            ## Run checks/linters for the whole project
 	bin/check-license
