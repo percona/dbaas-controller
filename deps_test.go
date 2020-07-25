@@ -42,6 +42,13 @@ func TestImports(t *testing.T) {
 		},
 	}
 
+	// cluster should not import kubectl
+	constraints["github.com/percona-platform/dbaas-controller/service/cluster"] = constraint{
+		blacklistPrefixes: []string{
+			"github.com/percona-platform/dbaas-controller/service/kubectl",
+		},
+	}
+
 	allImports := make(map[string]map[string]struct{})
 	for path, c := range constraints {
 		p, err := build.Import(path, ".", 0)

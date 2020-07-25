@@ -33,6 +33,7 @@ func TestK8Client(t *testing.T) {
 	ctx := context.TODO()
 
 	client := NewK8Client(l)
+	t.Cleanup(client.Cleanup)
 
 	name := "test-cluster"
 	_ = client.DeleteXtraDBCluster(ctx, name)

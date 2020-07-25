@@ -1,5 +1,3 @@
 digraph packages {
-	"/service/k8sclient" -> "/logger";
-	"/service/k8sclient" -> "/service/kubectl";
 	"/service/kubectl" -> "/logger";
 }

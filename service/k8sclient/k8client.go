@@ -58,6 +58,11 @@ type Cluster struct {
 	Status string
 }
 
+// K8Client is a client for Kubernetes.
+type K8Client struct {
+	kubeCtl *kubectl.KubeCtl
+}
+
 // NewK8Client returns new K8Client object.
 func NewK8Client(logger logger.Logger) *K8Client {
 	return &K8Client{
@@ -65,9 +70,9 @@ func NewK8Client(logger logger.Logger) *K8Client {
 	}
 }
 
-// K8Client is a client for Kubernetes.
-type K8Client struct {
-	kubeCtl *kubectl.KubeCtl
+// Cleanup removes temporary files created by that object.
+func (c *K8Client) Cleanup() {
+	c.kubeCtl.Cleanup()
 }
 
 // ListClusters returns list of clusters and their statuses.

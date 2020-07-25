@@ -43,12 +43,9 @@ type KubeCtl struct {
 
 // NewKubeCtl creates a new KubeCtl object with a given logger.
 func NewKubeCtl(l logger.Logger) *KubeCtl {
-	// TODO accept and handle version
-	// TODO find correct kubectl binary for given version
-	// https://jira.percona.com/browse/PMM-6348
+	// TODO Handle kubectl versions https://jira.percona.com/browse/PMM-6348
 
-	// TODO accept and handle kubeconfig
-	// https://jira.percona.com/browse/PMM-6347
+	// TODO Handle kubeconfig https://jira.percona.com/browse/PMM-6347
 
 	cmd := []string{"dbaas-kubectl-1.16"}
 	path, err := exec.LookPath(cmd[0])
@@ -64,35 +61,9 @@ func NewKubeCtl(l logger.Logger) *KubeCtl {
 	}
 }
 
-// run executes kubectl with given arguments and stdin data (encoded as JSON),
-// and returns stdout, stderr and execution error.
-func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]byte, []byte, error) {
-	args = append(k.cmd, args...)
-
-	var inBuf bytes.Buffer
-	if stdin != nil {
-		e := json.NewEncoder(&inBuf)
-		e.SetIndent("", "  ")
-		if err := e.Encode(stdin); err != nil {
-			return nil, nil, err
-		}
-		k.l.Debugf("Running %s with input:\n%s", strings.Join(args, " "), inBuf.String())
-	} else {
-		k.l.Debugf("Running %s", strings.Join(args, " "))
-	}
-
-	var outBuf bytes.Buffer
-	var errBuf bytes.Buffer
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...) //nolint:gosec
-	pdeathsig.Set(cmd, unix.SIGKILL)
-	cmd.Stdin = &inBuf
-	cmd.Stdout = &outBuf
-	cmd.Stderr = &errBuf
-	err := cmd.Run()
-
-	k.l.Debugf(outBuf.String()) // FIXME
-	k.l.Debugf(errBuf.String())
-	return outBuf.Bytes(), errBuf.Bytes(), err
+// Cleanup removes temporary files created by that object.
+func (k *KubeCtl) Cleanup() {
+	// TODO Remove kubeconfig file https://jira.percona.com/browse/PMM-6347
 }
 
 // Get executes `kubectl get` with given object kind and optional name,
@@ -125,4 +96,35 @@ func (k *KubeCtl) Apply(ctx context.Context, res meta.Object) error {
 func (k *KubeCtl) Delete(ctx context.Context, res meta.Object) error {
 	_, _, err := k.run(ctx, []string{"delete", "-f", "-"}, res)
 	return err
+}
+
+// run executes kubectl with given arguments and stdin data (encoded as JSON),
+// and returns stdout, stderr and execution error.
+func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]byte, []byte, error) {
+	args = append(k.cmd, args...)
+
+	var inBuf bytes.Buffer
+	if stdin != nil {
+		e := json.NewEncoder(&inBuf)
+		e.SetIndent("", "  ")
+		if err := e.Encode(stdin); err != nil {
+			return nil, nil, err
+		}
+		k.l.Debugf("Running %s with input:\n%s", strings.Join(args, " "), inBuf.String())
+	} else {
+		k.l.Debugf("Running %s", strings.Join(args, " "))
+	}
+
+	var outBuf bytes.Buffer
+	var errBuf bytes.Buffer
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...) //nolint:gosec
+	pdeathsig.Set(cmd, unix.SIGKILL)
+	cmd.Stdin = &inBuf
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
+	err := cmd.Run()
+
+	k.l.Debugf(outBuf.String()) // FIXME
+	k.l.Debugf(errBuf.String())
+	return outBuf.Bytes(), errBuf.Bytes(), err
 }
