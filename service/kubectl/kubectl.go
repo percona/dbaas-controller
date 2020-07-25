@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package k8sclient
+// Package kubectl provides kubectl CLI wrapper.
+package kubectl
 
 import (
 	"bytes"
@@ -34,14 +35,14 @@ import (
 // errNotFound is an error in case of object not found.
 var errNotFound = errors.New("object not found")
 
-// kubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
-type kubeCtl struct {
+// KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
+type KubeCtl struct {
 	l   logger.Logger
 	cmd []string
 }
 
-// newKubeCtl creates a new kubeCtl object with a given logger.
-func newKubeCtl(l logger.Logger) *kubeCtl {
+// NewKubeCtl creates a new KubeCtl object with a given logger.
+func NewKubeCtl(l logger.Logger) *KubeCtl {
 	// TODO accept and handle version
 	// TODO find correct kubectl binary for given version
 	// TODO accept and handle kubeconfig
@@ -54,7 +55,7 @@ func newKubeCtl(l logger.Logger) *kubeCtl {
 	}
 	l.Debugf("Using %q", strings.Join(cmd, " "))
 
-	return &kubeCtl{
+	return &KubeCtl{
 		l:   l.WithField("component", "kubectl"),
 		cmd: cmd,
 	}
@@ -62,7 +63,7 @@ func newKubeCtl(l logger.Logger) *kubeCtl {
 
 // run executes kubectl with given arguments and stdin data (encoded as JSON),
 // and returns stdout, stderr and execution error.
-func (k *kubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]byte, []byte, error) {
+func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]byte, []byte, error) {
 	args = append(k.cmd, args...)
 
 	var inBuf bytes.Buffer
@@ -91,22 +92,10 @@ func (k *kubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]
 	return outBuf.Bytes(), errBuf.Bytes(), err
 }
 
-// apply executes `kubectl apply` with given resource.
-func (k *kubeCtl) apply(ctx context.Context, res meta.Object) error {
-	_, _, err := k.run(ctx, []string{"apply", "-f", "-"}, res)
-	return err
-}
-
-// delete executes `kubectl delete` with given resource.
-func (k *kubeCtl) delete(ctx context.Context, res meta.Object) error {
-	_, _, err := k.run(ctx, []string{"delete", "-f", "-"}, res)
-	return err
-}
-
-// get executes `kubectl get` with given object kind and optional name,
+// Get executes `kubectl get` with given object kind and optional name,
 // and decodes resource into `res`.
 // It returns `errNotFound` if object is not found.
-func (k *kubeCtl) get(ctx context.Context, kind string, name string, res interface{}) error {
+func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interface{}) error {
 	args := []string{"get", "-o=json", kind}
 	if name != "" {
 		args = append(args, name)
@@ -121,4 +110,16 @@ func (k *kubeCtl) get(ctx context.Context, kind string, name string, res interfa
 	}
 
 	return json.Unmarshal(stdout, res)
+}
+
+// Apply executes `kubectl apply` with given resource.
+func (k *KubeCtl) Apply(ctx context.Context, res meta.Object) error {
+	_, _, err := k.run(ctx, []string{"apply", "-f", "-"}, res)
+	return err
+}
+
+// Delete executes `kubectl delete` with given resource.
+func (k *KubeCtl) Delete(ctx context.Context, res meta.Object) error {
+	_, _, err := k.run(ctx, []string{"delete", "-f", "-"}, res)
+	return err
 }

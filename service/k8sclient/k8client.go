@@ -30,6 +30,7 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/percona-platform/dbaas-controller/logger"
+	"github.com/percona-platform/dbaas-controller/service/kubectl"
 )
 
 // ClusterKind is a kind of a cluster.
@@ -60,13 +61,31 @@ type Cluster struct {
 // NewK8Client returns new K8Client object.
 func NewK8Client(logger logger.Logger) *K8Client {
 	return &K8Client{
-		kubeCtl: newKubeCtl(logger),
+		kubeCtl: kubectl.NewKubeCtl(logger),
 	}
 }
 
 // K8Client is a client for Kubernetes.
 type K8Client struct {
-	kubeCtl *kubeCtl
+	kubeCtl *kubectl.KubeCtl
+}
+
+// ListClusters returns list of clusters and their statuses.
+func (c *K8Client) ListClusters(ctx context.Context) ([]Cluster, error) {
+	perconaXtraDBClusters, err := c.getPerconaXtraDBClusters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Get PSMDB clusters.
+
+	deletingClusters, err := c.getDeletingClusters(ctx, perconaXtraDBClusters)
+	if err != nil {
+		return nil, err
+	}
+	res := append(perconaXtraDBClusters, deletingClusters...)
+
+	return res, nil
 }
 
 // CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
@@ -148,13 +167,13 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			},
 		},
 	}
-	return c.kubeCtl.apply(ctx, res)
+	return c.kubeCtl.Apply(ctx, res)
 }
 
 // UpdateXtraDBCluster changes size of provided Percona XtraDB cluster.
 func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
 	var cluster pxc.PerconaXtraDBCluster
-	err := c.kubeCtl.get(ctx, string(perconaXtradbClusterKind), params.Name, &cluster)
+	err := c.kubeCtl.Get(ctx, string(perconaXtradbClusterKind), params.Name, &cluster)
 	if err != nil {
 		return err
 	}
@@ -162,7 +181,7 @@ func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams
 	cluster.Spec.PXC.Size = params.Size
 	cluster.Spec.ProxySQL.Size = params.Size
 
-	return c.kubeCtl.apply(ctx, &cluster)
+	return c.kubeCtl.Apply(ctx, &cluster)
 }
 
 // DeleteXtraDBCluster deletes Percona XtraDB cluster with provided name.
@@ -176,31 +195,13 @@ func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, name string) error {
 			Name: name,
 		},
 	}
-	return c.kubeCtl.delete(ctx, res)
-}
-
-// ListClusters returns list of clusters and their statuses.
-func (c *K8Client) ListClusters(ctx context.Context) ([]Cluster, error) {
-	perconaXtraDBClusters, err := c.getPerconaXtraDBClusters(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: Get PSMDB clusters.
-
-	deletingClusters, err := c.getDeletingClusters(ctx, perconaXtraDBClusters)
-	if err != nil {
-		return nil, err
-	}
-	res := append(perconaXtraDBClusters, deletingClusters...)
-
-	return res, nil
+	return c.kubeCtl.Delete(ctx, res)
 }
 
 // getPerconaXtraDBClusters returns Percona XtraDB clusters.
 func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]Cluster, error) {
 	var list meta.List
-	err := c.kubeCtl.get(ctx, string(perconaXtradbClusterKind), "", &list)
+	err := c.kubeCtl.Get(ctx, string(perconaXtradbClusterKind), "", &list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get Percona XtraDB clusters")
 	}
@@ -225,7 +226,7 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]Cluster, err
 // getDeletingClusters returns Percona XtraDB clusters which are not fully deleted yet.
 func (c *K8Client) getDeletingClusters(ctx context.Context, runningClusters []Cluster) ([]Cluster, error) {
 	var list meta.List
-	err := c.kubeCtl.get(ctx, "pods", "", &list)
+	err := c.kubeCtl.Get(ctx, "pods", "", &list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
