@@ -45,6 +45,7 @@ type KubeCtl struct {
 func NewKubeCtl(l logger.Logger) *KubeCtl {
 	// TODO accept and handle version
 	// TODO find correct kubectl binary for given version
+	// https://jira.percona.com/browse/PMM-6348
 
 	// TODO accept and handle kubeconfig
 	// https://jira.percona.com/browse/PMM-6347
