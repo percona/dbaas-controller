@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package kubectl provides kubectl client.
-package kubectl
+package k8sclient
 
 import (
 	"bytes"
@@ -34,15 +33,15 @@ import (
 // errNotFound is an error in case of object not found.
 var errNotFound = errors.New("object not found")
 
-// NewKubeCtl returns new KubeCtl object.
-func NewKubeCtl(l logger.Logger) *KubeCtl {
-	return &KubeCtl{
+// newKubeCtl returns new kubeCtl object.
+func newKubeCtl(l logger.Logger) *kubeCtl {
+	return &kubeCtl{
 		l: l.WithField("component", "kubectl"),
 	}
 }
 
-// KubeCtl is a wrapper for kubectl cli command.
-type KubeCtl struct {
+// kubeCtl is a wrapper for kubectl cli command.
+type kubeCtl struct {
 	l   logger.Logger
 	cmd []string
 
@@ -50,7 +49,7 @@ type KubeCtl struct {
 }
 
 // run runs kubectl commands in cli.
-func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]byte, []byte, error) {
+func (k *kubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]byte, []byte, error) {
 	k.once.Do(k.init)
 	var stdOutBuf bytes.Buffer
 	var stdErrBuf bytes.Buffer
@@ -77,8 +76,8 @@ func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]
 	return stdOutBuf.Bytes(), stdErrBuf.Bytes(), nil
 }
 
-// Apply runs kubectl apply command.
-func (k *KubeCtl) Apply(ctx context.Context, res meta.Object) error {
+// apply runs kubectl apply command.
+func (k *kubeCtl) apply(ctx context.Context, res meta.Object) error {
 	_, _, err := k.run(ctx, []string{"apply", "-f", "-"}, res)
 	if err != nil {
 		return err
@@ -86,8 +85,8 @@ func (k *KubeCtl) Apply(ctx context.Context, res meta.Object) error {
 	return nil
 }
 
-// Delete runs kubectl delete command.
-func (k *KubeCtl) Delete(ctx context.Context, res meta.Object) error {
+// delete runs kubectl delete command.
+func (k *kubeCtl) delete(ctx context.Context, res meta.Object) error {
 	_, _, err := k.run(ctx, []string{"delete", "-f", "-"}, res)
 	if err != nil {
 		return err
@@ -95,8 +94,8 @@ func (k *KubeCtl) Delete(ctx context.Context, res meta.Object) error {
 	return nil
 }
 
-// Get runs kubectl get command and returns `errNotFound` if object not found.
-func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interface{}) error {
+// get runs kubectl get command and returns `errNotFound` if object not found.
+func (k *kubeCtl) get(ctx context.Context, kind string, name string, res interface{}) error {
 	args := []string{"get", "-o=json", kind}
 	if name != "" {
 		args = append(args, name)
@@ -113,7 +112,7 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 }
 
 // init selects available kubectl in current system.
-func (k *KubeCtl) init() {
+func (k *kubeCtl) init() {
 	cmd := []string{"dbaas-kubectl-1.16"}
 
 	path, err := exec.LookPath("dbaas-kubectl-1.16")
