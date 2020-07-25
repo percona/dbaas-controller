@@ -319,8 +319,8 @@ github.com/opencontainers/go-digest v1.0.0-rc1/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQ
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
-github.com/percona-platform/dbaas-api v0.0.0-20200709191648-a74b01cb7fc6 h1:A2+pV7tXeT9B0D4Gu5EPHvc/MlEdVJGAHZLZLi5NPgI=
-github.com/percona-platform/dbaas-api v0.0.0-20200709191648-a74b01cb7fc6/go.mod h1:cZ5vLB384umMj71NFhWEiKUnLGKtMBTLB0tkY0kqg8A=
+github.com/percona-platform/dbaas-api v0.0.0-20200717063155-bcb6c81137af h1:eLU733XKevHTdSqU0xa/SZ+mGKqxP4nFqsTHUtHZ7sg=
+github.com/percona-platform/dbaas-api v0.0.0-20200717063155-bcb6c81137af/go.mod h1:cZ5vLB384umMj71NFhWEiKUnLGKtMBTLB0tkY0kqg8A=
 github.com/percona-platform/saas v0.0.0-20200715163609-32e145816e31 h1:QQUQs0esG+z8SqFAEcCYLPdl/DuRI0XJInTrQNHMTng=
 github.com/percona-platform/saas v0.0.0-20200715163609-32e145816e31/go.mod h1:HS1CHWAhOTxuneDJE4twdEUAwllmOmNTME/IzL+jBnI=
 github.com/percona/percona-backup-mongodb v1.2.0 h1:Xihe6gsYOwBrvJQuq38tZa+y9E0xvcEgVb/4FHYstkg=
@@ -514,6 +514,8 @@ golang.org/x/sys v0.0.0-20200122134326-e047566fdf82/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200615200032-f1bc736245b1 h1:ogLJMz+qpzav7lGMh10LMvAkM/fAoGlaiiHYiFYdm80=
 golang.org/x/sys v0.0.0-20200615200032-f1bc736245b1/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20200724161237-0e2f3a69832c h1:UIcGWL6/wpCfyGuJnRFJRurA+yj8RrW7Q6x2YMCXt6c=
+golang.org/x/sys v0.0.0-20200724161237-0e2f3a69832c/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.0.0-20160726164857-2910a502d2bf/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
