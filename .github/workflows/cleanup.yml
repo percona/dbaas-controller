@@ -29,7 +29,7 @@ jobs:
         run: git config --global url."https://percona-platform-robot:${ROBOT_TOKEN}@github.com".insteadOf "https://github.com"
 
       - name: Set up Go ${{ matrix.go-version }}
-        uses: percona-platform/setup-go@v2.0.3
+        uses: percona-platform/setup-go@v2.1.1
         with:
           go-version: ${{ matrix.go-version }}
 
