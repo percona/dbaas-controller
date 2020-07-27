@@ -39,7 +39,7 @@ func TestK8Client(t *testing.T) {
 	_ = client.DeleteXtraDBCluster(ctx, name)
 
 	for {
-		clusters, err := client.ListClusters(ctx)
+		clusters, err := client.ListXtraDBClusters(ctx)
 		require.NoError(t, err)
 
 		if findCluster(clusters, name) == nil {
@@ -54,10 +54,10 @@ func TestK8Client(t *testing.T) {
 	})
 	require.NoError(t, err)
 	for {
-		clusters, err := client.ListClusters(ctx)
+		clusters, err := client.ListXtraDBClusters(ctx)
 		require.NoError(t, err)
 
-		if cluster := findCluster(clusters, name); cluster != nil && cluster.Status == "ready" {
+		if cluster := findCluster(clusters, name); cluster != nil && cluster.State == ClusterStateReady {
 			break
 		}
 		time.Sleep(5 * time.Second)
@@ -69,11 +69,11 @@ func TestK8Client(t *testing.T) {
 	})
 	require.NoError(t, err)
 	for {
-		clusters, err := client.ListClusters(ctx)
+		clusters, err := client.ListXtraDBClusters(ctx)
 		require.NoError(t, err)
 
 		cluster := findCluster(clusters, name)
-		if cluster != nil && cluster.Status == "ready" {
+		if cluster != nil && cluster.State == ClusterStateReady {
 			assert.Equal(t, int32(3), cluster.Size)
 			break
 		}
@@ -83,7 +83,7 @@ func TestK8Client(t *testing.T) {
 	err = client.DeleteXtraDBCluster(ctx, name)
 	require.NoError(t, err)
 	for {
-		clusters, err := client.ListClusters(ctx)
+		clusters, err := client.ListXtraDBClusters(ctx)
 		require.NoError(t, err)
 
 		if findCluster(clusters, name) == nil {
@@ -91,12 +91,12 @@ func TestK8Client(t *testing.T) {
 		}
 		time.Sleep(5 * time.Second)
 	}
-	clusters, err := client.ListClusters(ctx)
+	clusters, err := client.ListXtraDBClusters(ctx)
 	require.NoError(t, err)
 	assert.Nil(t, findCluster(clusters, name))
 }
 
-func findCluster(clusters []Cluster, name string) *Cluster {
+func findCluster(clusters []XtraDBCluster, name string) *XtraDBCluster {
 	for _, cluster := range clusters {
 		if cluster.Name == name {
 			return &cluster

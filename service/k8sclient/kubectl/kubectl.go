@@ -75,9 +75,9 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 		args = append(args, name)
 	}
 
-	stdout, stderr, err := k.run(ctx, args, nil)
+	stdout, err := k.run(ctx, args, nil)
 	if err != nil {
-		if strings.Contains(string(stderr), "not found") { // FIXME
+		if kubeCtlError, ok := err.(*kubeCtlError); ok && strings.Contains(kubeCtlError.stderr, "not found") { // FIXME
 			return errNotFound
 		}
 		return err
@@ -88,19 +88,19 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 
 // Apply executes `kubectl apply` with given resource.
 func (k *KubeCtl) Apply(ctx context.Context, res meta.Object) error {
-	_, _, err := k.run(ctx, []string{"apply", "-f", "-"}, res)
+	_, err := k.run(ctx, []string{"apply", "-f", "-"}, res)
 	return err
 }
 
 // Delete executes `kubectl delete` with given resource.
 func (k *KubeCtl) Delete(ctx context.Context, res meta.Object) error {
-	_, _, err := k.run(ctx, []string{"delete", "-f", "-"}, res)
+	_, err := k.run(ctx, []string{"delete", "-f", "-"}, res)
 	return err
 }
 
 // run executes kubectl with given arguments and stdin data (encoded as JSON),
 // and returns stdout, stderr and execution error.
-func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]byte, []byte, error) {
+func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]byte, error) {
 	args = append(k.cmd, args...)
 	argsString := strings.Join(args, " ")
 
@@ -109,7 +109,7 @@ func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]
 		e := json.NewEncoder(&inBuf)
 		e.SetIndent("", "  ")
 		if err := e.Encode(stdin); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		k.l.Debugf("Running %s with input:\n%s", argsString, inBuf.String())
 	} else {
@@ -134,5 +134,5 @@ func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]
 
 	k.l.Debugf(outBuf.String()) // FIXME
 	k.l.Debugf(errBuf.String())
-	return outBuf.Bytes(), errBuf.Bytes(), err
+	return outBuf.Bytes(), err
 }

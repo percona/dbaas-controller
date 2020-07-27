@@ -38,10 +38,28 @@ type ClusterKind string
 
 const perconaXtraDBClusterKind = ClusterKind("PerconaXtraDBCluster")
 
+// ClusterState represents XtraDB cluster CR state.
+type ClusterState int32
+
+const (
+	// ClusterStateInvalid represents unknown state.
+	ClusterStateInvalid ClusterState = 0
+	// ClusterStateChanging represents a cluster being changed (initializing).
+	ClusterStateChanging ClusterState = 1
+	// ClusterStateReady represents a cluster without pending changes (ready).
+	ClusterStateReady ClusterState = 2
+	// ClusterStateFailed represents a failed cluster (error).
+	ClusterStateFailed ClusterState = 3
+	// ClusterStateDeleting represents a cluster which are in deleting state (deleting).
+	ClusterStateDeleting ClusterState = 4
+)
+
 const (
 	pxcBackupImage       = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0-backup"
 	pxcImage             = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0"
 	pxcBackupStorageName = "test-backup-storage"
+	pxcApiVersion        = "pxc.percona.com/v1-4-0"
+	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.4.0-proxysql"
 )
 
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
@@ -50,12 +68,24 @@ type XtraDBParams struct {
 	Size int32
 }
 
-// Cluster contains information related to cluster.
+// Common contains common information related to cluster.
 type Cluster struct {
-	Name   string
-	Kind   ClusterKind
-	Size   int32
-	Status string // FIXME
+	Name string
+}
+
+// XtraDBCluster contains information related to xtradb cluster.
+type XtraDBCluster struct {
+	Name  string
+	Size  int32
+	State ClusterState
+}
+
+// pxcStatesMap matches pxc app states to cluster states.
+var pxcStatesMap = map[pxc.AppState]ClusterState{
+	pxc.AppStateUnknown: ClusterStateInvalid,
+	pxc.AppStateInit:    ClusterStateChanging,
+	pxc.AppStateReady:   ClusterStateReady,
+	pxc.AppStateError:   ClusterStateFailed,
 }
 
 // K8Client is a client for Kubernetes.
@@ -75,16 +105,14 @@ func (c *K8Client) Cleanup() {
 	c.kubeCtl.Cleanup()
 }
 
-// ListClusters returns list of clusters and their statuses.
-func (c *K8Client) ListClusters(ctx context.Context) ([]Cluster, error) {
+// ListClusters returns list of Percona XtraDB clusters and their statuses.
+func (c *K8Client) ListXtraDBClusters(ctx context.Context) ([]XtraDBCluster, error) {
 	perconaXtraDBClusters, err := c.getPerconaXtraDBClusters(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: Get PSMDB clusters.
-
-	deletingClusters, err := c.getDeletingClusters(ctx, perconaXtraDBClusters)
+	deletingClusters, err := c.getDeletingXtraDBClusters(ctx, perconaXtraDBClusters)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +125,7 @@ func (c *K8Client) ListClusters(ctx context.Context) ([]Cluster, error) {
 func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: meta.TypeMeta{
-			APIVersion: "pxc.percona.com/v1-4-0",
+			APIVersion: pxcApiVersion,
 			Kind:       string(perconaXtraDBClusterKind),
 		},
 		ObjectMeta: meta.ObjectMeta{
@@ -127,7 +155,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			ProxySQL: &pxc.PodSpec{
 				Enabled: true,
 				Size:    params.Size,
-				Image:   "percona/percona-xtradb-cluster-operator:1.4.0-proxysql",
+				Image:   pxcProxySQLImage,
 				VolumeSpec: &pxc.VolumeSpec{
 					PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
 						Resources: core.ResourceRequirements{
@@ -204,41 +232,35 @@ func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, name string) error {
 }
 
 // getPerconaXtraDBClusters returns Percona XtraDB clusters.
-func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]Cluster, error) {
+func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluster, error) {
 	var list meta.List
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), "", &list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get Percona XtraDB clusters")
 	}
 
-	res := make([]Cluster, len(list.Items))
+	res := make([]XtraDBCluster, len(list.Items))
 	for i, item := range list.Items {
 		var cluster pxc.PerconaXtraDBCluster
 		if err := json.Unmarshal(item.Raw, &cluster); err != nil {
 			return nil, err
 		}
-		val := Cluster{
-			Name:   cluster.Name,
-			Status: string(cluster.Status.Status),
-			Kind:   perconaXtraDBClusterKind,
-			Size:   cluster.Spec.ProxySQL.Size,
+		val := XtraDBCluster{
+			Name:  cluster.Name,
+			Size:  cluster.Spec.ProxySQL.Size,
+			State: pxcStatesMap[cluster.Status.Status],
 		}
 		res[i] = val
 	}
 	return res, nil
 }
 
-// getDeletingClusters returns Percona XtraDB clusters which are not fully deleted yet.
-func (c *K8Client) getDeletingClusters(ctx context.Context, runningClusters []Cluster) ([]Cluster, error) {
+// getDeletingClusters returns clusters which are not fully deleted yet.
+func (c *K8Client) getDeletingClusters(ctx context.Context, managedBy string, runningClusters map[string]struct{}) ([]Cluster, error) {
 	var list meta.List
 	err := c.kubeCtl.Get(ctx, "pods", "", &list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
-	}
-
-	exists := make(map[string]struct{}, len(runningClusters))
-	for _, cluster := range runningClusters {
-		exists[cluster.Name] = struct{}{}
 	}
 
 	res := make([]Cluster, 0)
@@ -249,26 +271,42 @@ func (c *K8Client) getDeletingClusters(ctx context.Context, runningClusters []Cl
 		}
 
 		clusterName := pod.Labels["app.kubernetes.io/instance"]
-		if _, ok := exists[clusterName]; ok {
+		if _, ok := runningClusters[clusterName]; ok {
 			continue
 		}
 
-		var kind ClusterKind
-		switch pod.Labels["app.kubernetes.io/managed-by"] {
-		case "percona-xtradb-cluster-operator":
-			kind = perconaXtraDBClusterKind
-		default:
+		if pod.Labels["app.kubernetes.io/managed-by"] != managedBy {
 			continue
 		}
 
 		cluster := Cluster{
-			Status: "deleting",
-			Kind:   kind,
-			Name:   clusterName,
+			Name: clusterName,
 		}
 		res = append(res, cluster)
 
-		exists[clusterName] = struct{}{}
+		runningClusters[clusterName] = struct{}{}
 	}
 	return res, nil
+}
+
+// getDeletingXtraDBClusters returns Percona XtraDB clusters which are not fully deleted yet.
+func (c *K8Client) getDeletingXtraDBClusters(ctx context.Context, clusters []XtraDBCluster) ([]XtraDBCluster, error) {
+	runningClusters := make(map[string]struct{}, len(clusters))
+	for _, cluster := range clusters {
+		runningClusters[cluster.Name] = struct{}{}
+	}
+
+	deletingClusters, err := c.getDeletingClusters(ctx, "percona-xtradb-cluster-operator", runningClusters)
+	if err != nil {
+		return nil, err
+	}
+
+	xtradbClusters := make([]XtraDBCluster, len(deletingClusters))
+	for i, cluster := range deletingClusters {
+		xtradbClusters[i] = XtraDBCluster{
+			Name:  cluster.Name,
+			State: ClusterStateDeleting,
+		}
+	}
+	return xtradbClusters, nil
 }
