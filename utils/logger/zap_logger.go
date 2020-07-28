@@ -61,6 +61,10 @@ func (z *ZapLogger) WithField(key string, value interface{}) Logger {
 
 func (z *ZapLogger) Debug(args ...interface{}) { z.l.Debug(args...) } //nolint:golint
 func (z *ZapLogger) Info(args ...interface{})  { z.l.Info(args...) }  //nolint:golint
+func (z *ZapLogger) Warn(args ...interface{})  { z.l.Warn(args...) }  //nolint:golint
+func (z *ZapLogger) Error(args ...interface{}) { z.l.Error(args...) } //nolint:golint
+func (z *ZapLogger) Fatal(args ...interface{}) { z.l.Fatal(args...) } //nolint:golint
+func (z *ZapLogger) Panic(args ...interface{}) { z.l.Panic(args...) } //nolint:golint
 
 func (z *ZapLogger) Debugf(format string, args ...interface{}) { z.l.Debugf(format, args...) } //nolint:golint
 func (z *ZapLogger) Infof(format string, args ...interface{})  { z.l.Infof(format, args...) }  //nolint:golint

@@ -46,7 +46,7 @@ func main() {
 		Name: "dbaas-controller",
 	})
 	if err != nil {
-		l.Fatalf("%s", err)
+		l.Fatal(err)
 	}
 
 	kingpin.Parse()

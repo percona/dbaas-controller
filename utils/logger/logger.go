@@ -30,6 +30,10 @@ type Logger interface {
 
 	Debug(args ...interface{})
 	Info(args ...interface{})
+	Warn(args ...interface{})
+	Error(args ...interface{})
+	Fatal(args ...interface{})
+	Panic(args ...interface{})
 
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
