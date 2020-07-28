@@ -32,9 +32,6 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
-// errNotFound is an error in case of object not found.
-var errNotFound = errors.New("object not found")
-
 // KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
 type KubeCtl struct {
 	l   logger.Logger
@@ -68,7 +65,6 @@ func (k *KubeCtl) Cleanup() {
 
 // Get executes `kubectl get` with given object kind and optional name,
 // and decodes resource into `res`.
-// It returns `errNotFound` if object is not found.
 func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interface{}) error {
 	args := []string{"get", "-o=json", kind}
 	if name != "" {
@@ -77,9 +73,6 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 
 	stdout, err := k.run(ctx, args, nil)
 	if err != nil {
-		if kubeCtlError, ok := err.(*kubeCtlError); ok && strings.Contains(kubeCtlError.stderr, "not found") { // FIXME
-			return errNotFound
-		}
 		return err
 	}
 
@@ -132,7 +125,7 @@ func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]
 		}
 	}
 
-	k.l.Debugf(outBuf.String()) // FIXME
-	k.l.Debugf(errBuf.String())
+	k.l.Debug(outBuf.String())
+	k.l.Debug(errBuf.String())
 	return outBuf.Bytes(), err
 }

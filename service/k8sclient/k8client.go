@@ -58,7 +58,7 @@ const (
 	pxcBackupImage       = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0-backup"
 	pxcImage             = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0"
 	pxcBackupStorageName = "test-backup-storage"
-	pxcApiVersion        = "pxc.percona.com/v1-4-0"
+	pxcAPIVersion        = "pxc.percona.com/v1-4-0"
 	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.4.0-proxysql"
 )
 
@@ -68,7 +68,7 @@ type XtraDBParams struct {
 	Size int32
 }
 
-// Common contains common information related to cluster.
+// Cluster contains common information related to cluster.
 type Cluster struct {
 	Name string
 }
@@ -105,7 +105,7 @@ func (c *K8Client) Cleanup() {
 	c.kubeCtl.Cleanup()
 }
 
-// ListClusters returns list of Percona XtraDB clusters and their statuses.
+// ListXtraDBClusters returns list of Percona XtraDB clusters and their statuses.
 func (c *K8Client) ListXtraDBClusters(ctx context.Context) ([]XtraDBCluster, error) {
 	perconaXtraDBClusters, err := c.getPerconaXtraDBClusters(ctx)
 	if err != nil {
@@ -125,7 +125,7 @@ func (c *K8Client) ListXtraDBClusters(ctx context.Context) ([]XtraDBCluster, err
 func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: meta.TypeMeta{
-			APIVersion: pxcApiVersion,
+			APIVersion: pxcAPIVersion,
 			Kind:       string(perconaXtraDBClusterKind),
 		},
 		ObjectMeta: meta.ObjectMeta{

@@ -87,7 +87,8 @@ func (z *LogrusLogger) WithField(key string, value interface{}) Logger {
 	return &LogrusLogger{l: z.l.WithField(key, value)}
 }
 
-func (z *LogrusLogger) Info(args ...interface{}) { z.l.Info(args...) } //nolint:golint
+func (z *LogrusLogger) Debug(args ...interface{}) { z.l.Debug(args...) } //nolint:golint
+func (z *LogrusLogger) Info(args ...interface{})  { z.l.Info(args...) }  //nolint:golint
 
 func (z *LogrusLogger) Debugf(format string, args ...interface{}) { z.l.Debugf(format, args...) } //nolint:golint
 func (z *LogrusLogger) Infof(format string, args ...interface{})  { z.l.Infof(format, args...) }  //nolint:golint

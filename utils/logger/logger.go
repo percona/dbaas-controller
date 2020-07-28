@@ -28,6 +28,7 @@ type Logger interface {
 
 	WithField(key string, value interface{}) Logger
 
+	Debug(args ...interface{})
 	Info(args ...interface{})
 
 	Debugf(format string, args ...interface{})
