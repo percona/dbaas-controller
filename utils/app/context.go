@@ -14,26 +14,36 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package logger contains interface and implementations for logging.
-package logger
+// +build !windows
+
+package app
 
 import (
-	"google.golang.org/grpc/grpclog"
+	"context"
+	"os"
+	"os/signal"
+
+	"golang.org/x/sys/unix"
+
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
-// Logger contains all methods related to zap and logrus loggers.
-type Logger interface {
-	Sync() error
-	GRPCLogger() grpclog.LoggerV2
+// Context returns main application context with set logger
+// that is canceled when SIGTERM or SIGINT is received.
+func Context() context.Context {
+	l := logger.NewLogger()
 
-	WithField(key string, value interface{}) Logger
+	ctx, cancel := context.WithCancel(context.Background())
+	ctx = logger.GetCtxWithLogger(ctx, l)
 
-	Info(args ...interface{})
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, unix.SIGTERM, unix.SIGINT)
+	go func() {
+		s := <-signals
+		signal.Stop(signals)
+		l.Warnf("Got %s, shutting down...", unix.SignalName(s.(unix.Signal)))
+		cancel()
+	}()
 
-	Debugf(format string, args ...interface{})
-	Infof(format string, args ...interface{})
-	Warnf(format string, args ...interface{})
-	Errorf(format string, args ...interface{})
-	Fatalf(format string, args ...interface{})
-	Panicf(format string, args ...interface{})
+	return ctx
 }

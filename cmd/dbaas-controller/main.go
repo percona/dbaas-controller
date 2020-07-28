@@ -24,11 +24,11 @@ import (
 	"google.golang.org/grpc/grpclog"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/percona-platform/dbaas-controller/app"
-	_ "github.com/percona-platform/dbaas-controller/catalog"
-	"github.com/percona-platform/dbaas-controller/logger"
-	"github.com/percona-platform/dbaas-controller/servers"
+	_ "github.com/percona-platform/dbaas-controller/catalog" // load messages
 	"github.com/percona-platform/dbaas-controller/service/cluster"
+	"github.com/percona-platform/dbaas-controller/utils/app"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
+	"github.com/percona-platform/dbaas-controller/utils/servers"
 )
 
 func main() {
@@ -46,7 +46,7 @@ func main() {
 		Name: "dbaas-controller",
 	})
 	if err != nil {
-		l.Fatalf("%s", err)
+		l.Fatal(err)
 	}
 
 	kingpin.Parse()

@@ -28,7 +28,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/percona-platform/dbaas-controller/logger"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // logGRPCRequest wraps f (gRPC handler) invocation with logging and panic recovery.

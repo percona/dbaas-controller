@@ -22,7 +22,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/percona-platform/dbaas-controller/logger"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // getCtxForRequest returns derived context with request-scoped logger set, and the logger itself.
