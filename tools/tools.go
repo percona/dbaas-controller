@@ -23,5 +23,5 @@ import (
 	_ "github.com/quasilyte/go-consistent"
 	_ "github.com/reviewdog/reviewdog/cmd/reviewdog"
 	_ "golang.org/x/text/cmd/gotext"
-	_ "golang.org/x/tools/cmd/goimports"
+	_ "mvdan.cc/gofumpt/gofumports"
 )

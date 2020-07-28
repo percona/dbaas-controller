@@ -14,20 +14,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package logger
+package kubectl
 
 import (
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"fmt"
 )
 
-// PromHTTP is a compatibility wrapper between Logger interface and Prometheus HTTP logger interface.
-type PromHTTP struct {
-	L Logger
+type kubeCtlError struct {
+	err    error
+	cmd    string
+	stderr string
 }
 
-func (p *PromHTTP) Println(args ...interface{}) { p.L.Info(args...) } // nolint:golint
+func (e *kubeCtlError) Error() string {
+	return fmt.Sprintf("%s\ncmd: %s\nstderr: %s", e.err, e.cmd, e.stderr)
+}
 
-// check interfaces.
-var (
-	_ promhttp.Logger = (*PromHTTP)(nil)
-)
+// TODO Cause, Unwrap methods?
+// TODO Tests
+// https://jira.percona.com/browse/PMM-6349

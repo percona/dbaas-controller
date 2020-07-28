@@ -87,14 +87,19 @@ func (z *LogrusLogger) WithField(key string, value interface{}) Logger {
 	return &LogrusLogger{l: z.l.WithField(key, value)}
 }
 
-func (z *LogrusLogger) Info(args ...interface{}) { z.l.Info(args...) } // nolint:golint
+func (z *LogrusLogger) Debug(args ...interface{}) { z.l.Debug(args...) } //nolint:golint
+func (z *LogrusLogger) Info(args ...interface{})  { z.l.Info(args...) }  //nolint:golint
+func (z *LogrusLogger) Warn(args ...interface{})  { z.l.Warn(args...) }  //nolint:golint
+func (z *LogrusLogger) Error(args ...interface{}) { z.l.Error(args...) }
+func (z *LogrusLogger) Fatal(args ...interface{}) { z.l.Fatal(args...) } //nolint:golint
+func (z *LogrusLogger) Panic(args ...interface{}) { z.l.Panic(args...) } //nolint:golint
 
-func (z *LogrusLogger) Debugf(format string, args ...interface{}) { z.l.Debugf(format, args...) } // nolint:golint
-func (z *LogrusLogger) Infof(format string, args ...interface{})  { z.l.Infof(format, args...) }  // nolint:golint
-func (z *LogrusLogger) Warnf(format string, args ...interface{})  { z.l.Warnf(format, args...) }  // nolint:golint
-func (z *LogrusLogger) Errorf(format string, args ...interface{}) { z.l.Errorf(format, args...) } // nolint:golint
-func (z *LogrusLogger) Fatalf(format string, args ...interface{}) { z.l.Fatalf(format, args...) } // nolint:golint
-func (z *LogrusLogger) Panicf(format string, args ...interface{}) { z.l.Panicf(format, args...) } // nolint:golint
+func (z *LogrusLogger) Debugf(format string, args ...interface{}) { z.l.Debugf(format, args...) } //nolint:golint
+func (z *LogrusLogger) Infof(format string, args ...interface{})  { z.l.Infof(format, args...) }  //nolint:golint
+func (z *LogrusLogger) Warnf(format string, args ...interface{})  { z.l.Warnf(format, args...) }  //nolint:golint
+func (z *LogrusLogger) Errorf(format string, args ...interface{}) { z.l.Errorf(format, args...) } //nolint:golint
+func (z *LogrusLogger) Fatalf(format string, args ...interface{}) { z.l.Fatalf(format, args...) } //nolint:golint
+func (z *LogrusLogger) Panicf(format string, args ...interface{}) { z.l.Panicf(format, args...) } //nolint:golint
 
 // check interfaces.
 var (

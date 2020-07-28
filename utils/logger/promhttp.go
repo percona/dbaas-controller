@@ -14,36 +14,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// +build !windows
-
-package app
+package logger
 
 import (
-	"context"
-	"os"
-	"os/signal"
-
-	"golang.org/x/sys/unix"
-
-	"github.com/percona-platform/dbaas-controller/logger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// Context returns main application context with set logger
-// that is canceled when SIGTERM or SIGINT is received.
-func Context() context.Context {
-	l := logger.NewLogger()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	ctx = logger.GetCtxWithLogger(ctx, l)
-
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, unix.SIGTERM, unix.SIGINT)
-	go func() {
-		s := <-signals
-		signal.Stop(signals)
-		l.Warnf("Got %s, shutting down...", unix.SignalName(s.(unix.Signal)))
-		cancel()
-	}()
-
-	return ctx
+// PromHTTP is a compatibility wrapper between Logger interface and Prometheus HTTP logger interface.
+type PromHTTP struct {
+	L Logger
 }
+
+func (p *PromHTTP) Println(args ...interface{}) { p.L.Info(args...) } //nolint:golint
+
+// check interfaces.
+var (
+	_ promhttp.Logger = (*PromHTTP)(nil)
+)

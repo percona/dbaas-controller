@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc"
 	channelz "google.golang.org/grpc/channelz/service"
 
-	"github.com/percona-platform/dbaas-controller/logger"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // GRPCServer is an interface wrapper for gRPC Server.

@@ -22,7 +22,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/percona-platform/dbaas-controller/logger"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // Context returns main application context with set logger

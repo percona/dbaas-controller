@@ -33,7 +33,7 @@ init:                             ## Install development tools
 	go build -o bin/check-license ./.github/check-license.go
 
 	go build -modfile=tools/go.mod -o bin/go-consistent github.com/quasilyte/go-consistent
-	go build -modfile=tools/go.mod -o bin/goimports golang.org/x/tools/cmd/goimports
+	go build -modfile=tools/go.mod -o bin/gofumports mvdan.cc/gofumpt/gofumports
 	go build -modfile=tools/go.mod -o bin/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
 	go build -modfile=tools/go.mod -o bin/gotext golang.org/x/text/cmd/gotext
 	go build -modfile=tools/go.mod -o bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
@@ -47,7 +47,7 @@ gen:                              ## Generate code
 
 format:                           ## Format source code
 	gofmt -w -s .
-	bin/goimports -local github.com/percona-platform/dbaas-controller -l -w .
+	bin/gofumports -local github.com/percona-platform/dbaas-controller -l -w .
 
 check:                            ## Run checks/linters for the whole project
 	bin/check-license
@@ -58,13 +58,13 @@ install:                          ## Install binaries
 	go build -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
 test:                             ## Run tests
-	go test -race -timeout=10m ./...
+	go test -race -timeout=15m ./...
 
 test-cover:                       ## Run tests and collect per-package coverage information
-	go test -race -timeout=10m -count=1 -coverprofile=cover.out -covermode=atomic ./...
+	go test -race -timeout=15m -count=1 -coverprofile=cover.out -covermode=atomic ./...
 
 test-crosscover:                  ## Run tests and collect cross-package coverage information
-	go test -race -timeout=10m -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
+	go test -race -timeout=15m -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
 
 run: install                      ## Run dbaas-controller
 	bin/dbaas-controller
