@@ -24,7 +24,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/percona-platform/dbaas-controller/logger"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // RunHTTPServerOpts configure HTTP server.

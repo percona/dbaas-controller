@@ -14,12 +14,5 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package k8sclient
-
-import (
-	"testing"
-)
-
-func TestExample(t *testing.T) {
-	example()
-}
+// Package dbaascontroller is a dummy package.
+package dbaascontroller
