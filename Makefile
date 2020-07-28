@@ -10,7 +10,7 @@ KUBERNETES_VERSION ?= 1.16.8
 # `cut` is used to remove first `v` from `git describe` output
 # PMM_RELEASE_XXX variables are overwritten during PMM Server build
 PMM_RELEASE_PATH ?= bin
-COMPONENT_VERSION = $(shell git describe --always --dirty | cut -b2-)
+COMPONENT_VERSION ?= $(shell git describe --always --dirty | cut -b2-)
 PMM_RELEASE_VERSION ?=
 PMM_RELEASE_TIMESTAMP ?= $(shell date '+%s')
 PMM_RELEASE_FULLCOMMIT ?= $(shell git rev-parse HEAD)
