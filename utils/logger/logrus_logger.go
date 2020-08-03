@@ -48,6 +48,7 @@ func SetupGlobal() {
 			return
 		},
 	})
+	logrus.SetLevel(logrus.DebugLevel)
 }
 
 type logrusGrpcLoggerV2 struct {

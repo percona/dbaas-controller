@@ -62,10 +62,28 @@ const (
 	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.4.0-proxysql"
 )
 
+// ComputeResources represents container computer resources requests or limits.
+type ComputeResources struct {
+	CPUM        int32
+	MemoryBytes int64
+}
+
+// PXC contains information related to PXC containers in Percona XtraDB cluster.
+type PXC struct {
+	ComputeResources *ComputeResources
+}
+
+// ProxySQL contains information related to ProxySQL containers in Percona XtraDB cluster.
+type ProxySQL struct {
+	ComputeResources *ComputeResources
+}
+
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
 type XtraDBParams struct {
-	Name string
-	Size int32
+	Name     string
+	Size     int32
+	PXC      *PXC
+	ProxySQL *ProxySQL
 }
 
 // Cluster contains common information related to cluster.
@@ -75,9 +93,11 @@ type Cluster struct {
 
 // XtraDBCluster contains information related to xtradb cluster.
 type XtraDBCluster struct {
-	Name  string
-	Size  int32
-	State ClusterState
+	Name     string
+	Size     int32
+	State    ClusterState
+	PXC      *PXC
+	ProxySQL *ProxySQL
 }
 
 // pxcStatesMap matches pxc app states to cluster states.
