@@ -94,9 +94,9 @@ type K8Client struct {
 }
 
 // NewK8Client returns new K8Client object.
-func NewK8Client(logger logger.Logger) *K8Client {
+func NewK8Client(logger logger.Logger, kubeconfig string) *K8Client {
 	return &K8Client{
-		kubeCtl: kubectl.NewKubeCtl(logger),
+		kubeCtl: kubectl.NewKubeCtl(logger, kubeconfig),
 	}
 }
 

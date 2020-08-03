@@ -21,7 +21,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/percona/pmm/utils/pdeathsig"
@@ -34,33 +38,54 @@ import (
 
 // KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
 type KubeCtl struct {
-	l   logger.Logger
-	cmd []string
+	l      logger.Logger
+	cmd    []string
+	tmpDir string
 }
 
+const kubeconfigFileName = "kubeconfig.json"
+
 // NewKubeCtl creates a new KubeCtl object with a given logger.
-func NewKubeCtl(l logger.Logger) *KubeCtl {
+func NewKubeCtl(l logger.Logger, kubeconfig string) *KubeCtl {
 	// TODO Handle kubectl versions https://jira.percona.com/browse/PMM-6348
 
-	// TODO Handle kubeconfig https://jira.percona.com/browse/PMM-6347
-
 	cmd := []string{"dbaas-kubectl-1.16"}
-	path, err := exec.LookPath(cmd[0])
-	l.Debugf("path: %s, err: %v", path, err)
+	kubectlPath, err := exec.LookPath(cmd[0])
+	l.Debugf("kubectlPath: %s, err: %v", kubectlPath, err)
 	if e, ok := err.(*exec.Error); err != nil && ok && e.Err == exec.ErrNotFound {
 		cmd = []string{"minikube", "kubectl", "--"}
 	}
+
+	// Handle kubeconfig.
+	tmpDir, err := ioutil.TempDir("/tmp", "dbaas-controller-kubeconfigs-")
+	if err != nil {
+		l.Fatal(err)
+	}
+
+	kubeconfigPath := path.Join(tmpDir, kubeconfigFileName)
+
+	err = ioutil.WriteFile(kubeconfigPath, []byte(kubeconfig), 0600)
+	if err != nil {
+		l.Fatal(err)
+	}
+
+	cmd = append(cmd, fmt.Sprintf("--kubeconfig=%s", kubeconfigPath))
 	l.Debugf("Using %q", strings.Join(cmd, " "))
 
 	return &KubeCtl{
-		l:   l.WithField("component", "kubectl"),
-		cmd: cmd,
+		l:      l.WithField("component", "kubectl"),
+		cmd:    cmd,
+		tmpDir: tmpDir,
 	}
 }
 
 // Cleanup removes temporary files created by that object.
 func (k *KubeCtl) Cleanup() {
-	// TODO Remove kubeconfig file https://jira.percona.com/browse/PMM-6347
+	err := os.RemoveAll(k.tmpDir)
+	if err != nil {
+		k.l.Errorf("cannot cleanup:%s", err)
+	}
+	k.l.Debugf("Cleanup %s", k.tmpDir)
 }
 
 // Get executes `kubectl get` with given object kind and optional name,

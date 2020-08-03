@@ -41,10 +41,10 @@ func New(p *message.Printer) *Service {
 
 // ListXtraDBClusters returns a list of XtraDB clusters.
 func (s *Service) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1.ListXtraDBClustersRequest) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
-	client := k8sclient.NewK8Client(logger.Get(ctx))
+	client := k8sclient.NewK8Client(logger.Get(ctx), req.KubeAuth.Kubeconfig)
 	defer client.Cleanup()
-
-	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("not implemented"))
+	xtraDBClusters, err := client.ListXtraDBClusters(ctx)
+	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("XtraDBClusters: %+v, err %+v", xtraDBClusters, err))
 }
 
 // CreateXtraDBCluster creates a new XtraDB cluster.
