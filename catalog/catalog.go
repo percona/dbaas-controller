@@ -38,15 +38,13 @@ func init() {
 }
 
 var messageKeyToIndex = map[string]int{
-	"%s is not implemented": 1,
-	"not implemented":       0,
+	"%s is not implemented": 0,
 }
 
-var enIndex = []uint32{ // 3 elements
-	0x00000000, 0x00000024, 0x0000003d,
-} // Size: 36 bytes
+var enIndex = []uint32{ // 2 elements
+	0x00000000, 0x00000019,
+} // Size: 32 bytes
 
-const enData string = "" + // Size: 61 bytes
-	"\x02This method is not implemented yet.\x02%[1]s is not implemented"
+const enData string = "\x02%[1]s is not implemented"
 
-	// Total table size 97 bytes (0KiB); checksum: 122E237E
+// Total table size 57 bytes (0KiB); checksum: 2D4FF99D

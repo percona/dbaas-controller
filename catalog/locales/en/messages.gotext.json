@@ -2,9 +2,42 @@
     "language": "en",
     "messages": [
         {
-            "id": "not implemented",
-            "message": "not implemented",
-            "translation": "This method is not implemented yet."
+            "id": "Cannot initialize K8s client: {Err}",
+            "message": "Cannot initialize K8s client: {Err}",
+            "translation": "",
+            "placeholders": [
+                {
+                    "id": "Err",
+                    "string": "%[1]s",
+                    "type": "error",
+                    "underlyingType": "interface{Error() string}",
+                    "argNum": 1,
+                    "expr": "err"
+                }
+            ]
+        },
+        {
+            "id": "XtraDBClusters: {XtraDBClusters}, err {Err}",
+            "message": "XtraDBClusters: {XtraDBClusters}, err {Err}",
+            "translation": "",
+            "placeholders": [
+                {
+                    "id": "XtraDBClusters",
+                    "string": "%+[1]v",
+                    "type": "[]github.com/percona-platform/dbaas-controller/service/k8sclient.XtraDBCluster",
+                    "underlyingType": "[]github.com/percona-platform/dbaas-controller/service/k8sclient.XtraDBCluster",
+                    "argNum": 1,
+                    "expr": "xtraDBClusters"
+                },
+                {
+                    "id": "Err",
+                    "string": "%+[2]v",
+                    "type": "error",
+                    "underlyingType": "interface{Error() string}",
+                    "argNum": 2,
+                    "expr": "err"
+                }
+            ]
         },
         {
             "id": "{MethodName} is not implemented",
