@@ -18,17 +18,18 @@
 package kubectl
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
 
-	"github.com/percona-platform/dbaas-controller/utils/app"
-	"github.com/percona-platform/dbaas-controller/utils/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/percona-platform/dbaas-controller/utils/app"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 func SetUp(t *testing.T) string {
@@ -52,7 +53,7 @@ func TestNewKubeCtl(t *testing.T) {
 	l := logger.Get(ctx).WithField("component", "kubectl")
 
 	t.Run("BasicNewKubeCtl", func(t *testing.T) {
-		md5KubeconfigExpected := md5.Sum([]byte(validKubeconfig)) //nolint:gosec
+		sha256KubeconfigExpected := sha256.Sum256([]byte(validKubeconfig))
 		kubeCtl, err := NewKubeCtl(l, validKubeconfig)
 		require.NoError(t, err)
 		// lookup for kubeconfig path
@@ -69,8 +70,8 @@ func TestNewKubeCtl(t *testing.T) {
 		kubeconfigFilePath := strings.Split(kubeconfigFlag, "=")[1]
 		dat, err := ioutil.ReadFile(kubeconfigFilePath) //nolint:gosec
 		require.NoError(t, err)
-		md5KubeconfigActual := md5.Sum(dat) //nolint:gosec
-		assert.Equal(t, md5KubeconfigExpected, md5KubeconfigActual)
+		sha256KubeconfigActual := sha256.Sum256(dat)
+		assert.Equal(t, sha256KubeconfigExpected, sha256KubeconfigActual)
 
 		tmpDir := strings.TrimSuffix(kubeconfigFilePath, "/"+kubeconfigFileName)
 		assert.Equal(t, kubeCtl.tmpDir, tmpDir)
