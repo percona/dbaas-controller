@@ -94,15 +94,16 @@ type K8Client struct {
 }
 
 // NewK8Client returns new K8Client object.
-func NewK8Client(logger logger.Logger, kubeconfig string) *K8Client {
+func NewK8Client(logger logger.Logger, kubeconfig string) (*K8Client, error) {
+	kubeCtl, err := kubectl.NewKubeCtl(logger, kubeconfig)
 	return &K8Client{
-		kubeCtl: kubectl.NewKubeCtl(logger, kubeconfig),
-	}
+		kubeCtl: kubeCtl,
+	}, err
 }
 
 // Cleanup removes temporary files created by that object.
-func (c *K8Client) Cleanup() {
-	c.kubeCtl.Cleanup()
+func (c *K8Client) Cleanup() error {
+	return c.kubeCtl.Cleanup()
 }
 
 // ListXtraDBClusters returns list of Percona XtraDB clusters and their statuses.

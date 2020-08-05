@@ -18,6 +18,7 @@ package k8sclient
 
 import (
 	"context"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -27,13 +28,31 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
+func SetUp(t *testing.T) string {
+	cmd := []string{"dbaas-kubectl-1.16"}
+	kubectlPath, err := exec.LookPath(cmd[0])
+	cmd = []string{kubectlPath}
+	if e, ok := err.(*exec.Error); err != nil && ok && e.Err == exec.ErrNotFound {
+		cmd = []string{"minikube", "kubectl", "--"}
+	}
+	cmd = append(cmd, "config", "view", "-o", "json")
+	validKubeconfig, err := exec.Command(cmd[0], cmd[1:]...).Output() //nolint:gosec
+	require.NoError(t, err)
+	return string(validKubeconfig)
+}
+
 func TestK8Client(t *testing.T) {
+	validKubeconfig := SetUp(t)
 	logger.SetupGlobal()
 	l := logger.NewLogger()
 	ctx := context.TODO()
 
-	client := NewK8Client(l)
-	t.Cleanup(client.Cleanup)
+	client, err := NewK8Client(l, validKubeconfig)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err := client.Cleanup()
+		require.NoError(t, err)
+	})
 
 	name := "test-cluster"
 	_ = client.DeleteXtraDBCluster(ctx, name)
@@ -48,7 +67,7 @@ func TestK8Client(t *testing.T) {
 		time.Sleep(5 * time.Second)
 	}
 
-	err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
+	err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
 		Name: name,
 		Size: 2,
 	})

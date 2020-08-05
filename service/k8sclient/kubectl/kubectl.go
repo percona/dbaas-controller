@@ -46,27 +46,22 @@ type KubeCtl struct {
 const kubeconfigFileName = "kubeconfig.json"
 
 // NewKubeCtl creates a new KubeCtl object with a given logger.
-func NewKubeCtl(l logger.Logger, kubeconfig string) *KubeCtl {
+func NewKubeCtl(l logger.Logger, kubeconfig string) (*KubeCtl, error) {
 	// TODO Handle kubectl versions https://jira.percona.com/browse/PMM-6348
 
 	cmd := []string{"dbaas-kubectl-1.16"}
 	kubectlPath, err := exec.LookPath(cmd[0])
 	l.Debugf("kubectlPath: %s, err: %v", kubectlPath, err)
+	cmd = []string{kubectlPath}
 	if e, ok := err.(*exec.Error); err != nil && ok && e.Err == exec.ErrNotFound {
 		cmd = []string{"minikube", "kubectl", "--"}
 	}
 
 	// Handle kubeconfig.
-	tmpDir, err := ioutil.TempDir("/tmp", "dbaas-controller-kubeconfigs-")
+	tmpDir, kubeconfigPath, err := saveKubeconfig(kubeconfig)
 	if err != nil {
-		l.Fatal(err)
-	}
-
-	kubeconfigPath := path.Join(tmpDir, kubeconfigFileName)
-
-	err = ioutil.WriteFile(kubeconfigPath, []byte(kubeconfig), 0600)
-	if err != nil {
-		l.Fatal(err)
+		l.Debugf("Cannot save kubeconfig: %s", err)
+		return nil, err
 	}
 
 	cmd = append(cmd, fmt.Sprintf("--kubeconfig=%s", kubeconfigPath))
@@ -76,16 +71,29 @@ func NewKubeCtl(l logger.Logger, kubeconfig string) *KubeCtl {
 		l:      l.WithField("component", "kubectl"),
 		cmd:    cmd,
 		tmpDir: tmpDir,
+	}, nil
+}
+
+// saveKubeconfig handles kubeconfig.
+func saveKubeconfig(kubeconfig string) (string, string, error) {
+	tmpDir, err := ioutil.TempDir("", "dbaas-controller-kubeconfigs-")
+	if err != nil {
+		return "", "", err
 	}
+
+	kubeconfigPath := path.Join(tmpDir, kubeconfigFileName)
+
+	err = ioutil.WriteFile(kubeconfigPath, []byte(kubeconfig), 0o600)
+	if err != nil {
+		return "", "", err
+	}
+
+	return tmpDir, kubeconfigPath, nil
 }
 
 // Cleanup removes temporary files created by that object.
-func (k *KubeCtl) Cleanup() {
-	err := os.RemoveAll(k.tmpDir)
-	if err != nil {
-		k.l.Errorf("cannot cleanup:%s", err)
-	}
-	k.l.Debugf("Cleanup %s", k.tmpDir)
+func (k *KubeCtl) Cleanup() error {
+	return os.RemoveAll(k.tmpDir)
 }
 
 // Get executes `kubectl get` with given object kind and optional name,
