@@ -21,8 +21,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/pkg/errors"
@@ -30,6 +33,11 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/percona-platform/dbaas-controller/utils/logger"
+)
+
+const (
+	defaultKubectl = "dbaas-kubectl-1.16"
+	devKubectl     = "minikube kubectl --"
 )
 
 // KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
@@ -40,22 +48,104 @@ type KubeCtl struct {
 
 // NewKubeCtl creates a new KubeCtl object with a given logger.
 func NewKubeCtl(l logger.Logger) *KubeCtl {
-	// TODO Handle kubectl versions https://jira.percona.com/browse/PMM-6348
-
-	// TODO Handle kubeconfig https://jira.percona.com/browse/PMM-6347
-
-	cmd := []string{"dbaas-kubectl-1.16"}
-	path, err := exec.LookPath(cmd[0])
-	l.Debugf("path: %s, err: %v", path, err)
-	if e, ok := err.(*exec.Error); err != nil && ok && e.Err == exec.ErrNotFound {
-		cmd = []string{"minikube", "kubectl", "--"}
+	// Handle kubectl versions
+	cmd, err := getKubectlCmd()
+	if err != nil {
+		l.Debugf("Cannot find kubectl binary: %s", err)
+		return nil
 	}
 	l.Debugf("Using %q", strings.Join(cmd, " "))
+
+	// TODO Handle kubeconfig https://jira.percona.com/browse/PMM-6347
 
 	return &KubeCtl{
 		l:   l.WithField("component", "kubectl"),
 		cmd: cmd,
 	}
+}
+
+// getKubectlCmd gets correct version of kubectl binary for Kubernetes cluster.
+func getKubectlCmd() ([]string, error) {
+	// Firstly lookup default kubectl to get Kubernetes Server version.
+	kubectlCmd, err := lookupCorrectKubectlCmd([]string{defaultKubectl})
+	if err != nil {
+		return nil, err
+	}
+
+	versionsJSON, err := getVersions(kubectlCmd)
+	if err != nil {
+		return nil, err
+	}
+
+	kubectlCmdNames, err := selectCorrectKubectlVersions(versionsJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	return lookupCorrectKubectlCmd(kubectlCmdNames)
+}
+
+// getVersions gets kubectl and Kubernetes cluster version.
+func getVersions(kubectlCmd []string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	getVersionCmd := append(kubectlCmd, "version", "-o", "json")
+	cmd := exec.CommandContext(ctx, getVersionCmd[0], getVersionCmd[1:]...) //nolint:gosec
+	versionsJSON, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	return versionsJSON, nil
+}
+
+// selectCorrectKubectlVersions select list correct versions of kubectl binary for Kubernetes cluster.
+//
+// https://kubernetes.io/docs/setup/release/version-skew-policy/#kubectl
+// > kubectl is supported within one minor version (older or newer) of kube-apiserver.
+// > Example:
+// > 	kube-apiserver is at 1.18
+// > 	kubectl is supported at 1.19, 1.18, and 1.17.
+func selectCorrectKubectlVersions(versionsJSON []byte) ([]string, error) {
+	var kubectlCmdNames []string
+	ver := struct {
+		ServerVersion struct {
+			Major string `json:"major"`
+			Minor string `json:"minor"`
+		} `json:"serverVersion"`
+	}{}
+
+	if err := json.Unmarshal(versionsJSON, &ver); err != nil {
+		return nil, err
+	}
+
+	serverMajor, err := strconv.Atoi(ver.ServerVersion.Major)
+	if err != nil {
+		return nil, err
+	}
+
+	serverMinor, err := strconv.Atoi(ver.ServerVersion.Minor)
+	if err != nil {
+		return nil, err
+	}
+
+	// Iterate from newer to older version. Append default as the last.
+	for minor := serverMinor + 1; minor >= serverMinor-1; minor-- {
+		kubectlCmdNames = append(kubectlCmdNames, fmt.Sprintf("kubectl-%d.%d", serverMajor, minor))
+	}
+	return kubectlCmdNames, nil
+}
+
+func lookupCorrectKubectlCmd(kubectlCmdNames []string) ([]string, error) {
+	for _, kubectlCmdName := range kubectlCmdNames {
+		kubectlPath, err := exec.LookPath(kubectlCmdName)
+		if err == nil {
+			return []string{kubectlPath}, nil
+		}
+	}
+
+	// if none found (pass empty kubectlCmdNames) use dev version of kubectl.
+	return strings.Split(devKubectl, " "), nil
 }
 
 // Cleanup removes temporary files created by that object.
