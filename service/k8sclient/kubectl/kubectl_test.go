@@ -18,6 +18,7 @@
 package kubectl
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,7 +73,8 @@ func Test_selectCorrectKubectlVersions(t *testing.T) {
 
 func Test_getKubectlCmd(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
-		got, err := getKubectlCmd()
+		ctx := context.TODO()
+		got, err := getKubectlCmd(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, got, []string{"minikube", "kubectl", "--"})
 	})

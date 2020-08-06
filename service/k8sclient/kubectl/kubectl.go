@@ -25,7 +25,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/pkg/errors"
@@ -36,8 +35,8 @@ import (
 )
 
 const (
-	defaultKubectl = "dbaas-kubectl-1.16"
-	devKubectl     = "minikube kubectl --"
+	// FIXME: change to a real default kubectl.
+	defaultKubectl = "minikube kubectl --"
 )
 
 // KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
@@ -47,32 +46,36 @@ type KubeCtl struct {
 }
 
 // NewKubeCtl creates a new KubeCtl object with a given logger.
-func NewKubeCtl(l logger.Logger) *KubeCtl {
+func NewKubeCtl(ctx context.Context) (*KubeCtl, error) {
+	l := logger.Get(ctx)
+	l = l.WithField("component", "kubectl")
+
 	// Handle kubectl versions
-	cmd, err := getKubectlCmd()
+	cmd, err := getKubectlCmd(ctx)
 	if err != nil {
 		l.Debugf("Cannot find kubectl binary: %s", err)
-		return nil
+		return nil, err
 	}
-	l.Debugf("Using %q", strings.Join(cmd, " "))
+
+	l.Infof("Using %q", strings.Join(cmd, " "))
 
 	// TODO Handle kubeconfig https://jira.percona.com/browse/PMM-6347
 
 	return &KubeCtl{
-		l:   l.WithField("component", "kubectl"),
+		l:   l,
 		cmd: cmd,
-	}
+	}, nil
 }
 
 // getKubectlCmd gets correct version of kubectl binary for Kubernetes cluster.
-func getKubectlCmd() ([]string, error) {
+func getKubectlCmd(ctx context.Context) ([]string, error) {
 	// Firstly lookup default kubectl to get Kubernetes Server version.
 	kubectlCmd, err := lookupCorrectKubectlCmd([]string{defaultKubectl})
 	if err != nil {
 		return nil, err
 	}
 
-	versionsJSON, err := getVersions(kubectlCmd)
+	versionsJSON, err := getVersions(ctx, kubectlCmd)
 	if err != nil {
 		return nil, err
 	}
@@ -85,14 +88,21 @@ func getKubectlCmd() ([]string, error) {
 	return lookupCorrectKubectlCmd(kubectlCmdNames)
 }
 
-// getVersions gets kubectl and Kubernetes cluster version.
-func getVersions(kubectlCmd []string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
+func lookupCorrectKubectlCmd(kubectlCmdNames []string) ([]string, error) {
+	for _, kubectlCmdName := range kubectlCmdNames {
+		kubectlPath, err := exec.LookPath(kubectlCmdName)
+		if err == nil {
+			return []string{kubectlPath}, nil
+		}
+	}
 
-	getVersionCmd := append(kubectlCmd, "version", "-o", "json")
-	cmd := exec.CommandContext(ctx, getVersionCmd[0], getVersionCmd[1:]...) //nolint:gosec
-	versionsJSON, err := cmd.CombinedOutput()
+	// if none found (pass empty kubectlCmdNames) use default version of kubectl.
+	return strings.Split(defaultKubectl, " "), nil
+}
+
+// getVersions gets kubectl and Kubernetes cluster version.
+func getVersions(ctx context.Context, kubectlCmd []string) ([]byte, error) {
+	versionsJSON, err := run(ctx, kubectlCmd, []string{"version", "-o", "json"}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -136,18 +146,6 @@ func selectCorrectKubectlVersions(versionsJSON []byte) ([]string, error) {
 	return kubectlCmdNames, nil
 }
 
-func lookupCorrectKubectlCmd(kubectlCmdNames []string) ([]string, error) {
-	for _, kubectlCmdName := range kubectlCmdNames {
-		kubectlPath, err := exec.LookPath(kubectlCmdName)
-		if err == nil {
-			return []string{kubectlPath}, nil
-		}
-	}
-
-	// if none found (pass empty kubectlCmdNames) use dev version of kubectl.
-	return strings.Split(devKubectl, " "), nil
-}
-
 // Cleanup removes temporary files created by that object.
 func (k *KubeCtl) Cleanup() {
 	// TODO Remove kubeconfig file https://jira.percona.com/browse/PMM-6347
@@ -161,7 +159,7 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 		args = append(args, name)
 	}
 
-	stdout, err := k.run(ctx, args, nil)
+	stdout, err := run(ctx, k.cmd, args, nil)
 	if err != nil {
 		return err
 	}
@@ -171,20 +169,22 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 
 // Apply executes `kubectl apply` with given resource.
 func (k *KubeCtl) Apply(ctx context.Context, res meta.Object) error {
-	_, err := k.run(ctx, []string{"apply", "-f", "-"}, res)
+	_, err := run(ctx, k.cmd, []string{"apply", "-f", "-"}, res)
 	return err
 }
 
 // Delete executes `kubectl delete` with given resource.
 func (k *KubeCtl) Delete(ctx context.Context, res meta.Object) error {
-	_, err := k.run(ctx, []string{"delete", "-f", "-"}, res)
+	_, err := run(ctx, k.cmd, []string{"delete", "-f", "-"}, res)
 	return err
 }
 
-// run executes kubectl with given arguments and stdin data (encoded as JSON),
+// run executes kubectl with given kubectl binary/command, arguments and stdin data (encoded as JSON),
 // and returns stdout, stderr and execution error.
-func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]byte, error) {
-	args = append(k.cmd, args...)
+func run(ctx context.Context, kubectlCmd []string, args []string, stdin interface{}) ([]byte, error) {
+	l := logger.Get(ctx)
+	l = l.WithField("component", "kubectl")
+	args = append(kubectlCmd, args...)
 	argsString := strings.Join(args, " ")
 
 	var inBuf bytes.Buffer
@@ -194,9 +194,9 @@ func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]
 		if err := e.Encode(stdin); err != nil {
 			return nil, err
 		}
-		k.l.Debugf("Running %s with input:\n%s", argsString, inBuf.String())
+		l.Debugf("Running %s with input:\n%s", argsString, inBuf.String())
 	} else {
-		k.l.Debugf("Running %s", argsString)
+		l.Debugf("Running %s", argsString)
 	}
 
 	var outBuf bytes.Buffer
@@ -215,7 +215,7 @@ func (k *KubeCtl) run(ctx context.Context, args []string, stdin interface{}) ([]
 		}
 	}
 
-	k.l.Debug(outBuf.String())
-	k.l.Debug(errBuf.String())
+	l.Debug(outBuf.String())
+	l.Debug(errBuf.String())
 	return outBuf.Bytes(), err
 }
