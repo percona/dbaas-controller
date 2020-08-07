@@ -17,33 +17,9 @@
             ]
         },
         {
-<<<<<<< HEAD
-            "id": "XtraDBClusters: {XtraDBClusters}, err {Err}",
-            "message": "XtraDBClusters: {XtraDBClusters}, err {Err}",
-            "translation": "",
-            "placeholders": [
-                {
-                    "id": "XtraDBClusters",
-                    "string": "%+[1]v",
-                    "type": "[]github.com/percona-platform/dbaas-controller/service/k8sclient.XtraDBCluster",
-                    "underlyingType": "[]github.com/percona-platform/dbaas-controller/service/k8sclient.XtraDBCluster",
-                    "argNum": 1,
-                    "expr": "xtraDBClusters"
-                },
-                {
-                    "id": "Err",
-                    "string": "%+[2]v",
-                    "type": "error",
-                    "underlyingType": "interface{Error() string}",
-                    "argNum": 2,
-                    "expr": "err"
-                }
-            ]
-=======
             "id": "not implemented",
             "message": "not implemented",
             "translation": "This method is not implemented yet."
->>>>>>> fb1c4a35a3f52bb45e5cfe77e7803d1038fc2beb
         },
         {
             "id": "{MethodName} is not implemented",
