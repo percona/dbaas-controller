@@ -44,10 +44,9 @@ const (
 
 // KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
 type KubeCtl struct {
-	l              logger.Logger
-	cmd            []string
-	tmpDir         string
-	kubeconfigPath string
+	l      logger.Logger
+	cmd    []string
+	tmpDir string
 }
 
 const kubeconfigFileName = "kubeconfig.json"
@@ -65,6 +64,13 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 
 	l.Infof("Using %q", strings.Join(cmd, " "))
 
+	if kubeconfig == "" {
+		return &KubeCtl{
+			l:   l,
+			cmd: cmd,
+		}, nil
+	}
+
 	// Handle kubeconfig.
 	tmpDir, kubeconfigPath, err := saveKubeconfig(kubeconfig)
 	if err != nil {
@@ -76,10 +82,9 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 	cmd = append(cmd, fmt.Sprintf("--kubeconfig=%s", kubeconfigPath))
 
 	return &KubeCtl{
-		l:              l,
-		cmd:            cmd,
-		tmpDir:         tmpDir,
-		kubeconfigPath: kubeconfigPath,
+		l:      l,
+		cmd:    cmd,
+		tmpDir: tmpDir,
 	}, nil
 }
 

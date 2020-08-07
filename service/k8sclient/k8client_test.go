@@ -30,7 +30,7 @@ import (
 func TestK8Client(t *testing.T) {
 	ctx := app.Context()
 
-	kubeCtl, err := kubectl.NewKubeCtl(ctx, "{}")
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, "")
 	require.NoError(t, err)
 
 	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
