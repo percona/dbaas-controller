@@ -35,7 +35,7 @@ var pxcStatesMap = map[k8sclient.ClusterState]controllerv1beta1.XtraDBClusterSta
 	k8sclient.ClusterStateChanging: controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING,
 	k8sclient.ClusterStateReady:    controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY,
 	k8sclient.ClusterStateFailed:   controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_FAILED,
-	k8sclient.ClusterStateDeleting: 4, // TODO: fix it
+	k8sclient.ClusterStateDeleting: controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_DELETING,
 }
 
 // Service implements methods of gRPC server and other business logic.
@@ -101,21 +101,17 @@ func (s *Service) CreateXtraDBCluster(ctx context.Context, req *controllerv1beta
 		Name: req.Name,
 		Size: req.Params.ClusterSize,
 	}
-	if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
-		params.PXC = &k8sclient.PXC{
-			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        req.Params.Pxc.ComputeResources.CpuM,
-				MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
-			},
-		}
+	params.PXC = &k8sclient.PXC{
+		ComputeResources: &k8sclient.ComputeResources{
+			CPUM:        req.Params.Pxc.ComputeResources.CpuM,
+			MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
+		},
 	}
-	if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
-		params.ProxySQL = &k8sclient.ProxySQL{
-			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        req.Params.Proxysql.ComputeResources.CpuM,
-				MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
-			},
-		}
+	params.ProxySQL = &k8sclient.ProxySQL{
+		ComputeResources: &k8sclient.ComputeResources{
+			CPUM:        req.Params.Proxysql.ComputeResources.CpuM,
+			MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
+		},
 	}
 	err := client.CreateXtraDBCluster(ctx, params)
 	if err != nil {
@@ -126,34 +122,7 @@ func (s *Service) CreateXtraDBCluster(ctx context.Context, req *controllerv1beta
 
 // UpdateXtraDBCluster updates existing XtraDB cluster.
 func (s *Service) UpdateXtraDBCluster(ctx context.Context, req *controllerv1beta1.UpdateXtraDBClusterRequest) (*controllerv1beta1.UpdateXtraDBClusterResponse, error) {
-	client := k8sclient.NewK8Client(logger.Get(ctx))
-	defer client.Cleanup()
-
-	params := &k8sclient.XtraDBParams{
-		Name: req.Name,
-		Size: req.Params.ClusterSize,
-	}
-	if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
-		params.PXC = &k8sclient.PXC{
-			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        req.Params.Pxc.ComputeResources.CpuM,
-				MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
-			},
-		}
-	}
-	if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
-		params.ProxySQL = &k8sclient.ProxySQL{
-			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        req.Params.Proxysql.ComputeResources.CpuM,
-				MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
-			},
-		}
-	}
-	err := client.UpdateXtraDBCluster(ctx, params)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	return new(controllerv1beta1.UpdateXtraDBClusterResponse), nil
+	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("This method is not implemented yet."))
 }
 
 // DeleteXtraDBCluster deletes XtraDB cluster.

@@ -18,6 +18,7 @@ package main
 
 import (
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"github.com/percona/pmm/version"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/grpclog"
@@ -31,9 +32,9 @@ import (
 )
 
 func main() {
-	//if version.Version == "" {
-	//	panic("dbaas-controller version is not set during build.")
-	//}
+	if version.Version == "" {
+		panic("dbaas-controller version is not set during build.")
+	}
 
 	logger.SetupGlobal()
 

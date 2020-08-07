@@ -58,7 +58,7 @@ check:                            ## Run checks/linters for the whole project
 	bin/golangci-lint run
 
 install:                          ## Install binaries
-	go build -race -o bin/dbaas-controller ./cmd/dbaas-controller
+	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
 test:                             ## Run tests
 	go test -race -timeout=15m ./...
