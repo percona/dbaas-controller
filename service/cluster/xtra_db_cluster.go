@@ -26,7 +26,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
-	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // Service implements methods of gRPC server and other business logic.
@@ -41,18 +40,13 @@ func New(p *message.Printer) *Service {
 
 // ListXtraDBClusters returns a list of XtraDB clusters.
 func (s *Service) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1.ListXtraDBClustersRequest) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
-	l := logger.Get(ctx)
-	client, err := k8sclient.NewK8Client(l, req.KubeAuth.Kubeconfig)
+	client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, s.p.Sprintf("Cannot initialize K8s client: %s", err))
 	}
-	defer func() {
-		if err := client.Cleanup(); err != nil {
-			l.Errorf("Cannot cleanup: %s", err)
-		}
-	}()
-	xtraDBClusters, err := client.ListXtraDBClusters(ctx)
-	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("XtraDBClusters: %+v, err %+v", xtraDBClusters, err))
+	defer client.Cleanup()
+
+	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("not implemented"))
 }
 
 // CreateXtraDBCluster creates a new XtraDB cluster.

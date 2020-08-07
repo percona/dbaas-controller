@@ -18,10 +18,10 @@
 package kubectl
 
 import (
+	"context"
 	"crypto/sha256"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 
@@ -29,32 +29,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona-platform/dbaas-controller/utils/app"
-	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
-func SetUp(t *testing.T) string {
-	cmd := []string{"dbaas-kubectl-1.16"}
-	kubectlPath, err := exec.LookPath(cmd[0])
-	cmd = []string{kubectlPath}
-	if e, ok := err.(*exec.Error); err != nil && ok && e.Err == exec.ErrNotFound {
-		cmd = []string{"minikube", "kubectl", "--"}
-	}
-	cmd = append(cmd, "config", "view", "-o", "json")
-	validKubeconfig, err := exec.Command(cmd[0], cmd[1:]...).Output() //nolint:gosec
-	require.NoError(t, err)
-	return string(validKubeconfig)
-}
-
 func TestNewKubeCtl(t *testing.T) {
-	validKubeconfig := SetUp(t)
-	logger.SetupGlobal()
-
 	ctx := app.Context()
-	l := logger.Get(ctx).WithField("component", "kubectl")
+
+	cmd, err := getKubectlCmd(ctx)
+	require.NoError(t, err)
+
+	validKubeconfig, err := run(ctx, cmd, []string{"config", "view", "-o", "json"}, nil)
+	require.NoError(t, err)
 
 	t.Run("BasicNewKubeCtl", func(t *testing.T) {
-		sha256KubeconfigExpected := sha256.Sum256([]byte(validKubeconfig))
-		kubeCtl, err := NewKubeCtl(l, validKubeconfig)
+		sha256KubeconfigExpected := sha256.Sum256(validKubeconfig)
+		kubeCtl, err := NewKubeCtl(ctx, string(validKubeconfig))
 		require.NoError(t, err)
 		// lookup for kubeconfig path
 		var kubeconfigFlag string
@@ -82,5 +70,79 @@ func TestNewKubeCtl(t *testing.T) {
 		_, err = os.Stat(tmpDir)
 		require.Error(t, err)
 		assert.True(t, os.IsNotExist(err))
+	})
+}
+
+const kubernetsVersions = `
+{
+	"clientVersion": {
+	  "major": "1",
+	  "minor": "16",
+	  "gitVersion": "v1.16.8",
+	  "gitCommit": "ec6eb119b81be488b030e849b9e64fda4caaf33c",
+	  "gitTreeState": "clean",
+	  "buildDate": "2020-03-12T21:00:06Z",
+	  "goVersion": "go1.13.8",
+	  "compiler": "gc",
+	  "platform": "darwin/amd64"
+	},
+	"serverVersion": {
+	  "major": "1",
+	  "minor": "16",
+	  "gitVersion": "v1.16.8",
+	  "gitCommit": "ec6eb119b81be488b030e849b9e64fda4caaf33c",
+	  "gitTreeState": "clean",
+	  "buildDate": "2020-03-12T20:52:22Z",
+	  "goVersion": "go1.13.8",
+	  "compiler": "gc",
+	  "platform": "linux/amd64"
+	}
+}
+`
+
+func Test_selectCorrectKubectlVersions(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
+		got, err := selectCorrectKubectlVersions([]byte(kubernetsVersions))
+		require.NoError(t, err)
+		expected := []string{
+			"kubectl-1.17",
+			"kubectl-1.16",
+			"kubectl-1.15",
+		}
+		assert.Equal(t, got, expected)
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		got, err := selectCorrectKubectlVersions([]byte(""))
+		assert.Errorf(t, err, "unexpected end of JSON input")
+		assert.Nil(t, got)
+	})
+}
+
+func Test_getKubectlCmd(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
+		ctx := context.TODO()
+		got, err := getKubectlCmd(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, got, []string{"minikube", "kubectl", "--"})
+	})
+}
+
+func Test_lookupCorrectKubectlCmd(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
+		args := []string{
+			"kubectl-1.17",
+			"kubectl-1.16",
+			"kubectl-1.15",
+		}
+		got, err := lookupCorrectKubectlCmd(args)
+		require.NoError(t, err)
+		assert.Equal(t, got, []string{"minikube", "kubectl", "--"})
+	})
+
+	t.Run("empty_kubectl_list_of_correct_version", func(t *testing.T) {
+		got, err := lookupCorrectKubectlCmd(nil)
+		require.NoError(t, err)
+		assert.Equal(t, got, []string{"minikube", "kubectl", "--"})
 	})
 }

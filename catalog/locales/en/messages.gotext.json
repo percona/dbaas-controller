@@ -17,6 +17,7 @@
             ]
         },
         {
+<<<<<<< HEAD
             "id": "XtraDBClusters: {XtraDBClusters}, err {Err}",
             "message": "XtraDBClusters: {XtraDBClusters}, err {Err}",
             "translation": "",
@@ -38,6 +39,11 @@
                     "expr": "err"
                 }
             ]
+=======
+            "id": "not implemented",
+            "message": "not implemented",
+            "translation": "This method is not implemented yet."
+>>>>>>> fb1c4a35a3f52bb45e5cfe77e7803d1038fc2beb
         },
         {
             "id": "{MethodName} is not implemented",

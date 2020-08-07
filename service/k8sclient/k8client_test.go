@@ -17,37 +17,27 @@
 package k8sclient
 
 import (
-	"context"
-	"os/exec"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/percona-platform/dbaas-controller/utils/logger"
+	"github.com/percona-platform/dbaas-controller/utils/app"
+
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
 
-func SetUp(t *testing.T) string {
-	cmd := []string{"dbaas-kubectl-1.16"}
-	kubectlPath, err := exec.LookPath(cmd[0])
-	cmd = []string{kubectlPath}
-	if e, ok := err.(*exec.Error); err != nil && ok && e.Err == exec.ErrNotFound {
-		cmd = []string{"minikube", "kubectl", "--"}
-	}
-	cmd = append(cmd, "config", "view", "-o", "json")
-	validKubeconfig, err := exec.Command(cmd[0], cmd[1:]...).Output() //nolint:gosec
-	require.NoError(t, err)
-	return string(validKubeconfig)
-}
-
 func TestK8Client(t *testing.T) {
-	validKubeconfig := SetUp(t)
-	logger.SetupGlobal()
-	l := logger.NewLogger()
-	ctx := context.TODO()
+	ctx := app.Context()
 
-	client, err := NewK8Client(l, validKubeconfig)
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, "{}")
+	require.NoError(t, err)
+
+	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
+	require.NoError(t, err)
+
+	client, err := NewK8Client(ctx, string(validKubeconfig))
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		err := client.Cleanup()
