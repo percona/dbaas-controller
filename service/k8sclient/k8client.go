@@ -30,7 +30,6 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
-	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // ClusterKind is a kind of a cluster.
@@ -114,10 +113,14 @@ type K8Client struct {
 }
 
 // NewK8Client returns new K8Client object.
-func NewK8Client(logger logger.Logger) *K8Client {
-	return &K8Client{
-		kubeCtl: kubectl.NewKubeCtl(logger),
+func NewK8Client(ctx context.Context) (*K8Client, error) {
+	kubeCtl, err := kubectl.NewKubeCtl(ctx)
+	if err != nil {
+		return nil, err
 	}
+	return &K8Client{
+		kubeCtl: kubeCtl,
+	}, nil
 }
 
 // Cleanup removes temporary files created by that object.

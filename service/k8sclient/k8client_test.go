@@ -23,16 +23,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 func TestK8Client(t *testing.T) {
-	logger.SetupGlobal()
-	l := logger.NewLogger()
 	ctx := context.TODO()
 
-	client := NewK8Client(l)
+	client, err := NewK8Client(ctx)
+	require.NoError(t, err)
 	t.Cleanup(client.Cleanup)
 
 	name := "test-cluster"
@@ -48,7 +45,7 @@ func TestK8Client(t *testing.T) {
 		time.Sleep(5 * time.Second)
 	}
 
-	err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
+	err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
 		Name: name,
 		Size: 2,
 	})
