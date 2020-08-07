@@ -220,8 +220,8 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			},
 		},
 	}
-	c.setPXCComputeResources(res.Spec.PXC, params.PXC.ComputeResources)
-	c.setPXCComputeResources(res.Spec.ProxySQL, params.ProxySQL.ComputeResources)
+	c.setXtraDBComputeResources(res.Spec.PXC, params.PXC.ComputeResources)
+	c.setXtraDBComputeResources(res.Spec.ProxySQL, params.ProxySQL.ComputeResources)
 	return c.kubeCtl.Apply(ctx, res)
 }
 
@@ -274,12 +274,12 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 		}
 		if cluster.Spec.PXC.Resources != nil {
 			val.PXC = &PXC{
-				ComputeResources: c.getPXCComputeResources(*cluster.Spec.PXC.Resources),
+				ComputeResources: c.getXtraDBComputeResources(*cluster.Spec.PXC.Resources),
 			}
 		}
 		if cluster.Spec.ProxySQL.Resources != nil {
 			val.ProxySQL = &ProxySQL{
-				ComputeResources: c.getPXCComputeResources(*cluster.Spec.ProxySQL.Resources),
+				ComputeResources: c.getXtraDBComputeResources(*cluster.Spec.ProxySQL.Resources),
 			}
 		}
 		res[i] = val
@@ -343,7 +343,7 @@ func (c *K8Client) getDeletingXtraDBClusters(ctx context.Context, clusters []Xtr
 	return xtradbClusters, nil
 }
 
-func (c *K8Client) getPXCComputeResources(resources pxc.PodResources) *ComputeResources {
+func (c *K8Client) getXtraDBComputeResources(resources pxc.PodResources) *ComputeResources {
 	if resources.Limits == nil {
 		return nil
 	}
@@ -355,7 +355,7 @@ func (c *K8Client) getPXCComputeResources(resources pxc.PodResources) *ComputeRe
 	}
 }
 
-func (c *K8Client) setPXCComputeResources(podResources *pxc.PodSpec, computeResources *ComputeResources) {
+func (c *K8Client) setXtraDBComputeResources(podResources *pxc.PodSpec, computeResources *ComputeResources) {
 	podResources.Resources = &pxc.PodResources{
 		Limits: &pxc.ResourcesList{
 			Memory: resource.NewQuantity(computeResources.MemoryBytes, resource.DecimalSI).String(),
