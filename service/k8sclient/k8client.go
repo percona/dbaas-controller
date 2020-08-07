@@ -95,9 +95,12 @@ type K8Client struct {
 // NewK8Client returns new K8Client object.
 func NewK8Client(ctx context.Context) (*K8Client, error) {
 	kubeCtl, err := kubectl.NewKubeCtl(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return &K8Client{
 		kubeCtl: kubeCtl,
-	}, err
+	}, nil
 }
 
 // Cleanup removes temporary files created by that object.

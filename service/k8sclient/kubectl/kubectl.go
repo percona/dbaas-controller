@@ -53,7 +53,6 @@ func NewKubeCtl(ctx context.Context) (*KubeCtl, error) {
 	// Handle kubectl versions
 	cmd, err := getKubectlCmd(ctx)
 	if err != nil {
-		l.Debugf("Cannot find kubectl binary: %s", err)
 		return nil, err
 	}
 
