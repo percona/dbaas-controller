@@ -223,8 +223,12 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			},
 		},
 	}
-	c.setXtraDBComputeResources(res.Spec.PXC, params.PXC.ComputeResources)
-	c.setXtraDBComputeResources(res.Spec.ProxySQL, params.ProxySQL.ComputeResources)
+	if params.PXC != nil {
+		c.setXtraDBComputeResources(res.Spec.PXC, params.PXC.ComputeResources)
+	}
+	if params.ProxySQL != nil {
+		c.setXtraDBComputeResources(res.Spec.ProxySQL, params.ProxySQL.ComputeResources)
+	}
 	return c.kubeCtl.Apply(ctx, res)
 }
 
@@ -359,6 +363,9 @@ func (c *K8Client) getXtraDBComputeResources(resources pxc.PodResources) *Comput
 }
 
 func (c *K8Client) setXtraDBComputeResources(podResources *pxc.PodSpec, computeResources *ComputeResources) {
+	if computeResources == nil {
+		return
+	}
 	podResources.Resources = &pxc.PodResources{
 		Limits: &pxc.ResourcesList{
 			Memory: resource.NewQuantity(computeResources.MemoryBytes, resource.DecimalSI).String(),
