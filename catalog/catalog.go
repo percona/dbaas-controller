@@ -37,16 +37,12 @@ func init() {
 	message.DefaultCatalog = cat
 }
 
-var messageKeyToIndex = map[string]int{
-	"%s is not implemented": 1,
-	"not implemented":       0,
-}
+var messageKeyToIndex = map[string]int{}
 
-var enIndex = []uint32{ // 3 elements
-	0x00000000, 0x00000024, 0x0000003d,
-} // Size: 36 bytes
+var enIndex = []uint32{ // 1 elements
+	0x00000000,
+} // Size: 28 bytes
 
-const enData string = "" + // Size: 61 bytes
-	"\x02This method is not implemented yet.\x02%[1]s is not implemented"
+const enData string = ""
 
-	// Total table size 97 bytes (0KiB); checksum: 122E237E
+// Total table size 28 bytes (0KiB); checksum: 8AEC66F1

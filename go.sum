@@ -321,6 +321,8 @@ github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtP
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/percona-platform/dbaas-api v0.0.0-20200717063155-bcb6c81137af h1:eLU733XKevHTdSqU0xa/SZ+mGKqxP4nFqsTHUtHZ7sg=
 github.com/percona-platform/dbaas-api v0.0.0-20200717063155-bcb6c81137af/go.mod h1:cZ5vLB384umMj71NFhWEiKUnLGKtMBTLB0tkY0kqg8A=
+github.com/percona-platform/dbaas-api v0.0.0-20200804080832-36f9f35f4e21 h1:DZlWXURiB6TTA4iNB0rDew0P4MYtVLSElcoHdyLUwDQ=
+github.com/percona-platform/dbaas-api v0.0.0-20200804080832-36f9f35f4e21/go.mod h1:cZ5vLB384umMj71NFhWEiKUnLGKtMBTLB0tkY0kqg8A=
 github.com/percona-platform/saas v0.0.0-20200715163609-32e145816e31 h1:QQUQs0esG+z8SqFAEcCYLPdl/DuRI0XJInTrQNHMTng=
 github.com/percona-platform/saas v0.0.0-20200715163609-32e145816e31/go.mod h1:HS1CHWAhOTxuneDJE4twdEUAwllmOmNTME/IzL+jBnI=
 github.com/percona/percona-backup-mongodb v1.2.0 h1:Xihe6gsYOwBrvJQuq38tZa+y9E0xvcEgVb/4FHYstkg=

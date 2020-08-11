@@ -18,7 +18,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/percona-platform/dbaas-api v0.0.0-20200717063155-bcb6c81137af
+	github.com/percona-platform/dbaas-api v0.0.0-20200804080832-36f9f35f4e21
 	github.com/percona-platform/saas v0.0.0-20200715163609-32e145816e31
 	github.com/percona/percona-backup-mongodb v1.2.0 // indirect
 	github.com/percona/percona-server-mongodb-operator v1.4.0
