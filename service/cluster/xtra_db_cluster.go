@@ -96,7 +96,10 @@ func (s *Service) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1
 
 // CreateXtraDBCluster creates a new XtraDB cluster.
 func (s *Service) CreateXtraDBCluster(ctx context.Context, req *controllerv1beta1.CreateXtraDBClusterRequest) (*controllerv1beta1.CreateXtraDBClusterResponse, error) {
-	client := k8sclient.NewK8Client(logger.Get(ctx))
+	client, err := k8sclient.NewK8Client(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	defer client.Cleanup()
 
 	params := &k8sclient.XtraDBParams{
@@ -115,7 +118,7 @@ func (s *Service) CreateXtraDBCluster(ctx context.Context, req *controllerv1beta
 			MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
 		},
 	}
-	err := client.CreateXtraDBCluster(ctx, params)
+	err = client.CreateXtraDBCluster(ctx, params)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -129,10 +132,13 @@ func (s *Service) UpdateXtraDBCluster(ctx context.Context, req *controllerv1beta
 
 // DeleteXtraDBCluster deletes XtraDB cluster.
 func (s *Service) DeleteXtraDBCluster(ctx context.Context, req *controllerv1beta1.DeleteXtraDBClusterRequest) (*controllerv1beta1.DeleteXtraDBClusterResponse, error) {
-	client := k8sclient.NewK8Client(logger.Get(ctx))
+	client, err := k8sclient.NewK8Client(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	defer client.Cleanup()
 
-	err := client.DeleteXtraDBCluster(ctx, req.Name)
+	err = client.DeleteXtraDBCluster(ctx, req.Name)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
