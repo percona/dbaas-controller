@@ -19,11 +19,56 @@ package kubectl
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/percona-platform/dbaas-controller/utils/app"
 )
+
+func TestNewKubeCtl(t *testing.T) {
+	ctx := app.Context()
+
+	cmd, err := getKubectlCmd(ctx)
+	require.NoError(t, err)
+
+	validKubeconfig, err := run(ctx, cmd, []string{"config", "view", "-o", "json"}, nil)
+	require.NoError(t, err)
+
+	t.Run("BasicNewKubeCtl", func(t *testing.T) {
+		kubeCtl, err := NewKubeCtl(ctx, string(validKubeconfig))
+		require.NoError(t, err)
+		// lookup for kubeconfig path
+		var kubeconfigFlag string
+		for _, option := range kubeCtl.cmd {
+			if strings.HasPrefix(option, "--kubeconfig") {
+				kubeconfigFlag = option
+				break
+			}
+		}
+
+		assert.True(t, strings.HasSuffix(kubeconfigFlag, kubeconfigFileName))
+
+		kubeconfigFilePath := strings.Split(kubeconfigFlag, "=")[1]
+		kubeconfigActual, err := ioutil.ReadFile(kubeconfigFilePath) //nolint:gosec
+		require.NoError(t, err)
+		assert.Equal(t, validKubeconfig, kubeconfigActual)
+
+		tmpDir := strings.TrimSuffix(kubeconfigFilePath, "/"+kubeconfigFileName)
+		assert.Equal(t, kubeCtl.tmpDir, tmpDir)
+
+		err = kubeCtl.Cleanup()
+		require.NoError(t, err)
+
+		_, err = os.Stat(tmpDir)
+		require.Error(t, err)
+		assert.True(t, os.IsNotExist(err))
+	})
+}
 
 const kubernetsVersions = `
 {
