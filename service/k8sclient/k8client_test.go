@@ -17,20 +17,31 @@
 package k8sclient
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
+	"github.com/percona-platform/dbaas-controller/utils/app"
 )
 
 func TestK8Client(t *testing.T) {
-	ctx := context.TODO()
+	ctx := app.Context()
 
-	client, err := NewK8Client(ctx)
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, "")
 	require.NoError(t, err)
-	t.Cleanup(client.Cleanup)
+
+	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
+	require.NoError(t, err)
+
+	client, err := NewK8Client(ctx, string(validKubeconfig))
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err := client.Cleanup()
+		require.NoError(t, err)
+	})
 
 	name := "test-cluster"
 	_ = client.DeleteXtraDBCluster(ctx, name)

@@ -49,7 +49,7 @@ func New(p *message.Printer) *Service {
 
 // ListXtraDBClusters returns a list of XtraDB clusters.
 func (s *Service) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1.ListXtraDBClustersRequest) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
-	client, err := k8sclient.NewK8Client(ctx)
+	client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, s.p.Sprintf("Cannot initialize K8s client: %s", err))
 	}

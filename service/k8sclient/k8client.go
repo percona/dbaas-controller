@@ -113,8 +113,8 @@ type K8Client struct {
 }
 
 // NewK8Client returns new K8Client object.
-func NewK8Client(ctx context.Context) (*K8Client, error) {
-	kubeCtl, err := kubectl.NewKubeCtl(ctx)
+func NewK8Client(ctx context.Context, kubeconfig string) (*K8Client, error) {
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, kubeconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -124,8 +124,8 @@ func NewK8Client(ctx context.Context) (*K8Client, error) {
 }
 
 // Cleanup removes temporary files created by that object.
-func (c *K8Client) Cleanup() {
-	c.kubeCtl.Cleanup()
+func (c *K8Client) Cleanup() error {
+	return c.kubeCtl.Cleanup()
 }
 
 // ListXtraDBClusters returns list of Percona XtraDB clusters and their statuses.

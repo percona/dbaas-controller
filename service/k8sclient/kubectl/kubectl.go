@@ -22,7 +22,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 
@@ -41,12 +44,15 @@ const (
 
 // KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
 type KubeCtl struct {
-	l   logger.Logger
-	cmd []string
+	l      logger.Logger
+	cmd    []string
+	tmpDir string
 }
 
+const kubeconfigFileName = "kubeconfig.json"
+
 // NewKubeCtl creates a new KubeCtl object with a given logger.
-func NewKubeCtl(ctx context.Context) (*KubeCtl, error) {
+func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "kubectl")
 
@@ -58,12 +64,44 @@ func NewKubeCtl(ctx context.Context) (*KubeCtl, error) {
 
 	l.Infof("Using %q", strings.Join(cmd, " "))
 
-	// TODO Handle kubeconfig https://jira.percona.com/browse/PMM-6347
+	if kubeconfig == "" {
+		return &KubeCtl{
+			l:   l,
+			cmd: cmd,
+		}, nil
+	}
+
+	// Handle kubeconfig.
+	tmpDir, kubeconfigPath, err := saveKubeconfig(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	l.Infof("kubectl config: %q", kubeconfigPath)
+
+	cmd = append(cmd, fmt.Sprintf("--kubeconfig=%s", kubeconfigPath))
 
 	return &KubeCtl{
-		l:   l,
-		cmd: cmd,
+		l:      l,
+		cmd:    cmd,
+		tmpDir: tmpDir,
 	}, nil
+}
+
+func saveKubeconfig(kubeconfig string) (string, string, error) {
+	tmpDir, err := ioutil.TempDir("", "dbaas-controller-kubeconfigs-")
+	if err != nil {
+		return "", "", err
+	}
+
+	kubeconfigPath := path.Join(tmpDir, kubeconfigFileName)
+
+	err = ioutil.WriteFile(kubeconfigPath, []byte(kubeconfig), 0o600)
+	if err != nil {
+		return "", "", err
+	}
+
+	return tmpDir, kubeconfigPath, nil
 }
 
 // getKubectlCmd gets correct version of kubectl binary for Kubernetes cluster.
@@ -146,8 +184,8 @@ func selectCorrectKubectlVersions(versionsJSON []byte) ([]string, error) {
 }
 
 // Cleanup removes temporary files created by that object.
-func (k *KubeCtl) Cleanup() {
-	// TODO Remove kubeconfig file https://jira.percona.com/browse/PMM-6347
+func (k *KubeCtl) Cleanup() error {
+	return os.RemoveAll(k.tmpDir)
 }
 
 // Get executes `kubectl get` with given object kind and optional name,
@@ -176,6 +214,15 @@ func (k *KubeCtl) Apply(ctx context.Context, res meta.Object) error {
 func (k *KubeCtl) Delete(ctx context.Context, res meta.Object) error {
 	_, err := run(ctx, k.cmd, []string{"delete", "-f", "-"}, res)
 	return err
+}
+
+// Run wraps func run.
+func (k *KubeCtl) Run(ctx context.Context, args []string, stdin interface{}) ([]byte, error) {
+	out, err := run(ctx, k.cmd, args, stdin)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // run executes kubectl with given kubectl binary/command, arguments and stdin data (encoded as JSON),
