@@ -19,13 +19,14 @@ package tests
 import (
 	"context"
 	"flag"
-	"google.golang.org/grpc"
 	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc"
 
 	dbaasClient "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/sirupsen/logrus"
@@ -96,7 +97,7 @@ func init() {
 
 	// make client and channel
 	opts := []grpc.DialOption{
-		//grpc.WithBlock(),
+		// grpc.WithBlock(),
 		grpc.WithInsecure(),
 	}
 	cc, err := grpc.DialContext(Context, *serverURLF, opts...)

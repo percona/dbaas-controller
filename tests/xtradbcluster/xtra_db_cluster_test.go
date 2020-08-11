@@ -20,13 +20,14 @@ import (
 	"testing"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/percona-platform/dbaas-controller/tests"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/percona-platform/dbaas-controller/tests"
 )
 
 func TestXtraDBClusterAPI(t *testing.T) {
-	kubeconfig := "todo" // TODO: set real kubeconfig
+	kubeconfig := `{"kind": "Config", "apiVersion": "v1"}`
 	name := "api-test-cluster"
 
 	clusters, err := tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
@@ -55,12 +56,14 @@ func TestXtraDBClusterAPI(t *testing.T) {
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        1000,
 					MemoryBytes: 1024 * 1024 * 1024,
-				}},
+				},
+			},
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        1000,
 					MemoryBytes: 1024 * 1024 * 1024,
-				}},
+				},
+			},
 		},
 	})
 	require.NoError(t, err)
