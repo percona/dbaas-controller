@@ -19,7 +19,6 @@ package kubectl
 
 import (
 	"context"
-	"crypto/sha256"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -41,7 +40,6 @@ func TestNewKubeCtl(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("BasicNewKubeCtl", func(t *testing.T) {
-		sha256KubeconfigExpected := sha256.Sum256(validKubeconfig)
 		kubeCtl, err := NewKubeCtl(ctx, string(validKubeconfig))
 		require.NoError(t, err)
 		// lookup for kubeconfig path
@@ -56,10 +54,9 @@ func TestNewKubeCtl(t *testing.T) {
 		assert.True(t, strings.HasSuffix(kubeconfigFlag, kubeconfigFileName))
 
 		kubeconfigFilePath := strings.Split(kubeconfigFlag, "=")[1]
-		dat, err := ioutil.ReadFile(kubeconfigFilePath) //nolint:gosec
+		kubeconfigActual, err := ioutil.ReadFile(kubeconfigFilePath) //nolint:gosec
 		require.NoError(t, err)
-		sha256KubeconfigActual := sha256.Sum256(dat)
-		assert.Equal(t, sha256KubeconfigExpected, sha256KubeconfigActual)
+		assert.Equal(t, validKubeconfig, kubeconfigActual)
 
 		tmpDir := strings.TrimSuffix(kubeconfigFilePath, "/"+kubeconfigFileName)
 		assert.Equal(t, kubeCtl.tmpDir, tmpDir)
