@@ -17,23 +17,31 @@
 package k8sclient
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/percona-platform/dbaas-controller/utils/logger"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
+	"github.com/percona-platform/dbaas-controller/utils/app"
 )
 
 func TestK8Client(t *testing.T) {
-	logger.SetupGlobal()
-	l := logger.NewLogger()
-	ctx := context.TODO()
+	ctx := app.Context()
 
-	client := NewK8Client(l)
-	t.Cleanup(client.Cleanup)
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, "")
+	require.NoError(t, err)
+
+	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
+	require.NoError(t, err)
+
+	client, err := NewK8Client(ctx, string(validKubeconfig))
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err := client.Cleanup()
+		require.NoError(t, err)
+	})
 
 	name := "test-cluster"
 	_ = client.DeleteXtraDBCluster(ctx, name)
@@ -48,7 +56,7 @@ func TestK8Client(t *testing.T) {
 		time.Sleep(5 * time.Second)
 	}
 
-	err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
+	err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
 		Name: name,
 		Size: 2,
 	})

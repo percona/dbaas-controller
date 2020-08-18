@@ -2,22 +2,17 @@
     "language": "en",
     "messages": [
         {
-            "id": "not implemented",
-            "message": "not implemented",
-            "translation": "This method is not implemented yet."
-        },
-        {
-            "id": "{MethodName} is not implemented",
-            "message": "{MethodName} is not implemented",
-            "translation": "{MethodName} is not implemented",
+            "id": "Cannot initialize K8s client: {Err}",
+            "message": "Cannot initialize K8s client: {Err}",
+            "translation": "",
             "placeholders": [
                 {
-                    "id": "MethodName",
+                    "id": "Err",
                     "string": "%[1]s",
-                    "type": "string",
-                    "underlyingType": "string",
+                    "type": "error",
+                    "underlyingType": "interface{Error() string}",
                     "argNum": 1,
-                    "expr": "methodName"
+                    "expr": "err"
                 }
             ]
         },

@@ -30,7 +30,6 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
-	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // ClusterKind is a kind of a cluster.
@@ -62,10 +61,28 @@ const (
 	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.4.0-proxysql"
 )
 
+// ComputeResources represents container computer resources requests or limits.
+type ComputeResources struct {
+	CPUM        int32
+	MemoryBytes int64
+}
+
+// PXC contains information related to PXC containers in Percona XtraDB cluster.
+type PXC struct {
+	ComputeResources *ComputeResources
+}
+
+// ProxySQL contains information related to ProxySQL containers in Percona XtraDB cluster.
+type ProxySQL struct {
+	ComputeResources *ComputeResources
+}
+
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
 type XtraDBParams struct {
-	Name string
-	Size int32
+	Name     string
+	Size     int32
+	PXC      *PXC
+	ProxySQL *ProxySQL
 }
 
 // Cluster contains common information related to cluster.
@@ -75,9 +92,11 @@ type Cluster struct {
 
 // XtraDBCluster contains information related to xtradb cluster.
 type XtraDBCluster struct {
-	Name  string
-	Size  int32
-	State ClusterState
+	Name     string
+	Size     int32
+	State    ClusterState
+	PXC      *PXC
+	ProxySQL *ProxySQL
 }
 
 // pxcStatesMap matches pxc app states to cluster states.
@@ -94,15 +113,19 @@ type K8Client struct {
 }
 
 // NewK8Client returns new K8Client object.
-func NewK8Client(logger logger.Logger) *K8Client {
-	return &K8Client{
-		kubeCtl: kubectl.NewKubeCtl(logger),
+func NewK8Client(ctx context.Context, kubeconfig string) (*K8Client, error) {
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, kubeconfig)
+	if err != nil {
+		return nil, err
 	}
+	return &K8Client{
+		kubeCtl: kubeCtl,
+	}, nil
 }
 
 // Cleanup removes temporary files created by that object.
-func (c *K8Client) Cleanup() {
-	c.kubeCtl.Cleanup()
+func (c *K8Client) Cleanup() error {
+	return c.kubeCtl.Cleanup()
 }
 
 // ListXtraDBClusters returns list of Percona XtraDB clusters and their statuses.
@@ -200,6 +223,12 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			},
 		},
 	}
+	if params.PXC != nil {
+		c.setXtraDBComputeResources(res.Spec.PXC, params.PXC.ComputeResources)
+	}
+	if params.ProxySQL != nil {
+		c.setXtraDBComputeResources(res.Spec.ProxySQL, params.ProxySQL.ComputeResources)
+	}
 	return c.kubeCtl.Apply(ctx, res)
 }
 
@@ -249,6 +278,16 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 			Name:  cluster.Name,
 			Size:  cluster.Spec.ProxySQL.Size,
 			State: pxcStatesMap[cluster.Status.Status],
+		}
+		if cluster.Spec.PXC.Resources != nil {
+			val.PXC = &PXC{
+				ComputeResources: c.getXtraDBComputeResources(*cluster.Spec.PXC.Resources),
+			}
+		}
+		if cluster.Spec.ProxySQL.Resources != nil {
+			val.ProxySQL = &ProxySQL{
+				ComputeResources: c.getXtraDBComputeResources(*cluster.Spec.ProxySQL.Resources),
+			}
 		}
 		res[i] = val
 	}
@@ -309,4 +348,28 @@ func (c *K8Client) getDeletingXtraDBClusters(ctx context.Context, clusters []Xtr
 		}
 	}
 	return xtradbClusters, nil
+}
+
+func (c *K8Client) getXtraDBComputeResources(resources pxc.PodResources) *ComputeResources {
+	if resources.Limits == nil {
+		return nil
+	}
+	cpum := resource.MustParse(resources.Limits.CPU)
+	memory := resource.MustParse(resources.Limits.Memory)
+	return &ComputeResources{
+		CPUM:        int32(cpum.MilliValue()),
+		MemoryBytes: memory.Value(),
+	}
+}
+
+func (c *K8Client) setXtraDBComputeResources(podResources *pxc.PodSpec, computeResources *ComputeResources) {
+	if computeResources == nil {
+		return
+	}
+	podResources.Resources = &pxc.PodResources{
+		Limits: &pxc.ResourcesList{
+			Memory: resource.NewQuantity(computeResources.MemoryBytes, resource.DecimalSI).String(),
+			CPU:    resource.NewMilliQuantity(int64(computeResources.CPUM), resource.DecimalSI).String(),
+		},
+	}
 }

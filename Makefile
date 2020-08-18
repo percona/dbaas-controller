@@ -25,6 +25,9 @@ PMM_LD_FLAGS = -ldflags " \
 			-X 'github.com/percona/pmm/version.Branch=$(PMM_RELEASE_BRANCH)' \
 			"
 
+release-component-version:
+	@echo $(COMPONENT_VERSION)
+
 release:                          ## Build dbaas-controller release binaries.
 	env CGO_ENABLED=0 go build -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
 	$(PMM_RELEASE_PATH)/dbaas-controller --version
@@ -55,16 +58,16 @@ check:                            ## Run checks/linters for the whole project
 	bin/golangci-lint run
 
 install:                          ## Install binaries
-	go build -race -o bin/dbaas-controller ./cmd/dbaas-controller
+	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
 test:                             ## Run tests
-	go test -race -timeout=15m ./...
+	go test -race -timeout=25m ./...
 
 test-cover:                       ## Run tests and collect per-package coverage information
-	go test -race -timeout=15m -count=1 -coverprofile=cover.out -covermode=atomic ./...
+	go test -race -timeout=25m -count=1 -coverprofile=cover.out -covermode=atomic ./...
 
 test-crosscover:                  ## Run tests and collect cross-package coverage information
-	go test -race -timeout=15m -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
+	go test -race -timeout=25m -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
 
 run: install                      ## Run dbaas-controller
 	bin/dbaas-controller
