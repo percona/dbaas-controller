@@ -41,6 +41,9 @@ init:                             ## Install development tools
 	go build -modfile=tools/go.mod -o bin/gotext golang.org/x/text/cmd/gotext
 	go build -modfile=tools/go.mod -o bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
 
+ci-init:                ## Initialize CI environment
+	# nothing there yet
+
 gen:                              ## Generate code
 	go generate ./catalog
 	mv catalog/locales/en/out.gotext.json catalog/locales/en/messages.gotext.json
