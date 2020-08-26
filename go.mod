@@ -22,7 +22,7 @@ require (
 	github.com/percona-platform/saas v0.0.0-20200715163609-32e145816e31
 	github.com/percona/percona-backup-mongodb v1.2.0 // indirect
 	github.com/percona/percona-server-mongodb-operator v1.4.0
-	github.com/percona/percona-xtradb-cluster-operator v1.4.0
+	github.com/percona/percona-xtradb-cluster-operator v1.5.0
 	github.com/percona/pmm v2.9.1+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
