@@ -1,6 +1,9 @@
 ---
 name: CI
 on:
+  schedule:
+    # run every Sunday to re-populate caches after they are cleaned on Saturday
+    - cron: "0 12 * * 0"
   push:
     branches:
       - main
@@ -21,16 +24,18 @@ jobs:
           - 1.14.x
           - 1.15.x
         os: [ubuntu-latest]
-        may-fail: [false]
-        include:
-          - go-version: tip
-            os: ubuntu-latest
-            may-fail: true
         kubernetes_version:
           # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
           - 1.15.11
           - 1.16.8
-        build_tags: ['', 'saas']
+        build_tags: ["", "saas"]
+        may-fail: [false]
+        include:
+          - go-version: tip
+            os: ubuntu-latest
+            kubernetes_version: 1.16.8
+            build_tags: ""
+            may-fail: true
 
     continue-on-error: ${{ matrix.may-fail }}
     runs-on: ${{ matrix.os }}
@@ -55,6 +60,9 @@ jobs:
 
       - name: Set up Go tip
         if: matrix.go-version == 'tip'
+        env:
+          # to avoid error due to `go version` accepting -v flag with an argument since 1.15
+          GOFLAGS: ""
         run: |
           git clone --depth=1 https://go.googlesource.com/go $HOME/gotip
           cd $HOME/gotip/src
