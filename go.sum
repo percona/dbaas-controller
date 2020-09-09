@@ -326,8 +326,8 @@ github.com/opencontainers/go-digest v1.0.0-rc1/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQ
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
-github.com/percona-platform/dbaas-api v0.0.0-20200909123013-067d66ee3244 h1:ZdOVqjLm5ZkTBdsJbnYizVCIh0jqcytpBXto2Vsm0DM=
-github.com/percona-platform/dbaas-api v0.0.0-20200909123013-067d66ee3244/go.mod h1:3n5ybnGcgjDVZmqmUPfhZmS0ZjrIqidLPSqnlhAwlDo=
+github.com/percona-platform/dbaas-api v0.0.0-20200909154600-92f2ab9b8440 h1:CkLv2F8cprSQm1i9AOH1574QgPV+ANpzM8S7ecN2/Vs=
+github.com/percona-platform/dbaas-api v0.0.0-20200909154600-92f2ab9b8440/go.mod h1:3n5ybnGcgjDVZmqmUPfhZmS0ZjrIqidLPSqnlhAwlDo=
 github.com/percona-platform/saas v0.0.0-20200715163609-32e145816e31 h1:QQUQs0esG+z8SqFAEcCYLPdl/DuRI0XJInTrQNHMTng=
 github.com/percona-platform/saas v0.0.0-20200715163609-32e145816e31/go.mod h1:HS1CHWAhOTxuneDJE4twdEUAwllmOmNTME/IzL+jBnI=
 github.com/percona/percona-backup-mongodb v1.2.0 h1:Xihe6gsYOwBrvJQuq38tZa+y9E0xvcEgVb/4FHYstkg=
