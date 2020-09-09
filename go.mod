@@ -33,7 +33,7 @@ require (
 	golang.org/x/text v0.3.3
 	google.golang.org/grpc v1.32.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	k8s.io/api v0.18.4
+	k8s.io/api v0.19.0
 	k8s.io/apimachinery v0.18.4
 	sigs.k8s.io/controller-runtime v0.6.1 // indirect
 )
