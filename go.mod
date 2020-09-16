@@ -15,7 +15,7 @@ go 1.14
 require (
 	github.com/AlekSi/pointer v1.1.0
 	github.com/google/uuid v1.1.2
-	github.com/grpc-ecosystem/go-grpc-middleware v1.2.1
+	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/percona-platform/dbaas-api v0.0.0-20200909154600-92f2ab9b8440
