@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 
 	"github.com/AlekSi/pointer"
-	_ "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1" // It'll be implemented later.
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
