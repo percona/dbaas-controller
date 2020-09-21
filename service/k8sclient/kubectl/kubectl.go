@@ -39,7 +39,7 @@ import (
 
 const (
 	kubeconfigFileName      = "kubeconfig.json"
-	defaultPmmServerKubectl = "/opt/dbaas-tools/bin/kubectl-1.16" // not in $PATH yet
+	defaultPmmServerKubectl = "/opt/dbaas-tools/bin/kubectl-1.16"
 	defaultDevEnvKubectl    = "minikube kubectl --"
 )
 
@@ -199,7 +199,6 @@ func selectCorrectKubectlVersions(versionsJSON []byte) ([]string, error) {
 	for minor := serverMinor + 1; minor >= serverMinor-1; minor-- {
 		kubectlCmdNames = append(kubectlCmdNames, fmt.Sprintf("kubectl-%d.%d", serverMajor, minor))
 	}
-
 	return kubectlCmdNames, nil
 }
 
@@ -220,7 +219,6 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 	if err != nil {
 		return err
 	}
-
 	return json.Unmarshal(stdout, res)
 }
 
@@ -233,7 +231,6 @@ func (k *KubeCtl) Apply(ctx context.Context, res meta.Object) error {
 // Delete executes `kubectl delete` with given resource.
 func (k *KubeCtl) Delete(ctx context.Context, res meta.Object) error {
 	_, err := run(ctx, k.cmd, []string{"delete", "-f", "-"}, res)
-
 	return err
 }
 
@@ -243,7 +240,6 @@ func (k *KubeCtl) Run(ctx context.Context, args []string, stdin interface{}) ([]
 	if err != nil {
 		return nil, err
 	}
-
 	return out, nil
 }
 
@@ -285,6 +281,5 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 
 	l.Debug(outBuf.String())
 	l.Debug(errBuf.String())
-
 	return outBuf.Bytes(), err
 }
