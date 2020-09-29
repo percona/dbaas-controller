@@ -56,30 +56,37 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "kubectl")
 
-	// Handle kubectl versions
-	cmd, err := getKubectlCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	l.Infof("Using %q", strings.Join(cmd, " "))
-
 	if kubeconfig == "" {
+		// Handle kubectl versions
+		cmd, err := getKubectlCmd(ctx, "")
+		if err != nil {
+			return nil, err
+		}
 		return &KubeCtl{
 			l:   l,
 			cmd: cmd,
 		}, nil
 	}
 
+	var tmpDir, kubeconfigPath string
+	var err error
+
 	// Handle kubeconfig.
-	tmpDir, kubeconfigPath, err := saveKubeconfig(kubeconfig)
+	tmpDir, kubeconfigPath, err = saveKubeconfig(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
-
 	l.Infof("kubectl config: %q", kubeconfigPath)
 
+	// Handle kubectl versions
+	cmd, err := getKubectlCmd(ctx, kubeconfigPath)
+	if err != nil {
+		_ = os.RemoveAll(tmpDir)
+		return nil, err
+	}
 	cmd = append(cmd, fmt.Sprintf("--kubeconfig=%s", kubeconfigPath))
+
+	l.Infof("Using %q", strings.Join(cmd, " "))
 
 	return &KubeCtl{
 		l:      l,
@@ -105,17 +112,18 @@ func saveKubeconfig(kubeconfig string) (string, string, error) {
 }
 
 // getKubectlCmd gets correct version of kubectl binary for Kubernetes cluster.
-func getKubectlCmd(ctx context.Context) ([]string, error) {
+func getKubectlCmd(ctx context.Context, kubeConfigPath string) ([]string, error) {
 	// Firstly lookup default kubectl to get Kubernetes Server version.
-	kubectlCmd, err := lookupCorrectKubectlCmd([]string{defaultKubectl})
+	kubectlCmd, err := lookupCorrectKubectlCmd([]string{"kubectl-1.16", defaultKubectl})
 	if err != nil {
 		return nil, err
 	}
 
-	versionsJSON, err := getVersions(ctx, kubectlCmd)
+	versionsJSON, err := getVersions(ctx, kubectlCmd, kubeConfigPath)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(string(versionsJSON))
 
 	kubectlCmdNames, err := selectCorrectKubectlVersions(versionsJSON)
 	if err != nil {
@@ -138,8 +146,12 @@ func lookupCorrectKubectlCmd(kubectlCmdNames []string) ([]string, error) {
 }
 
 // getVersions gets kubectl and Kubernetes cluster version.
-func getVersions(ctx context.Context, kubectlCmd []string) ([]byte, error) {
-	versionsJSON, err := run(ctx, kubectlCmd, []string{"version", "-o", "json"}, nil)
+func getVersions(ctx context.Context, kubectlCmd []string, kubeConfigPath string) ([]byte, error) {
+	args := []string{"version", "-o", "json", "--insecure-skip-tls-verify"}
+	if kubeConfigPath != "" {
+		args = append(args, "--kubeconfig", kubeConfigPath)
+	}
+	versionsJSON, err := run(ctx, kubectlCmd, args, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +183,7 @@ func selectCorrectKubectlVersions(versionsJSON []byte) ([]string, error) {
 		return nil, err
 	}
 
-	serverMinor, err := strconv.Atoi(ver.ServerVersion.Minor)
+	serverMinor, err := strconv.Atoi(strings.TrimSuffix(ver.ServerVersion.Minor, "+")) // EKS is returning "serverVersion": { "major": "1", "minor": "16+" }
 	if err != nil {
 		return nil, err
 	}

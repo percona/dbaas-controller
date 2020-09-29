@@ -33,7 +33,7 @@ import (
 func TestNewKubeCtl(t *testing.T) {
 	ctx := app.Context()
 
-	cmd, err := getKubectlCmd(ctx)
+	cmd, err := getKubectlCmd(ctx, "")
 	require.NoError(t, err)
 
 	validKubeconfig, err := run(ctx, cmd, []string{"config", "view", "-o", "json"}, nil)
@@ -119,7 +119,7 @@ func Test_selectCorrectKubectlVersions(t *testing.T) {
 func Test_getKubectlCmd(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		ctx := context.TODO()
-		got, err := getKubectlCmd(ctx)
+		got, err := getKubectlCmd(ctx, "")
 		require.NoError(t, err)
 		assert.Equal(t, got, []string{"minikube", "kubectl", "--"})
 	})
