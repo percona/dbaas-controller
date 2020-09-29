@@ -1,6 +1,9 @@
 ---
 name: CI
 on:
+  schedule:
+    # run every Sunday to re-populate caches after they are cleaned on Saturday
+    - cron: "0 12 * * 0"
   push:
     branches:
       - main
@@ -20,17 +23,20 @@ jobs:
         go-version:
           - 1.14.x
           - 1.15.x
-        os: [ubuntu-latest]
-        may-fail: [false]
-        include:
-          - go-version: tip
-            os: ubuntu-latest
-            may-fail: true
         kubernetes_version:
           # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
           - 1.15.11
           - 1.16.8
-        build_tags: ['', 'saas']
+        build_tags: ["", "saas"]
+        os: [ubuntu-latest]
+        may-fail: [false]
+
+        include:
+          - go-version: tip
+            kubernetes_version: 1.16.8
+            build_tags: ""
+            os: ubuntu-latest
+            may-fail: true
 
     continue-on-error: ${{ matrix.may-fail }}
     runs-on: ${{ matrix.os }}
@@ -49,12 +55,15 @@ jobs:
         env:
           # to avoid error due to `go version` accepting -v flag with an argument since 1.15
           GOFLAGS: ""
-        uses: percona-platform/setup-go@v2.1.1
+        uses: percona-platform/setup-go@v2.1.2
         with:
           go-version: ${{ matrix.go-version }}
 
       - name: Set up Go tip
         if: matrix.go-version == 'tip'
+        env:
+          # to avoid error due to `go version` accepting -v flag with an argument since 1.15
+          GOFLAGS: ""
         run: |
           git clone --depth=1 https://go.googlesource.com/go $HOME/gotip
           cd $HOME/gotip/src
@@ -71,7 +80,7 @@ jobs:
           echo "::set-env name=GO_VERSION::$(go version)"
 
       - name: Check out code into the Go module directory
-        uses: percona-platform/checkout@v2.3.1
+        uses: percona-platform/checkout@v2.3.2
 
       # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
       # https://minikube.sigs.k8s.io/docs/drivers/none/
@@ -123,7 +132,7 @@ jobs:
           make test-crosscover
 
       - name: Upload coverage results
-        uses: percona-platform/codecov-action@v1.0.12
+        uses: percona-platform/codecov-action@v1.0.13
         with:
           file: crosscover.out
           flags: crosscover
@@ -183,12 +192,12 @@ jobs:
 
     steps:
       - name: Set up Go ${{ matrix.go-version }}
-        uses: percona-platform/setup-go@v2.1.1
+        uses: percona-platform/setup-go@v2.1.2
         with:
           go-version: ${{ matrix.go-version }}
 
       - name: Check out code into the Go module directory
-        uses: percona-platform/checkout@v2.3.1
+        uses: percona-platform/checkout@v2.3.2
         with:
           lfs: true
 
