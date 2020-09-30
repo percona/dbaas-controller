@@ -38,8 +38,9 @@ import (
 )
 
 const (
-	// FIXME: change to a real default kubectl.
-	defaultKubectl = "minikube kubectl --"
+	dbaasToolPath      = "/opt/dbaas-tools/bin"
+	defaultKubectl     = dbaasToolPath + "/kubectl-1.16"
+	minikubeDevKubectl = "minikube kubectl --"
 )
 
 // KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
@@ -114,7 +115,7 @@ func saveKubeconfig(kubeconfig string) (string, string, error) {
 // getKubectlCmd gets correct version of kubectl binary for Kubernetes cluster.
 func getKubectlCmd(ctx context.Context, kubeConfigPath string) ([]string, error) {
 	// Firstly lookup default kubectl to get Kubernetes Server version.
-	kubectlCmd, err := lookupCorrectKubectlCmd([]string{"kubectl-1.16", defaultKubectl})
+	kubectlCmd, err := lookupCorrectKubectlCmd([]string{defaultKubectl, minikubeDevKubectl})
 	if err != nil {
 		return nil, err
 	}
@@ -130,24 +131,26 @@ func getKubectlCmd(ctx context.Context, kubeConfigPath string) ([]string, error)
 		return nil, err
 	}
 
-	return lookupCorrectKubectlCmd(kubectlCmdNames)
+	return lookupCorrectKubectlCmd(append(kubectlCmdNames, defaultKubectl, minikubeDevKubectl))
 }
 
 func lookupCorrectKubectlCmd(kubectlCmdNames []string) ([]string, error) {
 	for _, kubectlCmdName := range kubectlCmdNames {
-		kubectlPath, err := exec.LookPath(kubectlCmdName)
+		cmd := strings.Split(kubectlCmdName, " ")
+		kubectlPath, err := exec.LookPath(cmd[0])
 		if err == nil {
-			return []string{kubectlPath}, nil
+			cmd[0] = kubectlPath
+			return cmd, nil
 		}
 	}
 
 	// if none found (pass empty kubectlCmdNames) use default version of kubectl.
-	return strings.Split(defaultKubectl, " "), nil
+	return nil, errors.New("kubectl not found")
 }
 
 // getVersions gets kubectl and Kubernetes cluster version.
 func getVersions(ctx context.Context, kubectlCmd []string, kubeConfigPath string) ([]byte, error) {
-	args := []string{"version", "-o", "json", "--insecure-skip-tls-verify"}
+	args := []string{"version", "-o", "json"}
 	if kubeConfigPath != "" {
 		args = append(args, "--kubeconfig", kubeConfigPath)
 	}
@@ -190,7 +193,7 @@ func selectCorrectKubectlVersions(versionsJSON []byte) ([]string, error) {
 
 	// Iterate from newer to older version. Append default as the last.
 	for minor := serverMinor + 1; minor >= serverMinor-1; minor-- {
-		kubectlCmdNames = append(kubectlCmdNames, fmt.Sprintf("kubectl-%d.%d", serverMajor, minor))
+		kubectlCmdNames = append(kubectlCmdNames, fmt.Sprintf("%s/kubectl-%d.%d", dbaasToolPath, serverMajor, minor))
 	}
 	return kubectlCmdNames, nil
 }

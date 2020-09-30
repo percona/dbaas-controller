@@ -102,9 +102,9 @@ func Test_selectCorrectKubectlVersions(t *testing.T) {
 		got, err := selectCorrectKubectlVersions([]byte(kubernetsVersions))
 		require.NoError(t, err)
 		expected := []string{
-			"kubectl-1.17",
-			"kubectl-1.16",
-			"kubectl-1.15",
+			dbaasToolPath + "/kubectl-1.17",
+			dbaasToolPath + "/kubectl-1.16",
+			dbaasToolPath + "/kubectl-1.15",
 		}
 		assert.Equal(t, got, expected)
 	})
@@ -121,7 +121,7 @@ func Test_getKubectlCmd(t *testing.T) {
 		ctx := context.TODO()
 		got, err := getKubectlCmd(ctx, "")
 		require.NoError(t, err)
-		assert.Equal(t, got, []string{"minikube", "kubectl", "--"})
+		assert.Equal(t, got, []string{"/usr/bin/minikube", "kubectl", "--"})
 	})
 }
 
@@ -131,15 +131,16 @@ func Test_lookupCorrectKubectlCmd(t *testing.T) {
 			"kubectl-1.17",
 			"kubectl-1.16",
 			"kubectl-1.15",
+			"minikube kubectl --",
 		}
 		got, err := lookupCorrectKubectlCmd(args)
 		require.NoError(t, err)
-		assert.Equal(t, got, []string{"minikube", "kubectl", "--"})
+		assert.Equal(t, got, []string{"/usr/bin/minikube", "kubectl", "--"})
 	})
 
 	t.Run("empty_kubectl_list_of_correct_version", func(t *testing.T) {
 		got, err := lookupCorrectKubectlCmd(nil)
-		require.NoError(t, err)
-		assert.Equal(t, got, []string{"minikube", "kubectl", "--"})
+		require.EqualError(t, err, "kubectl not found")
+		require.Nil(t, got)
 	})
 }
