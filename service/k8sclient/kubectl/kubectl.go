@@ -69,11 +69,8 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 		}, nil
 	}
 
-	var tmpDir, kubeconfigPath string
-	var err error
-
 	// Handle kubeconfig.
-	tmpDir, kubeconfigPath, err = saveKubeconfig(kubeconfig)
+	tmpDir, kubeconfigPath, err := saveKubeconfig(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +121,6 @@ func getKubectlCmd(ctx context.Context, kubeConfigPath string) ([]string, error)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(string(versionsJSON))
 
 	kubectlCmdNames, err := selectCorrectKubectlVersions(versionsJSON)
 	if err != nil {
@@ -144,7 +140,7 @@ func lookupCorrectKubectlCmd(kubectlCmdNames []string) ([]string, error) {
 		}
 	}
 
-	// if none found (pass empty kubectlCmdNames) use default version of kubectl.
+	// if none found (pass empty kubectlCmdNames) return an error.
 	return nil, errors.New("kubectl not found")
 }
 
