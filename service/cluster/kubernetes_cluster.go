@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
 // KubernetesClusterService implements methods of gRPC server and other business logic related to kubernetes clusters.
@@ -39,10 +39,10 @@ func NewKubernetesClusterService(p *message.Printer) *KubernetesClusterService {
 
 // CheckKubernetesClusterConnection checks connection with kubernetes cluster.
 func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.Context, req *controllerv1beta1.CheckKubernetesClusterConnectionRequest) (*controllerv1beta1.CheckKubernetesClusterConnectionResponse, error) {
-	kubeCtl, err := kubectl.NewKubeCtl(ctx, req.KubeAuth.Kubeconfig)
+	k8Client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, k.p.Sprintf("Unable to connect to kubernetes cluster: %s", err))
 	}
-	defer kubeCtl.Cleanup() //nolint:errcheck
+	defer k8Client.Cleanup() //nolint:errcheck
 	return new(controllerv1beta1.CheckKubernetesClusterConnectionResponse), nil
 }
