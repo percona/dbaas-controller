@@ -338,6 +338,8 @@ github.com/percona/percona-xtradb-cluster-operator v1.4.0 h1:Rlsng4OsC1gZ3a8omui
 github.com/percona/percona-xtradb-cluster-operator v1.4.0/go.mod h1:QvGXz1h9lhCsGHDkKlbmRDEsQVEyZUZ2cQda+MwqYTY=
 github.com/percona/pmm v2.9.1+incompatible h1:SwDVou1J7rTWqg5gIKjhpC1HiPGO8PSlA/rsgPKwDfA=
 github.com/percona/pmm v2.9.1+incompatible/go.mod h1:nN14kK4Dfl2Ub1k05aOnAHv7SmLEQtCsYX+DEfLgrkU=
+github.com/percona/pmm v2.10.1+incompatible h1:8Nvj30A5wlNNTGhRiPL7dZbqIMX2FAv2nOTPxvvdU/k=
+github.com/percona/pmm v2.10.1+incompatible/go.mod h1:nN14kK4Dfl2Ub1k05aOnAHv7SmLEQtCsYX+DEfLgrkU=
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
 github.com/pierrec/lz4 v2.3.0+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

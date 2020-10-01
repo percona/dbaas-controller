@@ -23,7 +23,7 @@ require (
 	github.com/percona/percona-backup-mongodb v1.2.0 // indirect
 	github.com/percona/percona-server-mongodb-operator v1.4.0
 	github.com/percona/percona-xtradb-cluster-operator v1.4.0
-	github.com/percona/pmm v2.9.1+incompatible
+	github.com/percona/pmm v2.10.1+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.6.0
