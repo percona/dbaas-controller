@@ -27,7 +27,7 @@ import (
 	"golang.org/x/text/message"
 )
 
-func TestKubernetesClusterServiceKubernetesClusterCheckConnection(t *testing.T) {
+func TestKubernetesClusterServiceCheckConnection(t *testing.T) {
 	t.Run("Wrong kube config", func(t *testing.T) {
 		logrus.SetLevel(logrus.DebugLevel)
 		i18nPrinter := message.NewPrinter(language.English)

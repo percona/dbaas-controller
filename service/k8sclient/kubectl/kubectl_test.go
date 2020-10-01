@@ -21,6 +21,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -97,7 +98,7 @@ const kubernetsVersions = `
 }
 `
 
-func Test_selectCorrectKubectlVersions(t *testing.T) {
+func TestSelectCorrectKubectlVersions(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		got, err := selectCorrectKubectlVersions([]byte(kubernetsVersions))
 		require.NoError(t, err)
@@ -116,16 +117,17 @@ func Test_selectCorrectKubectlVersions(t *testing.T) {
 	})
 }
 
-func Test_getKubectlCmd(t *testing.T) {
+func TestGetKubectlCmd(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		ctx := context.TODO()
 		got, err := getKubectlCmd(ctx, "")
 		require.NoError(t, err)
-		assert.Equal(t, got, []string{"/usr/bin/minikube", "kubectl", "--"})
+		path, _ := exec.LookPath("minikube")
+		assert.Equal(t, got, []string{path, "kubectl", "--"})
 	})
 }
 
-func Test_lookupCorrectKubectlCmd(t *testing.T) {
+func TestLookupCorrectKubectlCmd(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		args := []string{
 			"kubectl-1.17",
@@ -135,10 +137,21 @@ func Test_lookupCorrectKubectlCmd(t *testing.T) {
 		}
 		got, err := lookupCorrectKubectlCmd(args)
 		require.NoError(t, err)
-		assert.Equal(t, got, []string{"/usr/bin/minikube", "kubectl", "--"})
+		path, _ := exec.LookPath("minikube")
+		assert.Equal(t, got, []string{path, "kubectl", "--"})
 	})
 
-	t.Run("empty_kubectl_list_of_correct_version", func(t *testing.T) {
+	t.Run("kubectlNotFound", func(t *testing.T) {
+		got, err := lookupCorrectKubectlCmd([]string{
+			"kubectl-1.17",
+			"kubectl-1.16",
+			"kubectl-1.15",
+		})
+		require.EqualError(t, err, "kubectl not found")
+		require.Nil(t, got)
+	})
+
+	t.Run("emptyKubectlList", func(t *testing.T) {
 		got, err := lookupCorrectKubectlCmd(nil)
 		require.EqualError(t, err, "kubectl not found")
 		require.Nil(t, got)
