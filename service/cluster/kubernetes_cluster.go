@@ -37,6 +37,7 @@ func NewKubernetesClusterService(p *message.Printer) *KubernetesClusterService {
 	return &KubernetesClusterService{p: p}
 }
 
+// CheckKubernetesClusterConnection checks connection with kubernetes cluster.
 func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.Context, req *controllerv1beta1.CheckKubernetesClusterConnectionRequest) (*controllerv1beta1.CheckKubernetesClusterConnectionResponse, error) {
 	kubeCtl, err := kubectl.NewKubeCtl(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
