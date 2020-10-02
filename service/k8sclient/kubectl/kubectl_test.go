@@ -33,7 +33,7 @@ import (
 func TestNewKubeCtl(t *testing.T) {
 	ctx := app.Context()
 
-	defaultKubectl, err := getDefaultKubectlCmd()
+	defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
 	require.NoError(t, err)
 
 	cmd, err := getKubectlCmd(ctx, defaultKubectl, "")
@@ -55,20 +55,15 @@ func TestNewKubeCtl(t *testing.T) {
 			}
 		}
 
-		assert.True(t, strings.HasSuffix(kubeconfigFlag, kubeconfigFileName))
-
 		kubeconfigFilePath := strings.Split(kubeconfigFlag, "=")[1]
 		kubeconfigActual, err := ioutil.ReadFile(kubeconfigFilePath) //nolint:gosec
 		require.NoError(t, err)
 		assert.Equal(t, validKubeconfig, kubeconfigActual)
 
-		tmpDir := strings.TrimSuffix(kubeconfigFilePath, "/"+kubeconfigFileName)
-		assert.Equal(t, kubeCtl.tmpDir, tmpDir)
-
 		err = kubeCtl.Cleanup()
 		require.NoError(t, err)
 
-		_, err = os.Stat(tmpDir)
+		_, err = os.Stat(kubeCtl.kubeconfigPath)
 		require.Error(t, err)
 		assert.True(t, os.IsNotExist(err))
 	})
@@ -123,7 +118,7 @@ func Test_selectCorrectKubectlVersions(t *testing.T) {
 func Test_getKubectlCmd(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		ctx := context.TODO()
-		defaultKubectl, err := getDefaultKubectlCmd()
+		defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
 		require.NoError(t, err)
 		got, err := getKubectlCmd(ctx, defaultKubectl, "")
 		require.NoError(t, err)
@@ -134,7 +129,7 @@ func Test_getKubectlCmd(t *testing.T) {
 }
 
 func Test_lookupCorrectKubectlCmd(t *testing.T) {
-	defaultKubectl, err := getDefaultKubectlCmd()
+	defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
 	require.NoError(t, err)
 	t.Run("basic", func(t *testing.T) {
 		args := []string{
