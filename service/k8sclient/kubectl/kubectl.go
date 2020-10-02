@@ -37,7 +37,6 @@ import (
 )
 
 const (
-	kubeconfigFileName      = "kubeconfig.json"
 	defaultPmmServerKubectl = "/opt/dbaas-tools/bin/kubectl-1.16"
 	defaultDevEnvKubectl    = "minikube kubectl --"
 )
