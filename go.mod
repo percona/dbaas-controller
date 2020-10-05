@@ -21,7 +21,7 @@ require (
 	github.com/percona-platform/dbaas-api v0.0.0-20200909154600-92f2ab9b8440
 	github.com/percona-platform/saas v0.0.0-20200715163609-32e145816e31
 	github.com/percona/percona-backup-mongodb v1.2.0 // indirect
-	github.com/percona/percona-server-mongodb-operator v1.4.0
+	github.com/percona/percona-server-mongodb-operator v1.5.0
 	github.com/percona/percona-xtradb-cluster-operator v1.4.0
 	github.com/percona/pmm v2.10.1+incompatible
 	github.com/pkg/errors v0.9.1
