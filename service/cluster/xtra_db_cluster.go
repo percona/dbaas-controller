@@ -53,7 +53,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 	if err != nil {
 		return nil, status.Error(codes.Internal, s.p.Sprintf("Cannot initialize K8s client: %s", err))
 	}
-	defer client.Cleanup()
+	defer client.Cleanup() //nolint:errcheck
 
 	xtradbClusters, err := client.ListXtraDBClusters(ctx)
 	if err != nil {
@@ -100,7 +100,7 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	defer client.Cleanup()
+	defer client.Cleanup() //nolint:errcheck
 
 	params := &k8sclient.XtraDBParams{
 		Name: req.Name,
@@ -136,7 +136,7 @@ func (s *XtraDBClusterService) DeleteXtraDBCluster(ctx context.Context, req *con
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	defer client.Cleanup()
+	defer client.Cleanup() //nolint:errcheck
 
 	err = client.DeleteXtraDBCluster(ctx, req.Name)
 	if err != nil {

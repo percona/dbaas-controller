@@ -34,7 +34,10 @@ import (
 func TestNewKubeCtl(t *testing.T) {
 	ctx := app.Context()
 
-	cmd, err := getKubectlCmd(ctx, "")
+	defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
+	require.NoError(t, err)
+
+	cmd, err := getKubectlCmd(ctx, defaultKubectl, "")
 	require.NoError(t, err)
 
 	validKubeconfig, err := run(ctx, cmd, []string{"config", "view", "-o", "json"}, nil)
@@ -48,24 +51,20 @@ func TestNewKubeCtl(t *testing.T) {
 		for _, option := range kubeCtl.cmd {
 			if strings.HasPrefix(option, "--kubeconfig") {
 				kubeconfigFlag = option
+
 				break
 			}
 		}
-
-		assert.True(t, strings.HasSuffix(kubeconfigFlag, kubeconfigFileName))
 
 		kubeconfigFilePath := strings.Split(kubeconfigFlag, "=")[1]
 		kubeconfigActual, err := ioutil.ReadFile(kubeconfigFilePath) //nolint:gosec
 		require.NoError(t, err)
 		assert.Equal(t, validKubeconfig, kubeconfigActual)
 
-		tmpDir := strings.TrimSuffix(kubeconfigFilePath, "/"+kubeconfigFileName)
-		assert.Equal(t, kubeCtl.tmpDir, tmpDir)
-
 		err = kubeCtl.Cleanup()
 		require.NoError(t, err)
 
-		_, err = os.Stat(tmpDir)
+		_, err = os.Stat(kubeCtl.kubeconfigPath)
 		require.Error(t, err)
 		assert.True(t, os.IsNotExist(err))
 	})
@@ -120,40 +119,33 @@ func TestSelectCorrectKubectlVersions(t *testing.T) {
 func TestGetKubectlCmd(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		ctx := context.TODO()
-		got, err := getKubectlCmd(ctx, "")
+		defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
 		require.NoError(t, err)
-		path, _ := exec.LookPath("minikube")
-		assert.Equal(t, got, []string{path, "kubectl", "--"})
+		got, err := getKubectlCmd(ctx, defaultKubectl, "")
+		require.NoError(t, err)
+		// `/usr/local/bin/minikube kubectl --` - for dev env
+		// `/opt/dbaas-tools/bin/kubectl-1.16` - for pmm-server
+		assert.Equal(t, got, defaultKubectl)
 	})
 }
 
 func TestLookupCorrectKubectlCmd(t *testing.T) {
+	defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
+	require.NoError(t, err)
 	t.Run("basic", func(t *testing.T) {
 		args := []string{
 			"kubectl-1.17",
 			"kubectl-1.16",
 			"kubectl-1.15",
-			"minikube kubectl --",
 		}
-		got, err := lookupCorrectKubectlCmd(args)
+		got, err := lookupCorrectKubectlCmd(defaultKubectl, args)
 		require.NoError(t, err)
-		path, _ := exec.LookPath("minikube")
-		assert.Equal(t, got, []string{path, "kubectl", "--"})
+		assert.Equal(t, got, defaultKubectl)
 	})
 
-	t.Run("kubectlNotFound", func(t *testing.T) {
-		got, err := lookupCorrectKubectlCmd([]string{
-			"kubectl-1.17",
-			"kubectl-1.16",
-			"kubectl-1.15",
-		})
-		require.EqualError(t, err, "kubectl not found")
-		require.Nil(t, got)
-	})
-
-	t.Run("emptyKubectlList", func(t *testing.T) {
-		got, err := lookupCorrectKubectlCmd(nil)
-		require.EqualError(t, err, "kubectl not found")
-		require.Nil(t, got)
+	t.Run("empty_kubectl_list_of_correct_version", func(t *testing.T) {
+		got, err := lookupCorrectKubectlCmd(defaultKubectl, nil)
+		require.NoError(t, err)
+		assert.Equal(t, got, defaultKubectl)
 	})
 }
