@@ -28,6 +28,7 @@ linters:
     - lll       # gRPC types are long
     - wsl       # too annoying
     - unused    # too many false positives
+    - nlreturn  # too annoying
 
 issues:
   exclude-use-default: false

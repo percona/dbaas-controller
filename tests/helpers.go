@@ -14,55 +14,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package cluster
+package tests
 
 import (
-	"context"
 	"testing"
 
-	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-func TestKubernetesClusterServiceCheckConnection(t *testing.T) {
-	t.Run("Wrong kube config", func(t *testing.T) {
-		i18nPrinter := message.NewPrinter(language.English)
-		k := NewKubernetesClusterService(i18nPrinter)
-		kubeConfig := `{
-			"kind": "Config",
-			"apiVersion": "v1",
-			"preferences": {},
-			"clusters": [
-				{
-					"name": "minikube",
-					"cluster": {
-						"server": "https://1.2.3.4:8443",
-					}
-				}
-			],
-			"contexts": [
-				{
-					"name": "minikube",
-					"context": {
-						"cluster": "minikube",
-						"user": "minikube"
-					}
-				}
-			],
-			"current-context": "minikube"
-		}`
-		_, err := k.CheckKubernetesClusterConnection(context.TODO(), &controllerv1beta1.CheckKubernetesClusterConnectionRequest{
-			KubeAuth: &controllerv1beta1.KubeAuth{Kubeconfig: kubeConfig},
-		})
-		require.Error(t, err)
-		AssertGRPCErrorRE(t, codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: exit status 65", err)
-	})
-}
 
 // AssertGRPCErrorRE checks that actual error has expected gRPC error code, and error messages
 // matches expected regular expression.

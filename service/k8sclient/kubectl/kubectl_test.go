@@ -21,7 +21,6 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 

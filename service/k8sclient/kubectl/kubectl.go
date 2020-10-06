@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	dbaasToolPath = "/opt/dbaas-tools/bin"
+	dbaasToolPath           = "/opt/dbaas-tools/bin"
 	defaultPmmServerKubectl = dbaasToolPath + "/kubectl-1.16"
 	defaultDevEnvKubectl    = "minikube kubectl --"
 )
@@ -260,7 +260,7 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
 	cmd.Env = []string{
-		fmt.Sprintf("PATH=$PATH;%s", dbaasToolPath),
+		fmt.Sprintf("PATH=%s", dbaasToolPath),
 	}
 	err := cmd.Run()
 	if err != nil {
