@@ -36,7 +36,7 @@ func TestNewKubeCtl(t *testing.T) {
 	defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
 	require.NoError(t, err)
 
-	cmd, err := getKubectlCmd(ctx, defaultKubectl, "")
+	cmd, err := getKubectlCmd(ctx, defaultKubectl, "/home/nurlan/kubeconfig")
 	require.NoError(t, err)
 
 	validKubeconfig, err := run(ctx, cmd, []string{"config", "view", "-o", "json"}, nil)
