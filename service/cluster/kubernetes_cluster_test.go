@@ -60,7 +60,7 @@ func TestKubernetesClusterServiceCheckConnection(t *testing.T) {
 			KubeAuth: &controllerv1beta1.KubeAuth{Kubeconfig: kubeConfig},
 		})
 		require.Error(t, err)
-		AssertGRPCErrorRE(t, codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: exit status 65", err)
+		AssertGRPCErrorRE(t, codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: exit status 1", err)
 	})
 }
 
