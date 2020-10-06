@@ -37,7 +37,7 @@ var pxcStatesMap = map[k8sclient.ClusterState]controllerv1beta1.XtraDBClusterSta
 	k8sclient.ClusterStateDeleting: controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_DELETING,
 }
 
-// XtraDBClusterService implements methods of gRPC server and other business logic related to xtradb clusters.
+// XtraDBClusterService implements methods of gRPC server and other business logic related to XtraDB clusters.
 type XtraDBClusterService struct {
 	p *message.Printer
 }

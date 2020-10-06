@@ -263,6 +263,9 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 	cmd.Stdin = &inBuf
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
+	cmd.Env = []string{
+		fmt.Sprintf("PATH=$PATH;%s", dbaasToolPath),
+	}
 	err := cmd.Run()
 	if err != nil {
 		err = &kubeCtlError{

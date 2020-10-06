@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -29,7 +28,6 @@ import (
 
 func TestKubernetesClusterServiceCheckConnection(t *testing.T) {
 	t.Run("Wrong kube config", func(t *testing.T) {
-		logrus.SetLevel(logrus.DebugLevel)
 		i18nPrinter := message.NewPrinter(language.English)
 		k := NewKubernetesClusterService(i18nPrinter)
 		kubeConfig := `{
@@ -59,6 +57,6 @@ func TestKubernetesClusterServiceCheckConnection(t *testing.T) {
 			KubeAuth: &controllerv1beta1.KubeAuth{Kubeconfig: kubeConfig},
 		})
 		require.Error(t, err)
-		require.Regexp(t, "rpc error: code = Internal desc = Unable to connect to kubernetes cluster: .*", err.Error())
+		require.Regexp(t, "rpc error: code = Internal desc = Unable to connect to Kubernetes cluster: .*", err.Error())
 	})
 }

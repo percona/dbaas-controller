@@ -41,7 +41,7 @@ func NewKubernetesClusterService(p *message.Printer) *KubernetesClusterService {
 func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.Context, req *controllerv1beta1.CheckKubernetesClusterConnectionRequest) (*controllerv1beta1.CheckKubernetesClusterConnectionResponse, error) {
 	k8Client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
-		return nil, status.Error(codes.Internal, k.p.Sprintf("Unable to connect to kubernetes cluster: %s", err))
+		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
 	}
 	defer k8Client.Cleanup() //nolint:errcheck
 	return new(controllerv1beta1.CheckKubernetesClusterConnectionResponse), nil
