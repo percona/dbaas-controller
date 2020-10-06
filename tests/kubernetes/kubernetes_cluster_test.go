@@ -30,7 +30,6 @@ import (
 
 func TestKubernetesClusterAPI(t *testing.T) {
 	t.Run("Correct", func(t *testing.T) {
-
 		kubeConfig := os.Getenv("PERCONA_TEST_DBAAS_KUBECONFIG")
 		if kubeConfig == "" {
 			t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")

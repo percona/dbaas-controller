@@ -2,8 +2,8 @@
     "language": "en",
     "messages": [
         {
-            "id": "Unable to connect to kubernetes cluster: {Err}",
-            "message": "Unable to connect to kubernetes cluster: {Err}",
+            "id": "Unable to connect to Kubernetes cluster: {Err}",
+            "message": "Unable to connect to Kubernetes cluster: {Err}",
             "translation": "",
             "placeholders": [
                 {
