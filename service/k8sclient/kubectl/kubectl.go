@@ -259,9 +259,12 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 	cmd.Stdin = &inBuf
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
-	cmd.Env = []string{
-		fmt.Sprintf("PATH=%s:%s", dbaasToolPath, os.Getenv("PATH")),
-		fmt.Sprintf("HOME=%s", os.Getenv("HOME")),
+	envs := os.Environ()
+	for _, env := range envs {
+		if strings.HasPrefix(env, "PATH=") {
+			env = fmt.Sprintf("PATH=%s:%s", dbaasToolPath, os.Getenv("PATH"))
+		}
+		cmd.Env = append(cmd.Env, env)
 	}
 	err := cmd.Run()
 	if err != nil {

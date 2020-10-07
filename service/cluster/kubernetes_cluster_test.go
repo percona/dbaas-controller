@@ -21,12 +21,12 @@ import (
 	"testing"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+
+	"github.com/percona-platform/dbaas-controller/utils/testutil"
 )
 
 func TestKubernetesClusterServiceCheckConnection(t *testing.T) {
@@ -60,19 +60,6 @@ func TestKubernetesClusterServiceCheckConnection(t *testing.T) {
 			KubeAuth: &controllerv1beta1.KubeAuth{Kubeconfig: kubeConfig},
 		})
 		require.Error(t, err)
-		AssertGRPCErrorRE(t, codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: exit status 1", err)
+		testutil.AssertGRPCErrorRE(t, codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: exit status 1", err)
 	})
-}
-
-// AssertGRPCErrorRE checks that actual error has expected gRPC error code, and error messages
-// matches expected regular expression.
-func AssertGRPCErrorRE(tb testing.TB, expectedCode codes.Code, expectedMessageRE string, actual error) {
-	tb.Helper()
-
-	s, ok := status.FromError(actual)
-	if !assert.True(tb, ok, "expected gRPC Status, got %T:\n%s", actual, actual) {
-		return
-	}
-	assert.Equal(tb, int(expectedCode), int(s.Code()), "gRPC status codes are not equal") // int() to log in decimal, not hex
-	assert.Regexp(tb, expectedMessageRE, s.Message(), "gRPC status message does not match")
 }
