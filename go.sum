@@ -338,6 +338,7 @@ github.com/percona/percona-server-mongodb-operator v1.4.0 h1:E0QxTEVLUQWXZjSSIdK
 github.com/percona/percona-server-mongodb-operator v1.4.0/go.mod h1:gogg6e/sIt2D8iNN4jQLEwE+TY5rH7OqzftSLLwH0M8=
 github.com/percona/percona-xtradb-cluster-operator v1.4.0 h1:Rlsng4OsC1gZ3a8omui0PSprubolBY47QuPjzt9MraI=
 github.com/percona/percona-xtradb-cluster-operator v1.4.0/go.mod h1:QvGXz1h9lhCsGHDkKlbmRDEsQVEyZUZ2cQda+MwqYTY=
+github.com/percona/percona-xtradb-cluster-operator v1.5.0 h1:N/E8wP+3XOOzmETN71Qs9g3rBL1WcMm9nR6OYj279CM=
 github.com/percona/pmm v2.9.1+incompatible h1:SwDVou1J7rTWqg5gIKjhpC1HiPGO8PSlA/rsgPKwDfA=
 github.com/percona/pmm v2.9.1+incompatible/go.mod h1:nN14kK4Dfl2Ub1k05aOnAHv7SmLEQtCsYX+DEfLgrkU=
 github.com/percona/pmm v2.10.1+incompatible h1:8Nvj30A5wlNNTGhRiPL7dZbqIMX2FAv2nOTPxvvdU/k=
