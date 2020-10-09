@@ -96,14 +96,14 @@ const kubernetsVersions = `
 }
 `
 
-func Test_selectCorrectKubectlVersions(t *testing.T) {
+func TestSelectCorrectKubectlVersions(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		got, err := selectCorrectKubectlVersions([]byte(kubernetsVersions))
 		require.NoError(t, err)
 		expected := []string{
-			"kubectl-1.17",
-			"kubectl-1.16",
-			"kubectl-1.15",
+			dbaasToolPath + "/kubectl-1.17",
+			dbaasToolPath + "/kubectl-1.16",
+			dbaasToolPath + "/kubectl-1.15",
 		}
 		assert.Equal(t, got, expected)
 	})
@@ -115,7 +115,7 @@ func Test_selectCorrectKubectlVersions(t *testing.T) {
 	})
 }
 
-func Test_getKubectlCmd(t *testing.T) {
+func TestGetKubectlCmd(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		ctx := context.TODO()
 		defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
@@ -128,7 +128,7 @@ func Test_getKubectlCmd(t *testing.T) {
 	})
 }
 
-func Test_lookupCorrectKubectlCmd(t *testing.T) {
+func TestLookupCorrectKubectlCmd(t *testing.T) {
 	defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
 	require.NoError(t, err)
 	t.Run("basic", func(t *testing.T) {

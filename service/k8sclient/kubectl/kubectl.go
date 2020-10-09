@@ -37,7 +37,8 @@ import (
 )
 
 const (
-	defaultPmmServerKubectl = "/opt/dbaas-tools/bin/kubectl-1.16"
+	dbaasToolPath           = "/opt/dbaas-tools/bin"
+	defaultPmmServerKubectl = dbaasToolPath + "/kubectl-1.16"
 	defaultDevEnvKubectl    = "minikube kubectl --"
 )
 
@@ -178,14 +179,14 @@ func selectCorrectKubectlVersions(versionsJSON []byte) ([]string, error) {
 		return nil, err
 	}
 
-	serverMinor, err := strconv.Atoi(ver.ServerVersion.Minor)
+	serverMinor, err := strconv.Atoi(strings.TrimSuffix(ver.ServerVersion.Minor, "+")) // EKS is returning "serverVersion": { "major": "1", "minor": "16+" }
 	if err != nil {
 		return nil, err
 	}
 
 	// Iterate from newer to older version. Append default as the last.
 	for minor := serverMinor + 1; minor >= serverMinor-1; minor-- {
-		kubectlCmdNames = append(kubectlCmdNames, fmt.Sprintf("kubectl-%d.%d", serverMajor, minor))
+		kubectlCmdNames = append(kubectlCmdNames, fmt.Sprintf("%s/kubectl-%d.%d", dbaasToolPath, serverMajor, minor))
 	}
 	return kubectlCmdNames, nil
 }
@@ -258,6 +259,13 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 	cmd.Stdin = &inBuf
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
+	envs := os.Environ()
+	for _, env := range envs {
+		if strings.HasPrefix(env, "PATH=") {
+			env = fmt.Sprintf("PATH=%s:%s", dbaasToolPath, os.Getenv("PATH"))
+		}
+		cmd.Env = append(cmd.Env, env)
+	}
 	err := cmd.Run()
 	if err != nil {
 		err = &kubeCtlError{

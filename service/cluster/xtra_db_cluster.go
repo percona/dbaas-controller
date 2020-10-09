@@ -37,18 +37,18 @@ var pxcStatesMap = map[k8sclient.ClusterState]controllerv1beta1.XtraDBClusterSta
 	k8sclient.ClusterStateDeleting: controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_DELETING,
 }
 
-// Service implements methods of gRPC server and other business logic.
-type Service struct {
+// XtraDBClusterService implements methods of gRPC server and other business logic related to XtraDB clusters.
+type XtraDBClusterService struct {
 	p *message.Printer
 }
 
-// New returns new Service instance.
-func New(p *message.Printer) *Service {
-	return &Service{p: p}
+// NewXtraDBClusterService returns new XtraDBClusterService instance.
+func NewXtraDBClusterService(p *message.Printer) *XtraDBClusterService {
+	return &XtraDBClusterService{p: p}
 }
 
 // ListXtraDBClusters returns a list of XtraDB clusters.
-func (s *Service) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1.ListXtraDBClustersRequest) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
+func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1.ListXtraDBClustersRequest) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
 	client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, s.p.Sprintf("Cannot initialize K8s client: %s", err))
@@ -95,7 +95,7 @@ func (s *Service) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1
 }
 
 // CreateXtraDBCluster creates a new XtraDB cluster.
-func (s *Service) CreateXtraDBCluster(ctx context.Context, req *controllerv1beta1.CreateXtraDBClusterRequest) (*controllerv1beta1.CreateXtraDBClusterResponse, error) {
+func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *controllerv1beta1.CreateXtraDBClusterRequest) (*controllerv1beta1.CreateXtraDBClusterResponse, error) {
 	client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -126,12 +126,12 @@ func (s *Service) CreateXtraDBCluster(ctx context.Context, req *controllerv1beta
 }
 
 // UpdateXtraDBCluster updates existing XtraDB cluster.
-func (s *Service) UpdateXtraDBCluster(ctx context.Context, req *controllerv1beta1.UpdateXtraDBClusterRequest) (*controllerv1beta1.UpdateXtraDBClusterResponse, error) {
+func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *controllerv1beta1.UpdateXtraDBClusterRequest) (*controllerv1beta1.UpdateXtraDBClusterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("This method is not implemented yet."))
 }
 
 // DeleteXtraDBCluster deletes XtraDB cluster.
-func (s *Service) DeleteXtraDBCluster(ctx context.Context, req *controllerv1beta1.DeleteXtraDBClusterRequest) (*controllerv1beta1.DeleteXtraDBClusterResponse, error) {
+func (s *XtraDBClusterService) DeleteXtraDBCluster(ctx context.Context, req *controllerv1beta1.DeleteXtraDBClusterRequest) (*controllerv1beta1.DeleteXtraDBClusterResponse, error) {
 	client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -147,5 +147,5 @@ func (s *Service) DeleteXtraDBCluster(ctx context.Context, req *controllerv1beta
 
 // Check interface.
 var (
-	_ controllerv1beta1.XtraDBClusterAPIServer = (*Service)(nil)
+	_ controllerv1beta1.XtraDBClusterAPIServer = (*XtraDBClusterService)(nil)
 )

@@ -43,6 +43,8 @@ var (
 
 	// XtraDBClusterAPIClient contains client for dbaas-controller API.
 	XtraDBClusterAPIClient dbaasClient.XtraDBClusterAPIClient
+
+	KubernetesClusterAPIClient dbaasClient.KubernetesClusterAPIClient
 )
 
 //nolint:gochecknoinits
@@ -105,4 +107,5 @@ func init() {
 		logrus.Fatalf("failed to dial server: %s", err)
 	}
 	XtraDBClusterAPIClient = dbaasClient.NewXtraDBClusterAPIClient(cc)
+	KubernetesClusterAPIClient = dbaasClient.NewKubernetesClusterAPIClient(cc)
 }
