@@ -8,7 +8,7 @@ go 1.14
 // replace github.com/percona-platform/saas => ../saas
 
 // Update with:
-// go get -v github.com/percona/pmm@PMM-2.0
+// go get -v github.com/percona/pmm@latest (for the latest tag) or @PMM-2.0 (only if really needed)
 // go get -v github.com/percona-platform/dbaas-api@main
 // go get -v github.com/percona-platform/saas@main
 
@@ -18,8 +18,8 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/percona-platform/dbaas-api v0.0.0-20200925063553-45690b46fc21
-	github.com/percona-platform/saas v0.0.0-20200715163609-32e145816e31
+	github.com/percona-platform/dbaas-api v0.0.0-20201009095023-f103f733767a
+	github.com/percona-platform/saas v0.0.0-20201008124851-3c2c6c2ec0ce
 	github.com/percona/percona-backup-mongodb v1.2.0 // indirect
 	github.com/percona/percona-server-mongodb-operator v1.4.0
 	github.com/percona/percona-xtradb-cluster-operator v1.4.0
