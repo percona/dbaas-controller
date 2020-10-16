@@ -17,19 +17,19 @@
 package v1
 
 import (
-	"errors"
+	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PerconaXtraDBClusterRestoreSpec defines the desired state of PerconaXtraDBClusterRestore
+// PerconaXtraDBClusterRestoreSpec defines the desired state of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreSpec struct {
 	PXCCluster   string           `json:"pxcCluster"`
 	BackupName   string           `json:"backupName"`
 	BackupSource *PXCBackupStatus `json:"backupSource"`
 }
 
-// PerconaXtraDBClusterRestoreStatus defines the observed state of PerconaXtraDBClusterRestore
+// PerconaXtraDBClusterRestoreStatus defines the observed state of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreStatus struct {
 	State         BcpRestoreStates `json:"state,omitempty"`
 	Comments      string           `json:"comments,omitempty"`
@@ -51,13 +51,14 @@ type PerconaXtraDBClusterRestore struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// PerconaXtraDBClusterRestoreList contains a list of PerconaXtraDBClusterRestore
+// PerconaXtraDBClusterRestoreList contains a list of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PerconaXtraDBClusterRestore `json:"items"`
 }
 
+// BcpRestoreStates Valid states.
 type BcpRestoreStates string
 
 const (
@@ -72,16 +73,16 @@ const (
 
 func (cr *PerconaXtraDBClusterRestore) CheckNsetDefaults() error {
 	if cr.Spec.PXCCluster == "" {
-		return errors.New("pxcCluster can't be empty")
+		return fmt.Errorf("pxcCluster can't be empty")
 	}
 
 	if cr.Spec.BackupName == "" && cr.Spec.BackupSource == nil {
-		return errors.New("backupName and BackupSource can't be empty simultaneously")
+		return fmt.Errorf("backupName and BackupSource can't be empty simultaneously")
 	}
 
 	return nil
 }
 
-func init() {
+func init() { //nolint:gochecknoinits
 	SchemeBuilder.Register(&PerconaXtraDBClusterRestore{}, &PerconaXtraDBClusterRestoreList{})
 }
