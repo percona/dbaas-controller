@@ -14,7 +14,6 @@ go 1.14
 
 require (
 	github.com/AlekSi/pointer v1.1.0
-	github.com/Azure/go-autorest/autorest v0.9.6 // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
 	github.com/go-ini/ini v1.62.0
 	github.com/google/go-cmp v0.5.2 // indirect
@@ -25,6 +24,7 @@ require (
 	github.com/hashicorp/go-version v1.2.1
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/jetstack/cert-manager v1.0.0-beta.0
+	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/percona-platform/dbaas-api v0.0.0-20201009095023-f103f733767a
 	github.com/percona-platform/saas v0.0.0-20201008124851-3c2c6c2ec0ce
 	github.com/percona/percona-backup-mongodb v1.2.0 // indirect
@@ -35,8 +35,6 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.6.1
-	go.etcd.io/bbolt v1.3.5 // indirect
-	go.etcd.io/etcd v0.5.0-alpha.5.0.20200819165624-17cef6e3e9d5 // indirect
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee // indirect
 	golang.org/x/net v0.0.0-20201010224723-4f7140c49acb // indirect
@@ -49,17 +47,9 @@ require (
 	google.golang.org/grpc v1.32.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	k8s.io/api v0.19.2
-	k8s.io/apiextensions-apiserver v0.19.0-alpha.1 // indirect
 	k8s.io/apimachinery v0.19.2
-	k8s.io/component-base v0.19.0 // indirect
-	k8s.io/gengo v0.0.0-20200428234225-8167cfdcfc14 // indirect
-	k8s.io/kube-aggregator v0.19.0-alpha.1 // indirect
-	k8s.io/kubectl v0.19.0-alpha.1 // indirect
 	k8s.io/utils v0.0.0-20201005171033-6301aaf42dc7 // indirect
-	mvdan.cc/gofumpt v0.0.0-20200927160801-5bfeb2e70dd6 // indirect
-	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.9 // indirect
 	sigs.k8s.io/controller-runtime v0.6.3
-	sigs.k8s.io/structured-merge-diff/v4 v4.0.1 // indirect
 )
 
 // Use the same versions as operators:
