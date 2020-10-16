@@ -106,7 +106,7 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 		Name: req.Name,
 		Size: req.Params.ClusterSize,
 	}
-	if req.Params.Pxc.ComputeResources.CpuM > 0 && req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
+	if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
 		params.PXC = &k8sclient.PXC{
 			ComputeResources: &k8sclient.ComputeResources{
 				CPUM:        req.Params.Pxc.ComputeResources.CpuM,
@@ -114,7 +114,7 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 			},
 		}
 	}
-	if req.Params.Proxysql.ComputeResources.CpuM > 0 && req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
+	if req.Params.Proxysql.ComputeResources.CpuM > 0 || req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
 		params.ProxySQL = &k8sclient.ProxySQL{
 			ComputeResources: &k8sclient.ComputeResources{
 				CPUM:        req.Params.Proxysql.ComputeResources.CpuM,
