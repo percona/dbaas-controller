@@ -17,6 +17,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.9.6 // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
 	github.com/go-ini/ini v1.62.0
+	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
@@ -43,6 +44,7 @@ require (
 	golang.org/x/sys v0.0.0-20201014080544-cc95f250f6bc
 	golang.org/x/text v0.3.3
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
+	golang.org/x/tools v0.0.0-20201015182029-a5d9e455e9c4 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/grpc v1.32.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
@@ -54,6 +56,7 @@ require (
 	k8s.io/kube-aggregator v0.19.0-alpha.1 // indirect
 	k8s.io/kubectl v0.19.0-alpha.1 // indirect
 	k8s.io/utils v0.0.0-20201005171033-6301aaf42dc7 // indirect
+	mvdan.cc/gofumpt v0.0.0-20200927160801-5bfeb2e70dd6 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.9 // indirect
 	sigs.k8s.io/controller-runtime v0.6.3
 	sigs.k8s.io/structured-merge-diff/v4 v4.0.1 // indirect
