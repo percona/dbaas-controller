@@ -285,8 +285,10 @@ type StatefulApp interface {
 
 const clusterNameMaxLen = 22
 
-var defaultPXCGracePeriodSec int64 = 600
-var livenessInitialDelaySeconds int32 = 300
+var (
+	defaultPXCGracePeriodSec    int64 = 600
+	livenessInitialDelaySeconds int32 = 300
+)
 
 // ErrClusterNameOverflow upspring when the cluster name is longer than acceptable
 var ErrClusterNameOverflow = fmt.Errorf("cluster (pxc) name too long, must be no more than %d characters", clusterNameMaxLen)
@@ -509,7 +511,7 @@ func (cr *PerconaXtraDBCluster) CheckNSetDefaults(serverVersion *version.ServerV
 			}
 			switch strg.Type {
 			case BackupStorageS3:
-				//TODO what should we check here?
+				// TODO what should we check here?
 			case BackupStorageFilesystem:
 				if strg.Volume == nil {
 					return false, fmt.Errorf("backup storage %s: volume should be specified", sch.StorageName)
@@ -575,7 +577,7 @@ func (cr *PerconaXtraDBCluster) CompareVersionWith(version string) int {
 		cr.setVersion()
 	}
 
-	//using Must because "version" must be right format
+	// using Must because "version" must be right format
 	return cr.Version().Compare(v.Must(v.NewVersion(version)))
 }
 
