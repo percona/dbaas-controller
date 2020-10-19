@@ -17,9 +17,16 @@
 package v1
 
 import (
-	"errors"
+	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+var (
+	// ErrPCXClusterCannotBeEmpty PXC cluster cannot be empty error.
+	ErrPCXClusterCannotBeEmpty = fmt.Errorf("pxcCluster can't be empty")
+	// ErrNameAndSourceCannotBeEmpty Backup name and source cannot be empty simultaneously.
+	ErrNameAndSourceCannotBeEmpty = fmt.Errorf("backupName and BackupSource can't be empty simultaneously")
 )
 
 // PerconaXtraDBClusterRestoreSpec defines the desired state of PerconaXtraDBClusterRestore
@@ -72,11 +79,11 @@ const (
 
 func (cr *PerconaXtraDBClusterRestore) CheckNsetDefaults() error {
 	if cr.Spec.PXCCluster == "" {
-		return errors.New("pxcCluster can't be empty")
+		return ErrPCXClusterCannotBeEmpty
 	}
 
 	if cr.Spec.BackupName == "" && cr.Spec.BackupSource == nil {
-		return errors.New("backupName and BackupSource can't be empty simultaneously")
+		return ErrNameAndSourceCannotBeEmpty
 	}
 
 	return nil

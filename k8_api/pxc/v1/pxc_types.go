@@ -33,8 +33,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster
-type PerconaXtraDBClusterSpec struct {
+// PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
+type PerconaXtraDBClusterSpec struct { //nolint:maligned
 	Platform              version.Platform                     `json:"platform,omitempty"`
 	CRVersion             string                               `json:"crVersion,omitempty"`
 	Pause                 bool                                 `json:"pause,omitempty"`
