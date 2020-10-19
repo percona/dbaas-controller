@@ -31,7 +31,6 @@ import (
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
@@ -212,13 +211,13 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 }
 
 // Apply executes `kubectl apply` with given resource.
-func (k *KubeCtl) Apply(ctx context.Context, res meta.Object) error {
+func (k *KubeCtl) Apply(ctx context.Context, res interface{}) error {
 	_, err := run(ctx, k.cmd, []string{"apply", "-f", "-"}, res)
 	return err
 }
 
 // Delete executes `kubectl delete` with given resource.
-func (k *KubeCtl) Delete(ctx context.Context, res meta.Object) error {
+func (k *KubeCtl) Delete(ctx context.Context, res interface{}) error {
 	_, err := run(ctx, k.cmd, []string{"delete", "-f", "-"}, res)
 	return err
 }

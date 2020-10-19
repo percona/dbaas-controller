@@ -89,11 +89,14 @@ env-up-start:
 	minikube kubectl -- version
 	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/bundle.yaml  | minikube kubectl -- apply -f -
 	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/secrets.yaml | minikube kubectl -- apply -f -
+	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/release-1.4.0/deploy/bundle.yaml  | minikube kubectl -- apply -f -
+	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/release-1.4.0/deploy/secrets.yaml | minikube kubectl -- apply -f -
 	minikube kubectl -- get nodes
 	minikube kubectl -- get pods
 
 env-up-wait:
 	minikube kubectl -- wait --for=condition=Available deployment percona-xtradb-cluster-operator
+	minikube kubectl -- wait --for=condition=Available deployment percona-server-mongodb-operator
 
 env-down:
 	#

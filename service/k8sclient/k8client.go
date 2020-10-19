@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 
 	"github.com/AlekSi/pointer"
-	_ "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1" // It'll be implemented later.
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
@@ -35,7 +34,10 @@ import (
 // ClusterKind is a kind of a cluster.
 type ClusterKind string
 
-const perconaXtraDBClusterKind = ClusterKind("PerconaXtraDBCluster")
+const (
+	perconaXtraDBClusterKind = ClusterKind("PerconaXtraDBCluster")
+	perconaServerMongoDBKind = ClusterKind("PerconaServerMongoDB")
+)
 
 // ClusterState represents XtraDB cluster CR state.
 type ClusterState int32
@@ -59,6 +61,10 @@ const (
 	pxcBackupStorageName = "test-backup-storage"
 	pxcAPIVersion        = "pxc.percona.com/v1-4-0"
 	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.4.0-proxysql"
+
+	psmdbBackupImage = "percona/percona-server-mongodb-operator:1.4.0-backup"
+	psmdbImage       = "percona/percona-server-mongodb-operator:1.4.0-mongod4.2"
+	psmdbAPIVersion  = "psmdb.percona.com/v1-4-0"
 )
 
 // ComputeResources represents container computer resources requests or limits.
@@ -77,6 +83,11 @@ type ProxySQL struct {
 	ComputeResources *ComputeResources
 }
 
+// Replicaset contains information related to Replicaset containers in PSMDB cluster.
+type Replicaset struct {
+	ComputeResources *ComputeResources
+}
+
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
 type XtraDBParams struct {
 	Name     string
@@ -90,6 +101,13 @@ type Cluster struct {
 	Name string
 }
 
+// PSMDBParams contains all parameters required to create or update percona server for mongodb cluster.
+type PSMDBParams struct {
+	Name       string
+	Size       int32
+	Replicaset *Replicaset
+}
+
 // XtraDBCluster contains information related to xtradb cluster.
 type XtraDBCluster struct {
 	Name     string
@@ -99,12 +117,29 @@ type XtraDBCluster struct {
 	ProxySQL *ProxySQL
 }
 
+// PSMDBCluster contains information related to psmdb cluster.
+type PSMDBCluster struct {
+	Name       string
+	Size       int32
+	State      ClusterState
+	Replicaset *Replicaset
+}
+
 // pxcStatesMap matches pxc app states to cluster states.
 var pxcStatesMap = map[pxc.AppState]ClusterState{
 	pxc.AppStateUnknown: ClusterStateInvalid,
 	pxc.AppStateInit:    ClusterStateChanging,
 	pxc.AppStateReady:   ClusterStateReady,
 	pxc.AppStateError:   ClusterStateFailed,
+}
+
+// psmdbStatesMap matches psmdb app states to cluster states.
+var psmdbStatesMap = map[appState]ClusterState{
+	appStateUnknown: ClusterStateInvalid,
+	appStatePending: ClusterStateChanging,
+	appStateInit:    ClusterStateChanging,
+	appStateReady:   ClusterStateReady,
+	appStateError:   ClusterStateFailed,
 }
 
 // K8Client is a client for Kubernetes.
@@ -372,4 +407,233 @@ func (c *K8Client) setXtraDBComputeResources(podResources *pxc.PodSpec, computeR
 			CPU:    resource.NewMilliQuantity(int64(computeResources.CPUM), resource.DecimalSI).String(),
 		},
 	}
+}
+
+// ListPSMDBClusters returns list of psmdb clusters and their statuses.
+func (c *K8Client) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error) {
+	clusters, err := c.getPSMDBClusters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	deletingClusters, err := c.getDeletingPSMDBClusters(ctx, clusters)
+	if err != nil {
+		return nil, err
+	}
+	res := append(clusters, deletingClusters...)
+
+	return res, nil
+}
+
+// CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
+func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
+	res := &perconaServerMongoDB{
+		TypeMeta: TypeMeta{
+			APIVersion: psmdbAPIVersion,
+			Kind:       string(perconaServerMongoDBKind),
+		},
+		ObjectMeta: ObjectMeta{
+			Name: params.Name,
+		},
+		Spec: perconaServerMongoDBSpec{
+			Image: psmdbImage,
+			Mongod: &mongodSpec{
+				Net: &mongodSpecNet{
+					Port: 27017,
+				},
+				OperationProfiling: &mongodSpecOperationProfiling{
+					Mode:              operationProfilingModeSlowOp,
+					SlowOpThresholdMs: 100,
+					RateLimit:         1,
+				},
+				Security: &mongodSpecSecurity{
+					RedactClientLogData:  false,
+					EnableEncryption:     pointer.ToBool(true),
+					EncryptionKeySecret:  "my-cluster-name-mongodb-encryption-key",
+					EncryptionCipherMode: mongodChiperModeCBC,
+				},
+				SetParameter: &mongodSpecSetParameter{
+					TTLMonitorSleepSecs:                   60,
+					WiredTigerConcurrentReadTransactions:  128,
+					WiredTigerConcurrentWriteTransactions: 128,
+				},
+				Storage: &mongodSpecStorage{
+					Engine: storageEngineWiredTiger,
+					InMemory: &mongodSpecInMemory{
+						EngineConfig: &mongodSpecInMemoryEngineConfig{
+							InMemorySizeRatio: 0.9,
+						},
+					},
+					MMAPv1: &mongodSpecMMAPv1{
+						NsSize:     16,
+						Smallfiles: false,
+					},
+					WiredTiger: &mongodSpecWiredTiger{
+						CollectionConfig: &mongodSpecWiredTigerCollectionConfig{
+							BlockCompressor: &wiredTigerCompressorSnappy,
+						},
+						EngineConfig: &mongodSpecWiredTigerEngineConfig{
+							CacheSizeRatio:      0.5,
+							DirectoryForIndexes: false,
+							JournalCompressor:   &wiredTigerCompressorSnappy,
+						},
+						IndexConfig: &mongodSpecWiredTigerIndexConfig{
+							PrefixCompression: true,
+						},
+					},
+				},
+			},
+			Replsets: []*replsetSpec{
+				{
+					Name: "rs0",
+					Size: params.Size,
+					Arbiter: arbiter{
+						Enabled: false,
+						Size:    1,
+						multiAZ: multiAZ{
+							Affinity: &podAffinity{
+								TopologyKey: pointer.ToString("kubernetes.io/hostname"),
+							},
+						},
+					},
+					VolumeSpec: &volumeSpec{
+						PersistentVolumeClaim: &persistentVolumeClaimSpec{
+							Resources: resourceRequirements{
+								Requests: resourceList{
+									ResourceStorage: resource.MustParse("1Gi"),
+								},
+							},
+						},
+					},
+					multiAZ: multiAZ{
+						Affinity: &podAffinity{
+							TopologyKey: pointer.ToString(affinityOff),
+						},
+					},
+				},
+			},
+
+			PMM: pmmSpec{
+				Enabled: false,
+			},
+
+			Backup: backupSpec{
+				Enabled:            true,
+				Image:              psmdbBackupImage,
+				ServiceAccountName: "percona-server-mongodb-operator",
+			},
+		},
+	}
+	if params.Replicaset != nil {
+		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+	}
+	return c.kubeCtl.Apply(ctx, res)
+}
+
+// UpdatePSMDBCluster changes size of provided percona server for mongodb cluster.
+func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
+	var cluster perconaServerMongoDB
+	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), params.Name, &cluster)
+	if err != nil {
+		return err
+	}
+
+	for i := range cluster.Spec.Replsets {
+		cluster.Spec.Replsets[i].Size = params.Size
+	}
+
+	return c.kubeCtl.Apply(ctx, &cluster)
+}
+
+// DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
+func (c *K8Client) DeletePSMDBCluster(ctx context.Context, name string) error {
+	res := &perconaServerMongoDB{
+		TypeMeta: TypeMeta{
+			APIVersion: psmdbAPIVersion,
+			Kind:       string(perconaServerMongoDBKind),
+		},
+		ObjectMeta: ObjectMeta{
+			Name: name,
+		},
+	}
+	return c.kubeCtl.Delete(ctx, res)
+}
+
+// getPSMDBClusters returns Percona Server for MongoDB clusters.
+func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error) {
+	var list meta.List
+	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), "", &list)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get percona server MongoDB clusters")
+	}
+
+	res := make([]PSMDBCluster, len(list.Items))
+	for i, item := range list.Items {
+		var cluster perconaServerMongoDB
+		if err := json.Unmarshal(item.Raw, &cluster); err != nil {
+			return nil, err
+		}
+		val := PSMDBCluster{
+			Name:  cluster.Name,
+			State: psmdbStatesMap[cluster.Status.Status],
+			Size:  cluster.Spec.Replsets[0].Size,
+		}
+		if cluster.Spec.Replsets[0].Resources != nil {
+			val.Replicaset = &Replicaset{
+				ComputeResources: c.getComputeResources(*cluster.Spec.Replsets[0].Resources),
+			}
+		}
+		res[i] = val
+	}
+	return res, nil
+}
+
+// getDeletingXtraDBClusters returns Percona XtraDB clusters which are not fully deleted yet.
+func (c *K8Client) getDeletingPSMDBClusters(ctx context.Context, clusters []PSMDBCluster) ([]PSMDBCluster, error) {
+	runningClusters := make(map[string]struct{}, len(clusters))
+	for _, cluster := range clusters {
+		runningClusters[cluster.Name] = struct{}{}
+	}
+
+	deletingClusters, err := c.getDeletingClusters(ctx, "percona-server-mongodb-operator", runningClusters)
+	if err != nil {
+		return nil, err
+	}
+
+	xtradbClusters := make([]PSMDBCluster, len(deletingClusters))
+	for i, cluster := range deletingClusters {
+		xtradbClusters[i] = PSMDBCluster{
+			Name:  cluster.Name,
+			State: ClusterStateDeleting,
+		}
+	}
+	return xtradbClusters, nil
+}
+
+func (c *K8Client) getComputeResources(resources resourcesSpec) *ComputeResources {
+	if resources.Limits == nil {
+		return nil
+	}
+	cpum := resource.MustParse(resources.Limits.CPU)
+	memory := resource.MustParse(resources.Limits.Memory)
+	return &ComputeResources{
+		CPUM:        int32(cpum.MilliValue()),
+		MemoryBytes: memory.Value(),
+	}
+}
+
+func (c *K8Client) setComputeResources(res *ComputeResources) *resourcesSpec {
+	if res == nil {
+		return nil
+	}
+	r := &resourcesSpec{
+		Limits: new(resourceSpecRequirements),
+	}
+	if res.CPUM != 0 {
+		r.Limits.CPU = resource.NewMilliQuantity(int64(res.CPUM), resource.DecimalSI).String()
+	}
+	if res.MemoryBytes != 0 {
+		r.Limits.Memory = resource.NewQuantity(res.MemoryBytes, resource.DecimalSI).String()
+	}
+	return r
 }
