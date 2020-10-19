@@ -368,7 +368,7 @@ func (c *K8Client) setXtraDBComputeResources(podResources *pxc.PodSpec, computeR
 	}
 
 	if computeResources.MemoryBytes > 0 || computeResources.CPUM > 0 {
-		podResources.Resources = &pxc.PodResources{Limits: &pxc.ResourcesList{}}
+		podResources.Resources = &pxc.PodResources{Limits: new(pxc.ResourcesList)}
 		if computeResources.MemoryBytes > 0 {
 			podResources.Resources.Limits.Memory = resource.NewQuantity(computeResources.MemoryBytes, resource.DecimalSI).String()
 		}
