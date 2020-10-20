@@ -110,19 +110,19 @@ type ConditionStatus string
 
 const (
 	ConditionTrue    ConditionStatus = "True"
-	ConditionFalse                   = "False"
-	ConditionUnknown                 = "Unknown"
+	ConditionFalse   ConditionStatus = "False"
+	ConditionUnknown ConditionStatus = "Unknown"
 )
 
 type ClusterConditionType string
 
 const (
 	ClusterReady        ClusterConditionType = "Ready"
-	ClusterInit                              = "Initializing"
-	ClusterPXCReady                          = "PXCReady"
-	ClusterProxyReady                        = "ProxySQLReady"
-	ClusterHAProxyReady                      = "HAProxyReady"
-	ClusterError                             = "Error"
+	ClusterInit         ClusterConditionType = "Initializing"
+	ClusterPXCReady     ClusterConditionType = "PXCReady"
+	ClusterProxyReady   ClusterConditionType = "ProxySQLReady"
+	ClusterHAProxyReady ClusterConditionType = "HAProxyReady"
+	ClusterError        ClusterConditionType = "Error"
 )
 
 type ClusterCondition struct {

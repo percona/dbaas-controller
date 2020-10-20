@@ -69,12 +69,12 @@ type BcpRestoreStates string
 
 const (
 	RestoreNew          BcpRestoreStates = ""
-	RestoreStarting                      = "Starting"
-	RestoreStopCluster                   = "Stopping Cluster"
-	RestoreRestore                       = "Restoring"
-	RestoreStartCluster                  = "Starting Cluster"
-	RestoreFailed                        = "Failed"
-	RestoreSucceeded                     = "Succeeded"
+	RestoreStarting     BcpRestoreStates = "Starting"
+	RestoreStopCluster  BcpRestoreStates = "Stopping Cluster"
+	RestoreRestore      BcpRestoreStates = "Restoring"
+	RestoreStartCluster BcpRestoreStates = "Starting Cluster"
+	RestoreFailed       BcpRestoreStates = "Failed"
+	RestoreSucceeded    BcpRestoreStates = "Succeeded"
 )
 
 func (cr *PerconaXtraDBClusterRestore) CheckNsetDefaults() error {
