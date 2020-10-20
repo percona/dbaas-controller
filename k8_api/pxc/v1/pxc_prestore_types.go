@@ -90,5 +90,5 @@ func (cr *PerconaXtraDBClusterRestore) CheckNsetDefaults() error {
 }
 
 func init() {
-	SchemeBuilder.Register(&PerconaXtraDBClusterRestore{}, &PerconaXtraDBClusterRestoreList{})
+	SchemeBuilder.Register(new(PerconaXtraDBClusterRestore), new(PerconaXtraDBClusterRestoreList))
 }

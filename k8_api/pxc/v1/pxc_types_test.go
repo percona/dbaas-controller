@@ -31,7 +31,7 @@ func TestReconcileAffinity(t *testing.T) {
 	}{
 		{
 			name: "no affinity set",
-			pod:  &PodSpec{},
+			pod:  new(PodSpec),
 			desiered: &PodSpec{
 				Affinity: &PodAffinity{
 					TopologyKey: &defaultAffinityTopologyKey,
@@ -70,14 +70,14 @@ func TestReconcileAffinity(t *testing.T) {
 				Affinity: &PodAffinity{
 					TopologyKey: func(s string) *string { return &s }("kubernetes.io/hostname"),
 					Advanced: &corev1.Affinity{
-						NodeAffinity: &corev1.NodeAffinity{},
+						NodeAffinity: new(corev1.NodeAffinity),
 					},
 				},
 			},
 			desiered: &PodSpec{
 				Affinity: &PodAffinity{
 					Advanced: &corev1.Affinity{
-						NodeAffinity: &corev1.NodeAffinity{},
+						NodeAffinity: new(corev1.NodeAffinity),
 					},
 				},
 			},

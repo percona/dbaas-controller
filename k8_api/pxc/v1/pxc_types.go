@@ -651,7 +651,7 @@ func (p *PodSpec) reconcileAffinityOpts() {
 
 func (v *VolumeSpec) reconcileOpts() (changed bool, err error) {
 	if v.EmptyDir == nil && v.HostPath == nil && v.PersistentVolumeClaim == nil {
-		v.PersistentVolumeClaim = &corev1.PersistentVolumeClaimSpec{}
+		v.PersistentVolumeClaim = new(corev1.PersistentVolumeClaimSpec)
 	}
 
 	if v.PersistentVolumeClaim != nil {

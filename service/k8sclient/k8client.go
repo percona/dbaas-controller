@@ -37,7 +37,7 @@ import (
 // ClusterKind is a kind of a cluster.
 type ClusterKind string
 
-const perconaXtraDBClusterKind = ClusterKind("PerconaXtraDBCluster")
+const perconaXtraDBClusterKind ClusterKind = ClusterKind("PerconaXtraDBCluster")
 
 // ClusterState represents XtraDB cluster CR state.
 type ClusterState int32
