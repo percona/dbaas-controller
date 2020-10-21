@@ -48,7 +48,7 @@ func NewPSMDBClusterService(p *message.Printer) *PSMDBClusterService {
 
 // ListPSMDBClusters returns a list of PSMDB clusters.
 func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *controllerv1beta1.ListPSMDBClustersRequest) (*controllerv1beta1.ListPSMDBClustersResponse, error) {
-	client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, s.p.Sprintf("Cannot initialize K8s client: %s", err))
 	}
@@ -87,7 +87,7 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 
 // CreatePSMDBCluster creates a new PSMDB cluster.
 func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *controllerv1beta1.CreatePSMDBClusterRequest) (*controllerv1beta1.CreatePSMDBClusterResponse, error) {
-	client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -117,7 +117,7 @@ func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *contr
 
 // DeletePSMDBCluster deletes PSMDB cluster.
 func (s *PSMDBClusterService) DeletePSMDBCluster(ctx context.Context, req *controllerv1beta1.DeletePSMDBClusterRequest) (*controllerv1beta1.DeletePSMDBClusterResponse, error) {
-	client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

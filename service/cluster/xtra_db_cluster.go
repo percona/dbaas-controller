@@ -49,7 +49,7 @@ func NewXtraDBClusterService(p *message.Printer) *XtraDBClusterService {
 
 // ListXtraDBClusters returns a list of XtraDB clusters.
 func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1.ListXtraDBClustersRequest) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
-	client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, s.p.Sprintf("Cannot initialize K8s client: %s", err))
 	}
@@ -96,7 +96,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 
 // CreateXtraDBCluster creates a new XtraDB cluster.
 func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *controllerv1beta1.CreateXtraDBClusterRequest) (*controllerv1beta1.CreateXtraDBClusterResponse, error) {
-	client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -132,7 +132,7 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 
 // DeleteXtraDBCluster deletes XtraDB cluster.
 func (s *XtraDBClusterService) DeleteXtraDBCluster(ctx context.Context, req *controllerv1beta1.DeleteXtraDBClusterRequest) (*controllerv1beta1.DeleteXtraDBClusterResponse, error) {
-	client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

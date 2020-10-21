@@ -147,8 +147,8 @@ type K8Client struct {
 	kubeCtl *kubectl.KubeCtl
 }
 
-// NewK8Client returns new K8Client object.
-func NewK8Client(ctx context.Context, kubeconfig string) (*K8Client, error) {
+// New returns new K8Client object.
+func New(ctx context.Context, kubeconfig string) (*K8Client, error) {
 	kubeCtl, err := kubectl.NewKubeCtl(ctx, kubeconfig)
 	if err != nil {
 		return nil, err

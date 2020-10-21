@@ -37,7 +37,7 @@ func TestK8Client(t *testing.T) {
 	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
 	require.NoError(t, err)
 
-	client, err := NewK8Client(ctx, string(validKubeconfig))
+	client, err := New(ctx, string(validKubeconfig))
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		err := client.Cleanup()
