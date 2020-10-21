@@ -16,14 +16,14 @@ require (
 	github.com/AlekSi/pointer v1.1.0
 	github.com/aws/aws-sdk-go v1.35.9 // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
-	github.com/go-ini/ini v1.62.0
+	github.com/go-ini/ini v1.62.0 // indirect
 	github.com/go-logr/logr v0.2.1 // indirect
 	github.com/golang/snappy v0.0.2 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/hashicorp/go-version v1.2.1
+	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/jetstack/cert-manager v0.15.1
 	github.com/klauspost/compress v1.11.1 // indirect
@@ -57,7 +57,6 @@ require (
 	k8s.io/api v0.19.2
 	k8s.io/apimachinery v0.19.2
 	k8s.io/utils v0.0.0-20201015054608-420da100c033 // indirect
-	mvdan.cc/gofumpt v0.0.0-20200927160801-5bfeb2e70dd6 // indirect
 	sigs.k8s.io/controller-runtime v0.5.6
 )
 
