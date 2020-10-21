@@ -24,6 +24,7 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// PerconaXtraDBClusterBackupList holds exported fields representing Percona XtraDB cluster backup list.
 type PerconaXtraDBClusterBackupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
@@ -32,6 +33,7 @@ type PerconaXtraDBClusterBackupList struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// PerconaXtraDBClusterBackup represents a Percona XtraDB cluster backup.
 type PerconaXtraDBClusterBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -41,11 +43,13 @@ type PerconaXtraDBClusterBackup struct {
 	PriorityClassName string          `json:"priorityClassName,omitempty"`
 }
 
+// PXCBackupSpec represents a PXC backup.
 type PXCBackupSpec struct {
 	PXCCluster  string `json:"pxcCluster"`
 	StorageName string `json:"storageName,omitempty"`
 }
 
+// PXCBackupStatus PXC backup status.
 type PXCBackupStatus struct {
 	State         PXCBackupState       `json:"state,omitempty"`
 	CompletedAt   *metav1.Time         `json:"completed,omitempty"`
@@ -55,17 +59,23 @@ type PXCBackupStatus struct {
 	S3            *BackupStorageS3Spec `json:"s3,omitempty"`
 }
 
+// PXCBackupState PXC backup state string.
 type PXCBackupState string
 
 const (
-	BackupNew       PXCBackupState = ""
-	BackupStarting  PXCBackupState = "Starting"
-	BackupRunning   PXCBackupState = "Running"
-	BackupFailed    PXCBackupState = "Failed"
+	// BackupNew backup state new.
+	BackupNew PXCBackupState = ""
+	// BackupStarting backup is starting.
+	BackupStarting PXCBackupState = "Starting"
+	// BackupRunning backup is running.
+	BackupRunning PXCBackupState = "Running"
+	// BackupFailed backup has failed.
+	BackupFailed PXCBackupState = "Failed"
+	// BackupSucceeded backup completed OK.
 	BackupSucceeded PXCBackupState = "Succeeded"
 )
 
-// OwnerRef returns OwnerReference to object
+// OwnerRef returns OwnerReference to object.
 func (cr *PerconaXtraDBClusterBackup) OwnerRef(scheme *runtime.Scheme) (metav1.OwnerReference, error) {
 	gvk, err := apiutil.GVKForObject(cr, scheme)
 	if err != nil {

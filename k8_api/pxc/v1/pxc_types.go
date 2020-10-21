@@ -22,10 +22,9 @@ import (
 	"strings"
 
 	"github.com/go-ini/ini"
+	v "github.com/hashicorp/go-version"
 	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
 	"github.com/percona/percona-xtradb-cluster-operator/version"
-
-	v "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -53,11 +52,13 @@ type PerconaXtraDBClusterSpec struct { //nolint:maligned
 	AllowUnsafeConfig     bool                                 `json:"allowUnsafeConfigurations,omitempty"`
 }
 
+// TLSSpec holds cluster's TLS specs.
 type TLSSpec struct {
 	SANs       []string                `json:"SANs,omitempty"`
 	IssuerConf *cmmeta.ObjectReference `json:"issuerConf,omitempty"`
 }
 
+// UpgradeOptions holds configuration options to handle automatic upgrades.
 type UpgradeOptions struct {
 	VersionServiceEndpoint string `json:"versionServiceEndpoint,omitempty"`
 	Apply                  string `json:"apply,omitempty"`
@@ -65,9 +66,11 @@ type UpgradeOptions struct {
 }
 
 const (
+	// SmartUpdateStatefulSetStrategyType Smart Update Strategy type.
 	SmartUpdateStatefulSetStrategyType appsv1.StatefulSetUpdateStrategyType = "SmartUpdate"
 )
 
+// PXCScheduledBackup holds the config for cluster scheduled backups.
 type PXCScheduledBackup struct {
 	Image              string                        `json:"image,omitempty"`
 	ImagePullSecrets   []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
@@ -77,22 +80,29 @@ type PXCScheduledBackup struct {
 	Annotations        map[string]string             `json:"annotations,omitempty"`
 }
 
+// PXCScheduledBackupSchedule holds the backup schedule.
 type PXCScheduledBackupSchedule struct {
 	Name        string `json:"name,omitempty"`
 	Schedule    string `json:"schedule,omitempty"`
 	Keep        int    `json:"keep,omitempty"`
 	StorageName string `json:"storageName,omitempty"`
 }
+
+// AppState Application state.
 type AppState string
 
 const (
+	// AppStateUnknown application state is unknown.
 	AppStateUnknown AppState = "unknown"
-	AppStateInit    AppState = "initializing"
-	AppStateReady   AppState = "ready"
-	AppStateError   AppState = "error"
+	// AppStateInit initializing state.
+	AppStateInit AppState = "initializing"
+	// AppStateReady application is ready state.
+	AppStateReady AppState = "ready"
+	// AppStateError error state.
+	AppStateError AppState = "error"
 )
 
-// PerconaXtraDBClusterStatus defines the observed state of PerconaXtraDBCluster
+// PerconaXtraDBClusterStatus defines the observed state of PerconaXtraDBCluster.
 type PerconaXtraDBClusterStatus struct {
 	PXC                AppStatus          `json:"pxc,omitempty"`
 	ProxySQL           AppStatus          `json:"proxysql,omitempty"`
@@ -106,25 +116,37 @@ type PerconaXtraDBClusterStatus struct {
 	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
 }
 
+// ConditionStatus tells if the cluster condition can be determined.
 type ConditionStatus string
 
 const (
-	ConditionTrue    ConditionStatus = "True"
-	ConditionFalse   ConditionStatus = "False"
+	// ConditionTrue cluster condition true.
+	ConditionTrue ConditionStatus = "True"
+	// ConditionFalse cluster condition false.
+	ConditionFalse ConditionStatus = "False"
+	// ConditionUnknown cluster condition unknown.
 	ConditionUnknown ConditionStatus = "Unknown"
 )
 
+// ClusterConditionType is the current condition state string.
 type ClusterConditionType string
 
 const (
-	ClusterReady        ClusterConditionType = "Ready"
-	ClusterInit         ClusterConditionType = "Initializing"
-	ClusterPXCReady     ClusterConditionType = "PXCReady"
-	ClusterProxyReady   ClusterConditionType = "ProxySQLReady"
+	// ClusterReady the cluster is ready.
+	ClusterReady ClusterConditionType = "Ready"
+	// ClusterInit the cluster is initializing.
+	ClusterInit ClusterConditionType = "Initializing"
+	// ClusterPXCReady PXC cluster ready.
+	ClusterPXCReady ClusterConditionType = "PXCReady"
+	// ClusterProxyReady ProxySQL cluster ready.
+	ClusterProxyReady ClusterConditionType = "ProxySQLReady"
+	// ClusterHAProxyReady HA proxy ready.
 	ClusterHAProxyReady ClusterConditionType = "HAProxyReady"
-	ClusterError        ClusterConditionType = "Error"
+	// ClusterError error in the cluster.
+	ClusterError ClusterConditionType = "Error"
 )
 
+// ClusterCondition holds exported fields with the cluster condition.
 type ClusterCondition struct {
 	Status             ConditionStatus      `json:"status,omitempty"`
 	Type               ClusterConditionType `json:"type,omitempty"`
@@ -133,6 +155,7 @@ type ClusterCondition struct {
 	Message            string               `json:"message,omitempty"`
 }
 
+// AppStatus holds exported fields representing the application status information.
 type AppStatus struct {
 	Size    int32    `json:"size,omitempty"`
 	Ready   int32    `json:"ready,omitempty"`
@@ -156,14 +179,15 @@ type PerconaXtraDBCluster struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster
+// PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
 type PerconaXtraDBClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PerconaXtraDBCluster `json:"items"`
 }
 
-type PodSpec struct {
+// PodSpec hold pod's exported fields representing the pod configuration.
+type PodSpec struct { //nolint:maligned
 	Enabled                       bool                                    `json:"enabled,omitempty"`
 	Size                          int32                                   `json:"size,omitempty"`
 	Image                         string                                  `json:"image,omitempty"`
@@ -197,21 +221,25 @@ type PodSpec struct {
 	ImagePullPolicy               corev1.PullPolicy                       `json:"imagePullPolicy,omitempty"`
 }
 
+// PodDisruptionBudgetSpec POD disruption budget specs.
 type PodDisruptionBudgetSpec struct {
 	MinAvailable   *intstr.IntOrString `json:"minAvailable,omitempty"`
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 }
 
+// PodAffinity POD's affinity.
 type PodAffinity struct {
 	TopologyKey *string          `json:"antiAffinityTopologyKey,omitempty"`
 	Advanced    *corev1.Affinity `json:"advanced,omitempty"`
 }
 
+// PodResources represents the POD resources limits.
 type PodResources struct {
 	Requests *ResourcesList `json:"requests,omitempty"`
 	Limits   *ResourcesList `json:"limits,omitempty"`
 }
 
+// PMMSpec hold exported fields representing PMM specs.
 type PMMSpec struct {
 	Enabled                  bool                    `json:"enabled,omitempty"`
 	ServerHost               string                  `json:"serverHost,omitempty"`
@@ -222,12 +250,14 @@ type PMMSpec struct {
 	ImagePullPolicy          corev1.PullPolicy       `json:"imagePullPolicy,omitempty"`
 }
 
+// ResourcesList POD's resources list.
 type ResourcesList struct {
 	Memory           string `json:"memory,omitempty"`
 	CPU              string `json:"cpu,omitempty"`
 	EphemeralStorage string `json:"ephemeral-storage,omitempty"`
 }
 
+// BackupStorageSpec holds backup's storage specs.
 type BackupStorageSpec struct {
 	Type                     BackupStorageType          `json:"type"`
 	S3                       BackupStorageS3Spec        `json:"s3,omitempty"`
@@ -244,13 +274,17 @@ type BackupStorageSpec struct {
 	ContainerSecurityContext *corev1.SecurityContext    `json:"containerSecurityContext,omitempty"`
 }
 
+// BackupStorageType backup storage type.
 type BackupStorageType string
 
 const (
+	// BackupStorageFilesystem use local filesystem for storage.
 	BackupStorageFilesystem BackupStorageType = "filesystem"
-	BackupStorageS3         BackupStorageType = "s3"
+	// BackupStorageS3 use S3 for storage.
+	BackupStorageS3 BackupStorageType = "s3"
 )
 
+// BackupStorageS3Spec holds the S3 configuration.
 type BackupStorageS3Spec struct {
 	Bucket            string `json:"bucket"`
 	CredentialsSecret string `json:"credentialsSecret"`
@@ -258,6 +292,7 @@ type BackupStorageS3Spec struct {
 	EndpointURL       string `json:"endpointUrl,omitempty"`
 }
 
+// VolumeSpec backup storage volume specs.
 type VolumeSpec struct {
 	// EmptyDir to use as data volume for mysql. EmptyDir represents a temporary
 	// directory that shares a pod's lifetime.
@@ -277,13 +312,16 @@ type VolumeSpec struct {
 	PersistentVolumeClaim *corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaim,omitempty"`
 }
 
+// Volume represents a backup volume.
 type Volume struct {
 	PVCs    []corev1.PersistentVolumeClaim
 	Volumes []corev1.Volume
 }
 
+// WorkloadSA workload.
 const WorkloadSA = "default"
 
+// App Application interface.
 type App interface {
 	AppContainer(spec *PodSpec, secrets string, cr *PerconaXtraDBCluster) (corev1.Container, error)
 	SidecarContainers(spec *PodSpec, secrets string, cr *PerconaXtraDBCluster) ([]corev1.Container, error)
@@ -292,6 +330,7 @@ type App interface {
 	Labels() map[string]string
 }
 
+// StatefulApp Stateful Application interface.
 type StatefulApp interface {
 	App
 	StatefulSet() *appsv1.StatefulSet
@@ -301,12 +340,13 @@ type StatefulApp interface {
 
 const clusterNameMaxLen = 22
 
+//nolint:gochecknoglobals
 var (
 	defaultPXCGracePeriodSec    int64 = 600
 	livenessInitialDelaySeconds int32 = 300
 )
 
-// ErrClusterNameOverflow upspring when the cluster name is longer than acceptable
+// ErrClusterNameOverflow upspring when the cluster name is longer than acceptable.
 var ErrClusterNameOverflow = fmt.Errorf("cluster (pxc) name too long, must be no more than %d characters", clusterNameMaxLen)
 
 func (cr *PerconaXtraDBCluster) setSecurityContext() {
@@ -335,6 +375,7 @@ func (cr *PerconaXtraDBCluster) setSecurityContext() {
 	}
 }
 
+// ShouldWaitForTokenIssue returns if should wait for a token issue.
 func (cr *PerconaXtraDBCluster) ShouldWaitForTokenIssue() bool {
 	_, ok := cr.Annotations["percona.com/issue-vault-token"]
 	return ok
@@ -342,8 +383,8 @@ func (cr *PerconaXtraDBCluster) ShouldWaitForTokenIssue() bool {
 
 // CheckNSetDefaults sets defaults options and overwrites wrong settings
 // and checks if other options' values are allowable
-// returned "changed" means CR should be updated on cluster
-func (cr *PerconaXtraDBCluster) CheckNSetDefaults(serverVersion *version.ServerVersion) (changed bool, err error) {
+// returned "changed" means CR should be updated on cluster.
+func (cr *PerconaXtraDBCluster) CheckNSetDefaults(serverVersion *version.ServerVersion) (changed bool, err error) { //nolint:funlen,gocognit,gocyclo
 	CRVerChanged, err := cr.setVersion()
 
 	workloadSA := "percona-xtradb-cluster-operator-workload"
@@ -364,7 +405,7 @@ func (cr *PerconaXtraDBCluster) CheckNSetDefaults(serverVersion *version.ServerV
 		return false, fmt.Errorf("spec.pxc section is not specified. Please check %s cluster settings", cr.Name)
 	}
 
-	if c.PXC != nil {
+	if c.PXC != nil { //nolint:nestif
 		if c.PXC.VolumeSpec == nil {
 			return false, fmt.Errorf("PXC: volumeSpec should be specified")
 		}
@@ -443,7 +484,7 @@ func (cr *PerconaXtraDBCluster) CheckNSetDefaults(serverVersion *version.ServerV
 		return false, errors.New("can't enable both HAProxy and ProxySQL please only select one of them")
 	}
 
-	if c.HAProxy != nil && c.HAProxy.Enabled {
+	if c.HAProxy != nil && c.HAProxy.Enabled { //nolint:nestif
 		if len(c.HAProxy.ImagePullPolicy) == 0 {
 			c.HAProxy.ImagePullPolicy = corev1.PullAlways
 		}
@@ -469,7 +510,7 @@ func (cr *PerconaXtraDBCluster) CheckNSetDefaults(serverVersion *version.ServerV
 		}
 	}
 
-	if c.ProxySQL != nil && c.ProxySQL.Enabled {
+	if c.ProxySQL != nil && c.ProxySQL.Enabled { //nolint:nestif
 		if len(c.ProxySQL.ImagePullPolicy) == 0 {
 			c.ProxySQL.ImagePullPolicy = corev1.PullAlways
 		}
@@ -575,7 +616,7 @@ func (cr *PerconaXtraDBCluster) setVersion() (bool, error) {
 			return false, errors.Wrap(err, "unmarshal cr")
 		}
 		if len(newCR.APIVersion) > 0 {
-			apiVersion = strings.Replace(strings.TrimPrefix(newCR.APIVersion, "pxc.percona.com/v"), "-", ".", -1)
+			apiVersion = strings.ReplaceAll(strings.TrimPrefix(newCR.APIVersion, "pxc.percona.com/v"), "-", ".")
 		}
 	}
 
@@ -583,6 +624,7 @@ func (cr *PerconaXtraDBCluster) setVersion() (bool, error) {
 	return true, nil
 }
 
+// Version returns the PerconaXtraDBCluster version or dies in case of errors.
 func (cr *PerconaXtraDBCluster) Version() *v.Version {
 	return v.Must(v.NewVersion(cr.Spec.CRVersion))
 }
@@ -590,14 +632,14 @@ func (cr *PerconaXtraDBCluster) Version() *v.Version {
 // CompareVersionWith compares given version to current version. Returns -1, 0, or 1 if given version is smaller, equal, or larger than the current version, respectively.
 func (cr *PerconaXtraDBCluster) CompareVersionWith(version string) int {
 	if len(cr.Spec.CRVersion) == 0 {
-		cr.setVersion()
+		cr.setVersion() //nolint:gosec,errcheck
 	}
 
 	// using Must because "version" must be right format
 	return cr.Version().Compare(v.Must(v.NewVersion(version)))
 }
 
-// ConfigHasKey check if cr.Spec.PXC.Configuration has given key in given section
+// ConfigHasKey check if cr.Spec.PXC.Configuration has given key in given section.
 func (cr *PerconaXtraDBCluster) ConfigHasKey(section, key string) (bool, error) {
 	file, err := ini.LoadSources(ini.LoadOptions{AllowBooleanKeys: true}, []byte(cr.Spec.PXC.Configuration))
 	if err != nil {
@@ -613,8 +655,10 @@ func (cr *PerconaXtraDBCluster) ConfigHasKey(section, key string) (bool, error) 
 	return s.HasKey(key), nil
 }
 
+// AffinityTopologyKeyOff Affinity Topology Key Off.
 const AffinityTopologyKeyOff = "none"
 
+//nolint:gochecknoglobals
 var affinityValidTopologyKeys = map[string]struct{}{
 	AffinityTopologyKeyOff:                     {},
 	"kubernetes.io/hostname":                   {},
@@ -622,13 +666,14 @@ var affinityValidTopologyKeys = map[string]struct{}{
 	"failure-domain.beta.kubernetes.io/region": {},
 }
 
+//nolint:gochecknoglobals
 var defaultAffinityTopologyKey = "kubernetes.io/hostname"
 
 // reconcileAffinityOpts ensures that the affinity is set to the valid values.
 // - if the affinity doesn't set at all - set topology key to `defaultAffinityTopologyKey`
 // - if topology key is set and the value not the one of `affinityValidTopologyKeys` - set to `defaultAffinityTopologyKey`
 // - if topology key set to valuse of `affinityOff` - disable the affinity at all
-// - if `Advanced` affinity is set - leave everything as it is and set topology key to nil (Advanced options has a higher priority)
+// - if `Advanced` affinity is set - leave everything as it is and set topology key to nil (Advanced options has a higher priority).
 func (p *PodSpec) reconcileAffinityOpts() {
 	switch {
 	case p.Affinity == nil:

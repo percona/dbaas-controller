@@ -104,6 +104,7 @@ func TestK8Client(t *testing.T) {
 	assert.Nil(t, findCluster(clusters, name))
 }
 
+//nolint:unparam
 func findCluster(clusters []XtraDBCluster, name string) *XtraDBCluster {
 	for _, cluster := range clusters {
 		if cluster.Name == name {

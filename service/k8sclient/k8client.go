@@ -22,16 +22,13 @@ import (
 	"encoding/json"
 
 	"github.com/AlekSi/pointer"
+	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 	_ "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1" // It'll be implemented later.
-
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
-
-	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
 )
 
 // ClusterKind is a kind of a cluster.
@@ -101,6 +98,7 @@ type XtraDBCluster struct {
 	ProxySQL *ProxySQL
 }
 
+//nolint:gochecknoglobals
 // pxcStatesMap matches pxc app states to cluster states.
 var pxcStatesMap = map[pxc.AppState]ClusterState{
 	pxc.AppStateUnknown: ClusterStateInvalid,

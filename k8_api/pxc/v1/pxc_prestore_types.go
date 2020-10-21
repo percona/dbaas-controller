@@ -29,14 +29,14 @@ var (
 	ErrNameAndSourceCannotBeEmpty = fmt.Errorf("backupName and BackupSource can't be empty simultaneously")
 )
 
-// PerconaXtraDBClusterRestoreSpec defines the desired state of PerconaXtraDBClusterRestore
+// PerconaXtraDBClusterRestoreSpec defines the desired state of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreSpec struct {
 	PXCCluster   string           `json:"pxcCluster"`
 	BackupName   string           `json:"backupName"`
 	BackupSource *PXCBackupStatus `json:"backupSource"`
 }
 
-// PerconaXtraDBClusterRestoreStatus defines the observed state of PerconaXtraDBClusterRestore
+// PerconaXtraDBClusterRestoreStatus defines the observed state of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreStatus struct {
 	State         BcpRestoreStates `json:"state,omitempty"`
 	Comments      string           `json:"comments,omitempty"`
@@ -58,25 +58,34 @@ type PerconaXtraDBClusterRestore struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// PerconaXtraDBClusterRestoreList contains a list of PerconaXtraDBClusterRestore
+// PerconaXtraDBClusterRestoreList contains a list of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PerconaXtraDBClusterRestore `json:"items"`
 }
 
+// BcpRestoreStates backup restore states.
 type BcpRestoreStates string
 
 const (
-	RestoreNew          BcpRestoreStates = ""
-	RestoreStarting     BcpRestoreStates = "Starting"
-	RestoreStopCluster  BcpRestoreStates = "Stopping Cluster"
-	RestoreRestore      BcpRestoreStates = "Restoring"
+	// RestoreNew restore status new.
+	RestoreNew BcpRestoreStates = ""
+	// RestoreStarting restore is starting.
+	RestoreStarting BcpRestoreStates = "Starting"
+	// RestoreStopCluster stopping cluster.
+	RestoreStopCluster BcpRestoreStates = "Stopping Cluster"
+	// RestoreRestore restoring backup.
+	RestoreRestore BcpRestoreStates = "Restoring"
+	// RestoreStartCluster starting cluster.
 	RestoreStartCluster BcpRestoreStates = "Starting Cluster"
-	RestoreFailed       BcpRestoreStates = "Failed"
-	RestoreSucceeded    BcpRestoreStates = "Succeeded"
+	// RestoreFailed restore has failed.
+	RestoreFailed BcpRestoreStates = "Failed"
+	// RestoreSucceeded restore completed OK.
+	RestoreSucceeded BcpRestoreStates = "Succeeded"
 )
 
+// CheckNsetDefaults checks for valid defaults.
 func (cr *PerconaXtraDBClusterRestore) CheckNsetDefaults() error {
 	if cr.Spec.PXCCluster == "" {
 		return ErrPCXClusterCannotBeEmpty
@@ -89,6 +98,6 @@ func (cr *PerconaXtraDBClusterRestore) CheckNsetDefaults() error {
 	return nil
 }
 
-func init() {
+func init() { //nolint:gochecknoinits
 	SchemeBuilder.Register(new(PerconaXtraDBClusterRestore), new(PerconaXtraDBClusterRestoreList))
 }

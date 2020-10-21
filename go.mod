@@ -49,6 +49,7 @@ require (
 	golang.org/x/sys v0.0.0-20201018230417-eeed37f84f13
 	golang.org/x/text v0.3.3
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
+	golang.org/x/tools v0.0.0-20201020161133-226fd2f889ca // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20201019141844-1ed22bb0c154 // indirect
 	google.golang.org/grpc v1.33.0
@@ -56,6 +57,7 @@ require (
 	k8s.io/api v0.19.2
 	k8s.io/apimachinery v0.19.2
 	k8s.io/utils v0.0.0-20201015054608-420da100c033 // indirect
+	mvdan.cc/gofumpt v0.0.0-20200927160801-5bfeb2e70dd6 // indirect
 	sigs.k8s.io/controller-runtime v0.5.6
 )
 
