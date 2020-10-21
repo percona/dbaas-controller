@@ -18,11 +18,7 @@ package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // PerconaXtraDBClusterBackupList holds exported fields representing Percona XtraDB cluster backup list.
 type PerconaXtraDBClusterBackupList struct {
@@ -30,8 +26,6 @@ type PerconaXtraDBClusterBackupList struct {
 	metav1.ListMeta `json:"metadata"`
 	Items           []PerconaXtraDBClusterBackup `json:"items"`
 }
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // PerconaXtraDBClusterBackup represents a Percona XtraDB cluster backup.
 type PerconaXtraDBClusterBackup struct {
@@ -61,34 +55,3 @@ type PXCBackupStatus struct {
 
 // PXCBackupState PXC backup state string.
 type PXCBackupState string
-
-const (
-	// BackupNew backup state new.
-	BackupNew PXCBackupState = ""
-	// BackupStarting backup is starting.
-	BackupStarting PXCBackupState = "Starting"
-	// BackupRunning backup is running.
-	BackupRunning PXCBackupState = "Running"
-	// BackupFailed backup has failed.
-	BackupFailed PXCBackupState = "Failed"
-	// BackupSucceeded backup completed OK.
-	BackupSucceeded PXCBackupState = "Succeeded"
-)
-
-// OwnerRef returns OwnerReference to object.
-func (cr *PerconaXtraDBClusterBackup) OwnerRef(scheme *runtime.Scheme) (metav1.OwnerReference, error) {
-	gvk, err := apiutil.GVKForObject(cr, scheme)
-	if err != nil {
-		return metav1.OwnerReference{}, err
-	}
-
-	trueVar := true
-
-	return metav1.OwnerReference{
-		APIVersion: gvk.GroupVersion().String(),
-		Kind:       gvk.Kind,
-		Name:       cr.GetName(),
-		UID:        cr.GetUID(),
-		Controller: &trueVar,
-	}, nil
-}

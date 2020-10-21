@@ -17,15 +17,8 @@
 package v1
 
 import (
-	"encoding/json"
-	"fmt"
-	"strings"
-
-	"github.com/go-ini/ini"
-	v "github.com/hashicorp/go-version"
 	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
 	"github.com/percona/percona-xtradb-cluster-operator/version"
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,11 +57,6 @@ type UpgradeOptions struct {
 	Apply                  string `json:"apply,omitempty"`
 	Schedule               string `json:"schedule,omitempty"`
 }
-
-const (
-	// SmartUpdateStatefulSetStrategyType Smart Update Strategy type.
-	SmartUpdateStatefulSetStrategyType appsv1.StatefulSetUpdateStrategyType = "SmartUpdate"
-)
 
 // PXCScheduledBackup holds the config for cluster scheduled backups.
 type PXCScheduledBackup struct {
@@ -119,32 +107,8 @@ type PerconaXtraDBClusterStatus struct {
 // ConditionStatus tells if the cluster condition can be determined.
 type ConditionStatus string
 
-const (
-	// ConditionTrue cluster condition true.
-	ConditionTrue ConditionStatus = "True"
-	// ConditionFalse cluster condition false.
-	ConditionFalse ConditionStatus = "False"
-	// ConditionUnknown cluster condition unknown.
-	ConditionUnknown ConditionStatus = "Unknown"
-)
-
 // ClusterConditionType is the current condition state string.
 type ClusterConditionType string
-
-const (
-	// ClusterReady the cluster is ready.
-	ClusterReady ClusterConditionType = "Ready"
-	// ClusterInit the cluster is initializing.
-	ClusterInit ClusterConditionType = "Initializing"
-	// ClusterPXCReady PXC cluster ready.
-	ClusterPXCReady ClusterConditionType = "PXCReady"
-	// ClusterProxyReady ProxySQL cluster ready.
-	ClusterProxyReady ClusterConditionType = "ProxySQLReady"
-	// ClusterHAProxyReady HA proxy ready.
-	ClusterHAProxyReady ClusterConditionType = "HAProxyReady"
-	// ClusterError error in the cluster.
-	ClusterError ClusterConditionType = "Error"
-)
 
 // ClusterCondition holds exported fields with the cluster condition.
 type ClusterCondition struct {
@@ -165,8 +129,6 @@ type AppStatus struct {
 	Image   string   `json:"image,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // PerconaXtraDBCluster is the Schema for the perconaxtradbclusters API
 // +k8s:openapi-gen=true
 type PerconaXtraDBCluster struct {
@@ -176,8 +138,6 @@ type PerconaXtraDBCluster struct {
 	Spec   PerconaXtraDBClusterSpec   `json:"spec,omitempty"`
 	Status PerconaXtraDBClusterStatus `json:"status,omitempty"`
 }
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
 type PerconaXtraDBClusterList struct {
@@ -277,6 +237,7 @@ type BackupStorageSpec struct {
 // BackupStorageType backup storage type.
 type BackupStorageType string
 
+// nolint:unused
 const (
 	// BackupStorageFilesystem use local filesystem for storage.
 	BackupStorageFilesystem BackupStorageType = "filesystem"
@@ -313,403 +274,10 @@ type VolumeSpec struct {
 }
 
 // Volume represents a backup volume.
-type Volume struct {
+type Volume struct { //nolint:unused
 	PVCs    []corev1.PersistentVolumeClaim
 	Volumes []corev1.Volume
 }
 
-// WorkloadSA workload.
-const WorkloadSA = "default"
-
-// App Application interface.
-type App interface {
-	AppContainer(spec *PodSpec, secrets string, cr *PerconaXtraDBCluster) (corev1.Container, error)
-	SidecarContainers(spec *PodSpec, secrets string, cr *PerconaXtraDBCluster) ([]corev1.Container, error)
-	PMMContainer(spec *PMMSpec, secrets string, cr *PerconaXtraDBCluster) (*corev1.Container, error)
-	Volumes(podSpec *PodSpec, cr *PerconaXtraDBCluster) (*Volume, error)
-	Labels() map[string]string
-}
-
-// StatefulApp Stateful Application interface.
-type StatefulApp interface {
-	App
-	StatefulSet() *appsv1.StatefulSet
-	Service() string
-	UpdateStrategy(cr *PerconaXtraDBCluster) appsv1.StatefulSetUpdateStrategy
-}
-
-const clusterNameMaxLen = 22
-
-//nolint:gochecknoglobals
-var (
-	defaultPXCGracePeriodSec    int64 = 600
-	livenessInitialDelaySeconds int32 = 300
-)
-
-// ErrClusterNameOverflow upspring when the cluster name is longer than acceptable.
-var ErrClusterNameOverflow = fmt.Errorf("cluster (pxc) name too long, must be no more than %d characters", clusterNameMaxLen)
-
-func (cr *PerconaXtraDBCluster) setSecurityContext() {
-	var fsgroup *int64
-	if cr.Spec.Platform != version.PlatformOpenshift {
-		var tp int64 = 1001
-		fsgroup = &tp
-	}
-	sc := &corev1.PodSecurityContext{
-		SupplementalGroups: []int64{1001},
-		FSGroup:            fsgroup,
-	}
-
-	if cr.Spec.PXC.PodSecurityContext == nil {
-		cr.Spec.PXC.PodSecurityContext = sc
-	}
-	if cr.Spec.ProxySQL != nil && cr.Spec.ProxySQL.PodSecurityContext == nil {
-		cr.Spec.ProxySQL.PodSecurityContext = sc
-	}
-	if cr.Spec.Backup != nil {
-		for k := range cr.Spec.Backup.Storages {
-			if cr.Spec.Backup.Storages[k].PodSecurityContext == nil {
-				cr.Spec.Backup.Storages[k].PodSecurityContext = sc
-			}
-		}
-	}
-}
-
-// ShouldWaitForTokenIssue returns if should wait for a token issue.
-func (cr *PerconaXtraDBCluster) ShouldWaitForTokenIssue() bool {
-	_, ok := cr.Annotations["percona.com/issue-vault-token"]
-	return ok
-}
-
-// CheckNSetDefaults sets defaults options and overwrites wrong settings
-// and checks if other options' values are allowable
-// returned "changed" means CR should be updated on cluster.
-func (cr *PerconaXtraDBCluster) CheckNSetDefaults(serverVersion *version.ServerVersion) (changed bool, err error) { //nolint:funlen,gocognit,gocyclo
-	CRVerChanged, err := cr.setVersion()
-
-	workloadSA := "percona-xtradb-cluster-operator-workload"
-	if cr.CompareVersionWith("1.6.0") >= 0 {
-		workloadSA = WorkloadSA
-	}
-
-	if err != nil {
-		return false, errors.Wrap(err, "set version")
-	}
-
-	if len(cr.Name) > clusterNameMaxLen {
-		return false, ErrClusterNameOverflow
-	}
-
-	c := cr.Spec
-	if c.PXC == nil {
-		return false, fmt.Errorf("spec.pxc section is not specified. Please check %s cluster settings", cr.Name)
-	}
-
-	if c.PXC != nil { //nolint:nestif
-		if c.PXC.VolumeSpec == nil {
-			return false, fmt.Errorf("PXC: volumeSpec should be specified")
-		}
-		changed, err = c.PXC.VolumeSpec.reconcileOpts()
-		if err != nil {
-			return false, fmt.Errorf("PXC.Volume: %v", err)
-		}
-		if len(c.PXC.ImagePullPolicy) == 0 {
-			c.PXC.ImagePullPolicy = corev1.PullAlways
-		}
-		c.PXC.VaultSecretName = c.VaultSecretName
-		if len(c.PXC.VaultSecretName) == 0 {
-			c.PXC.VaultSecretName = cr.Name + "-vault"
-		}
-
-		if len(c.SSLSecretName) > 0 {
-			c.PXC.SSLSecretName = c.SSLSecretName
-		} else {
-			c.PXC.SSLSecretName = cr.Name + "-ssl"
-		}
-
-		if len(c.SSLInternalSecretName) > 0 {
-			c.PXC.SSLInternalSecretName = c.SSLInternalSecretName
-		} else {
-			c.PXC.SSLInternalSecretName = cr.Name + "-ssl-internal"
-		}
-
-		// pxc replicas shouldn't be less than 3 for safe configuration
-		if c.PXC.Size < 3 && !c.AllowUnsafeConfig {
-			c.PXC.Size = 3
-		}
-
-		// number of pxc replicas should be an odd
-		if c.PXC.Size%2 == 0 && !c.AllowUnsafeConfig {
-			c.PXC.Size++
-		}
-
-		// Set maxUnavailable = 1 by default for PodDisruptionBudget-PXC.
-		// It's a description of the number of pods from that set that can be unavailable after the eviction.
-		if c.PXC.PodDisruptionBudget == nil {
-			defaultMaxUnavailable := intstr.FromInt(1)
-			c.PXC.PodDisruptionBudget = &PodDisruptionBudgetSpec{MaxUnavailable: &defaultMaxUnavailable}
-		}
-
-		if c.PXC.TerminationGracePeriodSeconds == nil {
-			c.PXC.TerminationGracePeriodSeconds = &defaultPXCGracePeriodSec
-		}
-
-		if c.PXC.LivenessInitialDelaySeconds == nil {
-			c.PXC.LivenessInitialDelaySeconds = &livenessInitialDelaySeconds
-		}
-
-		if len(c.PXC.ServiceAccountName) == 0 {
-			c.PXC.ServiceAccountName = workloadSA
-		}
-
-		c.PXC.reconcileAffinityOpts()
-
-		if c.Pause {
-			c.PXC.Size = 0
-		}
-
-		if c.PMM != nil && c.PMM.Resources == nil {
-			c.PMM.Resources = c.PXC.Resources
-		}
-	}
-
-	if c.PMM != nil && c.PMM.Enabled {
-		if len(c.PMM.ImagePullPolicy) == 0 {
-			c.PMM.ImagePullPolicy = corev1.PullAlways
-		}
-	}
-
-	if c.HAProxy != nil && c.HAProxy.Enabled &&
-		c.ProxySQL != nil && c.ProxySQL.Enabled {
-		return false, errors.New("can't enable both HAProxy and ProxySQL please only select one of them")
-	}
-
-	if c.HAProxy != nil && c.HAProxy.Enabled { //nolint:nestif
-		if len(c.HAProxy.ImagePullPolicy) == 0 {
-			c.HAProxy.ImagePullPolicy = corev1.PullAlways
-		}
-		// Set maxUnavailable = 1 by default for PodDisruptionBudget-HAProxy.
-		if c.HAProxy.PodDisruptionBudget == nil {
-			defaultMaxUnavailable := intstr.FromInt(1)
-			c.HAProxy.PodDisruptionBudget = &PodDisruptionBudgetSpec{MaxUnavailable: &defaultMaxUnavailable}
-		}
-
-		if c.HAProxy.TerminationGracePeriodSeconds == nil {
-			graceSec := int64(30)
-			c.HAProxy.TerminationGracePeriodSeconds = &graceSec
-		}
-
-		if len(c.HAProxy.ServiceAccountName) == 0 {
-			c.HAProxy.ServiceAccountName = workloadSA
-		}
-
-		c.HAProxy.reconcileAffinityOpts()
-
-		if c.Pause {
-			c.HAProxy.Size = 0
-		}
-	}
-
-	if c.ProxySQL != nil && c.ProxySQL.Enabled { //nolint:nestif
-		if len(c.ProxySQL.ImagePullPolicy) == 0 {
-			c.ProxySQL.ImagePullPolicy = corev1.PullAlways
-		}
-		if c.ProxySQL.VolumeSpec == nil {
-			return false, fmt.Errorf("ProxySQL: volumeSpec should be specified")
-		}
-		changed, err = c.ProxySQL.VolumeSpec.reconcileOpts()
-		if err != nil {
-			return false, fmt.Errorf("ProxySQL.Volume: %v", err)
-		}
-
-		if len(c.SSLSecretName) > 0 {
-			c.ProxySQL.SSLSecretName = c.SSLSecretName
-		} else {
-			c.ProxySQL.SSLSecretName = cr.Name + "-ssl"
-		}
-
-		if len(c.SSLInternalSecretName) > 0 {
-			c.ProxySQL.SSLInternalSecretName = c.SSLInternalSecretName
-		} else {
-			c.ProxySQL.SSLInternalSecretName = cr.Name + "-ssl-internal"
-		}
-
-		// Set maxUnavailable = 1 by default for PodDisruptionBudget-ProxySQL.
-		if c.ProxySQL.PodDisruptionBudget == nil {
-			defaultMaxUnavailable := intstr.FromInt(1)
-			c.ProxySQL.PodDisruptionBudget = &PodDisruptionBudgetSpec{MaxUnavailable: &defaultMaxUnavailable}
-		}
-
-		if c.ProxySQL.TerminationGracePeriodSeconds == nil {
-			graceSec := int64(30)
-			c.ProxySQL.TerminationGracePeriodSeconds = &graceSec
-		}
-
-		if len(c.ProxySQL.ServiceAccountName) == 0 {
-			c.ProxySQL.ServiceAccountName = workloadSA
-		}
-
-		c.ProxySQL.reconcileAffinityOpts()
-
-		if c.Pause {
-			c.ProxySQL.Size = 0
-		}
-	}
-
-	if c.Backup != nil {
-		if c.Backup.Image == "" {
-			return false, fmt.Errorf("backup.Image can't be empty")
-		}
-
-		for _, sch := range c.Backup.Schedule {
-			strg, ok := cr.Spec.Backup.Storages[sch.StorageName]
-			if !ok {
-				return false, fmt.Errorf("storage %s doesn't exist", sch.StorageName)
-			}
-			switch strg.Type {
-			case BackupStorageS3:
-				// TODO what should we check here?
-			case BackupStorageFilesystem:
-				if strg.Volume == nil {
-					return false, fmt.Errorf("backup storage %s: volume should be specified", sch.StorageName)
-				}
-				changed, err = strg.Volume.reconcileOpts()
-				if err != nil {
-					return false, fmt.Errorf("backup.Volume: %v", err)
-				}
-			}
-		}
-	}
-
-	if cr.Spec.UpdateStrategy == SmartUpdateStatefulSetStrategyType &&
-		(cr.Spec.ProxySQL == nil || !cr.Spec.ProxySQL.Enabled) &&
-		(cr.Spec.HAProxy == nil || !cr.Spec.HAProxy.Enabled) {
-		return false, fmt.Errorf("ProxySQL or HAProxy should be enabled if SmartUpdate set")
-	}
-
-	if len(cr.Spec.Platform) == 0 {
-		if len(serverVersion.Platform) > 0 {
-			cr.Spec.Platform = serverVersion.Platform
-		} else {
-			cr.Spec.Platform = version.PlatformKubernetes
-		}
-	}
-
-	cr.setSecurityContext()
-	cr.Spec.Platform = serverVersion.Platform
-
-	return CRVerChanged || changed, nil
-}
-
-// setVersion sets the API version of a PXC resource.
-// The new (semver-matching) version is determined either by the CR's API version or an API version specified via the CR's fields.
-// If the CR's API version is an empty string and last-applied-configuration from k8s is empty, it returns current operator version.
-func (cr *PerconaXtraDBCluster) setVersion() (bool, error) {
-	if len(cr.Spec.CRVersion) > 0 {
-		return false, nil
-	}
-	apiVersion := version.Version
-	if lastCR, ok := cr.Annotations["kubectl.kubernetes.io/last-applied-configuration"]; ok {
-		var newCR PerconaXtraDBCluster
-		err := json.Unmarshal([]byte(lastCR), &newCR)
-		if err != nil {
-			return false, errors.Wrap(err, "unmarshal cr")
-		}
-		if len(newCR.APIVersion) > 0 {
-			apiVersion = strings.ReplaceAll(strings.TrimPrefix(newCR.APIVersion, "pxc.percona.com/v"), "-", ".")
-		}
-	}
-
-	cr.Spec.CRVersion = apiVersion
-	return true, nil
-}
-
-// Version returns the PerconaXtraDBCluster version or dies in case of errors.
-func (cr *PerconaXtraDBCluster) Version() *v.Version {
-	return v.Must(v.NewVersion(cr.Spec.CRVersion))
-}
-
-// CompareVersionWith compares given version to current version. Returns -1, 0, or 1 if given version is smaller, equal, or larger than the current version, respectively.
-func (cr *PerconaXtraDBCluster) CompareVersionWith(version string) int {
-	if len(cr.Spec.CRVersion) == 0 {
-		cr.setVersion() //nolint:gosec,errcheck
-	}
-
-	// using Must because "version" must be right format
-	return cr.Version().Compare(v.Must(v.NewVersion(version)))
-}
-
-// ConfigHasKey check if cr.Spec.PXC.Configuration has given key in given section.
-func (cr *PerconaXtraDBCluster) ConfigHasKey(section, key string) (bool, error) {
-	file, err := ini.LoadSources(ini.LoadOptions{AllowBooleanKeys: true}, []byte(cr.Spec.PXC.Configuration))
-	if err != nil {
-		return false, errors.Wrap(err, "load configuration")
-	}
-	s, err := file.GetSection(section)
-	if err != nil && strings.Contains(err.Error(), "does not exist") {
-		return false, nil
-	} else if err != nil {
-		return false, errors.Wrap(err, "get section")
-	}
-
-	return s.HasKey(key), nil
-}
-
 // AffinityTopologyKeyOff Affinity Topology Key Off.
 const AffinityTopologyKeyOff = "none"
-
-//nolint:gochecknoglobals
-var affinityValidTopologyKeys = map[string]struct{}{
-	AffinityTopologyKeyOff:                     {},
-	"kubernetes.io/hostname":                   {},
-	"failure-domain.beta.kubernetes.io/zone":   {},
-	"failure-domain.beta.kubernetes.io/region": {},
-}
-
-//nolint:gochecknoglobals
-var defaultAffinityTopologyKey = "kubernetes.io/hostname"
-
-// reconcileAffinityOpts ensures that the affinity is set to the valid values.
-// - if the affinity doesn't set at all - set topology key to `defaultAffinityTopologyKey`
-// - if topology key is set and the value not the one of `affinityValidTopologyKeys` - set to `defaultAffinityTopologyKey`
-// - if topology key set to valuse of `affinityOff` - disable the affinity at all
-// - if `Advanced` affinity is set - leave everything as it is and set topology key to nil (Advanced options has a higher priority).
-func (p *PodSpec) reconcileAffinityOpts() {
-	switch {
-	case p.Affinity == nil:
-		p.Affinity = &PodAffinity{
-			TopologyKey: &defaultAffinityTopologyKey,
-		}
-
-	case p.Affinity.TopologyKey == nil:
-		p.Affinity.TopologyKey = &defaultAffinityTopologyKey
-
-	case p.Affinity.Advanced != nil:
-		p.Affinity.TopologyKey = nil
-
-	case p.Affinity != nil && p.Affinity.TopologyKey != nil:
-		if _, ok := affinityValidTopologyKeys[*p.Affinity.TopologyKey]; !ok {
-			p.Affinity.TopologyKey = &defaultAffinityTopologyKey
-		}
-	}
-}
-
-func (v *VolumeSpec) reconcileOpts() (changed bool, err error) {
-	if v.EmptyDir == nil && v.HostPath == nil && v.PersistentVolumeClaim == nil {
-		v.PersistentVolumeClaim = new(corev1.PersistentVolumeClaimSpec)
-	}
-
-	if v.PersistentVolumeClaim != nil {
-		_, ok := v.PersistentVolumeClaim.Resources.Requests[corev1.ResourceStorage]
-		if !ok {
-			return changed, fmt.Errorf("volume.resources.storage can't be empty")
-		}
-
-		if v.PersistentVolumeClaim.AccessModes == nil || len(v.PersistentVolumeClaim.AccessModes) == 0 {
-			v.PersistentVolumeClaim.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
-			changed = true
-		}
-	}
-
-	return changed, nil
-}
