@@ -629,10 +629,10 @@ func (c *K8Client) setComputeResources(res *ComputeResources) *resourcesSpec {
 	r := &resourcesSpec{
 		Limits: new(resourceSpecRequirements),
 	}
-	if res.CPUM != 0 {
+	if res.CPUM > 0 {
 		r.Limits.CPU = resource.NewMilliQuantity(int64(res.CPUM), resource.DecimalSI).String()
 	}
-	if res.MemoryBytes != 0 {
+	if res.MemoryBytes > 0 {
 		r.Limits.Memory = resource.NewQuantity(res.MemoryBytes, resource.DecimalSI).String()
 	}
 	return r
