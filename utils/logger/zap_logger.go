@@ -34,7 +34,7 @@ func NewLogger() Logger {
 
 // SetupGlobal sets up global zap logger.
 func SetupGlobal() {
-	logger.SetupGlobal()
+	logger.SetupGlobal(nil)
 }
 
 // ZapLogger iz a wrapper for zap.SugaredLogger.
