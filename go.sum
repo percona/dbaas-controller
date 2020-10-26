@@ -302,8 +302,8 @@ github.com/percona-platform/saas v0.0.0-20201008124851-3c2c6c2ec0ce h1:aZu6Aa3yn
 github.com/percona-platform/saas v0.0.0-20201008124851-3c2c6c2ec0ce/go.mod h1:W5pqZ32KFOitbsfHwxTikOGxHysLChN4i9yPmgcG+HE=
 github.com/percona/percona-xtradb-cluster-operator v1.4.0 h1:Rlsng4OsC1gZ3a8omui0PSprubolBY47QuPjzt9MraI=
 github.com/percona/percona-xtradb-cluster-operator v1.4.0/go.mod h1:QvGXz1h9lhCsGHDkKlbmRDEsQVEyZUZ2cQda+MwqYTY=
-github.com/percona/pmm v2.10.1+incompatible h1:8Nvj30A5wlNNTGhRiPL7dZbqIMX2FAv2nOTPxvvdU/k=
-github.com/percona/pmm v2.10.1+incompatible/go.mod h1:nN14kK4Dfl2Ub1k05aOnAHv7SmLEQtCsYX+DEfLgrkU=
+github.com/percona/pmm v2.11.1+incompatible h1:DXIPQiFLXfaaWSIdpFXCzymn+44SIdxHJO9Wo63c7d0=
+github.com/percona/pmm v2.11.1+incompatible/go.mod h1:nN14kK4Dfl2Ub1k05aOnAHv7SmLEQtCsYX+DEfLgrkU=
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
