@@ -437,6 +437,9 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 		},
 		Spec: perconaServerMongoDBSpec{
 			Image: psmdbImage,
+			Secrets: &secretsSpec{
+				Users: "my-cluster-name-secrets",
+			},
 			Mongod: &mongodSpec{
 				Net: &mongodSpecNet{
 					Port: 27017,
@@ -614,16 +617,20 @@ func (c *K8Client) getComputeResources(resources resourcesSpec) *ComputeResource
 	if resources.Limits == nil {
 		return nil
 	}
-	cpum := resource.MustParse(resources.Limits.CPU)
-	memory := resource.MustParse(resources.Limits.Memory)
-	return &ComputeResources{
-		CPUM:        int32(cpum.MilliValue()),
-		MemoryBytes: memory.Value(),
+	res := new(ComputeResources)
+	if resources.Limits.CPU != "" {
+		cpum := resource.MustParse(resources.Limits.CPU)
+		res.CPUM = int32(cpum.MilliValue())
 	}
+	if resources.Limits.Memory != "" {
+		memory := resource.MustParse(resources.Limits.Memory)
+		res.MemoryBytes = memory.Value()
+	}
+	return res
 }
 
 func (c *K8Client) setComputeResources(res *ComputeResources) *resourcesSpec {
-	if res == nil {
+	if res == nil || (res.CPUM <= 0 && res.MemoryBytes <= 0) {
 		return nil
 	}
 	r := &resourcesSpec{
