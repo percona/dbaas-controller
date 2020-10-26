@@ -55,7 +55,7 @@ jobs:
         env:
           # to avoid error due to `go version` accepting -v flag with an argument since 1.15
           GOFLAGS: ""
-        uses: percona-platform/setup-go@v2.1.2
+        uses: percona-platform/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
 
@@ -80,7 +80,7 @@ jobs:
           echo "::set-env name=GO_VERSION::$(go version)"
 
       - name: Check out code into the Go module directory
-        uses: percona-platform/checkout@v2.3.2
+        uses: percona-platform/checkout@v2
 
       # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
       # https://minikube.sigs.k8s.io/docs/drivers/none/
@@ -192,12 +192,12 @@ jobs:
 
     steps:
       - name: Set up Go ${{ matrix.go-version }}
-        uses: percona-platform/setup-go@v2.1.2
+        uses: percona-platform/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
 
       - name: Check out code into the Go module directory
-        uses: percona-platform/checkout@v2.3.2
+        uses: percona-platform/checkout@v2
         with:
           lfs: true
 
