@@ -18,7 +18,6 @@ package v1
 
 import (
 	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
-	"github.com/percona/percona-xtradb-cluster-operator/version"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +26,7 @@ import (
 
 // PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
 type PerconaXtraDBClusterSpec struct { //nolint:maligned
-	Platform              version.Platform                     `json:"platform,omitempty"`
+	Platform              string                               `json:"platform,omitempty"`
 	CRVersion             string                               `json:"crVersion,omitempty"`
 	Pause                 bool                                 `json:"pause,omitempty"`
 	SecretsName           string                               `json:"secretsName,omitempty"`
