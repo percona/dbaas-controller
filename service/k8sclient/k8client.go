@@ -401,11 +401,16 @@ func (c *K8Client) setXtraDBComputeResources(podResources *pxc.PodSpec, computeR
 	if computeResources == nil {
 		return
 	}
-	podResources.Resources = &pxc.PodResources{
-		Limits: &pxc.ResourcesList{
-			Memory: resource.NewQuantity(computeResources.MemoryBytes, resource.DecimalSI).String(),
-			CPU:    resource.NewMilliQuantity(int64(computeResources.CPUM), resource.DecimalSI).String(),
-		},
+
+	if computeResources.MemoryBytes > 0 || computeResources.CPUM > 0 {
+		podResources.Resources = &pxc.PodResources{Limits: new(pxc.ResourcesList)}
+		if computeResources.MemoryBytes > 0 {
+			podResources.Resources.Limits.Memory = resource.NewQuantity(computeResources.MemoryBytes, resource.DecimalSI).String()
+		}
+
+		if computeResources.CPUM > 0 {
+			podResources.Resources.Limits.CPU = resource.NewMilliQuantity(int64(computeResources.CPUM), resource.DecimalSI).String()
+		}
 	}
 }
 
