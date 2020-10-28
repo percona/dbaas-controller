@@ -124,7 +124,7 @@ func TestK8Client(t *testing.T) {
 
 		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
 			if cluster != nil && cluster.State == ClusterStateReady {
-				assert.Equal(t, int32(3), cluster.Size)
+				assert.Equal(t, int32(5), cluster.Size)
 				return true
 			}
 			return false
@@ -165,11 +165,11 @@ func assertListXtraDBCluster(t *testing.T, ctx context.Context, client *K8Client
 
 func assertListPSMDBCluster(t *testing.T, ctx context.Context, client *K8Client, name string, conditionFunc func(cluster *PSMDBCluster) bool) {
 	l := logger.Get(ctx)
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 	for {
 		time.Sleep(5 * time.Second)
-		clusters, err := client.ListPSMDBClusters(ctx)
+		clusters, err := client.ListPSMDBClusters(timeoutCtx)
 		require.NoError(t, err)
 
 		l.Debug(clusters)
