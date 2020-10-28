@@ -152,8 +152,9 @@ func assertListXtraDBCluster(t *testing.T, ctx context.Context, client *K8Client
 		l.Debug(clusters)
 
 		var cluster *XtraDBCluster
-		for _, cluster := range clusters {
-			if cluster.Name == name {
+		for _, c := range clusters {
+			if c.Name == name {
+				cluster = &c
 				break
 			}
 		}
@@ -175,8 +176,9 @@ func assertListPSMDBCluster(t *testing.T, ctx context.Context, client *K8Client,
 		l.Debug(clusters)
 
 		var cluster *PSMDBCluster
-		for _, cluster := range clusters {
-			if cluster.Name == name {
+		for _, c := range clusters {
+			if c.Name == name {
+				cluster = &c
 				break
 			}
 		}
