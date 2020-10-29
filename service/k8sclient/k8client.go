@@ -450,9 +450,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 					Port: 27017,
 				},
 				OperationProfiling: &mongodSpecOperationProfiling{
-					Mode:              operationProfilingModeSlowOp,
-					SlowOpThresholdMs: 100,
-					RateLimit:         1,
+					Mode: operationProfilingModeSlowOp,
 				},
 				Security: &mongodSpecSecurity{
 					RedactClientLogData:  false,
@@ -460,18 +458,8 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 					EncryptionKeySecret:  "my-cluster-name-mongodb-encryption-key",
 					EncryptionCipherMode: mongodChiperModeCBC,
 				},
-				SetParameter: &mongodSpecSetParameter{
-					TTLMonitorSleepSecs:                   60,
-					WiredTigerConcurrentReadTransactions:  128,
-					WiredTigerConcurrentWriteTransactions: 128,
-				},
 				Storage: &mongodSpecStorage{
 					Engine: storageEngineWiredTiger,
-					InMemory: &mongodSpecInMemory{
-						EngineConfig: &mongodSpecInMemoryEngineConfig{
-							InMemorySizeRatio: 0.9,
-						},
-					},
 					MMAPv1: &mongodSpecMMAPv1{
 						NsSize:     16,
 						Smallfiles: false,
@@ -481,7 +469,6 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 							BlockCompressor: &wiredTigerCompressorSnappy,
 						},
 						EngineConfig: &mongodSpecWiredTigerEngineConfig{
-							CacheSizeRatio:      0.5,
 							DirectoryForIndexes: false,
 							JournalCompressor:   &wiredTigerCompressorSnappy,
 						},

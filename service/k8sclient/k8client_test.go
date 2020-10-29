@@ -153,6 +153,7 @@ func assertListXtraDBCluster(t *testing.T, ctx context.Context, client *K8Client
 
 		var cluster *XtraDBCluster
 		for _, c := range clusters {
+			c := c
 			if c.Name == name {
 				cluster = &c
 				break
@@ -177,6 +178,7 @@ func assertListPSMDBCluster(t *testing.T, ctx context.Context, client *K8Client,
 
 		var cluster *PSMDBCluster
 		for _, c := range clusters {
+			c := c
 			if c.Name == name {
 				cluster = &c
 				break
