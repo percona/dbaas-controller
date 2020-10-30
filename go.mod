@@ -14,14 +14,13 @@ go 1.14
 
 require (
 	github.com/AlekSi/pointer v1.1.0
+	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/percona-platform/dbaas-api v0.0.0-20201009095023-f103f733767a
+	github.com/percona-platform/dbaas-api v0.0.0-20201030173620-6b058553a3ef
 	github.com/percona-platform/saas v0.0.0-20201008124851-3c2c6c2ec0ce
-	github.com/percona/percona-backup-mongodb v1.2.0 // indirect
-	github.com/percona/percona-server-mongodb-operator v1.4.0
 	github.com/percona/percona-xtradb-cluster-operator v1.4.0
 	github.com/percona/pmm v2.11.1+incompatible
 	github.com/pkg/errors v0.9.1

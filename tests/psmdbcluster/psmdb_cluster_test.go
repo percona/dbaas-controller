@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package xtradbcluster
+package psmdbcluster
 
 import (
 	"os"
@@ -27,14 +27,14 @@ import (
 	"github.com/percona-platform/dbaas-controller/tests"
 )
 
-func TestXtraDBClusterAPI(t *testing.T) {
+func TestPSMDBClusterAPI(t *testing.T) {
 	kubeconfig := os.Getenv("PERCONA_TEST_DBAAS_KUBECONFIG")
 	if kubeconfig == "" {
 		t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")
 	}
-	name := "api-xtradb-test-cluster"
+	name := "api-psmdb-test-cluster"
 
-	clusters, err := tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
+	clusters, err := tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
@@ -49,20 +49,14 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	}
 	require.Falsef(t, clusterFound, "There should not be cluster with name %s", name)
 
-	createXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.CreateXtraDBCluster(tests.Context, &controllerv1beta1.CreateXtraDBClusterRequest{
+	createPSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.CreatePSMDBCluster(tests.Context, &controllerv1beta1.CreatePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
-		Params: &controllerv1beta1.XtraDBClusterParams{
+		Params: &controllerv1beta1.PSMDBClusterParams{
 			ClusterSize: 3,
-			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
-				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        1000,
-					MemoryBytes: 1024 * 1024 * 1024,
-				},
-			},
-			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
+			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        1000,
 					MemoryBytes: 1024 * 1024 * 1024,
@@ -71,9 +65,9 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.NotNil(t, createXtraDBClusterResponse)
+	require.NotNil(t, createPSMDBClusterResponse)
 
-	clusters, err = tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
+	clusters, err = tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
@@ -83,19 +77,19 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	for _, cluster := range clusters.Clusters {
 		if cluster.Name == name {
 			assert.Equal(t, int32(3), cluster.Params.ClusterSize)
-			assert.Equal(t, int64(1024*1024*1024), cluster.Params.Proxysql.ComputeResources.MemoryBytes)
-			assert.Equal(t, int32(1000), cluster.Params.Proxysql.ComputeResources.CpuM)
+			assert.Equal(t, int64(1024*1024*1024), cluster.Params.Replicaset.ComputeResources.MemoryBytes)
+			assert.Equal(t, int32(1000), cluster.Params.Replicaset.ComputeResources.CpuM)
 			clusterFound = true
 		}
 	}
 	assert.True(t, clusterFound)
 
-	deleteXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.DeleteXtraDBCluster(tests.Context, &controllerv1beta1.DeleteXtraDBClusterRequest{
+	deletePSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.DeletePSMDBCluster(tests.Context, &controllerv1beta1.DeletePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
 	})
 	require.NoError(t, err)
-	require.NotNil(t, deleteXtraDBClusterResponse)
+	require.NotNil(t, deletePSMDBClusterResponse)
 }
