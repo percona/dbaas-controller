@@ -129,7 +129,6 @@ type AppStatus struct {
 }
 
 // PerconaXtraDBCluster is the Schema for the perconaxtradbclusters API
-// +k8s:openapi-gen=true
 type PerconaXtraDBCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -256,19 +255,17 @@ type BackupStorageS3Spec struct {
 type VolumeSpec struct {
 	// EmptyDir to use as data volume for mysql. EmptyDir represents a temporary
 	// directory that shares a pod's lifetime.
-	// +optional
 	EmptyDir *corev1.EmptyDirVolumeSource `json:"emptyDir,omitempty"`
 
 	// HostPath to use as data volume for mysql. HostPath represents a
 	// pre-existing file or directory on the host machine that is directly
 	// exposed to the container.
-	// +optional
+
 	HostPath *corev1.HostPathVolumeSource `json:"hostPath,omitempty"`
 
 	// PersistentVolumeClaim to specify PVC spec for the volume for mysql data.
 	// It has the highest level of precedence, followed by HostPath and
 	// EmptyDir. And represents the PVC specification.
-	// +optional
 	PersistentVolumeClaim *corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaim,omitempty"`
 }
 
