@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
-	github.com/percona-platform/dbaas-api v0.0.0-20200925092839-203ec38b10af
+	github.com/percona-platform/dbaas-api v0.0.0-20201030173620-6b058553a3ef
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
