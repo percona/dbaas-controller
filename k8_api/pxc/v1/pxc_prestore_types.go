@@ -53,7 +53,3 @@ type PerconaXtraDBClusterRestoreList struct {
 
 // BcpRestoreStates backup restore states.
 type BcpRestoreStates string
-
-func init() { //nolint:gochecknoinits
-	SchemeBuilder.Register(new(PerconaXtraDBClusterRestore), new(PerconaXtraDBClusterRestoreList))
-}
