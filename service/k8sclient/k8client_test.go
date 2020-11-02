@@ -175,14 +175,17 @@ func assertListPSMDBCluster(t *testing.T, ctx context.Context, client *K8Client,
 		require.NoError(t, err)
 
 		l.Debug(clusters)
-	}
-}
 
-func findCluster(clusters []XtraDBCluster, name string) *XtraDBCluster {
-	for _, cluster := range clusters {
-		if cluster.Name == name {
-			return &cluster
+		var cluster *PSMDBCluster
+		for _, c := range clusters {
+			c := c
+			if c.Name == name {
+				cluster = &c
+				break
+			}
+		}
+		if conditionFunc(cluster) {
+			break
 		}
 	}
-	return nil
 }
