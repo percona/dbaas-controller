@@ -39,7 +39,7 @@ func NewKubernetesClusterService(p *message.Printer) *KubernetesClusterService {
 
 // CheckKubernetesClusterConnection checks connection with kubernetes cluster.
 func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.Context, req *controllerv1beta1.CheckKubernetesClusterConnectionRequest) (*controllerv1beta1.CheckKubernetesClusterConnectionResponse, error) {
-	k8Client, err := k8sclient.NewK8Client(ctx, req.KubeAuth.Kubeconfig)
+	k8Client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
 	}
