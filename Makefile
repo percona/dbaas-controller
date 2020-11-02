@@ -57,7 +57,7 @@ format:                           ## Format source code
 
 check:                            ## Run checks/linters for the whole project
 	bin/check-license
-	bin/go-consistent -pedantic ./...
+	bin/go-consistent -pedantic -exclude "tests" ./...
 	bin/golangci-lint run
 
 install:                          ## Install binaries
