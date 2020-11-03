@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package testutil contains functions used in tests.
+// Package testutil is a collection of utility functions used for testing
 package testutil
 
 import (
