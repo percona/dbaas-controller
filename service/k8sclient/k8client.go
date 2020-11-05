@@ -285,7 +285,7 @@ func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams
 func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, name string) error {
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: meta.TypeMeta{
-			APIVersion: "pxc.percona.com/v1-4-0",
+			APIVersion: pxcAPIVersion,
 			Kind:       string(perconaXtraDBClusterKind),
 		},
 		ObjectMeta: meta.ObjectMeta{
