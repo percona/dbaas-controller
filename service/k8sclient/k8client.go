@@ -295,6 +295,18 @@ func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, name string) error {
 	return c.kubeCtl.Delete(ctx, res)
 }
 
+// GetXtraDBCluster get a Percona XtraDB cluster details.
+func (c *K8Client) GetXtraDBCluster(ctx context.Context, name string) (*pxc.PerconaXtraDBCluster, error) {
+	var cluster pxc.PerconaXtraDBCluster
+
+	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), name, &cluster)
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot get XtraDB cluster %q", name)
+	}
+
+	return &cluster, nil
+}
+
 // getPerconaXtraDBClusters returns Percona XtraDB clusters.
 func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluster, error) {
 	var list meta.List

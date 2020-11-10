@@ -112,7 +112,29 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 
 // UpdatePSMDBCluster updates existing PSMDB cluster.
 func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *controllerv1beta1.UpdatePSMDBClusterRequest) (*controllerv1beta1.UpdatePSMDBClusterResponse, error) {
-	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("This method is not implemented yet."))
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	params := &k8sclient.PSMDBParams{
+		Name: req.Name,
+		Size: req.Params.ClusterSize,
+	}
+	params.Replicaset = &k8sclient.Replicaset{
+		ComputeResources: &k8sclient.ComputeResources{
+			CPUM:        req.Params.Replicaset.ComputeResources.CpuM,
+			MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
+		},
+	}
+
+	err = client.UpdatePSMDBCluster(ctx, params)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return new(controllerv1beta1.UpdatePSMDBClusterResponse), nil
 }
 
 // DeletePSMDBCluster deletes PSMDB cluster.

@@ -19,12 +19,15 @@ package cluster
 
 import (
 	"context"
+	"sync"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"github.com/pkg/errors"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
@@ -38,14 +41,18 @@ var pxcStatesMap = map[k8sclient.ClusterState]controllerv1beta1.XtraDBClusterSta
 	k8sclient.ClusterStateDeleting: controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_DELETING,
 }
 
+// ErrXtraDBClusterNotReady The cluster is not in ready state.
+var ErrXtraDBClusterNotReady = errors.New("XtraDB cluster is not ready")
+
 // XtraDBClusterService implements methods of gRPC server and other business logic related to XtraDB clusters.
 type XtraDBClusterService struct {
-	p *message.Printer
+	p    *message.Printer
+	lock *sync.Mutex
 }
 
 // NewXtraDBClusterService returns new XtraDBClusterService instance.
 func NewXtraDBClusterService(p *message.Printer) *XtraDBClusterService {
-	return &XtraDBClusterService{p: p}
+	return &XtraDBClusterService{p: p, lock: new(sync.Mutex)}
 }
 
 // ListXtraDBClusters returns a list of XtraDB clusters.
@@ -132,7 +139,50 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 
 // UpdateXtraDBCluster updates existing XtraDB cluster.
 func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *controllerv1beta1.UpdateXtraDBClusterRequest) (*controllerv1beta1.UpdateXtraDBClusterResponse, error) {
-	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("This method is not implemented yet."))
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	cluster, err := client.GetXtraDBCluster(ctx, req.Name)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot read cluster info")
+	}
+
+	if cluster.Status.PXC.Status != pxc.AppStateReady {
+		return nil, ErrXtraDBClusterNotReady //nolint:ErrXtraDBClusterNotReady
+	}
+
+	params := &k8sclient.XtraDBParams{
+		Name: req.Name,
+		Size: req.Params.ClusterSize,
+	}
+
+	if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
+		params.PXC = &k8sclient.PXC{
+			ComputeResources: &k8sclient.ComputeResources{
+				CPUM:        req.Params.Pxc.ComputeResources.CpuM,
+				MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
+			},
+		}
+	}
+
+	if req.Params.Proxysql.ComputeResources.CpuM > 0 || req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
+		params.ProxySQL = &k8sclient.ProxySQL{
+			ComputeResources: &k8sclient.ComputeResources{
+				CPUM:        req.Params.Proxysql.ComputeResources.CpuM,
+				MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
+			},
+		}
+	}
+
+	err = client.UpdateXtraDBCluster(ctx, params)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return new(controllerv1beta1.UpdateXtraDBClusterResponse), nil
 }
 
 // DeleteXtraDBCluster deletes XtraDB cluster.
