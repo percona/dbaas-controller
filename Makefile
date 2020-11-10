@@ -73,6 +73,9 @@ test-cover:                       ## Run tests and collect per-package coverage 
 test-crosscover:                  ## Run tests and collect cross-package coverage information
 	go test -race -timeout=30m -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
 
+test-api-build:                   ## Check that API tests can be built
+	cd tests && go test -count=0 ./...
+
 run: install                      ## Run dbaas-controller
 	bin/dbaas-controller
 
