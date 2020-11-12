@@ -27,7 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
+	"github.com/percona-platform/dbaas-controller/k8_api/v1/common"
+	"github.com/percona-platform/dbaas-controller/k8_api/v1/pxc"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
 
@@ -76,16 +77,19 @@ type ComputeResources struct {
 // PXC contains information related to PXC containers in Percona XtraDB cluster.
 type PXC struct {
 	ComputeResources *ComputeResources
+	DiskSize         int64
 }
 
 // ProxySQL contains information related to ProxySQL containers in Percona XtraDB cluster.
 type ProxySQL struct {
 	ComputeResources *ComputeResources
+	DiskSize         int64
 }
 
 // Replicaset contains information related to Replicaset containers in PSMDB cluster.
 type Replicaset struct {
 	ComputeResources *ComputeResources
+	DiskSize         int64
 }
 
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
@@ -194,35 +198,19 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			SecretsName:       "my-cluster-secrets",
 
 			PXC: &pxc.PodSpec{
-				Size:  params.Size,
-				Image: pxcImage,
-				VolumeSpec: &pxc.VolumeSpec{
-					PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
-						Resources: core.ResourceRequirements{
-							Requests: core.ResourceList{
-								core.ResourceStorage: resource.MustParse("1Gi"),
-							},
-						},
-					},
-				},
+				Size:       params.Size,
+				Image:      pxcImage,
+				VolumeSpec: c.volumeSpec(params.PXC.DiskSize),
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 				},
 			},
 
 			ProxySQL: &pxc.PodSpec{
-				Enabled: true,
-				Size:    params.Size,
-				Image:   pxcProxySQLImage,
-				VolumeSpec: &pxc.VolumeSpec{
-					PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
-						Resources: core.ResourceRequirements{
-							Requests: core.ResourceList{
-								core.ResourceStorage: resource.MustParse("1Gi"),
-							},
-						},
-					},
-				},
+				Enabled:    true,
+				Size:       params.Size,
+				Image:      pxcProxySQLImage,
+				VolumeSpec: c.volumeSpec(params.ProxySQL.DiskSize),
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 				},
@@ -242,28 +230,16 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				}},
 				Storages: map[string]*pxc.BackupStorageSpec{
 					pxcBackupStorageName: {
-						Type: pxc.BackupStorageFilesystem,
-						Volume: &pxc.VolumeSpec{
-							PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
-								Resources: core.ResourceRequirements{
-									Requests: core.ResourceList{
-										core.ResourceStorage: resource.MustParse("1Gi"),
-									},
-								},
-							},
-						},
+						Type:   pxc.BackupStorageFilesystem,
+						Volume: c.volumeSpec(params.PXC.DiskSize),
 					},
 				},
 				ServiceAccountName: "percona-xtradb-cluster-operator",
 			},
 		},
 	}
-	if params.PXC != nil {
-		c.setXtraDBComputeResources(res.Spec.PXC, params.PXC.ComputeResources)
-	}
-	if params.ProxySQL != nil {
-		c.setXtraDBComputeResources(res.Spec.ProxySQL, params.ProxySQL.ComputeResources)
-	}
+	res.Spec.PXC.Resources = c.setComputeResources(params.PXC.ComputeResources)
+	res.Spec.ProxySQL.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
 	return c.kubeCtl.Apply(ctx, res)
 }
 
@@ -313,17 +289,16 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 			Name:  cluster.Name,
 			Size:  cluster.Spec.ProxySQL.Size,
 			State: pxcStatesMap[cluster.Status.Status],
+			PXC: &PXC{
+				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
+				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
+			},
+			ProxySQL: &ProxySQL{
+				DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
+				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
+			},
 		}
-		if cluster.Spec.PXC.Resources != nil {
-			val.PXC = &PXC{
-				ComputeResources: c.getXtraDBComputeResources(*cluster.Spec.PXC.Resources),
-			}
-		}
-		if cluster.Spec.ProxySQL.Resources != nil {
-			val.ProxySQL = &ProxySQL{
-				ComputeResources: c.getXtraDBComputeResources(*cluster.Spec.ProxySQL.Resources),
-			}
-		}
+
 		res[i] = val
 	}
 	return res, nil
@@ -383,35 +358,6 @@ func (c *K8Client) getDeletingXtraDBClusters(ctx context.Context, clusters []Xtr
 		}
 	}
 	return xtradbClusters, nil
-}
-
-func (c *K8Client) getXtraDBComputeResources(resources pxc.PodResources) *ComputeResources {
-	if resources.Limits == nil {
-		return nil
-	}
-	cpum := resource.MustParse(resources.Limits.CPU)
-	memory := resource.MustParse(resources.Limits.Memory)
-	return &ComputeResources{
-		CPUM:        int32(cpum.MilliValue()),
-		MemoryBytes: memory.Value(),
-	}
-}
-
-func (c *K8Client) setXtraDBComputeResources(podResources *pxc.PodSpec, computeResources *ComputeResources) {
-	if computeResources == nil {
-		return
-	}
-
-	if computeResources.MemoryBytes > 0 || computeResources.CPUM > 0 {
-		podResources.Resources = &pxc.PodResources{Limits: new(pxc.ResourcesList)}
-		if computeResources.MemoryBytes > 0 {
-			podResources.Resources.Limits.Memory = resource.NewQuantity(computeResources.MemoryBytes, resource.DecimalSI).String()
-		}
-
-		if computeResources.CPUM > 0 {
-			podResources.Resources.Limits.CPU = resource.NewMilliQuantity(int64(computeResources.CPUM), resource.DecimalSI).String()
-		}
-	}
 }
 
 // ListPSMDBClusters returns list of psmdb clusters and their statuses.
@@ -491,15 +437,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 							},
 						},
 					},
-					VolumeSpec: &volumeSpec{
-						PersistentVolumeClaim: &persistentVolumeClaimSpec{
-							Resources: resourceRequirements{
-								Requests: resourceList{
-									ResourceStorage: resource.MustParse("1Gi"),
-								},
-							},
-						},
-					},
+					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
 					multiAZ: multiAZ{
 						Affinity: &podAffinity{
 							TopologyKey: pointer.ToString(affinityOff),
@@ -572,11 +510,10 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 			Name:  cluster.Name,
 			State: psmdbStatesMap[cluster.Status.Status],
 			Size:  cluster.Spec.Replsets[0].Size,
-		}
-		if cluster.Spec.Replsets[0].Resources != nil {
-			val.Replicaset = &Replicaset{
-				ComputeResources: c.getComputeResources(*cluster.Spec.Replsets[0].Resources),
-			}
+			Replicaset: &Replicaset{
+				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
+				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
+			},
 		}
 		res[i] = val
 	}
@@ -605,8 +542,8 @@ func (c *K8Client) getDeletingPSMDBClusters(ctx context.Context, clusters []PSMD
 	return xtradbClusters, nil
 }
 
-func (c *K8Client) getComputeResources(resources resourcesSpec) *ComputeResources {
-	if resources.Limits == nil {
+func (c *K8Client) getComputeResources(resources *common.PodResources) *ComputeResources {
+	if resources == nil || resources.Limits == nil {
 		return nil
 	}
 	res := new(ComputeResources)
@@ -621,12 +558,12 @@ func (c *K8Client) getComputeResources(resources resourcesSpec) *ComputeResource
 	return res
 }
 
-func (c *K8Client) setComputeResources(res *ComputeResources) *resourcesSpec {
+func (c *K8Client) setComputeResources(res *ComputeResources) *common.PodResources {
 	if res == nil || (res.CPUM <= 0 && res.MemoryBytes <= 0) {
 		return nil
 	}
-	r := &resourcesSpec{
-		Limits: new(resourceSpecRequirements),
+	r := &common.PodResources{
+		Limits: new(common.ResourcesList),
 	}
 	if res.CPUM > 0 {
 		r.Limits.CPU = resource.NewMilliQuantity(int64(res.CPUM), resource.DecimalSI).String()
@@ -635,4 +572,30 @@ func (c *K8Client) setComputeResources(res *ComputeResources) *resourcesSpec {
 		r.Limits.Memory = resource.NewQuantity(res.MemoryBytes, resource.DecimalSI).String()
 	}
 	return r
+}
+
+func (c *K8Client) getDiskSize(volumeSpec *common.VolumeSpec) int64 {
+	if volumeSpec == nil || volumeSpec.PersistentVolumeClaim == nil {
+		return 0
+	}
+	quantity, ok := volumeSpec.PersistentVolumeClaim.Resources.Requests[common.ResourceStorage]
+	if !ok {
+		return 0
+	}
+	return quantity.Value()
+}
+
+func (c *K8Client) volumeSpec(diskSize int64) *common.VolumeSpec {
+	if diskSize == 0 {
+		return nil
+	}
+	return &common.VolumeSpec{
+		PersistentVolumeClaim: &common.PersistentVolumeClaimSpec{
+			Resources: common.ResourceRequirements{
+				Requests: common.ResourceList{
+					common.ResourceStorage: *resource.NewQuantity(diskSize, resource.DecimalSI),
+				},
+			},
+		},
+	}
 }
