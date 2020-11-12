@@ -14,15 +14,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package pxc
+// Package v1 contains API Schema definitions for the pxc v1 API group
+package v1
 
 import (
 	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
-	"github.com/percona-platform/dbaas-controller/k8_api/v1/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/percona-platform/dbaas-controller/k8_api/common"
 )
 
 // PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.

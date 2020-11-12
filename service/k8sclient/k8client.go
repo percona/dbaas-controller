@@ -27,8 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/percona-platform/dbaas-controller/k8_api/v1/common"
-	"github.com/percona-platform/dbaas-controller/k8_api/v1/pxc"
+	"github.com/percona-platform/dbaas-controller/k8_api/common"
+	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
 
@@ -199,6 +199,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 
 			PXC: &pxc.PodSpec{
 				Size:       params.Size,
+				Resources:  c.setComputeResources(params.PXC.ComputeResources),
 				Image:      pxcImage,
 				VolumeSpec: c.volumeSpec(params.PXC.DiskSize),
 				Affinity: &pxc.PodAffinity{
@@ -209,6 +210,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			ProxySQL: &pxc.PodSpec{
 				Enabled:    true,
 				Size:       params.Size,
+				Resources:  c.setComputeResources(params.ProxySQL.ComputeResources),
 				Image:      pxcProxySQLImage,
 				VolumeSpec: c.volumeSpec(params.ProxySQL.DiskSize),
 				Affinity: &pxc.PodAffinity{
@@ -238,8 +240,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			},
 		},
 	}
-	res.Spec.PXC.Resources = c.setComputeResources(params.PXC.ComputeResources)
-	res.Spec.ProxySQL.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
+
 	return c.kubeCtl.Apply(ctx, res)
 }
 
@@ -426,8 +427,9 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			},
 			Replsets: []*replsetSpec{
 				{
-					Name: "rs0",
-					Size: params.Size,
+					Name:      "rs0",
+					Size:      params.Size,
+					Resources: c.setComputeResources(params.Replicaset.ComputeResources),
 					Arbiter: arbiter{
 						Enabled: false,
 						Size:    1,
@@ -457,9 +459,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			},
 		},
 	}
-	if params.Replicaset != nil {
-		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
-	}
+
 	return c.kubeCtl.Apply(ctx, res)
 }
 

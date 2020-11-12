@@ -67,23 +67,23 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 	for i, cluster := range xtradbClusters {
 		params := &controllerv1beta1.XtraDBClusterParams{
 			ClusterSize: cluster.Size,
-		}
-		if cluster.PXC != nil {
-			params.Pxc = &controllerv1beta1.XtraDBClusterParams_PXC{
-				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        cluster.PXC.ComputeResources.CPUM,
-					MemoryBytes: cluster.PXC.ComputeResources.MemoryBytes,
-				},
+			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
 				DiskSize: cluster.PXC.DiskSize,
+			},
+			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
+				DiskSize: cluster.ProxySQL.DiskSize,
+			},
+		}
+		if cluster.PXC.ComputeResources != nil {
+			params.Pxc.ComputeResources = &controllerv1beta1.ComputeResources{
+				CpuM:        cluster.PXC.ComputeResources.CPUM,
+				MemoryBytes: cluster.PXC.ComputeResources.MemoryBytes,
 			}
 		}
-		if cluster.ProxySQL != nil {
-			params.Proxysql = &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        cluster.ProxySQL.ComputeResources.CPUM,
-					MemoryBytes: cluster.ProxySQL.ComputeResources.MemoryBytes,
-				},
-				DiskSize: cluster.ProxySQL.DiskSize,
+		if cluster.ProxySQL.ComputeResources != nil {
+			params.Proxysql.ComputeResources = &controllerv1beta1.ComputeResources{
+				CpuM:        cluster.ProxySQL.ComputeResources.CPUM,
+				MemoryBytes: cluster.ProxySQL.ComputeResources.MemoryBytes,
 			}
 		}
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{

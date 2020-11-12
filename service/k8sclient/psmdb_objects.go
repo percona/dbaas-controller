@@ -18,7 +18,7 @@
 package k8sclient
 
 import (
-	"github.com/percona-platform/dbaas-controller/k8_api/v1/common"
+	"github.com/percona-platform/dbaas-controller/k8_api/common"
 )
 
 const affinityOff = "none"
