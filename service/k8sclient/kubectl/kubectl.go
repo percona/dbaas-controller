@@ -207,6 +207,7 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 	if err != nil {
 		return err
 	}
+
 	return json.Unmarshal(stdout, res)
 }
 

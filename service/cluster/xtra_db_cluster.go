@@ -91,6 +91,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 				},
 			}
 		}
+
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{
 			Name:      cluster.Name,
 			State:     pxcStatesMap[cluster.State],
@@ -150,8 +151,9 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 		return nil, errors.Wrap(err, "cannot read cluster info")
 	}
 
+	// This is to prevent concurrent updates
 	if cluster.Status.PXC.Status != pxc.AppStateReady {
-		return nil, ErrXtraDBClusterNotReady //nolint:ErrXtraDBClusterNotReady
+		return nil, ErrXtraDBClusterNotReady //nolint:wrapcheck
 	}
 
 	params := &k8sclient.XtraDBParams{

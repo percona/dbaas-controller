@@ -17,17 +17,19 @@
 package xtradbcluster
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/kr/pretty"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona-platform/dbaas-controller/tests"
+	"github.com/percona-platform/dbaas-controller/utils/app"
 )
 
 func TestXtraDBClusterAPI(t *testing.T) {
@@ -35,7 +37,8 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	if kubeconfig == "" {
 		t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")
 	}
-	name := "api-xtradb-test-cluster"
+	name := "pxdb-api-test-cluster"
+	ctx := app.Context()
 
 	clusters, err := tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
@@ -58,17 +61,17 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		},
 		Name: name,
 		Params: &controllerv1beta1.XtraDBClusterParams{
-			ClusterSize: 3,
+			ClusterSize: 1,
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					// CpuM:        1000,
-					// MemoryBytes: 1024 * 1024 * 1024,
+					CpuM:        1000,
+					MemoryBytes: 1024 * 1024 * 1024,
 				},
 			},
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					// CpuM:        1000,
-					// MemoryBytes: 1024 * 1024 * 1024,
+					CpuM:        1000,
+					MemoryBytes: 1024 * 1024 * 1024,
 				},
 			},
 		},
@@ -76,6 +79,9 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, createXtraDBClusterResponse)
 
+	err = waitForClusterState(ctx, kubeconfig, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
+	assert.NoError(t, err)
+
 	clusters, err = tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
@@ -83,40 +89,15 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	pretty.Println(clusters.Clusters)
-
 	for _, cluster := range clusters.Clusters {
 		if cluster.Name == name {
-			// 		assert.Equal(t, int32(3), cluster.Params.ClusterSize)
-			// 		assert.Equal(t, int64(1024*1024*1024), cluster.Params.Proxysql.ComputeResources.MemoryBytes)
-			// 		assert.Equal(t, int32(1000), cluster.Params.Proxysql.ComputeResources.CpuM)
+			assert.Equal(t, int32(1), cluster.Params.ClusterSize)
+			assert.Equal(t, int64(1024*1024*1024), cluster.Params.Proxysql.ComputeResources.MemoryBytes)
+			assert.Equal(t, int32(1000), cluster.Params.Proxysql.ComputeResources.CpuM)
 			clusterFound = true
 		}
 	}
 	assert.True(t, clusterFound)
-
-	ch := make(chan bool)
-	go func() {
-		for {
-			clusters, err = tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
-				KubeAuth: &controllerv1beta1.KubeAuth{
-					Kubeconfig: kubeconfig,
-				},
-			})
-			pretty.Println(clusters.Clusters)
-			assert.NoError(t, err)
-			select {
-			case <-ch:
-				return
-			case <-time.After(50 * time.Millisecond):
-				continue
-			}
-		}
-	}()
-
-	fmt.Println("Sleeping")
-	time.Sleep(3 * time.Minute)
-	fmt.Println("Waking up")
 
 	updateClusterReq := &controllerv1beta1.UpdateXtraDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
@@ -124,24 +105,35 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		},
 		Name: name,
 		Params: &controllerv1beta1.XtraDBClusterParams{
-			ClusterSize: 4,
+			ClusterSize: 2,
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
-				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        1000,
-					MemoryBytes: 1024 * 1024 * 1024,
-				},
+				ComputeResources: &controllerv1beta1.ComputeResources{},
 			},
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        1000,
-					MemoryBytes: 1024 * 1024 * 1024,
-				},
+				ComputeResources: &controllerv1beta1.ComputeResources{},
 			},
 		},
 	}
+
+	t.Log("Before first update")
+
 	updateXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.UpdateXtraDBCluster(tests.Context, updateClusterReq)
-	pretty.Println(updateXtraDBClusterResponse)
-	pretty.Println(err)
+	assert.NoError(t, err)
+	assert.NotNil(t, updateXtraDBClusterResponse)
+
+	t.Log("Waiting for cluster into changing state")
+	err = waitForClusterState(ctx, kubeconfig, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
+	assert.NoError(t, err)
+
+	t.Log("Before second update")
+
+	// Cannot run a second update while the first haven't finish yet
+	updateXtraDBClusterResponse, err = tests.XtraDBClusterAPIClient.UpdateXtraDBCluster(tests.Context, updateClusterReq)
+	assert.Error(t, err)
+	assert.Nil(t, updateXtraDBClusterResponse)
+
+	err = waitForClusterState(ctx, kubeconfig, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
+	require.NoError(t, err)
 
 	clusters, err = tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
@@ -149,9 +141,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		},
 	})
 	assert.NoError(t, err)
-	fmt.Println("====================================================================================================")
-	pretty.Println(clusters.Clusters)
-	ch <- true
+	assert.Equal(t, int32(2), clusters.Clusters[0].Params.ClusterSize)
 
 	deleteXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.DeleteXtraDBCluster(tests.Context, &controllerv1beta1.DeleteXtraDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
@@ -161,4 +151,28 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, deleteXtraDBClusterResponse)
+}
+
+func waitForClusterState(ctx context.Context, kubeconfig string, state controllerv1beta1.XtraDBClusterState) error {
+	for {
+		clusters, err := tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: kubeconfig,
+			},
+		})
+		if err != nil {
+			return errors.Wrap(err, "cannot get clusters list")
+		}
+
+		if len(clusters.Clusters) > 0 && clusters.Clusters[0].State == state {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for the cluster to be ready")
+		case <-time.After(100 * time.Millisecond):
+			continue
+		}
+	}
 }
