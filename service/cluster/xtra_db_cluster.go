@@ -150,6 +150,21 @@ func (s *XtraDBClusterService) DeleteXtraDBCluster(ctx context.Context, req *con
 	return new(controllerv1beta1.DeleteXtraDBClusterResponse), nil
 }
 
+// RestartXtraDBCluster restarts XtraDB cluster.
+func (s *XtraDBClusterService) RestartXtraDBCluster(ctx context.Context, req *controllerv1beta1.RestartXtraDBClusterRequest) (*controllerv1beta1.RestartXtraDBClusterResponse, error) {
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	err = client.RestartXtraDBCluster(ctx, req.Name)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return new(controllerv1beta1.RestartXtraDBClusterResponse), nil
+}
+
 // Check interface.
 var (
 	_ controllerv1beta1.XtraDBClusterAPIServer = (*XtraDBClusterService)(nil)

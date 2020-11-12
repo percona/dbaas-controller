@@ -36,7 +36,7 @@ require (
 	golang.org/x/sys v0.0.0-20200724161237-0e2f3a69832c
 	golang.org/x/text v0.3.3
 	golang.org/x/tools v0.0.0-20200616133436-c1934b75d054 // indirect
-	google.golang.org/grpc v1.32.0
+	google.golang.org/grpc v1.33.2
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 	k8s.io/api v0.19.0
@@ -48,6 +48,7 @@ require (
 // * https://github.com/percona/percona-xtradb-cluster-operator/blob/master/go.mod
 // * https://github.com/percona/percona-server-mongodb-operator/blob/master/go.mod
 replace (
+	github.com/percona-platform/dbaas-api => /Users/als/go/src/github.com/percona-platform/dbaas-api
 	k8s.io/api => k8s.io/api v0.17.4
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.4
 	k8s.io/client-go => k8s.io/client-go v0.17.4

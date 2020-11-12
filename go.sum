@@ -356,8 +356,6 @@ github.com/pascaldekloe/goe v0.1.0/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144T
 github.com/pavel-v-chernykh/keystore-go v2.1.0+incompatible/go.mod h1:xlUlxe/2ItGlQyMTstqeDv9r3U4obH7xYd26TbDQutY=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
-github.com/percona-platform/dbaas-api v0.0.0-20201030173620-6b058553a3ef h1:Wbwav2FFqX7WH58qOYq7Wup6h/yn+QjnY0EHiEszkHs=
-github.com/percona-platform/dbaas-api v0.0.0-20201030173620-6b058553a3ef/go.mod h1:j0iHlvmUk/8hg0F4SKwf7Mee9TNoS6VOyRFjg3G7rvA=
 github.com/percona-platform/saas v0.0.0-20201008124851-3c2c6c2ec0ce h1:aZu6Aa3yn8NeXVkOOTpEdXkbmDxAw631vY5b6X5SJbQ=
 github.com/percona-platform/saas v0.0.0-20201008124851-3c2c6c2ec0ce/go.mod h1:W5pqZ32KFOitbsfHwxTikOGxHysLChN4i9yPmgcG+HE=
 github.com/percona/pmm v2.11.1+incompatible h1:DXIPQiFLXfaaWSIdpFXCzymn+44SIdxHJO9Wo63c7d0=
@@ -644,6 +642,8 @@ google.golang.org/grpc v1.27.0/go.mod h1:qbnxyOmOxrQa7FizSgH+ReBfzJrCY1pSN7KXBS8
 google.golang.org/grpc v1.29.1/go.mod h1:itym6AZVZYACWQqET3MqgPpjcuV5QH3BxFS3IjizoKk=
 google.golang.org/grpc v1.32.0 h1:zWTV+LMdc3kaiJMSTOFz2UgSBgx8RNQoTGiZu3fR9S0=
 google.golang.org/grpc v1.32.0/go.mod h1:N36X2cJ7JwdamYAgDz+s+rVMFjt3numwzf/HckM8pak=
+google.golang.org/grpc v1.33.2 h1:EQyQC3sa8M+p6Ulc8yy9SWSS2GVwyRc83gAbG8lrl4o=
+google.golang.org/grpc v1.33.2/go.mod h1:JMHMWHQWaTccqQQlmk3MJZS+GWXOdAesneDmEnv2fbc=
 google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
 google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ01Woi6D6+Kah6886xMZcty6N08ah7+eCXa0=
 google.golang.org/protobuf v0.0.0-20200228230310-ab0ca4ff8a60/go.mod h1:cfTl7dwQJ+fmap5saPgwCLgHXTUD7jkjRqWcaiX5VyM=

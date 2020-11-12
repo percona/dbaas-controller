@@ -20,6 +20,7 @@ package k8sclient
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
@@ -295,6 +296,23 @@ func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, name string) error {
 	return c.kubeCtl.Delete(ctx, res)
 }
 
+// RestartXtraDBCluster restarts Percona XtraDB cluster with provided name.
+func (c *K8Client) RestartXtraDBCluster(ctx context.Context, name string) error {
+	args := []string{"rollout", "restart", "StatefulSets", fmt.Sprintf("%s-pxc", name)}
+	_, err := c.kubeCtl.Run(ctx, args, nil)
+	if err != nil {
+		return err
+	}
+
+	args = []string{"rollout", "restart", "StatefulSets", fmt.Sprintf("%s-proxysql", name)}
+	_, err = c.kubeCtl.Run(ctx, args, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // getPerconaXtraDBClusters returns Percona XtraDB clusters.
 func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluster, error) {
 	var list meta.List
@@ -552,6 +570,14 @@ func (c *K8Client) DeletePSMDBCluster(ctx context.Context, name string) error {
 		},
 	}
 	return c.kubeCtl.Delete(ctx, res)
+}
+
+// RestartPSMDBCluster restarts Percona server for mongodb cluster with provided name.
+func (c *K8Client) RestartPSMDBCluster(ctx context.Context, name string) error {
+	args := []string{"rollout", "restart", "StatefulSets", fmt.Sprintf("%s-rs0", name)}
+	_, err := c.kubeCtl.Run(ctx, args, nil)
+
+	return err
 }
 
 // getPSMDBClusters returns Percona Server for MongoDB clusters.
