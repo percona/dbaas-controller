@@ -90,10 +90,11 @@ type Replicaset struct {
 
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
 type XtraDBParams struct {
-	Name     string
-	Size     int32
-	PXC      *PXC
-	ProxySQL *ProxySQL
+	Name             string
+	Size             int32
+	PXC              *PXC
+	ProxySQL         *ProxySQL
+	PublicAddressURL string
 }
 
 // Cluster contains common information related to cluster.
@@ -103,9 +104,10 @@ type Cluster struct {
 
 // PSMDBParams contains all parameters required to create or update percona server for mongodb cluster.
 type PSMDBParams struct {
-	Name       string
-	Size       int32
-	Replicaset *Replicaset
+	Name             string
+	Size             int32
+	Replicaset       *Replicaset
+	PublicAddressURL string
 }
 
 // XtraDBCluster contains information related to xtradb cluster.

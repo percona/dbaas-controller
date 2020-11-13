@@ -104,8 +104,9 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 	defer client.Cleanup() //nolint:errcheck
 
 	params := &k8sclient.XtraDBParams{
-		Name: req.Name,
-		Size: req.Params.ClusterSize,
+		Name:             req.Name,
+		Size:             req.Params.ClusterSize,
+		PublicAddressURL: req.PublicAddressUrl,
 	}
 	if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
 		params.PXC = &k8sclient.PXC{
