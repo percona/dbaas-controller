@@ -136,12 +136,17 @@ func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *contr
 	params := &k8sclient.PSMDBParams{
 		Name: req.Name,
 		Size: req.Params.ClusterSize,
-	}
-	params.Replicaset = &k8sclient.Replicaset{
-		ComputeResources: &k8sclient.ComputeResources{
-			CPUM:        req.Params.Replicaset.ComputeResources.CpuM,
-			MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
+		Replicaset: &k8sclient.Replicaset{
+			ComputeResources: new(k8sclient.ComputeResources), // this must be present for a valid request
 		},
+	}
+
+	if req.Params.Replicaset.ComputeResources.CpuM > 0 {
+		params.Replicaset.ComputeResources.CPUM = req.Params.Replicaset.ComputeResources.CpuM
+	}
+
+	if req.Params.Replicaset.ComputeResources.MemoryBytes > 0 {
+		params.Replicaset.ComputeResources.MemoryBytes = req.Params.Replicaset.ComputeResources.MemoryBytes
 	}
 
 	err = client.UpdatePSMDBCluster(ctx, params)

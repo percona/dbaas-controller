@@ -1,4 +1,5 @@
 digraph packages {
+	"/service/cluster" -> "/k8_api/pxc/v1";
 	"/service/cluster" -> "/service/k8sclient";
 	"/service/k8sclient" -> "/k8_api/pxc/v1";
 	"/service/k8sclient" -> "/service/k8sclient/kubectl";
