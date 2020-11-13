@@ -23,7 +23,7 @@ require (
 	github.com/jetstack/cert-manager v0.14.0-alpha.0
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
-	github.com/percona-platform/dbaas-api v0.0.0-20201030173620-6b058553a3ef
+	github.com/percona-platform/dbaas-api v0.0.0-20201111092300-681233000327
 	github.com/percona-platform/saas v0.0.0-20201008124851-3c2c6c2ec0ce
 	github.com/percona/pmm v2.11.1+incompatible
 	github.com/pkg/errors v0.9.1
@@ -48,7 +48,6 @@ require (
 // * https://github.com/percona/percona-xtradb-cluster-operator/blob/master/go.mod
 // * https://github.com/percona/percona-server-mongodb-operator/blob/master/go.mod
 replace (
-	github.com/percona-platform/dbaas-api => /Users/als/go/src/github.com/percona-platform/dbaas-api
 	k8s.io/api => k8s.io/api v0.17.4
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.4
 	k8s.io/client-go => k8s.io/client-go v0.17.4
