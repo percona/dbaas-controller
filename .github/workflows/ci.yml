@@ -123,6 +123,9 @@ jobs:
       - name: Install binaries
         run: make release install
 
+      - name: Check that API tests can be built
+        run: make test-api-build
+
       - name: Start development environment
         run: sudo -E make env-up
 
@@ -132,7 +135,7 @@ jobs:
           make test-crosscover
 
       - name: Upload coverage results
-        uses: percona-platform/codecov-action@v1.0.13
+        uses: percona-platform/codecov-action@v1
         with:
           file: crosscover.out
           flags: crosscover
