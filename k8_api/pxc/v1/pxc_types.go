@@ -206,7 +206,6 @@ type PMMSpec struct {
 	Resources                *PodResources           `json:"resources,omitempty"`
 	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
 	ImagePullPolicy          corev1.PullPolicy       `json:"imagePullPolicy,omitempty"`
-	PublicAddressURL         string                  `json:"publicAddressURL,omitempty"`
 }
 
 // ResourcesList POD's resources list.

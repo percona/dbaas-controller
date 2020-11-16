@@ -231,8 +231,8 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			},
 
 			PMM: &pxc.PMMSpec{
-				Enabled:          false,
-				PublicAddressURL: params.PublicAddressURL,
+				Enabled:    false,
+				ServerHost: params.PublicAddressURL,
 			},
 
 			Backup: &pxc.PXCScheduledBackup{
@@ -512,8 +512,8 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			},
 
 			PMM: pmmSpec{
-				Enabled:          false,
-				PublicAddressURL: params.PublicAddressURL,
+				Enabled:    false,
+				ServerHost: params.PublicAddressURL,
 			},
 
 			Backup: backupSpec{
