@@ -22,12 +22,10 @@ import (
 	"sync"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/pkg/errors"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
@@ -40,9 +38,6 @@ var pxcStatesMap = map[k8sclient.ClusterState]controllerv1beta1.XtraDBClusterSta
 	k8sclient.ClusterStateFailed:   controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_FAILED,
 	k8sclient.ClusterStateDeleting: controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_DELETING,
 }
-
-// ErrXtraDBClusterNotReady The cluster is not in ready state.
-var ErrXtraDBClusterNotReady = errors.New("XtraDB cluster is not ready")
 
 // XtraDBClusterService implements methods of gRPC server and other business logic related to XtraDB clusters.
 type XtraDBClusterService struct {
@@ -145,16 +140,6 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer client.Cleanup() //nolint:errcheck
-
-	cluster, err := client.GetXtraDBCluster(ctx, req.Name)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot read cluster info")
-	}
-
-	// This is to prevent concurrent updates
-	if cluster.Status.PXC.Status != pxc.AppStateReady {
-		return nil, ErrXtraDBClusterNotReady //nolint:wrapcheck
-	}
 
 	params := &k8sclient.XtraDBParams{
 		Name: req.Name,

@@ -20,7 +20,6 @@ import (
 	"context"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/pkg/errors"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -38,7 +37,6 @@ var (
 		k8sclient.ClusterStateFailed:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
 		k8sclient.ClusterStateDeleting: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
 	}
-	ErrPSMDBClusterNotReady = errors.New("PSMDB cluster is not ready")
 )
 
 // PSMDBClusterService implements methods of gRPC server and other business logic related to PSMDB clusters.
@@ -122,16 +120,6 @@ func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *contr
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer client.Cleanup() //nolint:errcheck
-
-	cluster, err := client.GetPSMDBCluster(ctx, req.Name)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot read cluster info")
-	}
-
-	// This is to prevent concurrent updates
-	if cluster.State != k8sclient.ClusterStateReady {
-		return nil, ErrPSMDBClusterNotReady //nolint:wrapcheck
-	}
 
 	params := &k8sclient.PSMDBParams{
 		Name: req.Name,

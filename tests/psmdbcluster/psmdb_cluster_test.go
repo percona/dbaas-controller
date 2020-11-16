@@ -89,7 +89,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	assert.True(t, clusterFound)
 
 	t.Log("Wating for cluster to be ready")
-	err = waitForPSMDBClusterState(tests.Context, kubeconfig, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
 	require.NoError(t, err)
 
 	updateReq := &controllerv1beta1.UpdatePSMDBClusterRequest{
@@ -112,7 +112,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 
 	// There is an error and the cluster never gets into the "changing" state.
 	t.Log("Waiting for state=changing")
-	err = waitForPSMDBClusterState(tests.Context, kubeconfig, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING)
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING)
 	assert.NoError(t, err)
 
 	// Second update should fail because running an update while the status is changing (there is a previous update running)
@@ -123,7 +123,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	assert.Nil(t, upresp)
 
 	t.Log("Wait for cluster to be ready")
-	err = waitForPSMDBClusterState(tests.Context, kubeconfig, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
 	require.NoError(t, err)
 
 	clusters, err = tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
@@ -151,7 +151,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	require.NotNil(t, deletePSMDBClusterResponse)
 }
 
-func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, state controllerv1beta1.PSMDBClusterState) error {
+func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.PSMDBClusterState) error {
 	for {
 		clusters, err := tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
@@ -162,7 +162,7 @@ func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, state cont
 			return errors.Wrap(err, "cannot get clusters list")
 		}
 
-		if len(clusters.Clusters) > 0 && clusters.Clusters[0].State == state {
+		if len(clusters.Clusters) > 0 && clusters.Clusters[0].State == state && clusters.Clusters[0].Name == name {
 			return nil
 		}
 
