@@ -143,23 +143,23 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 
 	params := &k8sclient.XtraDBParams{
 		Name: req.Name,
-		Size: req.Params.ClusterSize,
+		Size: req.ClusterSize,
 	}
 
-	if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
+	if req.Pxc.ComputeResources.CpuM > 0 || req.Pxc.ComputeResources.MemoryBytes > 0 {
 		params.PXC = &k8sclient.PXC{
 			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        req.Params.Pxc.ComputeResources.CpuM,
-				MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
+				CPUM:        req.Pxc.ComputeResources.CpuM,
+				MemoryBytes: req.Pxc.ComputeResources.MemoryBytes,
 			},
 		}
 	}
 
-	if req.Params.Proxysql.ComputeResources.CpuM > 0 || req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
+	if req.Proxysql.ComputeResources.CpuM > 0 || req.Proxysql.ComputeResources.MemoryBytes > 0 {
 		params.ProxySQL = &k8sclient.ProxySQL{
 			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        req.Params.Proxysql.ComputeResources.CpuM,
-				MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
+				CPUM:        req.Proxysql.ComputeResources.CpuM,
+				MemoryBytes: req.Proxysql.ComputeResources.MemoryBytes,
 			},
 		}
 	}
