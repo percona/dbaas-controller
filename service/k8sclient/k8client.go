@@ -90,11 +90,11 @@ type Replicaset struct {
 
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
 type XtraDBParams struct {
-	Name             string
-	Size             int32
-	PXC              *PXC
-	ProxySQL         *ProxySQL
-	PublicAddressURL string
+	Name                string
+	Size                int32
+	PXC                 *PXC
+	ProxySQL            *ProxySQL
+	PMMPublicAddressURL string
 }
 
 // Cluster contains common information related to cluster.
@@ -104,10 +104,10 @@ type Cluster struct {
 
 // PSMDBParams contains all parameters required to create or update percona server for mongodb cluster.
 type PSMDBParams struct {
-	Name             string
-	Size             int32
-	Replicaset       *Replicaset
-	PublicAddressURL string
+	Name                string
+	Size                int32
+	Replicaset          *Replicaset
+	PMMPublicAddressURL string
 }
 
 // XtraDBCluster contains information related to xtradb cluster.
@@ -231,8 +231,10 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			},
 
 			PMM: &pxc.PMMSpec{
-				Enabled:    false,
-				ServerHost: params.PublicAddressURL,
+				Enabled:    true,
+				ServerHost: params.PMMPublicAddressURL,
+				ServerUser: "admin",
+				Image:      "percona/percona-xtradb-cluster-operator:1.4.0-pmm",
 			},
 
 			Backup: &pxc.PXCScheduledBackup{
@@ -513,7 +515,9 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 
 			PMM: pmmSpec{
 				Enabled:    false,
-				ServerHost: params.PublicAddressURL,
+				ServerHost: params.PMMPublicAddressURL,
+				ServerUser: "admin",
+				Image:      "percona/percona-server-mongodb-operator:1.4.0-pmm",
 			},
 
 			Backup: backupSpec{

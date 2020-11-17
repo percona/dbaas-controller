@@ -94,9 +94,9 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 	defer client.Cleanup() //nolint:errcheck
 
 	params := &k8sclient.PSMDBParams{
-		Name:             req.Name,
-		Size:             req.Params.ClusterSize,
-		PublicAddressURL: req.PublicAddressUrl,
+		Name:                req.Name,
+		Size:                req.Params.ClusterSize,
+		PMMPublicAddressURL: req.PmmPublicAddressUrl,
 	}
 	params.Replicaset = &k8sclient.Replicaset{
 		ComputeResources: &k8sclient.ComputeResources{

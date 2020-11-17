@@ -205,6 +205,7 @@ type clusterCondition struct {
 type pmmSpec struct {
 	Enabled    bool           `json:"enabled,omitempty"`
 	ServerHost string         `json:"serverHost,omitempty"`
+	ServerUser string         `json:"serverUser,omitempty"`
 	Image      string         `json:"image,omitempty"`
 	Resources  *resourcesSpec `json:"resources,omitempty"`
 }
