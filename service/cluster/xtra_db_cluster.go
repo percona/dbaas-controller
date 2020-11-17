@@ -19,7 +19,6 @@ package cluster
 
 import (
 	"context"
-	"sync"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"golang.org/x/text/message"
@@ -41,13 +40,12 @@ var pxcStatesMap = map[k8sclient.ClusterState]controllerv1beta1.XtraDBClusterSta
 
 // XtraDBClusterService implements methods of gRPC server and other business logic related to XtraDB clusters.
 type XtraDBClusterService struct {
-	p    *message.Printer
-	lock *sync.Mutex
+	p *message.Printer
 }
 
 // NewXtraDBClusterService returns new XtraDBClusterService instance.
 func NewXtraDBClusterService(p *message.Printer) *XtraDBClusterService {
-	return &XtraDBClusterService{p: p, lock: new(sync.Mutex)}
+	return &XtraDBClusterService{p: p}
 }
 
 // ListXtraDBClusters returns a list of XtraDB clusters.
