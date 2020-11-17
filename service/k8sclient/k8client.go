@@ -354,8 +354,11 @@ func (c *K8Client) getDeletingXtraDBClusters(ctx context.Context, clusters []Xtr
 	xtradbClusters := make([]XtraDBCluster, len(deletingClusters))
 	for i, cluster := range deletingClusters {
 		xtradbClusters[i] = XtraDBCluster{
-			Name:  cluster.Name,
-			State: ClusterStateDeleting,
+			Name:     cluster.Name,
+			Size:     0,
+			State:    ClusterStateDeleting,
+			PXC:      new(PXC),
+			ProxySQL: new(ProxySQL),
 		}
 	}
 	return xtradbClusters, nil
@@ -535,8 +538,10 @@ func (c *K8Client) getDeletingPSMDBClusters(ctx context.Context, clusters []PSMD
 	xtradbClusters := make([]PSMDBCluster, len(deletingClusters))
 	for i, cluster := range deletingClusters {
 		xtradbClusters[i] = PSMDBCluster{
-			Name:  cluster.Name,
-			State: ClusterStateDeleting,
+			Name:       cluster.Name,
+			Size:       0,
+			State:      ClusterStateDeleting,
+			Replicaset: new(Replicaset),
 		}
 	}
 	return xtradbClusters, nil
