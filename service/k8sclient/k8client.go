@@ -514,7 +514,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			},
 
 			PMM: pmmSpec{
-				Enabled:    false,
+				Enabled:    true,
 				ServerHost: params.PMMPublicAddressURL,
 				ServerUser: "admin",
 				Image:      "percona/percona-server-mongodb-operator:1.4.0-pmm",

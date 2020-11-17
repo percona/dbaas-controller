@@ -46,7 +46,6 @@ require (
 // * https://github.com/percona/percona-xtradb-cluster-operator/blob/master/go.mod
 // * https://github.com/percona/percona-server-mongodb-operator/blob/master/go.mod
 replace (
-	github.com/percona-platform/dbaas-api => ../dbaas-api
 	k8s.io/api => k8s.io/api v0.17.4
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.4
 	k8s.io/client-go => k8s.io/client-go v0.17.4
