@@ -14,10 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package common contains common API Schema definitions for the pxc and psmdb API groups
 package common
 
 import (
-	core "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -25,12 +26,12 @@ import (
 type VolumeSpec struct {
 	// EmptyDir to use as data volume for mysql. EmptyDir represents a temporary
 	// directory that shares a pod's lifetime.
-	EmptyDir *core.EmptyDirVolumeSource `json:"emptyDir,omitempty"`
+	EmptyDir *corev1.EmptyDirVolumeSource `json:"emptyDir,omitempty"`
 
 	// HostPath to use as data volume for mysql. HostPath represents a
 	// pre-existing file or directory on the host machine that is directly
 	// exposed to the container.
-	HostPath *core.HostPathVolumeSource `json:"hostPath,omitempty"`
+	HostPath *corev1.HostPathVolumeSource `json:"hostPath,omitempty"`
 
 	// PersistentVolumeClaim to specify PVC spec for the volume for mysql data.
 	// It has the highest level of precedence, followed by HostPath and
@@ -43,22 +44,19 @@ type VolumeSpec struct {
 type PersistentVolumeClaimSpec struct {
 	// Resources represents the minimum resources the volume should have.
 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
-	// +optional
-	Resources ResourceRequirements `json:"resources,omitempty" protobuf:"bytes,2,opt,name=resources"`
+	Resources ResourceRequirements `json:"resources,omitempty"`
 }
 
 // ResourceRequirements describes the compute resource requirements.
 type ResourceRequirements struct {
 	// Limits describes the maximum amount of compute resources allowed.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-	// +optional
-	Limits ResourceList `json:"limits,omitempty" protobuf:"bytes,1,rep,name=limits,casttype=ResourceList,castkey=ResourceName"`
+	Limits ResourceList `json:"limits,omitempty"`
 	// Requests describes the minimum amount of compute resources required.
 	// If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
 	// otherwise to an implementation-defined value.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-	// +optional
-	Requests ResourceList `json:"requests,omitempty" protobuf:"bytes,2,rep,name=requests,casttype=ResourceList,castkey=ResourceName"`
+	Requests ResourceList `json:"requests,omitempty"`
 }
 
 // ResourceName is the name identifying various resources in a ResourceList.
