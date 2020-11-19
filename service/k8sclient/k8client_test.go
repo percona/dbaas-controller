@@ -18,7 +18,6 @@ package k8sclient
 
 import (
 	"context"
-	"io/ioutil"
 	"testing"
 	"time"
 
@@ -39,9 +38,6 @@ func TestK8Client(t *testing.T) {
 	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
 	require.NoError(t, err)
 
-	validKubeconfig, err = ioutil.ReadFile("/home/nurlan/kubeconfig-latest-2")
-	require.NoError(t, err)
-
 	client, err := New(ctx, string(validKubeconfig))
 	require.NoError(t, err)
 	t.Cleanup(func() {
@@ -52,7 +48,7 @@ func TestK8Client(t *testing.T) {
 	l := logger.Get(ctx)
 
 	t.Run("XtraDB", func(t *testing.T) {
-		name := "test-cluster-xtradb"
+		name := "xtradb-cluster"
 		_ = client.DeleteXtraDBCluster(ctx, name)
 
 		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
@@ -63,7 +59,7 @@ func TestK8Client(t *testing.T) {
 
 		err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
 			Name: name,
-			Size: 3,
+			Size: 1,
 			PXC: &PXC{ComputeResources: &ComputeResources{
 				CPUM:        600,
 				MemoryBytes: 1024 * 1024 * 1024,
