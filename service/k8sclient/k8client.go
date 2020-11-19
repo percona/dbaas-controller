@@ -20,12 +20,14 @@ package k8sclient
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
@@ -56,15 +58,18 @@ const (
 )
 
 const (
-	pxcBackupImage       = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0-backup"
-	pxcImage             = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0"
-	pxcBackupStorageName = "test-backup-storage"
-	pxcAPIVersion        = "pxc.percona.com/v1-4-0"
-	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.4.0-proxysql"
+	pmmClientImage = "perconalab/pmm-client:dev-latest"
 
-	psmdbBackupImage = "percona/percona-server-mongodb-operator:1.4.0-backup"
-	psmdbImage       = "percona/percona-server-mongodb-operator:1.4.0-mongod4.2"
-	psmdbAPIVersion  = "psmdb.percona.com/v1-4-0"
+	crVersion            = "1.7.0"
+	pxcBackupImage       = "percona/percona-xtradb-cluster-operator:1.6.0-pxc8.0-backup"
+	pxcImage             = "percona/percona-xtradb-cluster:8.0.20-11.1-debug"
+	pxcBackupStorageName = "pxc-backup-storage-%s"
+	pxcAPIVersion        = "pxc.percona.com/v1-6-0"
+	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.6.0-proxysql"
+
+	psmdbBackupImage = "percona/percona-server-mongodb-operator:1.6.0-backup"
+	psmdbImage       = "percona/percona-server-mongodb-operator:1.6.0-mongod4.2"
+	psmdbAPIVersion  = "psmdb.percona.com/v1-6-0"
 )
 
 // ComputeResources represents container computer resources requests or limits.
@@ -183,6 +188,8 @@ func (c *K8Client) ListXtraDBClusters(ctx context.Context) ([]XtraDBCluster, err
 
 // CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
 func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
+	storageName := fmt.Sprintf(pxcBackupStorageName, params.Name)
+	maxUnavailable := intstr.FromInt(1)
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: meta.TypeMeta{
 			APIVersion: pxcAPIVersion,
@@ -192,6 +199,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			Name: params.Name,
 		},
 		Spec: pxc.PerconaXtraDBClusterSpec{
+			CRVersion:         crVersion,
 			AllowUnsafeConfig: true,
 			SecretsName:       "my-cluster-secrets",
 
@@ -209,6 +217,9 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				},
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
+				},
+				PodDisruptionBudget: &pxc.PodDisruptionBudgetSpec{
+					MaxUnavailable: &maxUnavailable,
 				},
 			},
 
@@ -234,19 +245,19 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				Enabled:    true,
 				ServerHost: params.PMMPublicAddressURL,
 				ServerUser: "admin",
-				Image:      "percona/percona-xtradb-cluster-operator:1.4.0-pmm",
+				Image:      pmmClientImage,
 			},
 
 			Backup: &pxc.PXCScheduledBackup{
 				Image: pxcBackupImage,
 				Schedule: []pxc.PXCScheduledBackupSchedule{{
 					Name:        "test",
-					Schedule:    "*/1 * * * *",
+					Schedule:    "*/30 * * * *",
 					Keep:        3,
-					StorageName: pxcBackupStorageName,
+					StorageName: storageName,
 				}},
 				Storages: map[string]*pxc.BackupStorageSpec{
-					pxcBackupStorageName: {
+					storageName: {
 						Type: pxc.BackupStorageFilesystem,
 						Volume: &pxc.VolumeSpec{
 							PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
@@ -446,7 +457,8 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			Name: params.Name,
 		},
 		Spec: perconaServerMongoDBSpec{
-			Image: psmdbImage,
+			CRVersion: crVersion,
+			Image:     psmdbImage,
 			Secrets: &secretsSpec{
 				Users: "my-cluster-name-secrets",
 			},
@@ -517,7 +529,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 				Enabled:    true,
 				ServerHost: params.PMMPublicAddressURL,
 				ServerUser: "admin",
-				Image:      "percona/percona-server-mongodb-operator:1.4.0-pmm",
+				Image:      pmmClientImage,
 			},
 
 			Backup: backupSpec{

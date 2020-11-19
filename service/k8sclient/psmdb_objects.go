@@ -140,6 +140,7 @@ type perconaServerMongoDBSpec struct {
 	PMM                     pmmSpec        `json:"pmm,omitempty"`
 	SchedulerName           string         `json:"schedulerName,omitempty"`
 	ClusterServiceDNSSuffix string         `json:"clusterServiceDNSSuffix,omitempty"`
+	CRVersion               string         `json:"crVersion,omitempty"`
 }
 
 type replsetMemberStatus struct {

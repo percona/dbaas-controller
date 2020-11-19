@@ -59,7 +59,16 @@ func TestK8Client(t *testing.T) {
 
 		err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
 			Name: name,
-			Size: 2,
+			Size: 3,
+			PXC: &PXC{ComputeResources: &ComputeResources{
+				CPUM:        600,
+				MemoryBytes: 1024 * 1024 * 1024,
+			}},
+			ProxySQL: &ProxySQL{ComputeResources: &ComputeResources{
+				CPUM:        600,
+				MemoryBytes: 1024 * 1024 * 1024,
+			}},
+			PMMPublicAddressURL: "127.0.0.1",
 		})
 		require.NoError(t, err)
 
