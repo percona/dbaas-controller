@@ -60,15 +60,16 @@ const (
 const (
 	pmmClientImage = "perconalab/pmm-client:dev-latest"
 
-	crVersion            = "1.7.0"
+	pxcCRVersion         = "1.7.0"
 	pxcBackupImage       = "percona/percona-xtradb-cluster-operator:1.6.0-pxc8.0-backup"
 	pxcImage             = "percona/percona-xtradb-cluster:8.0.20-11.1-debug"
 	pxcBackupStorageName = "pxc-backup-storage-%s"
 	pxcAPIVersion        = "pxc.percona.com/v1-6-0"
 	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.6.0-proxysql"
 
-	psmdbBackupImage = "percona/percona-server-mongodb-operator:1.6.0-backup"
-	psmdbImage       = "percona/percona-server-mongodb-operator:1.6.0-mongod4.2"
+	psmdbCRVersion   = "1.6.0"
+	psmdbBackupImage = "percona/percona-server-mongodb-operator:1.5.0-backup"
+	psmdbImage       = "percona/percona-server-mongodb:4.2.8-8"
 	psmdbAPIVersion  = "psmdb.percona.com/v1-6-0"
 )
 
@@ -199,7 +200,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			Name: params.Name,
 		},
 		Spec: pxc.PerconaXtraDBClusterSpec{
-			CRVersion:         crVersion,
+			CRVersion:         pxcCRVersion,
 			AllowUnsafeConfig: true,
 			SecretsName:       "my-cluster-secrets",
 
@@ -448,6 +449,7 @@ func (c *K8Client) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
+	maxUnavailable := intstr.FromInt(1)
 	res := &perconaServerMongoDB{
 		TypeMeta: TypeMeta{
 			APIVersion: psmdbAPIVersion,
@@ -457,7 +459,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			Name: params.Name,
 		},
 		Spec: perconaServerMongoDBSpec{
-			CRVersion: crVersion,
+			CRVersion: psmdbCRVersion,
 			Image:     psmdbImage,
 			Secrets: &secretsSpec{
 				Users: "my-cluster-name-secrets",
@@ -495,6 +497,27 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 					},
 				},
 			},
+			Sharding: &shardingSpec{
+				Enabled: true,
+				ConfigsvrReplSet: &configsvrReplSetSpec{
+					Size: 3,
+					VolumeSpec: &pxc.VolumeSpec{
+						PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
+							Resources: core.ResourceRequirements{
+								Requests: core.ResourceList{
+									core.ResourceStorage: resource.MustParse("1Gi"),
+								},
+							},
+						},
+					},
+				},
+				Mongos: &replsetSpec{
+					Size: params.Size,
+				},
+				OperationProfiling: &mongodSpecOperationProfiling{
+					Mode: operationProfilingModeSlowOp,
+				},
+			},
 			Replsets: []*replsetSpec{
 				{
 					Name: "rs0",
@@ -517,6 +540,9 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 							},
 						},
 					},
+					PodDisruptionBudget: &pxc.PodDisruptionBudgetSpec{
+						MaxUnavailable: &maxUnavailable,
+					},
 					multiAZ: multiAZ{
 						Affinity: &podAffinity{
 							TopologyKey: pointer.ToString(affinityOff),
@@ -532,15 +558,16 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 				Image:      pmmClientImage,
 			},
 
-			Backup: backupSpec{
-				Enabled:            true,
-				Image:              psmdbBackupImage,
-				ServiceAccountName: "percona-server-mongodb-operator",
-			},
+			//Backup: backupSpec{
+			//	Enabled:            true,
+			//	Image:              psmdbBackupImage,
+			//	ServiceAccountName: "percona-server-mongodb-operator",
+			//},
 		},
 	}
 	if params.Replicaset != nil {
 		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	}
 	return c.kubeCtl.Apply(ctx, res)
 }

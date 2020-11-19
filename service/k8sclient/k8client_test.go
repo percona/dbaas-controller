@@ -18,6 +18,7 @@ package k8sclient
 
 import (
 	"context"
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -36,6 +37,9 @@ func TestK8Client(t *testing.T) {
 	require.NoError(t, err)
 
 	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
+	require.NoError(t, err)
+
+	validKubeconfig, err = ioutil.ReadFile("/home/nurlan/kubeconfig-latest-2")
 	require.NoError(t, err)
 
 	client, err := New(ctx, string(validKubeconfig))
@@ -103,7 +107,7 @@ func TestK8Client(t *testing.T) {
 	})
 
 	t.Run("PSMDB", func(t *testing.T) {
-		name := "test-cluster-psmdb"
+		name := "psmdb-cluster"
 		_ = client.DeletePSMDBCluster(ctx, name)
 
 		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
@@ -115,6 +119,11 @@ func TestK8Client(t *testing.T) {
 		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
 			Name: name,
 			Size: 3,
+			Replicaset: &Replicaset{ComputeResources: &ComputeResources{
+				CPUM:        600,
+				MemoryBytes: 1024 * 1024 * 1024,
+			}},
+			PMMPublicAddressURL: "127.0.0.1",
 		})
 		require.NoError(t, err)
 

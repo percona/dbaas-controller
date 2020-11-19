@@ -18,6 +18,7 @@
 package k8sclient
 
 import (
+	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -126,6 +127,18 @@ const (
 	platformOpenshift  platform = "openshift"
 )
 
+type configsvrReplSetSpec struct {
+	Size       int             `json:"size"`
+	VolumeSpec *pxc.VolumeSpec `json:"volumeSpec"`
+}
+
+type shardingSpec struct {
+	Enabled            bool                          `json:"enabled"`
+	Mongos             *replsetSpec                  `json:"mongos"`
+	ConfigsvrReplSet   *configsvrReplSetSpec         `json:"configsvrReplSet"`
+	OperationProfiling *mongodSpecOperationProfiling `json:"operationProfiling"`
+}
+
 // perconaServerMongoDBSpec defines the desired state of PerconaServerMongoDB.
 type perconaServerMongoDBSpec struct {
 	Pause                   bool           `json:"pause,omitempty"`
@@ -141,6 +154,7 @@ type perconaServerMongoDBSpec struct {
 	SchedulerName           string         `json:"schedulerName,omitempty"`
 	ClusterServiceDNSSuffix string         `json:"clusterServiceDNSSuffix,omitempty"`
 	CRVersion               string         `json:"crVersion,omitempty"`
+	Sharding                *shardingSpec  `json:"sharding"`
 }
 
 type replsetMemberStatus struct {
@@ -230,14 +244,15 @@ type podAffinity struct {
 }
 
 type replsetSpec struct {
-	Resources     *resourcesSpec         `json:"resources,omitempty"`
-	Name          string                 `json:"name"`
-	Size          int32                  `json:"size"`
-	ClusterRole   clusterRole            `json:"clusterRole,omitempty"`
-	Arbiter       arbiter                `json:"arbiter,omitempty"`
-	Expose        expose                 `json:"expose,omitempty"`
-	VolumeSpec    *volumeSpec            `json:"volumeSpec,omitempty"`
-	LivenessProbe *livenessProbeExtended `json:"livenessProbe,omitempty"`
+	Resources           *resourcesSpec         `json:"resources,omitempty"`
+	Name                string                 `json:"name"`
+	Size                int32                  `json:"size"`
+	ClusterRole         clusterRole            `json:"clusterRole,omitempty"`
+	Arbiter             arbiter                `json:"arbiter,omitempty"`
+	Expose              expose                 `json:"expose,omitempty"`
+	VolumeSpec          *volumeSpec            `json:"volumeSpec,omitempty"`
+	LivenessProbe       *livenessProbeExtended `json:"livenessProbe,omitempty"`
+	PodDisruptionBudget *pxc.PodDisruptionBudgetSpec
 	multiAZ
 }
 
