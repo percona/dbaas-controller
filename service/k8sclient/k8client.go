@@ -25,8 +25,8 @@ import (
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/percona-platform/dbaas-controller/k8_api/meta"
 	psmdb "github.com/percona-platform/dbaas-controller/k8_api/psmdb/v1"
 	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
@@ -434,11 +434,11 @@ func (c *K8Client) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
 	res := &psmdb.PerconaServerMongoDB{
-		TypeMeta: psmdb.TypeMeta{
+		TypeMeta: meta.TypeMeta{
 			APIVersion: psmdbAPIVersion,
 			Kind:       string(perconaServerMongoDBKind),
 		},
-		ObjectMeta: psmdb.ObjectMeta{
+		ObjectMeta: meta.ObjectMeta{
 			Name: params.Name,
 		},
 		Spec: psmdb.PerconaServerMongoDBSpec{
@@ -544,11 +544,11 @@ func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 // DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
 func (c *K8Client) DeletePSMDBCluster(ctx context.Context, name string) error {
 	res := &psmdb.PerconaServerMongoDB{
-		TypeMeta: psmdb.TypeMeta{
+		TypeMeta: meta.TypeMeta{
 			APIVersion: psmdbAPIVersion,
 			Kind:       string(perconaServerMongoDBKind),
 		},
-		ObjectMeta: psmdb.ObjectMeta{
+		ObjectMeta: meta.ObjectMeta{
 			Name: name,
 		},
 	}

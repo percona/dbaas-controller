@@ -17,20 +17,20 @@
 package v1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/percona-platform/dbaas-controller/k8_api/meta"
 )
 
 // PerconaXtraDBClusterBackupList holds exported fields representing Percona XtraDB cluster backup list.
 type PerconaXtraDBClusterBackupList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []PerconaXtraDBClusterBackup `json:"items"`
+	meta.TypeMeta `json:",inline"`
+	meta.ListMeta `json:"metadata"`
+	Items         []PerconaXtraDBClusterBackup `json:"items"`
 }
 
 // PerconaXtraDBClusterBackup represents a Percona XtraDB cluster backup.
 type PerconaXtraDBClusterBackup struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata"`
+	meta.TypeMeta     `json:",inline"`
+	meta.ObjectMeta   `json:"metadata"`
 	Spec              PXCBackupSpec   `json:"spec"`
 	Status            PXCBackupStatus `json:"status,omitempty"`
 	SchedulerName     string          `json:"schedulerName,omitempty"`
@@ -46,8 +46,8 @@ type PXCBackupSpec struct {
 // PXCBackupStatus PXC backup status.
 type PXCBackupStatus struct {
 	State         PXCBackupState       `json:"state,omitempty"`
-	CompletedAt   *metav1.Time         `json:"completed,omitempty"`
-	LastScheduled *metav1.Time         `json:"lastscheduled,omitempty"`
+	CompletedAt   *meta.Time           `json:"completed,omitempty"`
+	LastScheduled *meta.Time           `json:"lastscheduled,omitempty"`
 	Destination   string               `json:"destination,omitempty"`
 	StorageName   string               `json:"storageName,omitempty"`
 	S3            *BackupStorageS3Spec `json:"s3,omitempty"`

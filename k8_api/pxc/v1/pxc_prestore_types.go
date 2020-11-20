@@ -17,7 +17,7 @@
 package v1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/percona-platform/dbaas-controller/k8_api/meta"
 )
 
 // PerconaXtraDBClusterRestoreSpec defines the desired state of PerconaXtraDBClusterRestore.
@@ -31,14 +31,14 @@ type PerconaXtraDBClusterRestoreSpec struct {
 type PerconaXtraDBClusterRestoreStatus struct {
 	State         BcpRestoreStates `json:"state,omitempty"`
 	Comments      string           `json:"comments,omitempty"`
-	CompletedAt   *metav1.Time     `json:"completed,omitempty"`
-	LastScheduled *metav1.Time     `json:"lastscheduled,omitempty"`
+	CompletedAt   *meta.Time       `json:"completed,omitempty"`
+	LastScheduled *meta.Time       `json:"lastscheduled,omitempty"`
 }
 
 // PerconaXtraDBClusterRestore is the Schema for the perconaxtradbclusterrestores API.
 type PerconaXtraDBClusterRestore struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	meta.TypeMeta   `json:",inline"`
+	meta.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   PerconaXtraDBClusterRestoreSpec   `json:"spec,omitempty"`
 	Status PerconaXtraDBClusterRestoreStatus `json:"status,omitempty"`
@@ -46,9 +46,9 @@ type PerconaXtraDBClusterRestore struct {
 
 // PerconaXtraDBClusterRestoreList contains a list of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []PerconaXtraDBClusterRestore `json:"items"`
+	meta.TypeMeta `json:",inline"`
+	meta.ListMeta `json:"metadata,omitempty"`
+	Items         []PerconaXtraDBClusterRestore `json:"items"`
 }
 
 // BcpRestoreStates backup restore states.

@@ -18,9 +18,9 @@ package v1
 
 import (
 	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
+	"github.com/percona-platform/dbaas-controller/k8_api/meta"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -113,7 +113,7 @@ type ClusterConditionType string
 type ClusterCondition struct {
 	Status             ConditionStatus      `json:"status,omitempty"`
 	Type               ClusterConditionType `json:"type,omitempty"`
-	LastTransitionTime metav1.Time          `json:"lastTransitionTime,omitempty"`
+	LastTransitionTime meta.Time            `json:"lastTransitionTime,omitempty"`
 	Reason             string               `json:"reason,omitempty"`
 	Message            string               `json:"message,omitempty"`
 }
@@ -130,8 +130,8 @@ type AppStatus struct {
 
 // PerconaXtraDBCluster is the Schema for the perconaxtradbclusters API.
 type PerconaXtraDBCluster struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	meta.TypeMeta   `json:",inline"`
+	meta.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   PerconaXtraDBClusterSpec   `json:"spec,omitempty"`
 	Status PerconaXtraDBClusterStatus `json:"status,omitempty"`
@@ -139,9 +139,9 @@ type PerconaXtraDBCluster struct {
 
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
 type PerconaXtraDBClusterList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []PerconaXtraDBCluster `json:"items"`
+	meta.TypeMeta `json:",inline"`
+	meta.ListMeta `json:"metadata,omitempty"`
+	Items         []PerconaXtraDBCluster `json:"items"`
 }
 
 // PodSpec hold pod's exported fields representing the pod configuration.
