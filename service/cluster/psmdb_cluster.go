@@ -134,6 +134,21 @@ func (s *PSMDBClusterService) DeletePSMDBCluster(ctx context.Context, req *contr
 	return new(controllerv1beta1.DeletePSMDBClusterResponse), nil
 }
 
+// RestartPSMDBCluster restarts PSMDB cluster.
+func (s *PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *controllerv1beta1.RestartPSMDBClusterRequest) (*controllerv1beta1.RestartPSMDBClusterResponse, error) {
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	err = client.RestartPSMDBCluster(ctx, req.Name)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return new(controllerv1beta1.RestartPSMDBClusterResponse), nil
+}
+
 // Check interface.
 var (
 	_ controllerv1beta1.PSMDBClusterAPIServer = (*PSMDBClusterService)(nil)

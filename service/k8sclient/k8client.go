@@ -20,6 +20,7 @@ package k8sclient
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
@@ -272,6 +273,27 @@ func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, name string) error {
 	return c.kubeCtl.Delete(ctx, res)
 }
 
+func (c *K8Client) restartDBClusterCmd(name, kind string) []string {
+	return []string{"rollout", "restart", "StatefulSets", fmt.Sprintf("%s-%s", name, kind)}
+}
+
+// RestartXtraDBCluster restarts Percona XtraDB cluster with provided name.
+// FIXME: https://jira.percona.com/browse/PMM-6980
+func (c *K8Client) RestartXtraDBCluster(ctx context.Context, name string) error {
+	_, err := c.kubeCtl.Run(ctx, c.restartDBClusterCmd(name, "pxc"), nil)
+	if err != nil {
+		return err
+	}
+
+	// TODO: implement logic to handle the case when there is HAProxy instead of ProxySQL.
+	_, err = c.kubeCtl.Run(ctx, c.restartDBClusterCmd(name, "proxysql"), nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // getPerconaXtraDBClusters returns Percona XtraDB clusters.
 func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluster, error) {
 	var list meta.List
@@ -493,6 +515,14 @@ func (c *K8Client) DeletePSMDBCluster(ctx context.Context, name string) error {
 		},
 	}
 	return c.kubeCtl.Delete(ctx, res)
+}
+
+// RestartPSMDBCluster restarts Percona server for mongodb cluster with provided name.
+// FIXME: https://jira.percona.com/browse/PMM-6980
+func (c *K8Client) RestartPSMDBCluster(ctx context.Context, name string) error {
+	_, err := c.kubeCtl.Run(ctx, c.restartDBClusterCmd(name, "rs0"), nil)
+
+	return err
 }
 
 // getPSMDBClusters returns Percona Server for MongoDB clusters.
