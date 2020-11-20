@@ -20,10 +20,11 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/jetstack/cert-manager v0.14.0-alpha.0
+	github.com/kr/pretty v0.2.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
-	github.com/percona-platform/dbaas-api v0.0.0-20201117131428-7e88e92af4c4
+	github.com/percona-platform/dbaas-api v0.0.0-20201120110419-48f57e60d54c
 	github.com/percona-platform/saas v0.0.0-20201008124851-3c2c6c2ec0ce
-	github.com/percona/pmm v2.11.2-0.20201116180848-1b2a04374804+incompatible
+	github.com/percona/pmm v2.11.1+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.8.0
 	github.com/sirupsen/logrus v1.6.0

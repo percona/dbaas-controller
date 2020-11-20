@@ -68,13 +68,14 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 	for i, cluster := range PSMDBClusters {
 		params := &controllerv1beta1.PSMDBClusterParams{
 			ClusterSize: cluster.Size,
+			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
+				DiskSize: cluster.Replicaset.DiskSize,
+			},
 		}
-		if cluster.Replicaset != nil {
-			params.Replicaset = &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
-				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        cluster.Replicaset.ComputeResources.CPUM,
-					MemoryBytes: cluster.Replicaset.ComputeResources.MemoryBytes,
-				},
+		if cluster.Replicaset.ComputeResources != nil {
+			params.Replicaset.ComputeResources = &controllerv1beta1.ComputeResources{
+				CpuM:        cluster.Replicaset.ComputeResources.CPUM,
+				MemoryBytes: cluster.Replicaset.ComputeResources.MemoryBytes,
 			}
 		}
 		res.Clusters[i] = &controllerv1beta1.ListPSMDBClustersResponse_Cluster{
@@ -99,12 +100,15 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 	params := &k8sclient.PSMDBParams{
 		Name: req.Name,
 		Size: req.Params.ClusterSize,
+		Replicaset: &k8sclient.Replicaset{
+			DiskSize: req.Params.Replicaset.DiskSize,
+		},
 	}
-	params.Replicaset = &k8sclient.Replicaset{
-		ComputeResources: &k8sclient.ComputeResources{
+	if req.Params.Replicaset.ComputeResources != nil {
+		params.Replicaset.ComputeResources = &k8sclient.ComputeResources{
 			CPUM:        req.Params.Replicaset.ComputeResources.CpuM,
 			MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
-		},
+		}
 	}
 	err = client.CreatePSMDBCluster(ctx, params)
 	if err != nil {

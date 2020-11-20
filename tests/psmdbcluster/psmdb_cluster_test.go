@@ -65,6 +65,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 					CpuM:        1000,
 					MemoryBytes: 1024 * 1024 * 1024,
 				},
+				DiskSize: 1024 * 1024 * 1024,
 			},
 		},
 	})
@@ -96,10 +97,13 @@ func TestPSMDBClusterAPI(t *testing.T) {
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
-		Name:        name,
-		ClusterSize: 6,
-		Replicaset: &controllerv1beta1.UpdatePSMDBClusterRequest_ReplicaSet{
-			ComputeResources: &controllerv1beta1.ComputeResources{},
+		Name: name,
+		Params: &controllerv1beta1.PSMDBClusterParams{
+			ClusterSize: 6,
+			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
+				ComputeResources: &controllerv1beta1.ComputeResources{},
+				DiskSize:         1024 * 1024 * 1024,
+			},
 		},
 	}
 

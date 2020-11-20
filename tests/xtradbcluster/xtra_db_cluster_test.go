@@ -68,12 +68,14 @@ func TestXtraDBClusterAPI(t *testing.T) {
 					CpuM:        1000,
 					MemoryBytes: 1024 * 1024 * 1024,
 				},
+				DiskSize: 1024 * 1024 * 1024,
 			},
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        1000,
 					MemoryBytes: 1024 * 1024 * 1024,
 				},
+				DiskSize: 1024 * 1024 * 1024,
 			},
 		},
 	})
@@ -104,13 +106,15 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
-		Name:        name,
-		ClusterSize: 2,
-		Pxc: &controllerv1beta1.UpdateXtraDBClusterRequest_PXC{
-			ComputeResources: &controllerv1beta1.ComputeResources{},
-		},
-		Proxysql: &controllerv1beta1.UpdateXtraDBClusterRequest_ProxySQL{
-			ComputeResources: &controllerv1beta1.ComputeResources{},
+		Name: name,
+		Params: &controllerv1beta1.XtraDBClusterParams{
+			ClusterSize: 2,
+			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
+				ComputeResources: &controllerv1beta1.ComputeResources{},
+			},
+			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
+				ComputeResources: &controllerv1beta1.ComputeResources{},
+			},
 		},
 	}
 
