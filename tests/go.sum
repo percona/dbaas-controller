@@ -42,6 +42,8 @@ github.com/percona-platform/dbaas-api v0.0.0-20201112111158-abefe10dbba6 h1:rPwh
 github.com/percona-platform/dbaas-api v0.0.0-20201112111158-abefe10dbba6/go.mod h1:1xDGvhzEDWlAz4Kr/J9X9xXGJSsoCBOyr5f4ja6UVdE=
 github.com/percona-platform/dbaas-api v0.0.0-20201117150127-0cb4a17a7993 h1:CQod8+E0y7AszFglLSDvTxWvgI9R8iLQ5xyOFXFec6o=
 github.com/percona-platform/dbaas-api v0.0.0-20201117150127-0cb4a17a7993/go.mod h1:1xDGvhzEDWlAz4Kr/J9X9xXGJSsoCBOyr5f4ja6UVdE=
+github.com/percona-platform/dbaas-api v0.0.0-20201120110419-48f57e60d54c h1:jm8/mClXtupNnIgHB98isp1tZWiEqvCQatR2414gAQQ=
+github.com/percona-platform/dbaas-api v0.0.0-20201120110419-48f57e60d54c/go.mod h1:1xDGvhzEDWlAz4Kr/J9X9xXGJSsoCBOyr5f4ja6UVdE=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
