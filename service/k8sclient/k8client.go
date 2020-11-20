@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	psmdb "github.com/percona-platform/dbaas-controller/k8_api/psmdb/v1"
 	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
@@ -134,12 +135,12 @@ var pxcStatesMap = map[pxc.AppState]ClusterState{
 }
 
 // psmdbStatesMap matches psmdb app states to cluster states.
-var psmdbStatesMap = map[appState]ClusterState{
-	appStateUnknown: ClusterStateInvalid,
-	appStatePending: ClusterStateChanging,
-	appStateInit:    ClusterStateChanging,
-	appStateReady:   ClusterStateReady,
-	appStateError:   ClusterStateFailed,
+var psmdbStatesMap = map[psmdb.AppState]ClusterState{
+	psmdb.AppStateUnknown: ClusterStateInvalid,
+	psmdb.AppStatePending: ClusterStateChanging,
+	psmdb.AppStateInit:    ClusterStateChanging,
+	psmdb.AppStateReady:   ClusterStateReady,
+	psmdb.AppStateError:   ClusterStateFailed,
 }
 
 // K8Client is a client for Kubernetes.
@@ -432,87 +433,87 @@ func (c *K8Client) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
-	res := &perconaServerMongoDB{
-		TypeMeta: TypeMeta{
+	res := &psmdb.PerconaServerMongoDB{
+		TypeMeta: psmdb.TypeMeta{
 			APIVersion: psmdbAPIVersion,
 			Kind:       string(perconaServerMongoDBKind),
 		},
-		ObjectMeta: ObjectMeta{
+		ObjectMeta: psmdb.ObjectMeta{
 			Name: params.Name,
 		},
-		Spec: perconaServerMongoDBSpec{
+		Spec: psmdb.PerconaServerMongoDBSpec{
 			Image: psmdbImage,
-			Secrets: &secretsSpec{
+			Secrets: &psmdb.SecretsSpec{
 				Users: "my-cluster-name-secrets",
 			},
-			Mongod: &mongodSpec{
-				Net: &mongodSpecNet{
+			Mongod: &psmdb.MongodSpec{
+				Net: &psmdb.MongodSpecNet{
 					Port: 27017,
 				},
-				OperationProfiling: &mongodSpecOperationProfiling{
-					Mode: operationProfilingModeSlowOp,
+				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
+					Mode: psmdb.OperationProfilingModeSlowOp,
 				},
-				Security: &mongodSpecSecurity{
+				Security: &psmdb.MongodSpecSecurity{
 					RedactClientLogData:  false,
 					EnableEncryption:     pointer.ToBool(true),
 					EncryptionKeySecret:  "my-cluster-name-mongodb-encryption-key",
-					EncryptionCipherMode: mongodChiperModeCBC,
+					EncryptionCipherMode: psmdb.MongodChiperModeCBC,
 				},
-				Storage: &mongodSpecStorage{
-					Engine: storageEngineWiredTiger,
-					MMAPv1: &mongodSpecMMAPv1{
+				Storage: &psmdb.MongodSpecStorage{
+					Engine: psmdb.StorageEngineWiredTiger,
+					MMAPv1: &psmdb.MongodSpecMMAPv1{
 						NsSize:     16,
 						Smallfiles: false,
 					},
-					WiredTiger: &mongodSpecWiredTiger{
-						CollectionConfig: &mongodSpecWiredTigerCollectionConfig{
-							BlockCompressor: &wiredTigerCompressorSnappy,
+					WiredTiger: &psmdb.MongodSpecWiredTiger{
+						CollectionConfig: &psmdb.MongodSpecWiredTigerCollectionConfig{
+							BlockCompressor: &psmdb.WiredTigerCompressorSnappy,
 						},
-						EngineConfig: &mongodSpecWiredTigerEngineConfig{
+						EngineConfig: &psmdb.MongodSpecWiredTigerEngineConfig{
 							DirectoryForIndexes: false,
-							JournalCompressor:   &wiredTigerCompressorSnappy,
+							JournalCompressor:   &psmdb.WiredTigerCompressorSnappy,
 						},
-						IndexConfig: &mongodSpecWiredTigerIndexConfig{
+						IndexConfig: &psmdb.MongodSpecWiredTigerIndexConfig{
 							PrefixCompression: true,
 						},
 					},
 				},
 			},
-			Replsets: []*replsetSpec{
+			Replsets: []*psmdb.ReplsetSpec{
 				{
 					Name: "rs0",
 					Size: params.Size,
-					Arbiter: arbiter{
+					Arbiter: psmdb.Arbiter{
 						Enabled: false,
 						Size:    1,
-						multiAZ: multiAZ{
-							Affinity: &podAffinity{
+						MultiAZ: psmdb.MultiAZ{
+							Affinity: &psmdb.PodAffinity{
 								TopologyKey: pointer.ToString("kubernetes.io/hostname"),
 							},
 						},
 					},
-					VolumeSpec: &volumeSpec{
-						PersistentVolumeClaim: &persistentVolumeClaimSpec{
-							Resources: resourceRequirements{
-								Requests: resourceList{
-									ResourceStorage: resource.MustParse("1Gi"),
+					VolumeSpec: &psmdb.VolumeSpec{
+						PersistentVolumeClaim: &psmdb.PersistentVolumeClaimSpec{
+							Resources: psmdb.ResourceRequirements{
+								Requests: psmdb.ResourceList{
+									psmdb.ResourceStorage: resource.MustParse("1Gi"),
 								},
 							},
 						},
 					},
-					multiAZ: multiAZ{
-						Affinity: &podAffinity{
-							TopologyKey: pointer.ToString(affinityOff),
+					MultiAZ: psmdb.MultiAZ{
+						Affinity: &psmdb.PodAffinity{
+							TopologyKey: pointer.ToString(psmdb.AffinityOff),
 						},
 					},
 				},
 			},
 
-			PMM: pmmSpec{
+			PMM: psmdb.PmmSpec{
 				Enabled: false,
 			},
 
-			Backup: backupSpec{
+			Backup: psmdb.BackupSpec{
 				Enabled:            true,
 				Image:              psmdbBackupImage,
 				ServiceAccountName: "percona-server-mongodb-operator",
@@ -527,7 +528,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 
 // UpdatePSMDBCluster changes size of provided percona server for mongodb cluster.
 func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
-	var cluster perconaServerMongoDB
+	var cluster psmdb.PerconaServerMongoDB
 	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), params.Name, &cluster)
 	if err != nil {
 		return err
@@ -542,12 +543,12 @@ func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 
 // DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
 func (c *K8Client) DeletePSMDBCluster(ctx context.Context, name string) error {
-	res := &perconaServerMongoDB{
-		TypeMeta: TypeMeta{
+	res := &psmdb.PerconaServerMongoDB{
+		TypeMeta: psmdb.TypeMeta{
 			APIVersion: psmdbAPIVersion,
 			Kind:       string(perconaServerMongoDBKind),
 		},
-		ObjectMeta: ObjectMeta{
+		ObjectMeta: psmdb.ObjectMeta{
 			Name: name,
 		},
 	}
@@ -564,7 +565,7 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, item := range list.Items {
-		var cluster perconaServerMongoDB
+		var cluster psmdb.PerconaServerMongoDB
 		if err := json.Unmarshal(item.Raw, &cluster); err != nil {
 			return nil, err
 		}
@@ -605,7 +606,7 @@ func (c *K8Client) getDeletingPSMDBClusters(ctx context.Context, clusters []PSMD
 	return xtradbClusters, nil
 }
 
-func (c *K8Client) getComputeResources(resources resourcesSpec) *ComputeResources {
+func (c *K8Client) getComputeResources(resources psmdb.ResourcesSpec) *ComputeResources {
 	if resources.Limits == nil {
 		return nil
 	}
@@ -621,12 +622,12 @@ func (c *K8Client) getComputeResources(resources resourcesSpec) *ComputeResource
 	return res
 }
 
-func (c *K8Client) setComputeResources(res *ComputeResources) *resourcesSpec {
+func (c *K8Client) setComputeResources(res *ComputeResources) *psmdb.ResourcesSpec {
 	if res == nil || (res.CPUM <= 0 && res.MemoryBytes <= 0) {
 		return nil
 	}
-	r := &resourcesSpec{
-		Limits: new(resourceSpecRequirements),
+	r := &psmdb.ResourcesSpec{
+		Limits: new(psmdb.ResourceSpecRequirements),
 	}
 	if res.CPUM > 0 {
 		r.Limits.CPU = resource.NewMilliQuantity(int64(res.CPUM), resource.DecimalSI).String()
