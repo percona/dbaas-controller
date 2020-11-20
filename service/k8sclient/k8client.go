@@ -26,9 +26,9 @@ import (
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"github.com/percona-platform/dbaas-controller/k8_api/meta"
-	psmdb "github.com/percona-platform/dbaas-controller/k8_api/psmdb/v1"
-	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
+	"github.com/percona-platform/dbaas-controller/k8s_api/meta"
+	psmdb "github.com/percona-platform/dbaas-controller/k8s_api/psmdb/v1"
+	pxc "github.com/percona-platform/dbaas-controller/k8s_api/pxc/v1"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
 

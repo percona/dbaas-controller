@@ -18,7 +18,7 @@
 package v1
 
 import (
-	"github.com/percona-platform/dbaas-controller/k8_api/meta"
+	"github.com/percona-platform/dbaas-controller/k8s_api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )

@@ -17,7 +17,7 @@
 package v1
 
 import (
-	"github.com/percona-platform/dbaas-controller/k8_api/meta"
+	"github.com/percona-platform/dbaas-controller/k8s_api/meta"
 )
 
 // PerconaXtraDBClusterRestoreSpec defines the desired state of PerconaXtraDBClusterRestore.

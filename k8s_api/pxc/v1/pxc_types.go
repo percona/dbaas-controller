@@ -18,7 +18,7 @@ package v1
 
 import (
 	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
-	"github.com/percona-platform/dbaas-controller/k8_api/meta"
+	"github.com/percona-platform/dbaas-controller/k8s_api/meta"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
