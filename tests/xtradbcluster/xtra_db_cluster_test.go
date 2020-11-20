@@ -61,12 +61,14 @@ func TestXtraDBClusterAPI(t *testing.T) {
 					CpuM:        1000,
 					MemoryBytes: 1024 * 1024 * 1024,
 				},
+				DiskSize: 1024 * 1024 * 1024,
 			},
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        1000,
 					MemoryBytes: 1024 * 1024 * 1024,
 				},
+				DiskSize: 1024 * 1024 * 1024,
 			},
 		},
 	})

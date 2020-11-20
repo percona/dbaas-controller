@@ -67,21 +67,23 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 	for i, cluster := range xtradbClusters {
 		params := &controllerv1beta1.XtraDBClusterParams{
 			ClusterSize: cluster.Size,
+			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
+				DiskSize: cluster.PXC.DiskSize,
+			},
+			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
+				DiskSize: cluster.ProxySQL.DiskSize,
+			},
 		}
-		if cluster.PXC != nil {
-			params.Pxc = &controllerv1beta1.XtraDBClusterParams_PXC{
-				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        cluster.PXC.ComputeResources.CPUM,
-					MemoryBytes: cluster.PXC.ComputeResources.MemoryBytes,
-				},
+		if cluster.PXC.ComputeResources != nil {
+			params.Pxc.ComputeResources = &controllerv1beta1.ComputeResources{
+				CpuM:        cluster.PXC.ComputeResources.CPUM,
+				MemoryBytes: cluster.PXC.ComputeResources.MemoryBytes,
 			}
 		}
-		if cluster.ProxySQL != nil {
-			params.Proxysql = &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        cluster.ProxySQL.ComputeResources.CPUM,
-					MemoryBytes: cluster.ProxySQL.ComputeResources.MemoryBytes,
-				},
+		if cluster.ProxySQL.ComputeResources != nil {
+			params.Proxysql.ComputeResources = &controllerv1beta1.ComputeResources{
+				CpuM:        cluster.ProxySQL.ComputeResources.CPUM,
+				MemoryBytes: cluster.ProxySQL.ComputeResources.MemoryBytes,
 			}
 		}
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{
@@ -106,28 +108,31 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 	params := &k8sclient.XtraDBParams{
 		Name: req.Name,
 		Size: req.Params.ClusterSize,
+		PXC: &k8sclient.PXC{
+			DiskSize: req.Params.Pxc.DiskSize,
+		},
+		ProxySQL: &k8sclient.ProxySQL{
+			DiskSize: req.Params.Proxysql.DiskSize,
+		},
 	}
-	if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
-		params.PXC = &k8sclient.PXC{
-			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        req.Params.Pxc.ComputeResources.CpuM,
-				MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
-			},
-		}
-	}
-	if req.Params.Proxysql.ComputeResources.CpuM > 0 || req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
-		params.ProxySQL = &k8sclient.ProxySQL{
-			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        req.Params.Proxysql.ComputeResources.CpuM,
-				MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
-			},
-		}
-	}
+	params.PXC.ComputeResources = computeResources(req.Params.Pxc.ComputeResources)
+	params.ProxySQL.ComputeResources = computeResources(req.Params.Proxysql.ComputeResources)
+
 	err = client.CreateXtraDBCluster(ctx, params)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return new(controllerv1beta1.CreateXtraDBClusterResponse), nil
+}
+
+func computeResources(pxcRes *controllerv1beta1.ComputeResources) *k8sclient.ComputeResources {
+	if pxcRes == nil {
+		return nil
+	}
+	return &k8sclient.ComputeResources{
+		CPUM:        pxcRes.CpuM,
+		MemoryBytes: pxcRes.MemoryBytes,
+	}
 }
 
 // UpdateXtraDBCluster updates existing XtraDB cluster.
