@@ -237,6 +237,12 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				ServerHost: params.PMMPublicAddressURL,
 				ServerUser: "admin",
 				Image:      pmmClientImage,
+				Resources: &common.PodResources{
+					Requests: &common.ResourcesList{
+						Memory: "500M",
+						CPU:    "500m",
+					},
+				},
 			},
 
 			Backup: &pxc.PXCScheduledBackup{

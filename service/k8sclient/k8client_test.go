@@ -58,11 +58,15 @@ func TestK8Client(t *testing.T) {
 		l.Info("No XtraDB Clusters running")
 
 		err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
-			Name:     name,
-			Size:     1,
-			PXC:      &PXC{DiskSize: 1024 * 1024 * 1024},
-			ProxySQL: &ProxySQL{DiskSize: 1024 * 1024 * 1024},
-			PMMPublicAddressURL: "127.0.0.1",
+			Name: name,
+			Size: 1,
+			PXC: &PXC{
+				DiskSize: 5 * 1024 * 1024 * 1024,
+			},
+			ProxySQL: &ProxySQL{
+				DiskSize: 5 * 1024 * 1024 * 1024,
+			},
+			PMMPublicAddressURL: "host.minikube.internal",
 		})
 		require.NoError(t, err)
 
@@ -108,7 +112,7 @@ func TestK8Client(t *testing.T) {
 	})
 
 	t.Run("PSMDB", func(t *testing.T) {
-		name := "psmdb-cluster"
+		name := "test-cluster-psmdb"
 		_ = client.DeletePSMDBCluster(ctx, name)
 
 		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
@@ -118,10 +122,12 @@ func TestK8Client(t *testing.T) {
 		l.Info("No PSMDB Clusters running")
 
 		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name:       name,
-			Size:       3,
-			Replicaset: &Replicaset{DiskSize: 1024 * 1024 * 1024},
-			PMMPublicAddressURL: "127.0.0.1",
+			Name: name,
+			Size: 3,
+			Replicaset: &Replicaset{
+				DiskSize: 1024 * 1024 * 1024,
+			},
+			PMMPublicAddressURL: "host.minikube.internal",
 		})
 		require.NoError(t, err)
 
