@@ -100,11 +100,11 @@ type Replicaset struct {
 
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
 type XtraDBParams struct {
-	Name                string
-	Size                int32
-	PXC                 *PXC
-	ProxySQL            *ProxySQL
-	PMMPublicAddressURL string
+	Name             string
+	Size             int32
+	PXC              *PXC
+	ProxySQL         *ProxySQL
+	PMMPublicAddress string
 }
 
 // Cluster contains common information related to cluster.
@@ -114,10 +114,10 @@ type Cluster struct {
 
 // PSMDBParams contains all parameters required to create or update percona server for mongodb cluster.
 type PSMDBParams struct {
-	Name                string
-	Size                int32
-	Replicaset          *Replicaset
-	PMMPublicAddressURL string
+	Name             string
+	Size             int32
+	Replicaset       *Replicaset
+	PMMPublicAddress string
 }
 
 // XtraDBCluster contains information related to xtradb cluster.
@@ -233,8 +233,8 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			},
 
 			PMM: &pxc.PMMSpec{
-				Enabled:    true,
-				ServerHost: params.PMMPublicAddressURL,
+				Enabled:    params.PMMPublicAddress != "",
+				ServerHost: params.PMMPublicAddress,
 				ServerUser: "admin",
 				Image:      pmmClientImage,
 				Resources: &common.PodResources{
@@ -477,16 +477,8 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			Sharding: &shardingSpec{
 				Enabled: true,
 				ConfigsvrReplSet: &configsvrReplSetSpec{
-					Size: 3,
-					VolumeSpec: &common.VolumeSpec{
-						PersistentVolumeClaim: &common.PersistentVolumeClaimSpec{
-							Resources: common.ResourceRequirements{
-								Requests: common.ResourceList{
-									common.ResourceStorage: resource.MustParse("1Gi"),
-								},
-							},
-						},
-					},
+					Size:       3,
+					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
 				},
 				Mongos: &replsetSpec{
 					Size: params.Size,
@@ -523,8 +515,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 
 			PMM: pmmSpec{
 				Enabled:    true,
-				ServerHost: params.PMMPublicAddressURL,
-				ServerUser: "admin",
+				ServerHost: params.PMMPublicAddress,
 				Image:      pmmClientImage,
 			},
 

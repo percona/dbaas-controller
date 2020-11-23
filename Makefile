@@ -92,9 +92,9 @@ env-up-start:
 	minikube addons list
 	minikube kubectl -- version
 	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/pmm-branch/deploy/bundle.yaml | minikube kubectl -- apply -f -
-	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/pmm-branch/deploy/secrets.yaml | minikube kubectl -- apply -f -
+	minikube kubectl -- apply -f ./secrets-pxc.yaml
 	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/pmm-branch/deploy/bundle.yaml  | minikube kubectl -- apply -f -
-	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/pmm-branch/deploy/secrets.yaml | minikube kubectl -- apply -f -
+	minikube kubectl -- apply -f ./secrets-psmdb.yaml
 	minikube kubectl -- get nodes
 	minikube kubectl -- get pods
 

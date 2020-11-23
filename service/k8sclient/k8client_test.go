@@ -47,6 +47,7 @@ func TestK8Client(t *testing.T) {
 
 	l := logger.Get(ctx)
 
+	pmmPublicAddress := ""
 	t.Run("XtraDB", func(t *testing.T) {
 		name := "test-cluster-xtradb"
 		_ = client.DeleteXtraDBCluster(ctx, name)
@@ -66,7 +67,7 @@ func TestK8Client(t *testing.T) {
 			ProxySQL: &ProxySQL{
 				DiskSize: 5 * 1024 * 1024 * 1024,
 			},
-			PMMPublicAddressURL: "host.minikube.internal",
+			PMMPublicAddress: pmmPublicAddress,
 		})
 		require.NoError(t, err)
 
@@ -127,7 +128,7 @@ func TestK8Client(t *testing.T) {
 			Replicaset: &Replicaset{
 				DiskSize: 1024 * 1024 * 1024,
 			},
-			PMMPublicAddressURL: "host.minikube.internal",
+			PMMPublicAddress: pmmPublicAddress,
 		})
 		require.NoError(t, err)
 
