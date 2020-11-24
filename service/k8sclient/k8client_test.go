@@ -48,7 +48,7 @@ func TestK8Client(t *testing.T) {
 	l := logger.Get(ctx)
 
 	t.Run("XtraDB", func(t *testing.T) {
-		name := "xtradb-cluster"
+		name := "test-cluster-xtradb"
 		_ = client.DeleteXtraDBCluster(ctx, name)
 
 		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
@@ -58,16 +58,10 @@ func TestK8Client(t *testing.T) {
 		l.Info("No XtraDB Clusters running")
 
 		err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
-			Name: name,
-			Size: 1,
-			PXC: &PXC{ComputeResources: &ComputeResources{
-				CPUM:        600,
-				MemoryBytes: 1024 * 1024 * 1024,
-			}},
-			ProxySQL: &ProxySQL{ComputeResources: &ComputeResources{
-				CPUM:        600,
-				MemoryBytes: 1024 * 1024 * 1024,
-			}},
+			Name:     name,
+			Size:     1,
+			PXC:      &PXC{DiskSize: 1024 * 1024 * 1024},
+			ProxySQL: &ProxySQL{DiskSize: 1024 * 1024 * 1024},
 			PMMPublicAddressURL: "127.0.0.1",
 		})
 		require.NoError(t, err)
@@ -77,6 +71,17 @@ func TestK8Client(t *testing.T) {
 		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
+
+		err = client.RestartXtraDBCluster(ctx, name)
+		require.NoError(t, err)
+		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateChanging
+		})
+
+		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+		l.Info("XtraDB Cluster is restarted")
 
 		err = client.UpdateXtraDBCluster(ctx, &XtraDBParams{
 			Name: name,
@@ -113,12 +118,9 @@ func TestK8Client(t *testing.T) {
 		l.Info("No PSMDB Clusters running")
 
 		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name: name,
-			Size: 3,
-			Replicaset: &Replicaset{ComputeResources: &ComputeResources{
-				CPUM:        600,
-				MemoryBytes: 1024 * 1024 * 1024,
-			}},
+			Name:       name,
+			Size:       3,
+			Replicaset: &Replicaset{DiskSize: 1024 * 1024 * 1024},
 			PMMPublicAddressURL: "127.0.0.1",
 		})
 		require.NoError(t, err)
@@ -128,6 +130,18 @@ func TestK8Client(t *testing.T) {
 		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
+
+		err = client.RestartPSMDBCluster(ctx, name)
+		require.NoError(t, err)
+
+		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateChanging
+		})
+
+		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+		l.Info("PSMDB Cluster is restarted")
 
 		err = client.UpdatePSMDBCluster(ctx, &PSMDBParams{
 			Name: name,
