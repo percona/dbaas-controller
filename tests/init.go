@@ -41,8 +41,14 @@ var (
 	// True if -debug or -trace flag is passed.
 	Debug bool
 
-	// XtraDBClusterAPIClient contains client for dbaas-controller API.
+	// XtraDBClusterAPIClient contains client for dbaas-controller API related to XtraDB clusters.
 	XtraDBClusterAPIClient dbaasClient.XtraDBClusterAPIClient
+
+	// PSMDBClusterAPIClient contains client for dbaas-controller API related to PSMDB clusters.
+	PSMDBClusterAPIClient dbaasClient.PSMDBClusterAPIClient
+
+	// KubernetesClusterAPIClient contains client for dbaas-controller API related to Kubernetes clusters.
+	KubernetesClusterAPIClient dbaasClient.KubernetesClusterAPIClient
 )
 
 //nolint:gochecknoinits
@@ -105,4 +111,6 @@ func init() {
 		logrus.Fatalf("failed to dial server: %s", err)
 	}
 	XtraDBClusterAPIClient = dbaasClient.NewXtraDBClusterAPIClient(cc)
+	PSMDBClusterAPIClient = dbaasClient.NewPSMDBClusterAPIClient(cc)
+	KubernetesClusterAPIClient = dbaasClient.NewKubernetesClusterAPIClient(cc)
 }

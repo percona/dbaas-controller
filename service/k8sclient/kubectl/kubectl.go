@@ -25,94 +25,95 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"strconv"
 	"strings"
 
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 const (
-	// FIXME: change to a real default kubectl.
-	defaultKubectl = "minikube kubectl --"
+	dbaasToolPath           = "/opt/dbaas-tools/bin"
+	defaultPmmServerKubectl = dbaasToolPath + "/kubectl-1.16"
+	defaultDevEnvKubectl    = "minikube kubectl --"
 )
 
 // KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
 type KubeCtl struct {
-	l      logger.Logger
-	cmd    []string
-	tmpDir string
+	l              logger.Logger
+	cmd            []string
+	kubeconfigPath string
 }
-
-const kubeconfigFileName = "kubeconfig.json"
 
 // NewKubeCtl creates a new KubeCtl object with a given logger.
 func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "kubectl")
 
-	// Handle kubectl versions
-	cmd, err := getKubectlCmd(ctx)
+	// Firstly lookup default kubectl to get Kubernetes Server version.
+	defKubectls := []string{defaultPmmServerKubectl, defaultDevEnvKubectl}
+	defaultKubectl, err := lookupCorrectKubectlCmd(nil, defKubectls)
 	if err != nil {
 		return nil, err
 	}
 
-	l.Infof("Using %q", strings.Join(cmd, " "))
-
+	// Cannot identify k8s server version on non local env without kubeconfig (w/o address of k8s server).
 	if kubeconfig == "" {
 		return &KubeCtl{
 			l:   l,
-			cmd: cmd,
+			cmd: defaultKubectl,
 		}, nil
 	}
 
 	// Handle kubeconfig.
-	tmpDir, kubeconfigPath, err := saveKubeconfig(kubeconfig)
+	kubeconfigPath, err := saveKubeconfig(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
 
 	l.Infof("kubectl config: %q", kubeconfigPath)
 
-	cmd = append(cmd, fmt.Sprintf("--kubeconfig=%s", kubeconfigPath))
-
-	return &KubeCtl{
-		l:      l,
-		cmd:    cmd,
-		tmpDir: tmpDir,
-	}, nil
-}
-
-func saveKubeconfig(kubeconfig string) (string, string, error) {
-	tmpDir, err := ioutil.TempDir("", "dbaas-controller-kubeconfigs-")
-	if err != nil {
-		return "", "", err
-	}
-
-	kubeconfigPath := path.Join(tmpDir, kubeconfigFileName)
-
-	err = ioutil.WriteFile(kubeconfigPath, []byte(kubeconfig), 0o600)
-	if err != nil {
-		return "", "", err
-	}
-
-	return tmpDir, kubeconfigPath, nil
-}
-
-// getKubectlCmd gets correct version of kubectl binary for Kubernetes cluster.
-func getKubectlCmd(ctx context.Context) ([]string, error) {
-	// Firstly lookup default kubectl to get Kubernetes Server version.
-	kubectlCmd, err := lookupCorrectKubectlCmd([]string{defaultKubectl})
+	// Handle kubectl versions
+	cmd, err := getKubectlCmd(ctx, defaultKubectl, kubeconfigPath)
 	if err != nil {
 		return nil, err
 	}
 
-	versionsJSON, err := getVersions(ctx, kubectlCmd)
+	l.Infof("Using %q", strings.Join(cmd, " "))
+
+	cmd = append(cmd, fmt.Sprintf("--kubeconfig=%s", kubeconfigPath))
+
+	return &KubeCtl{
+		l:              l,
+		cmd:            cmd,
+		kubeconfigPath: kubeconfigPath,
+	}, nil
+}
+
+func saveKubeconfig(kubeconfig string) (string, error) {
+	tmpFile, err := ioutil.TempFile("", "dbaas-controller-kubeconfig-*")
+	if err != nil {
+		return "", err
+	}
+
+	_, err = tmpFile.Write([]byte(kubeconfig))
+	if err != nil {
+		return "", err
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return "", err
+	}
+
+	return tmpFile.Name(), nil
+}
+
+// getKubectlCmd gets correct version of kubectl binary for Kubernetes cluster.
+func getKubectlCmd(ctx context.Context, defaultKubectl []string, kubeconfigPath string) ([]string, error) {
+	versionsJSON, err := getVersions(ctx, defaultKubectl, kubeconfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -122,27 +123,33 @@ func getKubectlCmd(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	return lookupCorrectKubectlCmd(kubectlCmdNames)
+	return lookupCorrectKubectlCmd(defaultKubectl, kubectlCmdNames)
 }
 
-func lookupCorrectKubectlCmd(kubectlCmdNames []string) ([]string, error) {
+func lookupCorrectKubectlCmd(defaultKubectl, kubectlCmdNames []string) ([]string, error) {
 	for _, kubectlCmdName := range kubectlCmdNames {
-		kubectlPath, err := exec.LookPath(kubectlCmdName)
+		cmd := strings.Split(kubectlCmdName, " ")
+		kubectlPath, err := exec.LookPath(cmd[0])
 		if err == nil {
-			return []string{kubectlPath}, nil
+			return append([]string{kubectlPath}, cmd[1:]...), nil
 		}
 	}
 
-	// if none found (pass empty kubectlCmdNames) use default version of kubectl.
-	return strings.Split(defaultKubectl, " "), nil
+	if defaultKubectl == nil {
+		return nil, errors.Errorf("cannot find kubectl: %v, %v", defaultKubectl, kubectlCmdNames)
+	}
+
+	// if none found and default is not empty use default version of kubectl.
+	return defaultKubectl, nil
 }
 
 // getVersions gets kubectl and Kubernetes cluster version.
-func getVersions(ctx context.Context, kubectlCmd []string) ([]byte, error) {
-	versionsJSON, err := run(ctx, kubectlCmd, []string{"version", "-o", "json"}, nil)
+func getVersions(ctx context.Context, kubectlCmd []string, kubeconfigPath string) ([]byte, error) {
+	versionsJSON, err := run(ctx, kubectlCmd, []string{"version", fmt.Sprintf("--kubeconfig=%s", kubeconfigPath), "-o", "json"}, nil)
 	if err != nil {
 		return nil, err
 	}
+
 	return versionsJSON, nil
 }
 
@@ -171,21 +178,21 @@ func selectCorrectKubectlVersions(versionsJSON []byte) ([]string, error) {
 		return nil, err
 	}
 
-	serverMinor, err := strconv.Atoi(ver.ServerVersion.Minor)
+	serverMinor, err := strconv.Atoi(strings.TrimSuffix(ver.ServerVersion.Minor, "+")) // EKS is returning "serverVersion": { "major": "1", "minor": "16+" }
 	if err != nil {
 		return nil, err
 	}
 
 	// Iterate from newer to older version. Append default as the last.
 	for minor := serverMinor + 1; minor >= serverMinor-1; minor-- {
-		kubectlCmdNames = append(kubectlCmdNames, fmt.Sprintf("kubectl-%d.%d", serverMajor, minor))
+		kubectlCmdNames = append(kubectlCmdNames, fmt.Sprintf("%s/kubectl-%d.%d", dbaasToolPath, serverMajor, minor))
 	}
 	return kubectlCmdNames, nil
 }
 
 // Cleanup removes temporary files created by that object.
 func (k *KubeCtl) Cleanup() error {
-	return os.RemoveAll(k.tmpDir)
+	return os.RemoveAll(k.kubeconfigPath)
 }
 
 // Get executes `kubectl get` with given object kind and optional name,
@@ -200,18 +207,17 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 	if err != nil {
 		return err
 	}
-
 	return json.Unmarshal(stdout, res)
 }
 
 // Apply executes `kubectl apply` with given resource.
-func (k *KubeCtl) Apply(ctx context.Context, res meta.Object) error {
+func (k *KubeCtl) Apply(ctx context.Context, res interface{}) error {
 	_, err := run(ctx, k.cmd, []string{"apply", "-f", "-"}, res)
 	return err
 }
 
 // Delete executes `kubectl delete` with given resource.
-func (k *KubeCtl) Delete(ctx context.Context, res meta.Object) error {
+func (k *KubeCtl) Delete(ctx context.Context, res interface{}) error {
 	_, err := run(ctx, k.cmd, []string{"delete", "-f", "-"}, res)
 	return err
 }
@@ -252,6 +258,13 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 	cmd.Stdin = &inBuf
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
+	envs := os.Environ()
+	for _, env := range envs {
+		if strings.HasPrefix(env, "PATH=") {
+			env = fmt.Sprintf("PATH=%s:%s", dbaasToolPath, os.Getenv("PATH"))
+		}
+		cmd.Env = append(cmd.Env, env)
+	}
 	err := cmd.Run()
 	if err != nil {
 		err = &kubeCtlError{

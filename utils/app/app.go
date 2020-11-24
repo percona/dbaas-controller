@@ -18,13 +18,14 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/percona/pmm/version"
-	"github.com/pkg/errors"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 // ErrNoName is an error in case name is not provided.
-var ErrNoName = errors.New("app.Setup: no Name")
+var ErrNoName error = fmt.Errorf("app.Setup: no Name")
 
 // Flags contains flags for cli.
 type Flags struct {

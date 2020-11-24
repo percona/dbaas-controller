@@ -2,6 +2,21 @@
     "language": "en",
     "messages": [
         {
+            "id": "Unable to connect to Kubernetes cluster: {Err}",
+            "message": "Unable to connect to Kubernetes cluster: {Err}",
+            "translation": "",
+            "placeholders": [
+                {
+                    "id": "Err",
+                    "string": "%[1]s",
+                    "type": "error",
+                    "underlyingType": "interface{Error() string}",
+                    "argNum": 1,
+                    "expr": "err"
+                }
+            ]
+        },
+        {
             "id": "Cannot initialize K8s client: {Err}",
             "message": "Cannot initialize K8s client: {Err}",
             "translation": "",

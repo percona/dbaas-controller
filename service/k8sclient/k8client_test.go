@@ -17,6 +17,7 @@
 package k8sclient
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/app"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 func TestK8Client(t *testing.T) {
@@ -36,79 +38,180 @@ func TestK8Client(t *testing.T) {
 	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
 	require.NoError(t, err)
 
-	client, err := NewK8Client(ctx, string(validKubeconfig))
+	client, err := New(ctx, string(validKubeconfig))
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		err := client.Cleanup()
 		require.NoError(t, err)
 	})
 
-	name := "test-cluster"
-	_ = client.DeleteXtraDBCluster(ctx, name)
+	l := logger.Get(ctx)
 
-	for {
-		clusters, err := client.ListXtraDBClusters(ctx)
+	t.Run("XtraDB", func(t *testing.T) {
+		name := "test-cluster-xtradb"
+		_ = client.DeleteXtraDBCluster(ctx, name)
+
+		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
+			return cluster == nil
+		})
+
+		l.Info("No XtraDB Clusters running")
+
+		err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
+			Name:     name,
+			Size:     2,
+			PXC:      &PXC{DiskSize: 1024 * 1024 * 1024},
+			ProxySQL: &ProxySQL{DiskSize: 1024 * 1024 * 1024},
+		})
 		require.NoError(t, err)
 
-		if findCluster(clusters, name) == nil {
-			break
-		}
-		time.Sleep(5 * time.Second)
-	}
+		l.Info("XtraDB Cluster is created")
 
-	err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
-		Name: name,
-		Size: 2,
+		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+
+		err = client.RestartXtraDBCluster(ctx, name)
+		require.NoError(t, err)
+		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateChanging
+		})
+
+		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+		l.Info("XtraDB Cluster is restarted")
+
+		err = client.UpdateXtraDBCluster(ctx, &XtraDBParams{
+			Name: name,
+			Size: 3,
+		})
+		require.NoError(t, err)
+		l.Info("XtraDB Cluster is updated")
+
+		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
+			if cluster != nil && cluster.State == ClusterStateReady {
+				assert.Equal(t, int32(3), cluster.Size)
+				return true
+			}
+			return false
+		})
+
+		err = client.DeleteXtraDBCluster(ctx, name)
+		require.NoError(t, err)
+
+		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
+			return cluster == nil
+		})
+		l.Info("XtraDB Cluster is deleted")
 	})
-	require.NoError(t, err)
-	for {
-		clusters, err := client.ListXtraDBClusters(ctx)
+
+	t.Run("PSMDB", func(t *testing.T) {
+		name := "test-cluster-psmdb"
+		_ = client.DeletePSMDBCluster(ctx, name)
+
+		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster == nil
+		})
+
+		l.Info("No PSMDB Clusters running")
+
+		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
+			Name:       name,
+			Size:       3,
+			Replicaset: &Replicaset{DiskSize: 1024 * 1024 * 1024},
+		})
 		require.NoError(t, err)
 
-		if cluster := findCluster(clusters, name); cluster != nil && cluster.State == ClusterStateReady {
-			break
-		}
-		time.Sleep(5 * time.Second)
-	}
+		l.Info("PSMDB Cluster is created")
 
-	err = client.UpdateXtraDBCluster(ctx, &XtraDBParams{
-		Name: name,
-		Size: 3,
+		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+
+		err = client.RestartPSMDBCluster(ctx, name)
+		require.NoError(t, err)
+
+		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateChanging
+		})
+
+		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+		l.Info("PSMDB Cluster is restarted")
+
+		err = client.UpdatePSMDBCluster(ctx, &PSMDBParams{
+			Name: name,
+			Size: 5,
+		})
+		require.NoError(t, err)
+		l.Info("PSMDB Cluster is updated")
+
+		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
+			if cluster != nil && cluster.State == ClusterStateReady {
+				assert.Equal(t, int32(5), cluster.Size)
+				return true
+			}
+			return false
+		})
+
+		err = client.DeletePSMDBCluster(ctx, name)
+		require.NoError(t, err)
+
+		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster == nil
+		})
+		l.Info("PSMDB Cluster is deleted")
 	})
-	require.NoError(t, err)
-	for {
-		clusters, err := client.ListXtraDBClusters(ctx)
-		require.NoError(t, err)
-
-		cluster := findCluster(clusters, name)
-		if cluster != nil && cluster.State == ClusterStateReady {
-			assert.Equal(t, int32(3), cluster.Size)
-			break
-		}
-		time.Sleep(5 * time.Second)
-	}
-
-	err = client.DeleteXtraDBCluster(ctx, name)
-	require.NoError(t, err)
-	for {
-		clusters, err := client.ListXtraDBClusters(ctx)
-		require.NoError(t, err)
-
-		if findCluster(clusters, name) == nil {
-			break
-		}
-		time.Sleep(5 * time.Second)
-	}
-	clusters, err := client.ListXtraDBClusters(ctx)
-	require.NoError(t, err)
-	assert.Nil(t, findCluster(clusters, name))
 }
 
-func findCluster(clusters []XtraDBCluster, name string) *XtraDBCluster {
-	for _, cluster := range clusters {
-		if cluster.Name == name {
-			return &cluster
+func assertListXtraDBCluster(t *testing.T, ctx context.Context, client *K8Client, name string, conditionFunc func(cluster *XtraDBCluster) bool) {
+	l := logger.Get(ctx)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+	for {
+		time.Sleep(5 * time.Second)
+		clusters, err := client.ListXtraDBClusters(ctx)
+		require.NoError(t, err)
+
+		l.Debug(clusters)
+
+		var cluster *XtraDBCluster
+		for _, c := range clusters {
+			c := c
+			if c.Name == name {
+				cluster = &c
+				break
+			}
+		}
+		if conditionFunc(cluster) {
+			break
 		}
 	}
-	return nil
+}
+
+func assertListPSMDBCluster(t *testing.T, ctx context.Context, client *K8Client, name string, conditionFunc func(cluster *PSMDBCluster) bool) {
+	l := logger.Get(ctx)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+	for {
+		time.Sleep(5 * time.Second)
+		clusters, err := client.ListPSMDBClusters(timeoutCtx)
+		require.NoError(t, err)
+
+		l.Debug(clusters)
+
+		var cluster *PSMDBCluster
+		for _, c := range clusters {
+			c := c
+			if c.Name == name {
+				cluster = &c
+				break
+			}
+		}
+		if conditionFunc(cluster) {
+			break
+		}
+	}
 }

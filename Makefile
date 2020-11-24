@@ -57,20 +57,24 @@ format:                           ## Format source code
 
 check:                            ## Run checks/linters for the whole project
 	bin/check-license
-	bin/go-consistent -pedantic ./...
+	bin/go-consistent -pedantic -exclude "tests" ./...
+	cd tests && ../bin/go-consistent -pedantic ./...
 	bin/golangci-lint run
 
 install:                          ## Install binaries
 	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
 test:                             ## Run tests
-	go test -race -timeout=25m ./...
+	go test -race -timeout=30m ./...
 
 test-cover:                       ## Run tests and collect per-package coverage information
-	go test -race -timeout=25m -count=1 -coverprofile=cover.out -covermode=atomic ./...
+	go test -race -timeout=30m -count=1 -coverprofile=cover.out -covermode=atomic ./...
 
 test-crosscover:                  ## Run tests and collect cross-package coverage information
-	go test -race -timeout=25m -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
+	go test -race -timeout=30m -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
+
+test-api-build:                   ## Check that API tests can be built
+	cd tests && go test -count=0 ./...
 
 run: install                      ## Run dbaas-controller
 	bin/dbaas-controller
@@ -89,11 +93,14 @@ env-up-start:
 	minikube kubectl -- version
 	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/bundle.yaml  | minikube kubectl -- apply -f -
 	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/secrets.yaml | minikube kubectl -- apply -f -
+	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/release-1.4.0/deploy/bundle.yaml  | minikube kubectl -- apply -f -
+	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/release-1.4.0/deploy/secrets.yaml | minikube kubectl -- apply -f -
 	minikube kubectl -- get nodes
 	minikube kubectl -- get pods
 
 env-up-wait:
 	minikube kubectl -- wait --for=condition=Available deployment percona-xtradb-cluster-operator
+	minikube kubectl -- wait --for=condition=Available deployment percona-server-mongodb-operator
 
 env-down:
 	#

@@ -17,6 +17,8 @@
 package main
 
 import (
+	"log"
+
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/percona/pmm/version"
 	"golang.org/x/text/language"
@@ -36,20 +38,19 @@ func main() {
 		panic("dbaas-controller version is not set during build.")
 	}
 
-	logger.SetupGlobal()
-
-	ctx := app.Context()
-	l := logger.Get(ctx).WithField("component", "main")
-	defer l.Sync() //nolint:errcheck
-
 	flags, err := app.Setup(&app.SetupOpts{
 		Name: "dbaas-controller",
 	})
 	if err != nil {
-		l.Fatal(err)
+		log.Fatal(err)
 	}
 
 	kingpin.Parse()
+
+	logger.SetupGlobal()
+	ctx := app.Context()
+	l := logger.Get(ctx).WithField("component", "main")
+	defer l.Sync() //nolint:errcheck
 
 	l.Infof("Starting...")
 
@@ -64,7 +65,9 @@ func main() {
 	}
 
 	i18nPrinter := message.NewPrinter(language.English)
-	controllerv1beta1.RegisterXtraDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.New(i18nPrinter))
+	controllerv1beta1.RegisterXtraDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewXtraDBClusterService(i18nPrinter))
+	controllerv1beta1.RegisterPSMDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewPSMDBClusterService(i18nPrinter))
+	controllerv1beta1.RegisterKubernetesClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewKubernetesClusterService(i18nPrinter))
 
 	go servers.RunDebugServer(ctx, &servers.RunDebugServerOpts{
 		Addr: flags.DebugAddr,
