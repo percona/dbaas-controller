@@ -85,12 +85,18 @@ type PXC struct {
 type ProxySQL struct {
 	ComputeResources *ComputeResources
 	DiskSize         int64
+	ServiceType      string
 }
 
 // Replicaset contains information related to Replicaset containers in PSMDB cluster.
 type Replicaset struct {
 	ComputeResources *ComputeResources
 	DiskSize         int64
+	// Expose the port to allow external connections.
+	Expose bool
+	// ExposeType ClusterIP, NodePort, LoadBalancer.
+	// See: https://www.percona.com/doc/kubernetes-operator-for-psmongodb/expose.html.
+	ExposeType string
 }
 
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
@@ -106,11 +112,23 @@ type Cluster struct {
 	Name string
 }
 
+// Net MongoD Network config.
+type Net struct {
+	Port     string `json:"port"`
+	HostPort int32  `json:"hostPort"`
+}
+
+// MongoD has network options to expose ports to the world.
+type MongoD struct {
+	Net *Net `json:"net"`
+}
+
 // PSMDBParams contains all parameters required to create or update percona server for mongodb cluster.
 type PSMDBParams struct {
 	Name       string
 	Size       int32
 	Replicaset *Replicaset
+	MongoD     *MongoD
 }
 
 // XtraDBCluster contains information related to xtradb cluster.
@@ -217,6 +235,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 				},
+				ServiceType: core.ServiceType(params.ProxySQL.ServiceType),
 			},
 
 			PMM: &pxc.PMMSpec{
@@ -419,7 +438,8 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			},
 			Mongod: &mongodSpec{
 				Net: &mongodSpecNet{
-					Port: 27017,
+					Port:     27017,
+					HostPort: params.MongoD.Net.HostPort,
 				},
 				OperationProfiling: &mongodSpecOperationProfiling{
 					Mode: operationProfilingModeSlowOp,
@@ -463,6 +483,10 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 								TopologyKey: pointer.ToString("kubernetes.io/hostname"),
 							},
 						},
+					},
+					Expose: expose{
+						Enabled:    params.Replicaset.Expose,
+						ExposeType: params.Replicaset.ExposeType,
 					},
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
 					multiAZ: multiAZ{

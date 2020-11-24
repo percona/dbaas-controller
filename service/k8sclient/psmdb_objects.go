@@ -433,4 +433,7 @@ type arbiter struct {
 
 type expose struct {
 	Enabled bool `json:"enabled"`
+	// ExposeType ClusterIP, NodePort, LoadBalancer.
+	// See: https://www.percona.com/doc/kubernetes-operator-for-psmongodb/expose.html.
+	ExposeType string `json:"exposeType"`
 }

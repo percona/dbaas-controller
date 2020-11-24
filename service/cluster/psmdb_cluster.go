@@ -107,6 +107,17 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 			MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
 		}
 	}
+
+	if req.Params.Expose {
+		params.MongoD = &k8sclient.MongoD{
+			Net: &k8sclient.Net{
+				HostPort: req.Params.ExposePort,
+			},
+		}
+		params.Replicaset.Expose = true
+		params.Replicaset.ExposeType = req.Params.ExposeType
+	}
+
 	err = client.CreatePSMDBCluster(ctx, params)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

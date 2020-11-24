@@ -63,6 +63,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 				},
 				DiskSize: 1024 * 1024 * 1024,
 			},
+			// TODO: Add expose ports tests
 		},
 	})
 	require.NoError(t, err)
