@@ -18,8 +18,8 @@
 package k8sclient
 
 import (
-	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
 	"github.com/percona-platform/dbaas-controller/k8_api/common"
+	pxc "github.com/percona-platform/dbaas-controller/k8_api/pxc/v1"
 )
 
 const affinityOff = "none"
@@ -127,8 +127,8 @@ const (
 )
 
 type configsvrReplSetSpec struct {
-	Size       int             `json:"size"`
-	VolumeSpec *pxc.VolumeSpec `json:"volumeSpec"`
+	Size       int                `json:"size"`
+	VolumeSpec *common.VolumeSpec `json:"volumeSpec"`
 }
 
 type shardingSpec struct {
@@ -219,7 +219,7 @@ type clusterCondition struct {
 type pmmSpec struct {
 	Enabled    bool                 `json:"enabled,omitempty"`
 	ServerHost string               `json:"serverHost,omitempty"`
-	ServerUser string         `json:"serverUser,omitempty"`
+	ServerUser string               `json:"serverUser,omitempty"`
 	Image      string               `json:"image,omitempty"`
 	Resources  *common.PodResources `json:"resources,omitempty"`
 }

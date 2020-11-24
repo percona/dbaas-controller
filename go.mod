@@ -22,7 +22,7 @@ require (
 	github.com/jetstack/cert-manager v0.14.0-alpha.0
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
-	github.com/percona-platform/dbaas-api v0.0.0-20201117121114-c4f385ec7b61
+	github.com/percona-platform/dbaas-api v0.0.0-20201124100654-ca0e388f37b8
 	github.com/percona-platform/saas v0.0.0-20201008124851-3c2c6c2ec0ce
 	github.com/percona/pmm v2.11.1+incompatible
 	github.com/pkg/errors v0.9.1

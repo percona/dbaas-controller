@@ -63,7 +63,7 @@ const (
 
 	pxcCRVersion         = "1.7.0"
 	pxcBackupImage       = "percona/percona-xtradb-cluster-operator:1.6.0-pxc8.0-backup"
-	pxcImage             = "percona/percona-xtradb-cluster:8.0.20-11.1-debug"
+	pxcImage             = "percona/percona-xtradb-cluster:8.0.20-11.1"
 	pxcBackupStorageName = "pxc-backup-storage-%s"
 	pxcAPIVersion        = "pxc.percona.com/v1-6-0"
 	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.6.0-proxysql"
@@ -472,11 +472,11 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 				Enabled: true,
 				ConfigsvrReplSet: &configsvrReplSetSpec{
 					Size: 3,
-					VolumeSpec: &pxc.VolumeSpec{
-						PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
-							Resources: core.ResourceRequirements{
-								Requests: core.ResourceList{
-									core.ResourceStorage: resource.MustParse("1Gi"),
+					VolumeSpec: &common.VolumeSpec{
+						PersistentVolumeClaim: &common.PersistentVolumeClaimSpec{
+							Resources: common.ResourceRequirements{
+								Requests: common.ResourceList{
+									common.ResourceStorage: resource.MustParse("1Gi"),
 								},
 							},
 						},
