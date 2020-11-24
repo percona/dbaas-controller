@@ -18,39 +18,37 @@
 package v1
 
 import (
-	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
-	"github.com/percona-platform/dbaas-controller/k8s_api/meta"
-	appsv1 "k8s.io/api/apps/v1"
+	"github.com/percona-platform/dbaas-controller/k8s_api/k8sio"
+	meta "github.com/percona-platform/dbaas-controller/k8s_api/meta/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
 // PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
 type PerconaXtraDBClusterSpec struct { //nolint:maligned
-	Platform              string                               `json:"platform,omitempty"`
-	CRVersion             string                               `json:"crVersion,omitempty"`
-	Pause                 bool                                 `json:"pause,omitempty"`
-	SecretsName           string                               `json:"secretsName,omitempty"`
-	VaultSecretName       string                               `json:"vaultSecretName,omitempty"`
-	SSLSecretName         string                               `json:"sslSecretName,omitempty"`
-	SSLInternalSecretName string                               `json:"sslInternalSecretName,omitempty"`
-	TLS                   *TLSSpec                             `json:"tls,omitempty"`
-	PXC                   *PodSpec                             `json:"pxc,omitempty"`
-	ProxySQL              *PodSpec                             `json:"proxysql,omitempty"`
-	HAProxy               *PodSpec                             `json:"haproxy,omitempty"`
-	PMM                   *PMMSpec                             `json:"pmm,omitempty"`
-	Backup                *PXCScheduledBackup                  `json:"backup,omitempty"`
-	UpdateStrategy        appsv1.StatefulSetUpdateStrategyType `json:"updateStrategy,omitempty"`
-	UpgradeOptions        UpgradeOptions                       `json:"upgradeOptions,omitempty"`
-	AllowUnsafeConfig     bool                                 `json:"allowUnsafeConfigurations,omitempty"`
+	Platform              string              `json:"platform,omitempty"`
+	CRVersion             string              `json:"crVersion,omitempty"`
+	Pause                 bool                `json:"pause,omitempty"`
+	SecretsName           string              `json:"secretsName,omitempty"`
+	VaultSecretName       string              `json:"vaultSecretName,omitempty"`
+	SSLSecretName         string              `json:"sslSecretName,omitempty"`
+	SSLInternalSecretName string              `json:"sslInternalSecretName,omitempty"`
+	TLS                   *TLSSpec            `json:"tls,omitempty"`
+	PXC                   *PodSpec            `json:"pxc,omitempty"`
+	ProxySQL              *PodSpec            `json:"proxysql,omitempty"`
+	HAProxy               *PodSpec            `json:"haproxy,omitempty"`
+	PMM                   *PMMSpec            `json:"pmm,omitempty"`
+	Backup                *PXCScheduledBackup `json:"backup,omitempty"`
+	UpdateStrategy        string              `json:"updateStrategy,omitempty"`
+	UpgradeOptions        UpgradeOptions      `json:"upgradeOptions,omitempty"`
+	AllowUnsafeConfig     bool                `json:"allowUnsafeConfigurations,omitempty"`
 }
 
 // TLSSpec holds cluster's TLS specs.
 type TLSSpec struct {
-	SANs       []string                `json:"SANs,omitempty"`
-	IssuerConf *cmmeta.ObjectReference `json:"issuerConf,omitempty"`
+	SANs       []string         `json:"SANs,omitempty"`
+	IssuerConf *ObjectReference `json:"issuerConf,omitempty"`
 }
 
 // UpgradeOptions holds configuration options to handle automatic upgrades.
@@ -184,8 +182,8 @@ type PodSpec struct { //nolint:maligned
 
 // PodDisruptionBudgetSpec POD disruption budget specs.
 type PodDisruptionBudgetSpec struct {
-	MinAvailable   *intstr.IntOrString `json:"minAvailable,omitempty"`
-	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+	MinAvailable   *k8sio.IntOrString `json:"minAvailable,omitempty"`
+	MaxUnavailable *k8sio.IntOrString `json:"maxUnavailable,omitempty"`
 }
 
 // PodAffinity POD's affinity.
@@ -249,3 +247,16 @@ type Volume struct { //nolint:unused
 
 // AffinityTopologyKeyOff Affinity Topology Key Off.
 const AffinityTopologyKeyOff = "none"
+
+// ObjectReference is a reference to an object with a given name, kind and group.
+// Copy of https://github.com/jetstack/cert-manager/blob/9dc044d033ed2566b425f02080d03e19b38e571c/pkg/apis/meta/v1/types.go#L51-L61
+type ObjectReference struct {
+	// Name of the resource being referred to.
+	Name string `json:"name"`
+	// Kind of the resource being referred to.
+	// +optional
+	Kind string `json:"kind,omitempty"`
+	// Group of the resource being referred to.
+	// +optional
+	Group string `json:"group,omitempty"`
+}

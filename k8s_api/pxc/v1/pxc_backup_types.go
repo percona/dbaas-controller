@@ -17,7 +17,7 @@
 package v1
 
 import (
-	"github.com/percona-platform/dbaas-controller/k8s_api/meta"
+	meta "github.com/percona-platform/dbaas-controller/k8s_api/meta/v1"
 )
 
 // PerconaXtraDBClusterBackupList holds exported fields representing Percona XtraDB cluster backup list.
