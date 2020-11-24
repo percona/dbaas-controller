@@ -517,13 +517,19 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 				Enabled:    true,
 				ServerHost: params.PMMPublicAddress,
 				Image:      pmmClientImage,
+				Resources: &common.PodResources{
+					Requests: &common.ResourcesList{
+						Memory: "500M",
+						CPU:    "500m",
+					},
+				},
 			},
 
-			//Backup: backupSpec{
-			//	Enabled:            true,
-			//	Image:              psmdbBackupImage,
-			//	ServiceAccountName: "percona-server-mongodb-operator",
-			//},
+			Backup: backupSpec{
+				Enabled:            true,
+				Image:              psmdbBackupImage,
+				ServiceAccountName: "percona-server-mongodb-operator",
+			},
 		},
 	}
 	if params.Replicaset != nil {

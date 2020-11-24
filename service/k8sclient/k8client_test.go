@@ -47,9 +47,9 @@ func TestK8Client(t *testing.T) {
 
 	l := logger.Get(ctx)
 
-	pmmPublicAddress := ""
+	pmmPublicAddress := "192.168.1.25"
 	t.Run("XtraDB", func(t *testing.T) {
-		name := "test-cluster-xtradb"
+		name := "test-xtradb"
 		_ = client.DeleteXtraDBCluster(ctx, name)
 
 		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
@@ -62,10 +62,10 @@ func TestK8Client(t *testing.T) {
 			Name: name,
 			Size: 1,
 			PXC: &PXC{
-				DiskSize: 5 * 1024 * 1024 * 1024,
+				DiskSize: 1024 * 1024 * 1024,
 			},
 			ProxySQL: &ProxySQL{
-				DiskSize: 5 * 1024 * 1024 * 1024,
+				DiskSize: 1024 * 1024 * 1024,
 			},
 			PMMPublicAddress: pmmPublicAddress,
 		})
