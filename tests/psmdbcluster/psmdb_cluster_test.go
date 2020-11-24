@@ -61,6 +61,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 					CpuM:        1000,
 					MemoryBytes: 1024 * 1024 * 1024,
 				},
+				DiskSize: 1024 * 1024 * 1024,
 			},
 		},
 	})
@@ -83,6 +84,15 @@ func TestPSMDBClusterAPI(t *testing.T) {
 		}
 	}
 	assert.True(t, clusterFound)
+
+	restartPSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.RestartPSMDBCluster(tests.Context, &controllerv1beta1.RestartPSMDBClusterRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+		Name: name,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, restartPSMDBClusterResponse)
 
 	deletePSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.DeletePSMDBCluster(tests.Context, &controllerv1beta1.DeletePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{

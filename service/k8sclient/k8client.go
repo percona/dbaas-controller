@@ -20,12 +20,14 @@ package k8sclient
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 	"github.com/percona-platform/dbaas-controller/k8s_api/meta"
 	psmdb "github.com/percona-platform/dbaas-controller/k8s_api/psmdb/v1"
 	pxc "github.com/percona-platform/dbaas-controller/k8s_api/pxc/v1"
@@ -77,16 +79,19 @@ type ComputeResources struct {
 // PXC contains information related to PXC containers in Percona XtraDB cluster.
 type PXC struct {
 	ComputeResources *ComputeResources
+	DiskSize         int64
 }
 
 // ProxySQL contains information related to ProxySQL containers in Percona XtraDB cluster.
 type ProxySQL struct {
 	ComputeResources *ComputeResources
+	DiskSize         int64
 }
 
 // Replicaset contains information related to Replicaset containers in PSMDB cluster.
 type Replicaset struct {
 	ComputeResources *ComputeResources
+	DiskSize         int64
 }
 
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
@@ -195,35 +200,21 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			SecretsName:       "my-cluster-secrets",
 
 			PXC: &pxc.PodSpec{
-				Size:  params.Size,
-				Image: pxcImage,
-				VolumeSpec: &pxc.VolumeSpec{
-					PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
-						Resources: core.ResourceRequirements{
-							Requests: core.ResourceList{
-								core.ResourceStorage: resource.MustParse("1Gi"),
-							},
-						},
-					},
-				},
+				Size:       params.Size,
+				Resources:  c.setComputeResources(params.PXC.ComputeResources),
+				Image:      pxcImage,
+				VolumeSpec: c.volumeSpec(params.PXC.DiskSize),
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 				},
 			},
 
 			ProxySQL: &pxc.PodSpec{
-				Enabled: true,
-				Size:    params.Size,
-				Image:   pxcProxySQLImage,
-				VolumeSpec: &pxc.VolumeSpec{
-					PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
-						Resources: core.ResourceRequirements{
-							Requests: core.ResourceList{
-								core.ResourceStorage: resource.MustParse("1Gi"),
-							},
-						},
-					},
-				},
+				Enabled:    true,
+				Size:       params.Size,
+				Resources:  c.setComputeResources(params.ProxySQL.ComputeResources),
+				Image:      pxcProxySQLImage,
+				VolumeSpec: c.volumeSpec(params.ProxySQL.DiskSize),
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 				},
@@ -243,28 +234,15 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				}},
 				Storages: map[string]*pxc.BackupStorageSpec{
 					pxcBackupStorageName: {
-						Type: pxc.BackupStorageFilesystem,
-						Volume: &pxc.VolumeSpec{
-							PersistentVolumeClaim: &core.PersistentVolumeClaimSpec{
-								Resources: core.ResourceRequirements{
-									Requests: core.ResourceList{
-										core.ResourceStorage: resource.MustParse("1Gi"),
-									},
-								},
-							},
-						},
+						Type:   pxc.BackupStorageFilesystem,
+						Volume: c.volumeSpec(params.PXC.DiskSize),
 					},
 				},
 				ServiceAccountName: "percona-xtradb-cluster-operator",
 			},
 		},
 	}
-	if params.PXC != nil {
-		c.setXtraDBComputeResources(res.Spec.PXC, params.PXC.ComputeResources)
-	}
-	if params.ProxySQL != nil {
-		c.setXtraDBComputeResources(res.Spec.ProxySQL, params.ProxySQL.ComputeResources)
-	}
+
 	return c.kubeCtl.Apply(ctx, res)
 }
 
@@ -296,6 +274,27 @@ func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, name string) error {
 	return c.kubeCtl.Delete(ctx, res)
 }
 
+func (c *K8Client) restartDBClusterCmd(name, kind string) []string {
+	return []string{"rollout", "restart", "StatefulSets", fmt.Sprintf("%s-%s", name, kind)}
+}
+
+// RestartXtraDBCluster restarts Percona XtraDB cluster with provided name.
+// FIXME: https://jira.percona.com/browse/PMM-6980
+func (c *K8Client) RestartXtraDBCluster(ctx context.Context, name string) error {
+	_, err := c.kubeCtl.Run(ctx, c.restartDBClusterCmd(name, "pxc"), nil)
+	if err != nil {
+		return err
+	}
+
+	// TODO: implement logic to handle the case when there is HAProxy instead of ProxySQL.
+	_, err = c.kubeCtl.Run(ctx, c.restartDBClusterCmd(name, "proxysql"), nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // getPerconaXtraDBClusters returns Percona XtraDB clusters.
 func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluster, error) {
 	var list meta.List
@@ -314,17 +313,16 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 			Name:  cluster.Name,
 			Size:  cluster.Spec.ProxySQL.Size,
 			State: pxcStatesMap[cluster.Status.Status],
+			PXC: &PXC{
+				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
+				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
+			},
+			ProxySQL: &ProxySQL{
+				DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
+				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
+			},
 		}
-		if cluster.Spec.PXC.Resources != nil {
-			val.PXC = &PXC{
-				ComputeResources: c.getXtraDBComputeResources(*cluster.Spec.PXC.Resources),
-			}
-		}
-		if cluster.Spec.ProxySQL.Resources != nil {
-			val.ProxySQL = &ProxySQL{
-				ComputeResources: c.getXtraDBComputeResources(*cluster.Spec.ProxySQL.Resources),
-			}
-		}
+
 		res[i] = val
 	}
 	return res, nil
@@ -379,40 +377,14 @@ func (c *K8Client) getDeletingXtraDBClusters(ctx context.Context, clusters []Xtr
 	xtradbClusters := make([]XtraDBCluster, len(deletingClusters))
 	for i, cluster := range deletingClusters {
 		xtradbClusters[i] = XtraDBCluster{
-			Name:  cluster.Name,
-			State: ClusterStateDeleting,
+			Name:     cluster.Name,
+			Size:     0,
+			State:    ClusterStateDeleting,
+			PXC:      new(PXC),
+			ProxySQL: new(ProxySQL),
 		}
 	}
 	return xtradbClusters, nil
-}
-
-func (c *K8Client) getXtraDBComputeResources(resources pxc.PodResources) *ComputeResources {
-	if resources.Limits == nil {
-		return nil
-	}
-	cpum := resource.MustParse(resources.Limits.CPU)
-	memory := resource.MustParse(resources.Limits.Memory)
-	return &ComputeResources{
-		CPUM:        int32(cpum.MilliValue()),
-		MemoryBytes: memory.Value(),
-	}
-}
-
-func (c *K8Client) setXtraDBComputeResources(podResources *pxc.PodSpec, computeResources *ComputeResources) {
-	if computeResources == nil {
-		return
-	}
-
-	if computeResources.MemoryBytes > 0 || computeResources.CPUM > 0 {
-		podResources.Resources = &pxc.PodResources{Limits: new(pxc.ResourcesList)}
-		if computeResources.MemoryBytes > 0 {
-			podResources.Resources.Limits.Memory = resource.NewQuantity(computeResources.MemoryBytes, resource.DecimalSI).String()
-		}
-
-		if computeResources.CPUM > 0 {
-			podResources.Resources.Limits.CPU = resource.NewMilliQuantity(int64(computeResources.CPUM), resource.DecimalSI).String()
-		}
-	}
 }
 
 // ListPSMDBClusters returns list of psmdb clusters and their statuses.
@@ -481,8 +453,9 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			},
 			Replsets: []*psmdb.ReplsetSpec{
 				{
-					Name: "rs0",
-					Size: params.Size,
+					Name:      "rs0",
+					Size:      params.Size,
+					Resources: c.setComputeResources(params.Replicaset.ComputeResources),
 					Arbiter: psmdb.Arbiter{
 						Enabled: false,
 						Size:    1,
@@ -492,15 +465,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 							},
 						},
 					},
-					VolumeSpec: &psmdb.VolumeSpec{
-						PersistentVolumeClaim: &psmdb.PersistentVolumeClaimSpec{
-							Resources: psmdb.ResourceRequirements{
-								Requests: psmdb.ResourceList{
-									psmdb.ResourceStorage: resource.MustParse("1Gi"),
-								},
-							},
-						},
-					},
+					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: &psmdb.PodAffinity{
 							TopologyKey: pointer.ToString(psmdb.AffinityOff),
@@ -520,9 +485,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			},
 		},
 	}
-	if params.Replicaset != nil {
-		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
-	}
+
 	return c.kubeCtl.Apply(ctx, res)
 }
 
@@ -555,6 +518,14 @@ func (c *K8Client) DeletePSMDBCluster(ctx context.Context, name string) error {
 	return c.kubeCtl.Delete(ctx, res)
 }
 
+// RestartPSMDBCluster restarts Percona server for mongodb cluster with provided name.
+// FIXME: https://jira.percona.com/browse/PMM-6980
+func (c *K8Client) RestartPSMDBCluster(ctx context.Context, name string) error {
+	_, err := c.kubeCtl.Run(ctx, c.restartDBClusterCmd(name, "rs0"), nil)
+
+	return err
+}
+
 // getPSMDBClusters returns Percona Server for MongoDB clusters.
 func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error) {
 	var list meta.List
@@ -573,11 +544,10 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 			Name:  cluster.Name,
 			State: psmdbStatesMap[cluster.Status.Status],
 			Size:  cluster.Spec.Replsets[0].Size,
-		}
-		if cluster.Spec.Replsets[0].Resources != nil {
-			val.Replicaset = &Replicaset{
-				ComputeResources: c.getComputeResources(*cluster.Spec.Replsets[0].Resources),
-			}
+			Replicaset: &Replicaset{
+				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
+				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
+			},
 		}
 		res[i] = val
 	}
@@ -599,15 +569,17 @@ func (c *K8Client) getDeletingPSMDBClusters(ctx context.Context, clusters []PSMD
 	xtradbClusters := make([]PSMDBCluster, len(deletingClusters))
 	for i, cluster := range deletingClusters {
 		xtradbClusters[i] = PSMDBCluster{
-			Name:  cluster.Name,
-			State: ClusterStateDeleting,
+			Name:       cluster.Name,
+			Size:       0,
+			State:      ClusterStateDeleting,
+			Replicaset: new(Replicaset),
 		}
 	}
 	return xtradbClusters, nil
 }
 
-func (c *K8Client) getComputeResources(resources psmdb.ResourcesSpec) *ComputeResources {
-	if resources.Limits == nil {
+func (c *K8Client) getComputeResources(resources *common.PodResources) *ComputeResources {
+	if resources == nil || resources.Limits == nil {
 		return nil
 	}
 	res := new(ComputeResources)
@@ -622,12 +594,12 @@ func (c *K8Client) getComputeResources(resources psmdb.ResourcesSpec) *ComputeRe
 	return res
 }
 
-func (c *K8Client) setComputeResources(res *ComputeResources) *psmdb.ResourcesSpec {
+func (c *K8Client) setComputeResources(res *ComputeResources) *common.PodResources {
 	if res == nil || (res.CPUM <= 0 && res.MemoryBytes <= 0) {
 		return nil
 	}
-	r := &psmdb.ResourcesSpec{
-		Limits: new(psmdb.ResourceSpecRequirements),
+	r := &common.PodResources{
+		Limits: new(common.ResourcesList),
 	}
 	if res.CPUM > 0 {
 		r.Limits.CPU = resource.NewMilliQuantity(int64(res.CPUM), resource.DecimalSI).String()
@@ -636,4 +608,30 @@ func (c *K8Client) setComputeResources(res *ComputeResources) *psmdb.ResourcesSp
 		r.Limits.Memory = resource.NewQuantity(res.MemoryBytes, resource.DecimalSI).String()
 	}
 	return r
+}
+
+func (c *K8Client) getDiskSize(volumeSpec *common.VolumeSpec) int64 {
+	if volumeSpec == nil || volumeSpec.PersistentVolumeClaim == nil {
+		return 0
+	}
+	quantity, ok := volumeSpec.PersistentVolumeClaim.Resources.Requests[common.ResourceStorage]
+	if !ok {
+		return 0
+	}
+	return quantity.Value()
+}
+
+func (c *K8Client) volumeSpec(diskSize int64) *common.VolumeSpec {
+	if diskSize == 0 {
+		return nil
+	}
+	return &common.VolumeSpec{
+		PersistentVolumeClaim: &common.PersistentVolumeClaimSpec{
+			Resources: common.ResourceRequirements{
+				Requests: common.ResourceList{
+					common.ResourceStorage: *resource.NewQuantity(diskSize, resource.DecimalSI),
+				},
+			},
+		},
+	}
 }

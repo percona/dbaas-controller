@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package v1 contains API Schema definitions for the pxc v1 API group
 package v1
 
 import (
@@ -22,6 +23,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
 // PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
@@ -149,9 +152,9 @@ type PodSpec struct { //nolint:maligned
 	Enabled                       bool                                    `json:"enabled,omitempty"`
 	Size                          int32                                   `json:"size,omitempty"`
 	Image                         string                                  `json:"image,omitempty"`
-	Resources                     *PodResources                           `json:"resources,omitempty"`
-	SidecarResources              *PodResources                           `json:"sidecarResources,omitempty"`
-	VolumeSpec                    *VolumeSpec                             `json:"volumeSpec,omitempty"`
+	Resources                     *common.PodResources                    `json:"resources,omitempty"`
+	SidecarResources              *common.PodResources                    `json:"sidecarResources,omitempty"`
+	VolumeSpec                    *common.VolumeSpec                      `json:"volumeSpec,omitempty"`
 	Affinity                      *PodAffinity                            `json:"affinity,omitempty"`
 	NodeSelector                  map[string]string                       `json:"nodeSelector,omitempty"`
 	Tolerations                   []corev1.Toleration                     `json:"tolerations,omitempty"`
@@ -191,37 +194,24 @@ type PodAffinity struct {
 	Advanced    *corev1.Affinity `json:"advanced,omitempty"`
 }
 
-// PodResources represents the POD resources limits.
-type PodResources struct {
-	Requests *ResourcesList `json:"requests,omitempty"`
-	Limits   *ResourcesList `json:"limits,omitempty"`
-}
-
 // PMMSpec hold exported fields representing PMM specs.
 type PMMSpec struct {
 	Enabled                  bool                    `json:"enabled,omitempty"`
 	ServerHost               string                  `json:"serverHost,omitempty"`
 	Image                    string                  `json:"image,omitempty"`
 	ServerUser               string                  `json:"serverUser,omitempty"`
-	Resources                *PodResources           `json:"resources,omitempty"`
+	Resources                *common.PodResources    `json:"resources,omitempty"`
 	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
 	ImagePullPolicy          corev1.PullPolicy       `json:"imagePullPolicy,omitempty"`
-}
-
-// ResourcesList POD's resources list.
-type ResourcesList struct {
-	Memory           string `json:"memory,omitempty"`
-	CPU              string `json:"cpu,omitempty"`
-	EphemeralStorage string `json:"ephemeral-storage,omitempty"`
 }
 
 // BackupStorageSpec holds backup's storage specs.
 type BackupStorageSpec struct {
 	Type                     BackupStorageType          `json:"type"`
 	S3                       BackupStorageS3Spec        `json:"s3,omitempty"`
-	Volume                   *VolumeSpec                `json:"volume,omitempty"`
+	Volume                   *common.VolumeSpec         `json:"volume,omitempty"`
 	NodeSelector             map[string]string          `json:"nodeSelector,omitempty"`
-	Resources                *PodResources              `json:"resources,omitempty"`
+	Resources                *common.PodResources       `json:"resources,omitempty"`
 	Affinity                 *corev1.Affinity           `json:"affinity,omitempty"`
 	Tolerations              []corev1.Toleration        `json:"tolerations,omitempty"`
 	Annotations              map[string]string          `json:"annotations,omitempty"`
@@ -249,23 +239,6 @@ type BackupStorageS3Spec struct {
 	CredentialsSecret string `json:"credentialsSecret"`
 	Region            string `json:"region,omitempty"`
 	EndpointURL       string `json:"endpointUrl,omitempty"`
-}
-
-// VolumeSpec backup storage volume specs.
-type VolumeSpec struct {
-	// EmptyDir to use as data volume for mysql. EmptyDir represents a temporary
-	// directory that shares a pod's lifetime.
-	EmptyDir *corev1.EmptyDirVolumeSource `json:"emptyDir,omitempty"`
-
-	// HostPath to use as data volume for mysql. HostPath represents a
-	// pre-existing file or directory on the host machine that is directly
-	// exposed to the container.
-	HostPath *corev1.HostPathVolumeSource `json:"hostPath,omitempty"`
-
-	// PersistentVolumeClaim to specify PVC spec for the volume for mysql data.
-	// It has the highest level of precedence, followed by HostPath and
-	// EmptyDir. And represents the PVC specification.
-	PersistentVolumeClaim *corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaim,omitempty"`
 }
 
 // Volume represents a backup volume.

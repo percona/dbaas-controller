@@ -18,8 +18,8 @@
 package v1
 
 import (
+	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 	"github.com/percona-platform/dbaas-controller/k8s_api/meta"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -125,19 +125,18 @@ type clusterCondition struct {
 }
 
 type PmmSpec struct {
-	Enabled    bool           `json:"enabled,omitempty"`
-	ServerHost string         `json:"serverHost,omitempty"`
-	Image      string         `json:"image,omitempty"`
-	Resources  *ResourcesSpec `json:"resources,omitempty"`
+	Enabled    bool                 `json:"enabled,omitempty"`
+	ServerHost string               `json:"serverHost,omitempty"`
+	Image      string               `json:"image,omitempty"`
+	Resources  *common.PodResources `json:"resources,omitempty"`
 }
 
 type MultiAZ struct {
-	Affinity            *PodAffinity             `json:"affinity,omitempty"`
-	NodeSelector        map[string]string        `json:"nodeSelector,omitempty"`
-	PriorityClassName   string                   `json:"priorityClassName,omitempty"`
-	Annotations         map[string]string        `json:"annotations,omitempty"`
-	Labels              map[string]string        `json:"labels,omitempty"`
-	PodDisruptionBudget *podDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+	Affinity          *PodAffinity      `json:"affinity,omitempty"`
+	NodeSelector      map[string]string `json:"nodeSelector,omitempty"`
+	PriorityClassName string            `json:"priorityClassName,omitempty"`
+	Annotations       map[string]string `json:"annotations,omitempty"`
+	Labels            map[string]string `json:"labels,omitempty"`
 }
 
 type podDisruptionBudgetSpec struct {
@@ -150,13 +149,13 @@ type PodAffinity struct {
 }
 
 type ReplsetSpec struct {
-	Resources     *ResourcesSpec         `json:"resources,omitempty"`
+	Resources     *common.PodResources   `json:"resources,omitempty"`
 	Name          string                 `json:"name"`
 	Size          int32                  `json:"size"`
 	ClusterRole   clusterRole            `json:"clusterRole,omitempty"`
 	Arbiter       Arbiter                `json:"arbiter,omitempty"`
 	Expose        expose                 `json:"expose,omitempty"`
-	VolumeSpec    *VolumeSpec            `json:"volumeSpec,omitempty"`
+	VolumeSpec    *common.VolumeSpec     `json:"volumeSpec,omitempty"`
 	LivenessProbe *livenessProbeExtended `json:"livenessProbe,omitempty"`
 	MultiAZ
 }
@@ -165,34 +164,16 @@ type livenessProbeExtended struct {
 	StartupDelaySeconds int `json:"startupDelaySeconds,omitempty"`
 }
 
-type VolumeSpec struct {
-
-	// PersistentVolumeClaim represents a reference to a PersistentVolumeClaim.
-	// It has the highest level of precedence, followed by HostPath and
-	// EmptyDir. And represents the PVC specification.
-	PersistentVolumeClaim *PersistentVolumeClaimSpec `json:"persistentVolumeClaim,omitempty"`
-}
-
-type ResourceSpecRequirements struct {
-	CPU    string `json:"cpu,omitempty"`
-	Memory string `json:"memory,omitempty"`
-}
-
-type ResourcesSpec struct {
-	Limits   *ResourceSpecRequirements `json:"limits,omitempty"`
-	Requests *ResourceSpecRequirements `json:"requests,omitempty"`
-}
-
 type SecretsSpec struct {
 	Users       string `json:"users,omitempty"`
 	SSL         string `json:"ssl,omitempty"`
 	SSLInternal string `json:"sslInternal,omitempty"`
 }
 
-type mongosSpec struct {
-	*ResourcesSpec `json:"resources,omitempty"`
-	Port           int32 `json:"port,omitempty"`
-	HostPort       int32 `json:"hostPort,omitempty"`
+type MongosSpec struct {
+	*common.PodResources `json:"resources,omitempty"`
+	Port                 int32 `json:"port,omitempty"`
+	HostPort             int32 `json:"hostPort,omitempty"`
 }
 
 type MongodSpec struct {
@@ -369,7 +350,7 @@ type BackupSpec struct {
 	Image              string                       `json:"image,omitempty"`
 	Tasks              []backupTaskSpec             `json:"tasks,omitempty"`
 	ServiceAccountName string                       `json:"serviceAccountName,omitempty"`
-	Resources          *ResourcesSpec               `json:"resources,omitempty"`
+	Resources          *common.PodResources         `json:"resources,omitempty"`
 }
 
 type Arbiter struct {
@@ -381,49 +362,3 @@ type Arbiter struct {
 type expose struct {
 	Enabled bool `json:"enabled"`
 }
-
-// PersistentVolumeClaimSpec describes the common attributes of storage devices
-// and allows a Source for provider-specific attributes.
-type PersistentVolumeClaimSpec struct {
-	// Resources represents the minimum resources the volume should have.
-	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
-	// +optional
-	Resources ResourceRequirements `json:"resources,omitempty" protobuf:"bytes,2,opt,name=resources"`
-}
-
-// ResourceRequirements describes the compute resource requirements.
-type ResourceRequirements struct {
-	// Limits describes the maximum amount of compute resources allowed.
-	// More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-	// +optional
-	Limits ResourceList `json:"limits,omitempty" protobuf:"bytes,1,rep,name=limits,casttype=ResourceList,castkey=resourceName"`
-	// Requests describes the minimum amount of compute resources required.
-	// If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-	// otherwise to an implementation-defined value.
-	// More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-	// +optional
-	Requests ResourceList `json:"requests,omitempty" protobuf:"bytes,2,rep,name=requests,casttype=ResourceList,castkey=resourceName"`
-}
-
-// resourceName is the name identifying various resources in a resourceList.
-type resourceName string
-
-// Resource names must be not more than 63 characters, consisting of upper- or lower-case alphanumeric characters,
-// with the -, _, and . characters allowed anywhere, except the first or last character.
-// The default convention, matching that for annotations, is to use lower-case names, with dashes, rather than
-// camel case, separating compound words.
-// Fully-qualified resource typenames are constructed from a DNS-style subdomain, followed by a slash `/` and a name.
-const (
-	// CPU, in cores. (500m = .5 cores).
-	ResourceCPU resourceName = "cpu"
-	// Memory, in bytes. (500Gi = 500GiB = 500 * 1024 * 1024 * 1024).
-	ResourceMemory resourceName = "memory"
-	// Volume size, in bytes (e,g. 5Gi = 5GiB = 5 * 1024 * 1024 * 1024).
-	ResourceStorage resourceName = "storage"
-	// Local ephemeral storage, in bytes. (500Gi = 500GiB = 500 * 1024 * 1024 * 1024)
-	// The resource name for ResourceEphemeralStorage is alpha and it can change across releases.
-	ResourceEphemeralStorage resourceName = "ephemeral-storage"
-)
-
-// resourceList is a set of (resource name, quantity) pairs.
-type ResourceList map[resourceName]resource.Quantity
