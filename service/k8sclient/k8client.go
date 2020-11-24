@@ -267,6 +267,8 @@ func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams
 
 	cluster.Spec.PXC.Size = params.Size
 	cluster.Spec.ProxySQL.Size = params.Size
+	cluster.Spec.PXC.Resources = c.setComputeResources(params.PXC.ComputeResources)
+	cluster.Spec.ProxySQL.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
 
 	return c.kubeCtl.Apply(ctx, &cluster)
 }
