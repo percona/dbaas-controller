@@ -47,7 +47,7 @@ func TestK8Client(t *testing.T) {
 
 	l := logger.Get(ctx)
 
-	pmmPublicAddress := "192.168.1.25"
+	pmmPublicAddress := ""
 	t.Run("XtraDB", func(t *testing.T) {
 		name := "test-xtradb"
 		_ = client.DeleteXtraDBCluster(ctx, name)
