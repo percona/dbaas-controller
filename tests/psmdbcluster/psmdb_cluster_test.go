@@ -143,6 +143,15 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	}
 	assert.True(t, clusterFound)
 
+	restartPSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.RestartPSMDBCluster(tests.Context, &controllerv1beta1.RestartPSMDBClusterRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+		Name: name,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, restartPSMDBClusterResponse)
+
 	deletePSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.DeletePSMDBCluster(tests.Context, &controllerv1beta1.DeletePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
@@ -154,6 +163,8 @@ func TestPSMDBClusterAPI(t *testing.T) {
 }
 
 func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.PSMDBClusterState) error {
+	stateCount := 0
+
 	for {
 		clusters, err := tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
@@ -164,14 +175,26 @@ func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name strin
 			return errors.Wrap(err, "cannot get clusters list")
 		}
 
-		if len(clusters.Clusters) > 0 && clusters.Clusters[0].State == state && clusters.Clusters[0].Name == name {
+		var clusterState *controllerv1beta1.PSMDBClusterState
+
+		for _, cluster := range clusters.Clusters {
+			if cluster.Name == name && (clusterState == nil || cluster.State < *clusterState) {
+				clusterState = &cluster.State
+			}
+		}
+
+		if *clusterState == state {
+			stateCount++
+		}
+
+		if stateCount > 3 {
 			return nil
 		}
 
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("timeout waiting for the cluster to be ready")
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(1000 * time.Millisecond):
 			continue
 		}
 	}

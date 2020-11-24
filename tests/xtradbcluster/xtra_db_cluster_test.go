@@ -146,6 +146,15 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, int32(2), clusters.Clusters[0].Params.ClusterSize)
 
+	restartXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.RestartXtraDBCluster(tests.Context, &controllerv1beta1.RestartXtraDBClusterRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+		Name: name,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, restartXtraDBClusterResponse)
+
 	deleteXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.DeleteXtraDBCluster(tests.Context, &controllerv1beta1.DeleteXtraDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
