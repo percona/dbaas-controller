@@ -268,8 +268,14 @@ func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams
 
 	cluster.Spec.PXC.Size = params.Size
 	cluster.Spec.ProxySQL.Size = params.Size
-	cluster.Spec.PXC.Resources = c.setComputeResources(params.PXC.ComputeResources)
-	cluster.Spec.ProxySQL.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
+
+	if params.PXC != nil {
+		cluster.Spec.PXC.Resources = c.updateComputeResources(params.PXC.ComputeResources, cluster.Spec.PXC.Resources)
+	}
+
+	if params.ProxySQL != nil {
+		cluster.Spec.ProxySQL.Resources = c.updateComputeResources(params.ProxySQL.ComputeResources, cluster.Spec.ProxySQL.Resources)
+	}
 
 	return c.kubeCtl.Apply(ctx, &cluster)
 }
@@ -665,6 +671,25 @@ func (c *K8Client) setComputeResources(res *ComputeResources) *common.PodResourc
 		r.Limits.Memory = resource.NewQuantity(res.MemoryBytes, resource.DecimalSI).String()
 	}
 	return r
+}
+
+func (c *K8Client) updateComputeResources(res *ComputeResources, podResources *common.PodResources) *common.PodResources {
+	if res == nil || (res.CPUM <= 0 && res.MemoryBytes <= 0) {
+		return podResources
+	}
+	if podResources == nil || podResources.Limits == nil {
+		podResources = &common.PodResources{
+			Limits: new(common.ResourcesList),
+		}
+	}
+
+	if res.CPUM > 0 {
+		podResources.Limits.CPU = resource.NewMilliQuantity(int64(res.CPUM), resource.DecimalSI).String()
+	}
+	if res.MemoryBytes > 0 {
+		podResources.Limits.Memory = resource.NewQuantity(res.MemoryBytes, resource.DecimalSI).String()
+	}
+	return podResources
 }
 
 func (c *K8Client) getDiskSize(volumeSpec *common.VolumeSpec) int64 {

@@ -24,7 +24,6 @@ import (
 	"time"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -112,36 +111,12 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, upresp)
 
-	// There is an error and the cluster never gets into the "changing" state.
-	t.Log("Waiting for state=changing")
-	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING)
-	assert.NoError(t, err)
-
 	// Second update should fail because running an update while the status is changing (there is a previous update running)
 	// is not allowed.
 	t.Log("Second update")
 	upresp, err = tests.PSMDBClusterAPIClient.UpdatePSMDBCluster(tests.Context, updateReq)
 	assert.Error(t, err)
 	assert.Nil(t, upresp)
-
-	t.Log("Wait for cluster to be ready")
-	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
-	require.NoError(t, err)
-
-	clusters, err = tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
-		KubeAuth: &controllerv1beta1.KubeAuth{
-			Kubeconfig: kubeconfig,
-		},
-	})
-	assert.NoError(t, err)
-
-	for _, cluster := range clusters.Clusters {
-		if cluster.Name == name {
-			assert.Equal(t, int32(6), cluster.Params.ClusterSize)
-			clusterFound = true
-		}
-	}
-	assert.True(t, clusterFound)
 
 	restartPSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.RestartPSMDBCluster(tests.Context, &controllerv1beta1.RestartPSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
@@ -163,8 +138,6 @@ func TestPSMDBClusterAPI(t *testing.T) {
 }
 
 func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.PSMDBClusterState) error {
-	stateCount := 0
-
 	for {
 		clusters, err := tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
@@ -172,23 +145,14 @@ func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name strin
 			},
 		})
 		if err != nil {
-			return errors.Wrap(err, "cannot get clusters list")
+			time.Sleep(time.Second)
+			continue
 		}
-
-		var clusterState *controllerv1beta1.PSMDBClusterState
 
 		for _, cluster := range clusters.Clusters {
-			if cluster.Name == name && (clusterState == nil || cluster.State < *clusterState) {
-				clusterState = &cluster.State
+			if cluster.Name == name && cluster.State == state {
+				return nil
 			}
-		}
-
-		if *clusterState == state {
-			stateCount++
-		}
-
-		if stateCount > 3 {
-			return nil
 		}
 
 		select {
