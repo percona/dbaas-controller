@@ -514,7 +514,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			},
 
 			PMM: pmmSpec{
-				Enabled:    true,
+				Enabled:    params.PMMPublicAddress != "",
 				ServerHost: params.PMMPublicAddress,
 				Image:      pmmClientImage,
 				Resources: &common.PodResources{
