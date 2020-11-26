@@ -18,9 +18,9 @@
 package v1
 
 import (
-	"github.com/percona-platform/dbaas-controller/k8s_api/k8sio"
-	meta "github.com/percona-platform/dbaas-controller/k8s_api/meta/v1"
-	corev1 "k8s.io/api/core/v1"
+	corev1 "github.com/percona-platform/dbaas-controller/k8s_api/api/core/v1"
+	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1" // "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/util/intstr"         // "k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
@@ -114,7 +114,7 @@ type ClusterConditionType string
 type ClusterCondition struct {
 	Status             ConditionStatus      `json:"status,omitempty"`
 	Type               ClusterConditionType `json:"type,omitempty"`
-	LastTransitionTime meta.Time            `json:"lastTransitionTime,omitempty"`
+	LastTransitionTime metav1.Time          `json:"lastTransitionTime,omitempty"`
 	Reason             string               `json:"reason,omitempty"`
 	Message            string               `json:"message,omitempty"`
 }
@@ -131,8 +131,8 @@ type AppStatus struct {
 
 // PerconaXtraDBCluster is the Schema for the perconaxtradbclusters API.
 type PerconaXtraDBCluster struct {
-	meta.TypeMeta   `json:",inline"`
-	meta.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   PerconaXtraDBClusterSpec   `json:"spec,omitempty"`
 	Status PerconaXtraDBClusterStatus `json:"status,omitempty"`
@@ -140,9 +140,9 @@ type PerconaXtraDBCluster struct {
 
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
 type PerconaXtraDBClusterList struct {
-	meta.TypeMeta `json:",inline"`
-	meta.ListMeta `json:"metadata,omitempty"`
-	Items         []PerconaXtraDBCluster `json:"items"`
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []PerconaXtraDBCluster `json:"items"`
 }
 
 // PodSpec hold pod's exported fields representing the pod configuration.
@@ -182,8 +182,8 @@ type PodSpec struct { //nolint:maligned
 
 // PodDisruptionBudgetSpec POD disruption budget specs.
 type PodDisruptionBudgetSpec struct {
-	MinAvailable   *k8sio.IntOrString `json:"minAvailable,omitempty"`
-	MaxUnavailable *k8sio.IntOrString `json:"maxUnavailable,omitempty"`
+	MinAvailable   *intstr.IntOrString `json:"minAvailable,omitempty"`
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 }
 
 // PodAffinity POD's affinity.

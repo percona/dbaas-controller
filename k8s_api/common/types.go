@@ -18,8 +18,8 @@
 package common
 
 import (
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
+	corev1 "github.com/percona-platform/dbaas-controller/k8s_api/api/core/v1"            // "k8s.io/api/core/v1"
+	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/api/resource" // "k8s.io/apimachinery/pkg/api/resource"
 )
 
 // VolumeSpec backup storage volume specs.

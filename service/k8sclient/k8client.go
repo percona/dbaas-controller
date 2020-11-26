@@ -24,11 +24,11 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
-	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 
+	corev1 "github.com/percona-platform/dbaas-controller/k8s_api/api/core/v1"                   // "k8s.io/api/core/v1"
+	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/api/resource"        // "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1" // "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
-	meta "github.com/percona-platform/dbaas-controller/k8s_api/meta/v1"
 	psmdb "github.com/percona-platform/dbaas-controller/k8s_api/psmdb/v1"
 	pxc "github.com/percona-platform/dbaas-controller/k8s_api/pxc/v1"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
@@ -188,11 +188,11 @@ func (c *K8Client) ListXtraDBClusters(ctx context.Context) ([]XtraDBCluster, err
 // CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
 func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
 	res := &pxc.PerconaXtraDBCluster{
-		TypeMeta: meta.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: pxcAPIVersion,
 			Kind:       string(perconaXtraDBClusterKind),
 		},
-		ObjectMeta: meta.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: params.Name,
 		},
 		Spec: pxc.PerconaXtraDBClusterSpec{
@@ -263,11 +263,11 @@ func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams
 // DeleteXtraDBCluster deletes Percona XtraDB cluster with provided name.
 func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, name string) error {
 	res := &pxc.PerconaXtraDBCluster{
-		TypeMeta: meta.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: pxcAPIVersion,
 			Kind:       string(perconaXtraDBClusterKind),
 		},
-		ObjectMeta: meta.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 	}
@@ -297,7 +297,7 @@ func (c *K8Client) RestartXtraDBCluster(ctx context.Context, name string) error 
 
 // getPerconaXtraDBClusters returns Percona XtraDB clusters.
 func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluster, error) {
-	var list meta.List
+	var list metav1.List
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), "", &list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get Percona XtraDB clusters")
@@ -330,7 +330,7 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 
 // getDeletingClusters returns clusters which are not fully deleted yet.
 func (c *K8Client) getDeletingClusters(ctx context.Context, managedBy string, runningClusters map[string]struct{}) ([]Cluster, error) {
-	var list meta.List
+	var list metav1.List
 	err := c.kubeCtl.Get(ctx, "pods", "", &list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
@@ -338,7 +338,7 @@ func (c *K8Client) getDeletingClusters(ctx context.Context, managedBy string, ru
 
 	res := make([]Cluster, 0)
 	for _, item := range list.Items {
-		var pod core.Pod
+		var pod corev1.Pod
 		if err := json.Unmarshal(item.Raw, &pod); err != nil {
 			return nil, err
 		}
@@ -406,11 +406,11 @@ func (c *K8Client) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
 	res := &psmdb.PerconaServerMongoDB{
-		TypeMeta: meta.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: psmdbAPIVersion,
 			Kind:       string(perconaServerMongoDBKind),
 		},
-		ObjectMeta: meta.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: params.Name,
 		},
 		Spec: psmdb.PerconaServerMongoDBSpec{
@@ -507,11 +507,11 @@ func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 // DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
 func (c *K8Client) DeletePSMDBCluster(ctx context.Context, name string) error {
 	res := &psmdb.PerconaServerMongoDB{
-		TypeMeta: meta.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: psmdbAPIVersion,
 			Kind:       string(perconaServerMongoDBKind),
 		},
-		ObjectMeta: meta.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 	}
@@ -528,7 +528,7 @@ func (c *K8Client) RestartPSMDBCluster(ctx context.Context, name string) error {
 
 // getPSMDBClusters returns Percona Server for MongoDB clusters.
 func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error) {
-	var list meta.List
+	var list metav1.List
 	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), "", &list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get percona server MongoDB clusters")
