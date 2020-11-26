@@ -110,12 +110,16 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		Params: &controllerv1beta1.XtraDBClusterParams{
 			ClusterSize: 2,
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
-				ComputeResources: &controllerv1beta1.ComputeResources{},
-				DiskSize:         1024 * 1024 * 1024,
+				ComputeResources: &controllerv1beta1.ComputeResources{
+					MemoryBytes: 1024 * 1024 * 1024 * 2,
+				},
+				DiskSize: 1024 * 1024 * 1024,
 			},
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				ComputeResources: &controllerv1beta1.ComputeResources{},
-				DiskSize:         1024 * 1024 * 1024,
+				ComputeResources: &controllerv1beta1.ComputeResources{
+					MemoryBytes: 1024 * 1024 * 1024 * 2,
+				},
+				DiskSize: 1024 * 1024 * 1024,
 			},
 		},
 	}
@@ -147,6 +151,8 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, int32(2), clusters.Clusters[0].Params.ClusterSize)
+	assert.Equal(t, int64(1024*1024*1024*2), clusters.Clusters[0].Params.Pxc.ComputeResources.MemoryBytes)
+	assert.Equal(t, int64(1024*1024*1024*2), clusters.Clusters[0].Params.Proxysql.ComputeResources.MemoryBytes)
 
 	restartXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.RestartXtraDBCluster(tests.Context, &controllerv1beta1.RestartXtraDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
