@@ -526,7 +526,7 @@ func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 	cluster.Spec.Replsets[0].Size = params.Size
 
 	if params.Replicaset != nil {
-		cluster.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+		cluster.Spec.Replsets[0].Resources = c.updateComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
 	}
 
 	return c.kubeCtl.Apply(ctx, cluster)
