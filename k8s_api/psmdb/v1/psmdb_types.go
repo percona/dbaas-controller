@@ -18,13 +18,15 @@
 package v1
 
 import (
-	"github.com/percona-platform/dbaas-controller/k8s_api/common"
-	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/util/intstr" // "k8s.io/apimachinery/pkg/util/intstr"
 	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1" // "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/util/intstr"         // "k8s.io/apimachinery/pkg/util/intstr"
+	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
+// AffinityOff turn off affinity.
 const AffinityOff = "none"
 
+// PerconaServerMongoDB is the Schema for the perconaservermongodbs API.
 type PerconaServerMongoDB struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -51,10 +53,10 @@ const (
 // PerconaServerMongoDBSpec defines the desired state of PerconaServerMongoDB.
 type PerconaServerMongoDBSpec struct {
 	Pause                   bool           `json:"pause,omitempty"`
+	UnsafeConf              bool           `json:"allowUnsafeConfigurations"`
+	RunUID                  int64          `json:"runUid,omitempty"`
 	Platform                *platform      `json:"platform,omitempty"`
 	Image                   string         `json:"image,omitempty"`
-	RunUID                  int64          `json:"runUid,omitempty"`
-	UnsafeConf              bool           `json:"allowUnsafeConfigurations"`
 	Mongod                  *MongodSpec    `json:"mongod,omitempty"`
 	Replsets                []*ReplsetSpec `json:"replsets,omitempty"`
 	Secrets                 *SecretsSpec   `json:"secrets,omitempty"`
@@ -80,14 +82,20 @@ type replsetStatus struct {
 	Message     string   `json:"message,omitempty"`
 }
 
+// AppState application state.
 type AppState string
 
 const (
+	// AppStateUnknown unknown application state.
 	AppStateUnknown AppState = "unknown"
+	// AppStatePending pending application state.
 	AppStatePending AppState = "pending"
-	AppStateInit    AppState = "initializing"
-	AppStateReady   AppState = "ready"
-	AppStateError   AppState = "error"
+	// AppStateInit initializing application state.
+	AppStateInit AppState = "initializing"
+	// AppStateReady ready application state.
+	AppStateReady AppState = "ready"
+	// AppStateError error application state.
+	AppStateError AppState = "error"
 )
 
 // perconaServerMongoDBStatus defines the observed state of PerconaServerMongoDB.
@@ -124,6 +132,7 @@ type clusterCondition struct {
 	Message string               `json:"message,omitempty"`
 }
 
+// PmmSpec defines pmm specification.
 type PmmSpec struct {
 	Enabled    bool                 `json:"enabled,omitempty"`
 	ServerHost string               `json:"serverHost,omitempty"`
@@ -131,6 +140,7 @@ type PmmSpec struct {
 	Resources  *common.PodResources `json:"resources,omitempty"`
 }
 
+// MultiAZ defines multi availability zones.
 type MultiAZ struct {
 	Affinity          *PodAffinity      `json:"affinity,omitempty"`
 	NodeSelector      map[string]string `json:"nodeSelector,omitempty"`
@@ -144,17 +154,19 @@ type podDisruptionBudgetSpec struct {
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 }
 
+// PodAffinity define pod affinity.
 type PodAffinity struct {
 	TopologyKey *string `json:"antiAffinityTopologyKey,omitempty"`
 }
 
+// ReplsetSpec defines replicaton set specification.
 type ReplsetSpec struct {
+	Expose        expose                 `json:"expose,omitempty"`
+	Size          int32                  `json:"size"`
+	Arbiter       Arbiter                `json:"arbiter,omitempty"`
 	Resources     *common.PodResources   `json:"resources,omitempty"`
 	Name          string                 `json:"name"`
-	Size          int32                  `json:"size"`
 	ClusterRole   clusterRole            `json:"clusterRole,omitempty"`
-	Arbiter       Arbiter                `json:"arbiter,omitempty"`
-	Expose        expose                 `json:"expose,omitempty"`
 	VolumeSpec    *common.VolumeSpec     `json:"volumeSpec,omitempty"`
 	LivenessProbe *livenessProbeExtended `json:"livenessProbe,omitempty"`
 	MultiAZ
@@ -164,18 +176,21 @@ type livenessProbeExtended struct {
 	StartupDelaySeconds int `json:"startupDelaySeconds,omitempty"`
 }
 
+// SecretsSpec defines secrets specification.
 type SecretsSpec struct {
 	Users       string `json:"users,omitempty"`
 	SSL         string `json:"ssl,omitempty"`
 	SSLInternal string `json:"sslInternal,omitempty"`
 }
 
+// MongosSpec defines MongoDB specification.
 type MongosSpec struct {
 	*common.PodResources `json:"resources,omitempty"`
 	Port                 int32 `json:"port,omitempty"`
 	HostPort             int32 `json:"hostPort,omitempty"`
 }
 
+// MongodSpec defines mongod specification.
 type MongodSpec struct {
 	Net                *MongodSpecNet                `json:"net,omitempty"`
 	AuditLog           *MongodSpecAuditLog           `json:"auditLog,omitempty"`
@@ -186,11 +201,13 @@ type MongodSpec struct {
 	Storage            *MongodSpecStorage            `json:"storage,omitempty"`
 }
 
+// MongodSpecNet defines mongod specification of network.
 type MongodSpecNet struct {
 	Port     int32 `json:"port,omitempty"`
 	HostPort int32 `json:"hostPort,omitempty"`
 }
 
+// MongodSpecReplication defines mongod specification of replication.
 type MongodSpecReplication struct {
 	OplogSizeMB int `json:"oplogSizeMB,omitempty"`
 }
@@ -199,11 +216,15 @@ type MongodSpecReplication struct {
 type mongodChiperMode string
 
 const (
+	// MongodChiperModeUnset mongod chiper mode is unset.
 	MongodChiperModeUnset mongodChiperMode = ""
-	MongodChiperModeCBC   mongodChiperMode = "AES256-CBC"
-	MongodChiperModeGCM   mongodChiperMode = "AES256-GCM"
+	// MongodChiperModeCBC mongod chiper mode is AES256-CBC.
+	MongodChiperModeCBC mongodChiperMode = "AES256-CBC"
+	// MongodChiperModeGCM mongod chiper mode is AES256-GCM.
+	MongodChiperModeGCM mongodChiperMode = "AES256-GCM"
 )
 
+// MongodSpecSecurity defines mongod specification of security.
 type MongodSpecSecurity struct {
 	RedactClientLogData  bool             `json:"redactClientLogData,omitempty"`
 	EnableEncryption     *bool            `json:"enableEncryption,omitempty"`
@@ -211,6 +232,7 @@ type MongodSpecSecurity struct {
 	EncryptionCipherMode mongodChiperMode `json:"encryptionCipherMode,omitempty"`
 }
 
+// MongodSpecSetParameter defines mongod specification of parameter set.
 type MongodSpecSetParameter struct {
 	TTLMonitorSleepSecs                   int `json:"ttlMonitorSleepSecs,omitempty"`
 	WiredTigerConcurrentReadTransactions  int `json:"wiredTigerConcurrentReadTransactions,omitempty"`
@@ -220,11 +242,15 @@ type MongodSpecSetParameter struct {
 type storageEngine string
 
 const (
+	// StorageEngineWiredTiger WiredTiger storage engine.
 	StorageEngineWiredTiger storageEngine = "wiredTiger"
-	StorageEngineInMemory   storageEngine = "inMemory"
-	StorageEngineMMAPv1     storageEngine = "mmapv1"
+	// StorageEngineInMemory inMemory storage engine.
+	StorageEngineInMemory storageEngine = "inMemory"
+	// StorageEngineMMAPv1 mmapv1 storage engine.
+	StorageEngineMMAPv1 storageEngine = "mmapv1"
 )
 
+// MongodSpecStorage defines mongod specification of starage.
 type MongodSpecStorage struct {
 	Engine         storageEngine         `json:"engine,omitempty"`
 	DirectoryPerDB bool                  `json:"directoryPerDB,omitempty"`
@@ -234,6 +260,7 @@ type MongodSpecStorage struct {
 	WiredTiger     *MongodSpecWiredTiger `json:"wiredTiger,omitempty"`
 }
 
+// MongodSpecMMAPv1 defines mongod specification of MMAPv1.
 type MongodSpecMMAPv1 struct {
 	NsSize     int  `json:"nsSize,omitempty"`
 	Smallfiles bool `json:"smallfiles,omitempty"`
@@ -242,25 +269,32 @@ type MongodSpecMMAPv1 struct {
 type wiredTigerCompressor string
 
 var (
-	WiredTigerCompressorNone   wiredTigerCompressor = "none"
+	// WiredTigerCompressorNone is none compressor.
+	WiredTigerCompressorNone wiredTigerCompressor = "none"
+	// WiredTigerCompressorSnappy is snappy compressor.
 	WiredTigerCompressorSnappy wiredTigerCompressor = "snappy"
-	WiredTigerCompressorZlib   wiredTigerCompressor = "zlib"
+	// WiredTigerCompressorZlib is zlib compressor.
+	WiredTigerCompressorZlib wiredTigerCompressor = "zlib"
 )
 
+// MongodSpecWiredTigerEngineConfig defines mongod specification of WiredTiger engine configuration.
 type MongodSpecWiredTigerEngineConfig struct {
 	CacheSizeRatio      float64               `json:"cacheSizeRatio,omitempty"`
 	DirectoryForIndexes bool                  `json:"directoryForIndexes,omitempty"`
 	JournalCompressor   *wiredTigerCompressor `json:"journalCompressor,omitempty"`
 }
 
+// MongodSpecWiredTigerCollectionConfig defines mongod specification of WiredTiger collection configuration.
 type MongodSpecWiredTigerCollectionConfig struct {
 	BlockCompressor *wiredTigerCompressor `json:"blockCompressor,omitempty"`
 }
 
+// MongodSpecWiredTigerIndexConfig defines mongod specification of WiredTiger index configuration.
 type MongodSpecWiredTigerIndexConfig struct {
 	PrefixCompression bool `json:"prefixCompression,omitempty"`
 }
 
+// MongodSpecWiredTiger defines mongod specification of WiredTiger.
 type MongodSpecWiredTiger struct {
 	CollectionConfig *MongodSpecWiredTigerCollectionConfig `json:"collectionConfig,omitempty"`
 	EngineConfig     *MongodSpecWiredTigerEngineConfig     `json:"engineConfig,omitempty"`
@@ -286,6 +320,7 @@ const (
 	auditLogFormatJSON auditLogFormat = "JSON"
 )
 
+// MongodSpecAuditLog defines mongod specification of audit log.
 type MongodSpecAuditLog struct {
 	Destination auditLogDestination `json:"destination,omitempty"`
 	Format      auditLogFormat      `json:"format,omitempty"`
@@ -295,10 +330,13 @@ type MongodSpecAuditLog struct {
 type operationProfilingMode string
 
 const (
-	OperationProfilingModeAll    operationProfilingMode = "all"
+	// OperationProfilingModeAll mode all.
+	OperationProfilingModeAll operationProfilingMode = "all"
+	// OperationProfilingModeSlowOp mode slowOP.
 	OperationProfilingModeSlowOp operationProfilingMode = "slowOp"
 )
 
+// MongodSpecOperationProfiling defines mongod specification of operation profiling.
 type MongodSpecOperationProfiling struct {
 	Mode              operationProfilingMode `json:"mode,omitempty"`
 	SlowOpThresholdMs int                    `json:"slowOpThresholdMs,omitempty"`
@@ -344,6 +382,7 @@ type backupStorageSpec struct {
 	S3   backupStorageS3Spec `json:"s3,omitempty"`
 }
 
+// BackupSpec defines back up specification.
 type BackupSpec struct {
 	Enabled            bool                         `json:"enabled"`
 	Storages           map[string]backupStorageSpec `json:"storages,omitempty"`
@@ -353,6 +392,7 @@ type BackupSpec struct {
 	Resources          *common.PodResources         `json:"resources,omitempty"`
 }
 
+// Arbiter defines Arbiter.
 type Arbiter struct {
 	Enabled bool  `json:"enabled"`
 	Size    int32 `json:"size"`
