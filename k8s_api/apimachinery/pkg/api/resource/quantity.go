@@ -18,13 +18,13 @@ package resource
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
 	inf "gopkg.in/inf.v0"
 )
 

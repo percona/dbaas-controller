@@ -19,7 +19,8 @@ package runtime
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
+
+	"github.com/pkg/errors"
 )
 
 func (re *RawExtension) UnmarshalJSON(in []byte) error {
