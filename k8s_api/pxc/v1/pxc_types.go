@@ -21,7 +21,6 @@ import (
 	corev1 "github.com/percona-platform/dbaas-controller/k8s_api/api/core/v1"
 	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1" // "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/util/intstr"         // "k8s.io/apimachinery/pkg/util/intstr"
-
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
