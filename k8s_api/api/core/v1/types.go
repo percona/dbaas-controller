@@ -1130,7 +1130,7 @@ type SecretVolumeSource struct {
 }
 
 const (
-	SecretVolumeSourceDefaultMode int32 = 0644
+	SecretVolumeSourceDefaultMode int32 = 0o644
 )
 
 // Adapts a secret into a projected volume.
@@ -1347,8 +1347,10 @@ type PhotonPersistentDiskVolumeSource struct {
 	FSType string `json:"fsType,omitempty" protobuf:"bytes,2,opt,name=fsType"`
 }
 
-type AzureDataDiskCachingMode string
-type AzureDataDiskKind string
+type (
+	AzureDataDiskCachingMode string
+	AzureDataDiskKind        string
+)
 
 const (
 	AzureDataDiskCachingNone      AzureDataDiskCachingMode = "None"
@@ -1558,7 +1560,7 @@ type ConfigMapVolumeSource struct {
 }
 
 const (
-	ConfigMapVolumeSourceDefaultMode int32 = 0644
+	ConfigMapVolumeSourceDefaultMode int32 = 0o644
 )
 
 // Adapts a ConfigMap into a projected volume.
@@ -1642,7 +1644,7 @@ type VolumeProjection struct {
 }
 
 const (
-	ProjectedVolumeSourceDefaultMode int32 = 0644
+	ProjectedVolumeSourceDefaultMode int32 = 0o644
 )
 
 // Maps a string key to a path within a volume.
@@ -2605,7 +2607,7 @@ const (
 // over a set of nodes; that is, it represents the OR of the selectors represented
 // by the node selector terms.
 type NodeSelector struct {
-	//Required. A list of node selector terms. The terms are ORed.
+	// Required. A list of node selector terms. The terms are ORed.
 	NodeSelectorTerms []NodeSelectorTerm `json:"nodeSelectorTerms" protobuf:"bytes,1,rep,name=nodeSelectorTerms"`
 }
 
@@ -5999,7 +6001,7 @@ type DownwardAPIVolumeSource struct {
 }
 
 const (
-	DownwardAPIVolumeSourceDefaultMode int32 = 0644
+	DownwardAPIVolumeSourceDefaultMode int32 = 0o644
 )
 
 // DownwardAPIVolumeFile represents information to create the file containing the pod field

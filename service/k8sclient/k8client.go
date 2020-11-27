@@ -391,12 +391,12 @@ func (c *K8Client) getDeletingXtraDBClusters(ctx context.Context, clusters []Xtr
 func (c *K8Client) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error) {
 	clusters, err := c.getPSMDBClusters(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "cannot get PSMDB clusters")
 	}
 
 	deletingClusters, err := c.getDeletingPSMDBClusters(ctx, clusters)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "cannot get deleting PSMDB clusters")
 	}
 	res := append(clusters, deletingClusters...)
 
@@ -538,7 +538,7 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 	for i, item := range list.Items {
 		var cluster psmdb.PerconaServerMongoDB
 		if err := json.Unmarshal(item.Raw, &cluster); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "cannot unmarshal PSMDB cluster")
 		}
 		val := PSMDBCluster{
 			Name:  cluster.Name,
