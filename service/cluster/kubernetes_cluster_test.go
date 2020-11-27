@@ -20,12 +20,12 @@ import (
 	"context"
 	"testing"
 
+	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 
-	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/percona-platform/dbaas-controller/utils/testutil"
 )
 

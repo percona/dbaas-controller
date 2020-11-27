@@ -14,12 +14,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package v1 contains specification to works with Percona Server MongoDB Operator
 // nolint:unused,deadcode,varcheck,gochecknoglobals
 package v1
 
 import (
-	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1" // "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/util/intstr"         // "k8s.io/apimachinery/pkg/util/intstr"
+
+	// "k8s.io/apimachinery/pkg/apis/meta/v1".
+	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
+
+	// "k8s.io/apimachinery/pkg/util/intstr".
+	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/util/intstr"
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
