@@ -113,7 +113,7 @@ func (intstr IntOrString) MarshalJSON() ([]byte, error) {
 	case String:
 		return json.Marshal(intstr.StrVal)
 	default:
-		return []byte{}, fmt.Errorf("impossible IntOrString.Type")
+		return make([]byte, 0), fmt.Errorf("impossible IntOrString.Type")
 	}
 }
 

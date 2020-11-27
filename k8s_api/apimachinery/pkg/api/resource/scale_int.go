@@ -30,7 +30,7 @@ var (
 
 func init() {
 	intPool.New = func() interface{} {
-		return &big.Int{}
+		return new(big.Int)
 	}
 }
 

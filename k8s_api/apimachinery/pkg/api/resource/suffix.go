@@ -45,13 +45,13 @@ type listSuffixer struct {
 
 func (ls *listSuffixer) addSuffix(s suffix, pair bePair) {
 	if ls.suffixToBE == nil {
-		ls.suffixToBE = map[suffix]bePair{}
+		ls.suffixToBE = make(map[suffix]bePair)
 	}
 	if ls.beToSuffix == nil {
-		ls.beToSuffix = map[bePair]suffix{}
+		ls.beToSuffix = make(map[bePair]suffix)
 	}
 	if ls.beToSuffixBytes == nil {
-		ls.beToSuffixBytes = map[bePair][]byte{}
+		ls.beToSuffixBytes = make(map[bePair][]byte)
 	}
 	ls.suffixToBE[s] = pair
 	ls.beToSuffix[pair] = s
@@ -106,7 +106,7 @@ func (l fastLookup) interpret(s suffix) (base, exponent int32, format Format, ok
 }
 
 func newSuffixer() suffixer {
-	sh := &suffixHandler{}
+	sh := new(suffixHandler)
 
 	// IMPORTANT: if you change this section you must change fastLookup
 

@@ -381,7 +381,7 @@ func ParseQuantity(str string) (Quantity, error) {
 // receiver is a value, so we can mutate it in-place and return it.
 func (q Quantity) DeepCopy() Quantity {
 	if q.d.Dec != nil {
-		tmp := &inf.Dec{}
+		tmp := new(inf.Dec)
 		q.d.Dec = tmp.Set(q.d.Dec)
 	}
 	return q

@@ -263,7 +263,7 @@ type infDecAmount struct {
 // AsScale adjusts this amount to set a minimum scale, rounding up, and returns true iff no precision
 // was lost. (1.1e5).AsScale(5) would return 1.1e5, but (1.1e5).AsScale(6) would return 1e6.
 func (a infDecAmount) AsScale(scale Scale) (infDecAmount, bool) {
-	tmp := &inf.Dec{}
+	tmp := new(inf.Dec)
 	tmp.Round(a.Dec, scale.infScale(), inf.RoundUp)
 	return infDecAmount{tmp}, tmp.Cmp(a.Dec) == 0
 }
@@ -292,7 +292,7 @@ func (a infDecAmount) AsCanonicalBytes(out []byte) (result []byte, exponent int3
 // either that buffer or a larger buffer and the current exponent of the value. 2048 is 2 * 1024 ^ 1 and would
 // return []byte("2048"), 1.
 func (a infDecAmount) AsCanonicalBase1024Bytes(out []byte) (result []byte, exponent int32) {
-	tmp := &inf.Dec{}
+	tmp := new(inf.Dec)
 	tmp.Round(a.Dec, 0, inf.RoundUp)
 	amount, exponent := removeBigIntFactors(tmp.UnscaledBig(), big1024)
 	return append(out, amount.String()...), exponent
