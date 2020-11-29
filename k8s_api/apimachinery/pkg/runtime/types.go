@@ -29,15 +29,9 @@ package runtime
 //
 // TypeMeta is provided here for convenience. You may use it directly from this package or define
 // your own with the same fields.
-//
-// +k8s:deepcopy-gen=false
-// +protobuf=true
-// +k8s:openapi-gen=true
 type TypeMeta struct {
-	// +optional
-	APIVersion string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty" protobuf:"bytes,1,opt,name=apiVersion"`
-	// +optional
-	Kind string `json:"kind,omitempty" yaml:"kind,omitempty" protobuf:"bytes,2,opt,name=kind"`
+	APIVersion string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
+	Kind       string `json:"kind,omitempty" yaml:"kind,omitempty"`
 }
 
 const (
@@ -87,15 +81,11 @@ const (
 // JSON stored in RawExtension, turning it into the correct object type, and storing it
 // in the Object. (TODO: In the case where the object is of an unknown type, a
 // runtime.Unknown object will be created and stored.)
-//
-// +k8s:deepcopy-gen=true
-// +protobuf=true
-// +k8s:openapi-gen=true
 type RawExtension struct {
 	// Raw is the underlying serialization of this object.
 	//
 	// TODO: Determine how to detect ContentType and ContentEncoding of 'Raw' data.
-	Raw []byte `json:"-" protobuf:"bytes,1,opt,name=raw"`
+	Raw []byte `json:"-"`
 	// Object can hold a representation of this extension - useful for working with versioned
 	// structs.
 	Object Object `json:"-"`
@@ -106,21 +96,16 @@ type RawExtension struct {
 // TypeMeta features-- kind, version, etc.
 // TODO: Make this object have easy access to field based accessors and settors for
 // metadata and field mutatation.
-//
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +protobuf=true
-// +k8s:openapi-gen=true
 type Unknown struct {
-	TypeMeta `json:",inline" protobuf:"bytes,1,opt,name=typeMeta"`
+	TypeMeta `json:",inline"`
 	// Raw will hold the complete serialized object which couldn't be matched
 	// with a registered type. Most likely, nothing should be done with this
 	// except for passing it through the system.
-	Raw []byte `protobuf:"bytes,2,opt,name=raw"`
+	Raw []byte
 	// ContentEncoding is encoding used to encode 'Raw' data.
 	// Unspecified means no encoding.
-	ContentEncoding string `protobuf:"bytes,3,opt,name=contentEncoding"`
+	ContentEncoding string
 	// ContentType  is serialization method used to serialize 'Raw'.
 	// Unspecified means ContentTypeJSON.
-	ContentType string `protobuf:"bytes,4,opt,name=contentType"`
+	ContentType string
 }

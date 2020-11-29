@@ -24,12 +24,8 @@ import (
 const RFC3339Micro = "2006-01-02T15:04:05.000000Z07:00"
 
 // MicroTime is version of Time with microsecond level precision.
-//
-// +protobuf.options.marshal=false
-// +protobuf.as=Timestamp
-// +protobuf.options.(gogoproto.goproto_stringer)=false
 type MicroTime struct {
-	time.Time `protobuf:"-"`
+	time.Time
 }
 
 // DeepCopy returns a deep-copy of the MicroTime value.  The underlying time.Time

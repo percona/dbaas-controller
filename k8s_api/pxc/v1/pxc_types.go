@@ -257,9 +257,7 @@ type ObjectReference struct {
 	// Name of the resource being referred to.
 	Name string `json:"name"`
 	// Kind of the resource being referred to.
-	// +optional
 	Kind string `json:"kind,omitempty"`
 	// Group of the resource being referred to.
-	// +optional
 	Group string `json:"group,omitempty"`
 }

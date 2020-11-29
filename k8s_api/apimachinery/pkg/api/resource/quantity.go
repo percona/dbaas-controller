@@ -79,13 +79,6 @@ import (
 // This format is intended to make it difficult to use these numbers without
 // writing some sort of special handling code in the hopes that that will
 // cause implementors to also use a fixed point implementation.
-//
-// +protobuf=true
-// +protobuf.embed=string
-// +protobuf.options.marshal=false
-// +protobuf.options.(gogoproto.goproto_stringer)=false
-// +k8s:deepcopy-gen=true
-// +k8s:openapi-gen=true
 type Quantity struct {
 	// i is the quantity in int64 scaled form, if d.Dec == nil
 	i int64Amount
