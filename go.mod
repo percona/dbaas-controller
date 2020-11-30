@@ -32,7 +32,7 @@ require (
 	golang.org/x/mod v0.3.0 // indirect
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sys v0.0.0-20201015000850-e3ed0017c211
-	golang.org/x/text v0.3.3
+	golang.org/x/text v0.3.4
 	golang.org/x/tools v0.0.0-20200616133436-c1934b75d054 // indirect
 	google.golang.org/grpc v1.33.2
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
