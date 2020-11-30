@@ -33,8 +33,3 @@ linters:
 
 issues:
   exclude-use-default: false
-
-run:
-  skip-dirs:
-    - k8s_api/apimachinery
-    - k8s_api/api

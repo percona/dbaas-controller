@@ -17,8 +17,6 @@
 package v1
 
 import (
-
-	// "k8s.io/apimachinery/pkg/apis/meta/v1".
 	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -47,12 +45,10 @@ type PXCBackupSpec struct {
 
 // PXCBackupStatus PXC backup status.
 type PXCBackupStatus struct {
-	State         PXCBackupState       `json:"state,omitempty"`
-	CompletedAt   *metav1.Time         `json:"completed,omitempty"`
-	LastScheduled *metav1.Time         `json:"lastscheduled,omitempty"`
-	Destination   string               `json:"destination,omitempty"`
-	StorageName   string               `json:"storageName,omitempty"`
-	S3            *BackupStorageS3Spec `json:"s3,omitempty"`
+	State       PXCBackupState       `json:"state,omitempty"`
+	Destination string               `json:"destination,omitempty"`
+	StorageName string               `json:"storageName,omitempty"`
+	S3          *BackupStorageS3Spec `json:"s3,omitempty"`
 }
 
 // PXCBackupState PXC backup state string.

@@ -17,8 +17,6 @@
 package v1
 
 import (
-
-	// "k8s.io/apimachinery/pkg/apis/meta/v1".
 	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,10 +29,8 @@ type PerconaXtraDBClusterRestoreSpec struct {
 
 // PerconaXtraDBClusterRestoreStatus defines the observed state of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreStatus struct {
-	State         BcpRestoreStates `json:"state,omitempty"`
-	Comments      string           `json:"comments,omitempty"`
-	CompletedAt   *metav1.Time     `json:"completed,omitempty"`
-	LastScheduled *metav1.Time     `json:"lastscheduled,omitempty"`
+	State    BcpRestoreStates `json:"state,omitempty"`
+	Comments string           `json:"comments,omitempty"`
 }
 
 // PerconaXtraDBClusterRestore is the Schema for the perconaxtradbclusterrestores API.

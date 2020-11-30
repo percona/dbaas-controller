@@ -18,11 +18,7 @@
 package common
 
 import (
-
-	// "k8s.io/api/core/v1".
 	corev1 "github.com/percona-platform/dbaas-controller/k8s_api/api/core/v1"
-
-	// "k8s.io/apimachinery/pkg/api/resource".
 	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/api/resource"
 )
 
@@ -35,7 +31,7 @@ type VolumeSpec struct {
 	// HostPath to use as data volume for mysql. HostPath represents a
 	// pre-existing file or directory on the host machine that is directly
 	// exposed to the container.
-	HostPath *corev1.HostPathVolumeSource `json:"hostPath,omitempty"`
+	// HostPath *corev1.HostPathVolumeSource `json:"hostPath,omitempty"`
 
 	// PersistentVolumeClaim to specify PVC spec for the volume for mysql data.
 	// It has the highest level of precedence, followed by HostPath and
@@ -98,3 +94,15 @@ type PodResources struct {
 	Requests *ResourcesList `json:"requests,omitempty"`
 	Limits   *ResourcesList `json:"limits,omitempty"`
 }
+
+// PullPolicy describes a policy for if/when to pull a container image.
+type PullPolicy string
+
+const (
+	// PullAlways means that kubelet always attempts to pull the latest image. Container will fail If the pull fails.
+	PullAlways PullPolicy = "Always"
+	// PullNever means that kubelet never pulls an image, but only uses a local image. Container will fail if the image isn't present.
+	PullNever PullPolicy = "Never"
+	// PullIfNotPresent means that kubelet pulls if the image isn't present on disk. Container will fail if the image isn't present and the pull fails.
+	PullIfNotPresent PullPolicy = "IfNotPresent"
+)

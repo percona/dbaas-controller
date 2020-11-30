@@ -104,7 +104,7 @@ func main() {
 		}
 		if info.IsDir() {
 			switch path {
-			case ".git", "k8s_api/api", "k8s_api/apimachinery":
+			case ".git":
 				return filepath.SkipDir
 			default:
 				return nil

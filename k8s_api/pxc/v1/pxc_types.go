@@ -18,13 +18,7 @@
 package v1
 
 import (
-	corev1 "github.com/percona-platform/dbaas-controller/k8s_api/api/core/v1"
-
-	// "k8s.io/apimachinery/pkg/apis/meta/v1".
 	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
-
-	// "k8s.io/apimachinery/pkg/util/intstr".
-	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/util/intstr"
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
@@ -64,7 +58,6 @@ type UpgradeOptions struct {
 // PXCScheduledBackup holds the config for cluster scheduled backups.
 type PXCScheduledBackup struct {
 	Image              string                        `json:"image,omitempty"`
-	ImagePullSecrets   []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	Schedule           []PXCScheduledBackupSchedule  `json:"schedule,omitempty"`
 	Storages           map[string]*BackupStorageSpec `json:"storages,omitempty"`
 	ServiceAccountName string                        `json:"serviceAccountName,omitempty"`
@@ -115,11 +108,10 @@ type ClusterConditionType string
 
 // ClusterCondition holds exported fields with the cluster condition.
 type ClusterCondition struct {
-	Status             ConditionStatus      `json:"status,omitempty"`
-	Type               ClusterConditionType `json:"type,omitempty"`
-	LastTransitionTime metav1.Time          `json:"lastTransitionTime,omitempty"`
-	Reason             string               `json:"reason,omitempty"`
-	Message            string               `json:"message,omitempty"`
+	Status  ConditionStatus      `json:"status,omitempty"`
+	Type    ClusterConditionType `json:"type,omitempty"`
+	Reason  string               `json:"reason,omitempty"`
+	Message string               `json:"message,omitempty"`
 }
 
 // AppStatus holds exported fields representing the application status information.
@@ -150,77 +142,65 @@ type PerconaXtraDBClusterList struct {
 
 // PodSpec hold pod's exported fields representing the pod configuration.
 type PodSpec struct { //nolint:maligned
-	Enabled                       bool                                    `json:"enabled,omitempty"`
-	Size                          int32                                   `json:"size,omitempty"`
-	Image                         string                                  `json:"image,omitempty"`
-	Resources                     *common.PodResources                    `json:"resources,omitempty"`
-	SidecarResources              *common.PodResources                    `json:"sidecarResources,omitempty"`
-	VolumeSpec                    *common.VolumeSpec                      `json:"volumeSpec,omitempty"`
-	Affinity                      *PodAffinity                            `json:"affinity,omitempty"`
-	NodeSelector                  map[string]string                       `json:"nodeSelector,omitempty"`
-	Tolerations                   []corev1.Toleration                     `json:"tolerations,omitempty"`
-	PriorityClassName             string                                  `json:"priorityClassName,omitempty"`
-	Annotations                   map[string]string                       `json:"annotations,omitempty"`
-	Labels                        map[string]string                       `json:"labels,omitempty"`
-	ImagePullSecrets              []corev1.LocalObjectReference           `json:"imagePullSecrets,omitempty"`
-	Configuration                 string                                  `json:"configuration,omitempty"`
-	PodDisruptionBudget           *PodDisruptionBudgetSpec                `json:"podDisruptionBudget,omitempty"`
-	VaultSecretName               string                                  `json:"vaultSecretName,omitempty"`
-	SSLSecretName                 string                                  `json:"sslSecretName,omitempty"`
-	SSLInternalSecretName         string                                  `json:"sslInternalSecretName,omitempty"`
-	TerminationGracePeriodSeconds *int64                                  `json:"gracePeriod,omitempty"`
-	ForceUnsafeBootstrap          bool                                    `json:"forceUnsafeBootstrap,omitempty"`
-	ServiceType                   corev1.ServiceType                      `json:"serviceType,omitempty"`
-	ExternalTrafficPolicy         corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty"`
-	LoadBalancerSourceRanges      []string                                `json:"loadBalancerSourceRanges,omitempty"`
-	ServiceAnnotations            map[string]string                       `json:"serviceAnnotations,omitempty"`
-	SchedulerName                 string                                  `json:"schedulerName,omitempty"`
-	ReadinessInitialDelaySeconds  *int32                                  `json:"readinessDelaySec,omitempty"`
-	LivenessInitialDelaySeconds   *int32                                  `json:"livenessDelaySec,omitempty"`
-	PodSecurityContext            *corev1.PodSecurityContext              `json:"podSecurityContext,omitempty"`
-	ContainerSecurityContext      *corev1.SecurityContext                 `json:"containerSecurityContext,omitempty"`
-	ServiceAccountName            string                                  `json:"serviceAccountName,omitempty"`
-	ImagePullPolicy               corev1.PullPolicy                       `json:"imagePullPolicy,omitempty"`
+	Enabled           bool                 `json:"enabled,omitempty"`
+	Size              int32                `json:"size,omitempty"`
+	Image             string               `json:"image,omitempty"`
+	Resources         *common.PodResources `json:"resources,omitempty"`
+	SidecarResources  *common.PodResources `json:"sidecarResources,omitempty"`
+	VolumeSpec        *common.VolumeSpec   `json:"volumeSpec,omitempty"`
+	Affinity          *PodAffinity         `json:"affinity,omitempty"`
+	NodeSelector      map[string]string    `json:"nodeSelector,omitempty"`
+	PriorityClassName string               `json:"priorityClassName,omitempty"`
+	Annotations       map[string]string    `json:"annotations,omitempty"`
+	Labels            map[string]string    `json:"labels,omitempty"`
+	Configuration     string               `json:"configuration,omitempty"`
+	// PodDisruptionBudget           *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+	VaultSecretName               string            `json:"vaultSecretName,omitempty"`
+	SSLSecretName                 string            `json:"sslSecretName,omitempty"`
+	SSLInternalSecretName         string            `json:"sslInternalSecretName,omitempty"`
+	TerminationGracePeriodSeconds *int64            `json:"gracePeriod,omitempty"`
+	ForceUnsafeBootstrap          bool              `json:"forceUnsafeBootstrap,omitempty"`
+	LoadBalancerSourceRanges      []string          `json:"loadBalancerSourceRanges,omitempty"`
+	ServiceAnnotations            map[string]string `json:"serviceAnnotations,omitempty"`
+	SchedulerName                 string            `json:"schedulerName,omitempty"`
+	ReadinessInitialDelaySeconds  *int32            `json:"readinessDelaySec,omitempty"`
+	LivenessInitialDelaySeconds   *int32            `json:"livenessDelaySec,omitempty"`
+	ServiceAccountName            string            `json:"serviceAccountName,omitempty"`
+	ImagePullPolicy               common.PullPolicy `json:"imagePullPolicy,omitempty"`
 }
 
 // PodDisruptionBudgetSpec POD disruption budget specs.
 type PodDisruptionBudgetSpec struct {
-	MinAvailable   *intstr.IntOrString `json:"minAvailable,omitempty"`
-	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+	MinAvailable   string `json:"minAvailable,omitempty"`
+	MaxUnavailable string `json:"maxUnavailable,omitempty"`
 }
 
 // PodAffinity POD's affinity.
 type PodAffinity struct {
-	TopologyKey *string          `json:"antiAffinityTopologyKey,omitempty"`
-	Advanced    *corev1.Affinity `json:"advanced,omitempty"`
+	TopologyKey *string `json:"antiAffinityTopologyKey,omitempty"`
 }
 
 // PMMSpec hold exported fields representing PMM specs.
 type PMMSpec struct {
-	Enabled                  bool                    `json:"enabled,omitempty"`
-	ServerHost               string                  `json:"serverHost,omitempty"`
-	Image                    string                  `json:"image,omitempty"`
-	ServerUser               string                  `json:"serverUser,omitempty"`
-	Resources                *common.PodResources    `json:"resources,omitempty"`
-	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
-	ImagePullPolicy          corev1.PullPolicy       `json:"imagePullPolicy,omitempty"`
+	Enabled         bool                 `json:"enabled,omitempty"`
+	ServerHost      string               `json:"serverHost,omitempty"`
+	Image           string               `json:"image,omitempty"`
+	ServerUser      string               `json:"serverUser,omitempty"`
+	Resources       *common.PodResources `json:"resources,omitempty"`
+	ImagePullPolicy common.PullPolicy    `json:"imagePullPolicy,omitempty"`
 }
 
 // BackupStorageSpec holds backup's storage specs.
 type BackupStorageSpec struct {
-	Type                     BackupStorageType          `json:"type"`
-	S3                       BackupStorageS3Spec        `json:"s3,omitempty"`
-	Volume                   *common.VolumeSpec         `json:"volume,omitempty"`
-	NodeSelector             map[string]string          `json:"nodeSelector,omitempty"`
-	Resources                *common.PodResources       `json:"resources,omitempty"`
-	Affinity                 *corev1.Affinity           `json:"affinity,omitempty"`
-	Tolerations              []corev1.Toleration        `json:"tolerations,omitempty"`
-	Annotations              map[string]string          `json:"annotations,omitempty"`
-	Labels                   map[string]string          `json:"labels,omitempty"`
-	SchedulerName            string                     `json:"schedulerName,omitempty"`
-	PriorityClassName        string                     `json:"priorityClassName,omitempty"`
-	PodSecurityContext       *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
-	ContainerSecurityContext *corev1.SecurityContext    `json:"containerSecurityContext,omitempty"`
+	Type              BackupStorageType    `json:"type"`
+	S3                BackupStorageS3Spec  `json:"s3,omitempty"`
+	Volume            *common.VolumeSpec   `json:"volume,omitempty"`
+	NodeSelector      map[string]string    `json:"nodeSelector,omitempty"`
+	Resources         *common.PodResources `json:"resources,omitempty"`
+	Annotations       map[string]string    `json:"annotations,omitempty"`
+	Labels            map[string]string    `json:"labels,omitempty"`
+	SchedulerName     string               `json:"schedulerName,omitempty"`
+	PriorityClassName string               `json:"priorityClassName,omitempty"`
 }
 
 // BackupStorageType backup storage type.
@@ -240,12 +220,6 @@ type BackupStorageS3Spec struct {
 	CredentialsSecret string `json:"credentialsSecret"`
 	Region            string `json:"region,omitempty"`
 	EndpointURL       string `json:"endpointUrl,omitempty"`
-}
-
-// Volume represents a backup volume.
-type Volume struct { //nolint:unused
-	PVCs    []corev1.PersistentVolumeClaim
-	Volumes []corev1.Volume
 }
 
 // AffinityTopologyKeyOff Affinity Topology Key Off.

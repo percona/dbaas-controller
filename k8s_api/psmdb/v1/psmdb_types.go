@@ -19,12 +19,7 @@
 package v1
 
 import (
-
-	// "k8s.io/apimachinery/pkg/apis/meta/v1".
 	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
-
-	// "k8s.io/apimachinery/pkg/util/intstr".
-	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/util/intstr"
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
@@ -155,8 +150,8 @@ type MultiAZ struct {
 }
 
 type podDisruptionBudgetSpec struct {
-	MinAvailable   *intstr.IntOrString `json:"minAvailable,omitempty"`
-	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+	MinAvailable   *string `json:"minAvailable,omitempty"`
+	MaxUnavailable *string `json:"maxUnavailable,omitempty"`
 }
 
 // PodAffinity define pod affinity.

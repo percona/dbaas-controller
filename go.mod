@@ -15,8 +15,6 @@ go 1.14
 require (
 	github.com/AlekSi/pointer v1.1.0
 	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/google/gofuzz v1.1.0
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
@@ -38,13 +36,4 @@ require (
 	google.golang.org/grpc v1.33.2
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/inf.v0 v0.9.1
-)
-
-// Use the same versions as operators:
-// * https://github.com/percona/percona-xtradb-cluster-operator/blob/master/go.mod
-// * https://github.com/percona/percona-server-mongodb-operator/blob/master/go.mod
-replace (
-	k8s.io/api => k8s.io/api v0.17.4
-	k8s.io/apimachinery => k8s.io/apimachinery v0.17.4
-	k8s.io/client-go => k8s.io/client-go v0.17.4
 )

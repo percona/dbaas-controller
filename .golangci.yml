@@ -48,8 +48,3 @@ issues:
         - funlen       # tests may be long
         - testpackage  # senseless
         - unused       # very annoying false positive: https://github.com/golangci/golangci-lint/issues/791
-
-run:
-  skip-dirs:
-    - k8s_api/apimachinery
-    - k8s_api/api
