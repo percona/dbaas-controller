@@ -36,7 +36,7 @@ require (
 	golang.org/x/tools v0.0.0-20200616133436-c1934b75d054 // indirect
 	google.golang.org/grpc v1.33.2
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	k8s.io/api v0.19.0
+	k8s.io/api v0.19.4
 	k8s.io/apimachinery v0.19.0
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
