@@ -86,6 +86,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 				MemoryBytes: cluster.ProxySQL.ComputeResources.MemoryBytes,
 			}
 		}
+
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{
 			Name:      cluster.Name,
 			State:     pxcStatesMap[cluster.State],
@@ -137,7 +138,41 @@ func computeResources(pxcRes *controllerv1beta1.ComputeResources) *k8sclient.Com
 
 // UpdateXtraDBCluster updates existing XtraDB cluster.
 func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *controllerv1beta1.UpdateXtraDBClusterRequest) (*controllerv1beta1.UpdateXtraDBClusterResponse, error) {
-	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("This method is not implemented yet."))
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	params := &k8sclient.XtraDBParams{
+		Name: req.Name,
+		Size: req.Params.ClusterSize,
+	}
+
+	if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
+		params.PXC = &k8sclient.PXC{
+			ComputeResources: &k8sclient.ComputeResources{
+				CPUM:        req.Params.Pxc.ComputeResources.CpuM,
+				MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
+			},
+		}
+	}
+
+	if req.Params.Proxysql.ComputeResources.CpuM > 0 || req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
+		params.ProxySQL = &k8sclient.ProxySQL{
+			ComputeResources: &k8sclient.ComputeResources{
+				CPUM:        req.Params.Proxysql.ComputeResources.CpuM,
+				MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
+			},
+		}
+	}
+
+	err = client.UpdateXtraDBCluster(ctx, params)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return new(controllerv1beta1.UpdateXtraDBClusterResponse), nil
 }
 
 // DeleteXtraDBCluster deletes XtraDB cluster.
