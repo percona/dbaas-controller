@@ -19,7 +19,6 @@ package common
 
 import (
 	corev1 "github.com/percona-platform/dbaas-controller/k8s_api/api/core/v1"
-	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/api/resource"
 )
 
 // VolumeSpec backup storage volume specs.
@@ -80,7 +79,7 @@ const (
 )
 
 // ResourceList is a set of (resource name, quantity) pairs.
-type ResourceList map[ResourceName]resource.Quantity
+type ResourceList map[ResourceName]string
 
 // ResourcesList POD's resources list.
 type ResourcesList struct {

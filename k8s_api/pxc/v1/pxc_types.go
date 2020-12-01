@@ -135,38 +135,37 @@ type PerconaXtraDBCluster struct {
 
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
 type PerconaXtraDBClusterList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PerconaXtraDBCluster `json:"items"`
 }
 
 // PodSpec hold pod's exported fields representing the pod configuration.
 type PodSpec struct { //nolint:maligned
-	Enabled           bool                 `json:"enabled,omitempty"`
-	Size              int32                `json:"size,omitempty"`
-	Image             string               `json:"image,omitempty"`
-	Resources         *common.PodResources `json:"resources,omitempty"`
-	SidecarResources  *common.PodResources `json:"sidecarResources,omitempty"`
-	VolumeSpec        *common.VolumeSpec   `json:"volumeSpec,omitempty"`
-	Affinity          *PodAffinity         `json:"affinity,omitempty"`
-	NodeSelector      map[string]string    `json:"nodeSelector,omitempty"`
-	PriorityClassName string               `json:"priorityClassName,omitempty"`
-	Annotations       map[string]string    `json:"annotations,omitempty"`
-	Labels            map[string]string    `json:"labels,omitempty"`
-	Configuration     string               `json:"configuration,omitempty"`
-	// PodDisruptionBudget           *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
-	VaultSecretName               string            `json:"vaultSecretName,omitempty"`
-	SSLSecretName                 string            `json:"sslSecretName,omitempty"`
-	SSLInternalSecretName         string            `json:"sslInternalSecretName,omitempty"`
-	TerminationGracePeriodSeconds *int64            `json:"gracePeriod,omitempty"`
-	ForceUnsafeBootstrap          bool              `json:"forceUnsafeBootstrap,omitempty"`
-	LoadBalancerSourceRanges      []string          `json:"loadBalancerSourceRanges,omitempty"`
-	ServiceAnnotations            map[string]string `json:"serviceAnnotations,omitempty"`
-	SchedulerName                 string            `json:"schedulerName,omitempty"`
-	ReadinessInitialDelaySeconds  *int32            `json:"readinessDelaySec,omitempty"`
-	LivenessInitialDelaySeconds   *int32            `json:"livenessDelaySec,omitempty"`
-	ServiceAccountName            string            `json:"serviceAccountName,omitempty"`
-	ImagePullPolicy               common.PullPolicy `json:"imagePullPolicy,omitempty"`
+	Enabled                       bool                 `json:"enabled,omitempty"`
+	Size                          int32                `json:"size,omitempty"`
+	Image                         string               `json:"image,omitempty"`
+	Resources                     *common.PodResources `json:"resources,omitempty"`
+	SidecarResources              *common.PodResources `json:"sidecarResources,omitempty"`
+	VolumeSpec                    *common.VolumeSpec   `json:"volumeSpec,omitempty"`
+	Affinity                      *PodAffinity         `json:"affinity,omitempty"`
+	NodeSelector                  map[string]string    `json:"nodeSelector,omitempty"`
+	PriorityClassName             string               `json:"priorityClassName,omitempty"`
+	Annotations                   map[string]string    `json:"annotations,omitempty"`
+	Labels                        map[string]string    `json:"labels,omitempty"`
+	Configuration                 string               `json:"configuration,omitempty"`
+	VaultSecretName               string               `json:"vaultSecretName,omitempty"`
+	SSLSecretName                 string               `json:"sslSecretName,omitempty"`
+	SSLInternalSecretName         string               `json:"sslInternalSecretName,omitempty"`
+	TerminationGracePeriodSeconds *int64               `json:"gracePeriod,omitempty"`
+	ForceUnsafeBootstrap          bool                 `json:"forceUnsafeBootstrap,omitempty"`
+	LoadBalancerSourceRanges      []string             `json:"loadBalancerSourceRanges,omitempty"`
+	ServiceAnnotations            map[string]string    `json:"serviceAnnotations,omitempty"`
+	SchedulerName                 string               `json:"schedulerName,omitempty"`
+	ReadinessInitialDelaySeconds  *int32               `json:"readinessDelaySec,omitempty"`
+	LivenessInitialDelaySeconds   *int32               `json:"livenessDelaySec,omitempty"`
+	ServiceAccountName            string               `json:"serviceAccountName,omitempty"`
+	ImagePullPolicy               common.PullPolicy    `json:"imagePullPolicy,omitempty"`
 }
 
 // PodDisruptionBudgetSpec POD disruption budget specs.

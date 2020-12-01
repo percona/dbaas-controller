@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package v1 contains type from k8s.io/api/core/v1.
 package v1
 
 import (
@@ -31,7 +32,7 @@ const (
 	TopologyKeyAny string = "*"
 )
 
-// Represents a host path mapped into a pod.
+// HostPathVolumeSource represents a host path mapped into a pod.
 // Host path volumes do not support ownership management or SELinux relabeling.
 type HostPathVolumeSource struct {
 	// Path of the directory on the host.
@@ -40,7 +41,7 @@ type HostPathVolumeSource struct {
 	Path string `json:"path"`
 }
 
-// Represents an empty directory for a pod.
+// EmptyDirVolumeSource represents an empty directory for a pod.
 // Empty directory volumes support ownership management and SELinux relabeling.
 type EmptyDirVolumeSource struct{}
 
@@ -59,7 +60,7 @@ type PodSpec struct {
 // Pod is a collection of containers that can run on a host. This resource is created
 // by clients and scheduled onto hosts.
 type Pod struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta
 
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata

@@ -24,7 +24,6 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/require"
 
-	"github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/api/resource"
 	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
@@ -34,8 +33,7 @@ const expected = `
     "kind": "PerconaServerMongoDB",
     "apiVersion": "psmdb.percona.com/v1-4-0",
     "metadata": {
-        "name": "test-psmdb",
-        "creationTimestamp": "0001-01-01T00:00:00Z"
+        "name": "test-psmdb"
     },
     "spec": {
         "allowUnsafeConfigurations": false,
@@ -85,7 +83,7 @@ const expected = `
                 },
                 "resources": {
                     "limits": {
-                        "memory": "800M",
+                        "memory": "800000000",
                         "cpu": "500m"
                     }
                 },
@@ -94,7 +92,7 @@ const expected = `
                     "persistentVolumeClaim": {
                         "resources": {
                             "requests": {
-                                "storage": "1G"
+                                "storage": "1000000000"
                             }
                         }
                     }
@@ -172,8 +170,8 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 						Size: 3,
 						Resources: &common.PodResources{
 							Limits: &common.ResourcesList{
-								CPU:    resource.NewMilliQuantity(int64(500), resource.DecimalSI).String(),
-								Memory: resource.NewQuantity(800000000, resource.DecimalSI).String(),
+								CPU:    "500m",
+								Memory: "800000000",
 							},
 						},
 						Arbiter: Arbiter{
@@ -189,7 +187,7 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 							PersistentVolumeClaim: &common.PersistentVolumeClaimSpec{
 								Resources: common.ResourceRequirements{
 									Requests: common.ResourceList{
-										common.ResourceStorage: *resource.NewQuantity(1000000000, resource.DecimalSI),
+										common.ResourceStorage: "1000000000",
 									},
 								},
 							},
