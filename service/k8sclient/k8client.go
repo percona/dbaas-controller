@@ -520,7 +520,7 @@ func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 	}
 
 	// This is to prevent concurrent updates
-	if cluster.Status.Status != appStateReady {
+	if cluster.Status.Status != psmdb.AppStateReady {
 		return errors.Wrapf(ErrPSMDBClusterNotReady, "state is %v", cluster.Status.Status) //nolint:wrapcheck
 	}
 
@@ -592,8 +592,8 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
   While the cluster is being initialized, we need to return the lowest state value found in the
   replicaset list of members.
 */
-func getReplicasetStatus(cluster perconaServerMongoDB) ClusterState {
-	if strings.ToLower(string(cluster.Status.Status)) != string(appStateError) {
+func getReplicasetStatus(cluster psmdb.PerconaServerMongoDB) ClusterState {
+	if strings.ToLower(string(cluster.Status.Status)) != string(psmdb.AppStateError) {
 		return psmdbStatesMap[cluster.Status.Status]
 	}
 
