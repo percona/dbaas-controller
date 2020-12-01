@@ -31,7 +31,7 @@ type VolumeSpec struct {
 	// HostPath to use as data volume for mysql. HostPath represents a
 	// pre-existing file or directory on the host machine that is directly
 	// exposed to the container.
-	// HostPath *corev1.HostPathVolumeSource `json:"hostPath,omitempty"`
+	HostPath *corev1.HostPathVolumeSource `json:"hostPath,omitempty"`
 
 	// PersistentVolumeClaim to specify PVC spec for the volume for mysql data.
 	// It has the highest level of precedence, followed by HostPath and
