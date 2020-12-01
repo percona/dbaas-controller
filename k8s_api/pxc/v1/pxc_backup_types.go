@@ -22,14 +22,14 @@ import (
 
 // PerconaXtraDBClusterBackupList holds exported fields representing Percona XtraDB cluster backup list.
 type PerconaXtraDBClusterBackupList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta
 	metav1.ListMeta `json:"metadata"`
 	Items           []PerconaXtraDBClusterBackup `json:"items"`
 }
 
 // PerconaXtraDBClusterBackup represents a Percona XtraDB cluster backup.
 type PerconaXtraDBClusterBackup struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              PXCBackupSpec   `json:"spec"`
 	Status            PXCBackupStatus `json:"status,omitempty"`

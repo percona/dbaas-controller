@@ -126,7 +126,7 @@ type AppStatus struct {
 
 // PerconaXtraDBCluster is the Schema for the perconaxtradbclusters API.
 type PerconaXtraDBCluster struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   PerconaXtraDBClusterSpec   `json:"spec,omitempty"`

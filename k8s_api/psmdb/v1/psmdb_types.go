@@ -56,16 +56,6 @@ type PerconaServerMongoDBDeletingList struct {
 	Items []corev1.Pod `json:"items"`
 }
 
-// type PerconaServerMongoDBPod struct {
-// 	metav1.TypeMeta
-// 	// Standard list metadata.
-// 	metav1.ListMeta `json:"metadata,omitempty"`
-
-// 	// Specification of the desired behavior of the pod.
-// 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-// 	Spec corev1.Pod `json:"spec,omitempty"`
-// }
-
 type clusterRole string
 
 const (

@@ -35,7 +35,7 @@ type PerconaXtraDBClusterRestoreStatus struct {
 
 // PerconaXtraDBClusterRestore is the Schema for the perconaxtradbclusterrestores API.
 type PerconaXtraDBClusterRestore struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   PerconaXtraDBClusterRestoreSpec   `json:"spec,omitempty"`
@@ -44,7 +44,7 @@ type PerconaXtraDBClusterRestore struct {
 
 // PerconaXtraDBClusterRestoreList contains a list of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PerconaXtraDBClusterRestore `json:"items"`
 }
