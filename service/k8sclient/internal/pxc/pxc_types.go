@@ -204,7 +204,6 @@ type BackupStorageSpec struct {
 // BackupStorageType backup storage type.
 type BackupStorageType string
 
-// nolint:unused
 const (
 	// BackupStorageFilesystem use local filesystem for storage.
 	BackupStorageFilesystem BackupStorageType = "filesystem"
