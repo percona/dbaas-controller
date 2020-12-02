@@ -19,7 +19,6 @@ package v1
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/AlekSi/pointer"
@@ -126,7 +125,7 @@ const expected = `
 }
 `
 
-func TestPSMDBTypesMarshal(t *testing.T) {
+func TestPXCTypesMarshal(t *testing.T) {
 	t.Run("check inline marshal", func(t *testing.T) {
 		res := &PerconaXtraDBCluster{
 			TypeMeta: metav1.TypeMeta{
@@ -214,7 +213,6 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 		}
 
 		actual, e := json.MarshalIndent(res, "", "    ")
-		fmt.Printf("%s", actual)
 		require.NoError(t, e)
 		require.JSONEq(t, expected, string(actual))
 	})
