@@ -39,9 +39,6 @@ type PerconaServerMongoDB struct {
 // PerconaServerMongoDBList holds a list of PSMDB objects.
 type PerconaServerMongoDBList struct {
 	metav1.TypeMeta // anonymous for embedding
-	// Standard list metadata.
-	metav1.ListMeta `json:"metadata,omitempty"`
-
 	// List of objects
 	Items []PerconaServerMongoDB `json:"items"`
 }
@@ -49,10 +46,7 @@ type PerconaServerMongoDBList struct {
 // PerconaServerMongoDBDeletingList holds a list of PSMDB objects.
 type PerconaServerMongoDBDeletingList struct {
 	metav1.TypeMeta // anonymous for embedding
-	// Standard list metadata.
-	metav1.ListMeta `json:"metadata,omitempty"`
 
-	// List of objects
 	Items []corev1.Pod `json:"items"`
 }
 

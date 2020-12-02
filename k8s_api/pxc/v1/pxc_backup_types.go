@@ -23,8 +23,8 @@ import (
 // PerconaXtraDBClusterBackupList holds exported fields representing Percona XtraDB cluster backup list.
 type PerconaXtraDBClusterBackupList struct {
 	metav1.TypeMeta // anonymous for embedding
-	metav1.ListMeta `json:"metadata"`
-	Items           []PerconaXtraDBClusterBackup `json:"items"`
+
+	Items []PerconaXtraDBClusterBackup `json:"items"`
 }
 
 // PerconaXtraDBClusterBackup represents a Percona XtraDB cluster backup.

@@ -136,8 +136,8 @@ type PerconaXtraDBCluster struct {
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
 type PerconaXtraDBClusterList struct {
 	metav1.TypeMeta // anonymous for embedding
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []PerconaXtraDBCluster `json:"items"`
+
+	Items []PerconaXtraDBCluster `json:"items"`
 }
 
 // PodSpec hold pod's exported fields representing the pod configuration.

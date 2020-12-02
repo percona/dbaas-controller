@@ -45,8 +45,8 @@ type PerconaXtraDBClusterRestore struct {
 // PerconaXtraDBClusterRestoreList contains a list of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreList struct {
 	metav1.TypeMeta // anonymous for embedding
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []PerconaXtraDBClusterRestore `json:"items"`
+
+	Items []PerconaXtraDBClusterRestore `json:"items"`
 }
 
 // BcpRestoreStates backup restore states.
