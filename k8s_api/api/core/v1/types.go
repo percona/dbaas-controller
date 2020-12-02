@@ -49,7 +49,7 @@ type PodSpec struct {
 // Pod is a collection of containers that can run on a host. This resource is created
 // by clients and scheduled onto hosts.
 type Pod struct {
-	metav1.TypeMeta
+	metav1.TypeMeta // anonymous for embedding
 
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata

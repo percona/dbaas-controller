@@ -29,7 +29,7 @@ const AffinityOff = "none"
 
 // PerconaServerMongoDB is the Schema for the perconaservermongodbs API.
 type PerconaServerMongoDB struct {
-	metav1.TypeMeta
+	metav1.TypeMeta   // anonymous for embedding
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   PerconaServerMongoDBSpec   `json:"spec,omitempty"`
@@ -38,7 +38,7 @@ type PerconaServerMongoDB struct {
 
 // PerconaServerMongoDBList holds a list of PSMDB objects.
 type PerconaServerMongoDBList struct {
-	metav1.TypeMeta
+	metav1.TypeMeta // anonymous for embedding
 	// Standard list metadata.
 	metav1.ListMeta `json:"metadata,omitempty"`
 
@@ -48,7 +48,7 @@ type PerconaServerMongoDBList struct {
 
 // PerconaServerMongoDBDeletingList holds a list of PSMDB objects.
 type PerconaServerMongoDBDeletingList struct {
-	metav1.TypeMeta
+	metav1.TypeMeta // anonymous for embedding
 	// Standard list metadata.
 	metav1.ListMeta `json:"metadata,omitempty"`
 

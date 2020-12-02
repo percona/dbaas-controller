@@ -126,7 +126,7 @@ type AppStatus struct {
 
 // PerconaXtraDBCluster is the Schema for the perconaxtradbclusters API.
 type PerconaXtraDBCluster struct {
-	metav1.TypeMeta
+	metav1.TypeMeta   // anonymous for embedding
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   PerconaXtraDBClusterSpec   `json:"spec,omitempty"`
@@ -135,7 +135,7 @@ type PerconaXtraDBCluster struct {
 
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
 type PerconaXtraDBClusterList struct {
-	metav1.TypeMeta
+	metav1.TypeMeta // anonymous for embedding
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PerconaXtraDBCluster `json:"items"`
 }
