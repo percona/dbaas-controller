@@ -19,16 +19,12 @@ package servers
 import (
 	"bytes"
 	"context"
-
-	// register /debug/vars.
-	_ "expvar"
+	_ "expvar" // register /debug/vars
 	"fmt"
 	"log"
 	"net"
 	"net/http"
-
-	// nolint:gosec
-	_ "net/http/pprof"
+	_ "net/http/pprof" //nolint:gosec // register /debug/pprof
 	"os"
 	"strings"
 	"text/template"
