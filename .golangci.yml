@@ -10,9 +10,8 @@ linters-settings:
       - errors
       # use "github.com/golang/protobuf/proto" instead
       - github.com/gogo/protobuf/proto
-      # use github.com/percona-platform/dbaas-controller/k8s_api/api/core/v1 instead https://jira.percona.com/browse/PMM-6863
+      # The next six packages was removed in favour to github.com/percona-platform/dbaas-controller/k8s_api/... https://jira.percona.com/browse/PMM-6863
       - k8s.io/api/core/v1
-      # use k8s.io/apimachinery/pkg/... instead https://jira.percona.com/browse/PMM-6863
       - k8s.io/apimachinery/pkg/api/resource
       - k8s.io/apimachinery/pkg/apis/meta/v1
       - k8s.io/apimachinery/pkg/apis/runtime

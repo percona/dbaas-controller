@@ -21,17 +21,6 @@ import (
 	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	// NamespaceDefault means the object is in the default namespace which is applied when not specified by clients.
-	NamespaceDefault string = "default"
-	// NamespaceAll is the default argument to specify on a context when you want to list or filter resources across all namespaces.
-	NamespaceAll string = ""
-	// NamespaceNodeLease is the namespace where we place node lease objects (used for node heartbeats).
-	NamespaceNodeLease string = "kube-node-lease"
-	// TopologyKeyAny is the service topology key that matches any node.
-	TopologyKeyAny string = "*"
-)
-
 // HostPathVolumeSource represents a host path mapped into a pod.
 // Host path volumes do not support ownership management or SELinux relabeling.
 type HostPathVolumeSource struct {
