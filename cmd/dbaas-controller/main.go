@@ -26,7 +26,7 @@ import (
 	"google.golang.org/grpc/grpclog"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	_ "github.com/percona-platform/dbaas-controller/catalog" // load messages
+	_ "github.com/percona-platform/dbaas-controller/catalog" // load messages.
 	"github.com/percona-platform/dbaas-controller/service/cluster"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"

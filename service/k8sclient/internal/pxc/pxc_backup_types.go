@@ -14,23 +14,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package v1
+package pxc
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
 )
 
 // PerconaXtraDBClusterBackupList holds exported fields representing Percona XtraDB cluster backup list.
 type PerconaXtraDBClusterBackupList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []PerconaXtraDBClusterBackup `json:"items"`
+	common.TypeMeta // anonymous for embedding
+
+	Items []PerconaXtraDBClusterBackup `json:"items"`
 }
 
 // PerconaXtraDBClusterBackup represents a Percona XtraDB cluster backup.
 type PerconaXtraDBClusterBackup struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata"`
+	common.TypeMeta   // anonymous for embedding
+	common.ObjectMeta `json:"metadata"`
 	Spec              PXCBackupSpec   `json:"spec"`
 	Status            PXCBackupStatus `json:"status,omitempty"`
 	SchedulerName     string          `json:"schedulerName,omitempty"`
@@ -45,12 +45,10 @@ type PXCBackupSpec struct {
 
 // PXCBackupStatus PXC backup status.
 type PXCBackupStatus struct {
-	State         PXCBackupState       `json:"state,omitempty"`
-	CompletedAt   *metav1.Time         `json:"completed,omitempty"`
-	LastScheduled *metav1.Time         `json:"lastscheduled,omitempty"`
-	Destination   string               `json:"destination,omitempty"`
-	StorageName   string               `json:"storageName,omitempty"`
-	S3            *BackupStorageS3Spec `json:"s3,omitempty"`
+	State       PXCBackupState       `json:"state,omitempty"`
+	Destination string               `json:"destination,omitempty"`
+	StorageName string               `json:"storageName,omitempty"`
+	S3          *BackupStorageS3Spec `json:"s3,omitempty"`
 }
 
 // PXCBackupState PXC backup state string.

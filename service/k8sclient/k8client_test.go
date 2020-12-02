@@ -60,8 +60,8 @@ func TestK8Client(t *testing.T) {
 		err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
 			Name:     name,
 			Size:     2,
-			PXC:      &PXC{DiskSize: 1024 * 1024 * 1024},
-			ProxySQL: &ProxySQL{DiskSize: 1024 * 1024 * 1024},
+			PXC:      &PXC{DiskSize: "1000000000"},
+			ProxySQL: &ProxySQL{DiskSize: "1000000000"},
 		})
 		require.NoError(t, err)
 
@@ -119,7 +119,7 @@ func TestK8Client(t *testing.T) {
 		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
 			Name:       name,
 			Size:       3,
-			Replicaset: &Replicaset{DiskSize: 1024 * 1024 * 1024},
+			Replicaset: &Replicaset{DiskSize: "1000000000"},
 		})
 		require.NoError(t, err)
 
