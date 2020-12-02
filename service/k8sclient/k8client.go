@@ -26,8 +26,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
-	psmdb "github.com/percona-platform/dbaas-controller/k8s_api/psmdb/v1"
-	pxc "github.com/percona-platform/dbaas-controller/k8s_api/pxc/v1"
+	"github.com/percona-platform/dbaas-controller/k8s_api/psmdb"
+	"github.com/percona-platform/dbaas-controller/k8s_api/pxc"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
 

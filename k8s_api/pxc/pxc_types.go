@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package v1 contains API Schema definitions for the pxc v1 API group
-package v1
+// Package pxc contains API Schema definitions for the pxc v1 API group.
+package pxc
 
 import (
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"

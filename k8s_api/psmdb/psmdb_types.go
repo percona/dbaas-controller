@@ -14,9 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package v1 contains specification to works with Percona Server MongoDB Operator
-// nolint:unused,deadcode,varcheck,gochecknoglobals
-package v1
+// Package psmdb contains API Schema definitions for the psmdb v1 API group.
+package psmdb
 
 import (
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"

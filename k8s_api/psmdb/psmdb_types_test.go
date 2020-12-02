@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package v1 contains tests for specification to works with Percona Server MongoDB Operator
-package v1
+package psmdb
 
 import (
 	"encoding/json"
