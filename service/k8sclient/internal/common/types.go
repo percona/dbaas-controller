@@ -101,3 +101,10 @@ const (
 	// PullIfNotPresent means that kubelet pulls if the image isn't present on disk. Container will fail if the image isn't present and the pull fails.
 	PullIfNotPresent PullPolicy = "IfNotPresent"
 )
+
+// PodList holds a list of pods objects.
+type PodList struct {
+	TypeMeta // anonymous for embedding
+
+	Items []Pod `json:"items"`
+}

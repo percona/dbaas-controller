@@ -40,13 +40,6 @@ type PerconaServerMongoDBList struct {
 	Items []PerconaServerMongoDB `json:"items"`
 }
 
-// PerconaServerMongoDBDeletingList holds a list of PSMDB objects.
-type PerconaServerMongoDBDeletingList struct {
-	common.TypeMeta // anonymous for embedding
-
-	Items []common.Pod `json:"items"`
-}
-
 type clusterRole string
 
 const (

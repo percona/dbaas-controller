@@ -348,7 +348,7 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 
 // getDeletingClusters returns clusters which are not fully deleted yet.
 func (c *K8Client) getDeletingClusters(ctx context.Context, managedBy string, runningClusters map[string]struct{}) ([]Cluster, error) {
-	var list psmdb.PerconaServerMongoDBDeletingList
+	var list common.PodList
 
 	err := c.kubeCtl.Get(ctx, "pods", "", &list)
 	if err != nil {
