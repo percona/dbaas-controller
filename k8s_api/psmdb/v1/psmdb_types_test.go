@@ -24,7 +24,6 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/require"
 
-	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
@@ -119,11 +118,11 @@ const expected = `
 func TestPSMDBTypesMarshal(t *testing.T) {
 	t.Run("check inline marshal", func(t *testing.T) {
 		res := &PerconaServerMongoDB{
-			TypeMeta: metav1.TypeMeta{
+			TypeMeta: common.TypeMeta{
 				APIVersion: "psmdb.percona.com/v1-4-0",
 				Kind:       "PerconaServerMongoDB",
 			},
-			ObjectMeta: metav1.ObjectMeta{
+			ObjectMeta: common.ObjectMeta{
 				Name: "test-psmdb",
 			},
 			Spec: PerconaServerMongoDBSpec{

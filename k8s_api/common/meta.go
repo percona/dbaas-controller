@@ -14,16 +14,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package v1 contains API types that are common to all versions.
-//
-// The package contains two categories of types:
-// - external (serialized) types that lack their own version (e.g TypeMeta)
-// - internal (never-serialized) types that are needed by several different
-//   api groups, and so live here, to avoid duplication and/or import loops
-//   (e.g. LabelSelector).
-// In the future, we will probably move these categories of objects into
-// separate packages.
-package v1
+package common
+
+// Extracted from https://pkg.go.dev/k8s.io/apimachinery/pkg/apis/meta/v1
 
 // TypeMeta describes an individual object in an API response or request
 // with strings representing the type of the object and its API schema version.

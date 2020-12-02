@@ -17,20 +17,16 @@
 // Package common contains common API Schema definitions for the pxc and psmdb API groups
 package common
 
-import (
-	corev1 "github.com/percona-platform/dbaas-controller/k8s_api/api/core/v1"
-)
-
 // VolumeSpec backup storage volume specs.
 type VolumeSpec struct {
 	// EmptyDir to use as data volume for mysql. EmptyDir represents a temporary
 	// directory that shares a pod's lifetime.
-	EmptyDir *corev1.EmptyDirVolumeSource `json:"emptyDir,omitempty"`
+	EmptyDir *EmptyDirVolumeSource `json:"emptyDir,omitempty"`
 
 	// HostPath to use as data volume for mysql. HostPath represents a
 	// pre-existing file or directory on the host machine that is directly
 	// exposed to the container.
-	HostPath *corev1.HostPathVolumeSource `json:"hostPath,omitempty"`
+	HostPath *HostPathVolumeSource `json:"hostPath,omitempty"`
 
 	// PersistentVolumeClaim to specify PVC spec for the volume for mysql data.
 	// It has the highest level of precedence, followed by HostPath and

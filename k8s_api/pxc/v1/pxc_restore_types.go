@@ -17,7 +17,7 @@
 package v1
 
 import (
-	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
+	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
 // PerconaXtraDBClusterRestoreSpec defines the desired state of PerconaXtraDBClusterRestore.
@@ -35,8 +35,8 @@ type PerconaXtraDBClusterRestoreStatus struct {
 
 // PerconaXtraDBClusterRestore is the Schema for the perconaxtradbclusterrestores API.
 type PerconaXtraDBClusterRestore struct {
-	metav1.TypeMeta   // anonymous for embedding
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	common.TypeMeta   // anonymous for embedding
+	common.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   PerconaXtraDBClusterRestoreSpec   `json:"spec,omitempty"`
 	Status PerconaXtraDBClusterRestoreStatus `json:"status,omitempty"`
@@ -44,7 +44,7 @@ type PerconaXtraDBClusterRestore struct {
 
 // PerconaXtraDBClusterRestoreList contains a list of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreList struct {
-	metav1.TypeMeta // anonymous for embedding
+	common.TypeMeta // anonymous for embedding
 
 	Items []PerconaXtraDBClusterRestore `json:"items"`
 }

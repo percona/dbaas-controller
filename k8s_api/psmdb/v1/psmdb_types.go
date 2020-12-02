@@ -19,8 +19,6 @@
 package v1
 
 import (
-	corev1 "github.com/percona-platform/dbaas-controller/k8s_api/api/core/v1"
-	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
@@ -29,8 +27,8 @@ const AffinityOff = "none"
 
 // PerconaServerMongoDB is the Schema for the perconaservermongodbs API.
 type PerconaServerMongoDB struct {
-	metav1.TypeMeta   // anonymous for embedding
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	common.TypeMeta   // anonymous for embedding
+	common.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   PerconaServerMongoDBSpec   `json:"spec,omitempty"`
 	Status perconaServerMongoDBStatus `json:"status,omitempty"`
@@ -38,16 +36,16 @@ type PerconaServerMongoDB struct {
 
 // PerconaServerMongoDBList holds a list of PSMDB objects.
 type PerconaServerMongoDBList struct {
-	metav1.TypeMeta // anonymous for embedding
-	// List of objects
+	common.TypeMeta // anonymous for embedding
+
 	Items []PerconaServerMongoDB `json:"items"`
 }
 
 // PerconaServerMongoDBDeletingList holds a list of PSMDB objects.
 type PerconaServerMongoDBDeletingList struct {
-	metav1.TypeMeta // anonymous for embedding
+	common.TypeMeta // anonymous for embedding
 
-	Items []corev1.Pod `json:"items"`
+	Items []common.Pod `json:"items"`
 }
 
 type clusterRole string

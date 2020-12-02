@@ -24,7 +24,6 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/require"
 
-	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
@@ -128,11 +127,11 @@ const expected = `
 func TestPXCTypesMarshal(t *testing.T) {
 	t.Run("check inline marshal", func(t *testing.T) {
 		res := &PerconaXtraDBCluster{
-			TypeMeta: metav1.TypeMeta{
+			TypeMeta: common.TypeMeta{
 				APIVersion: "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0",
 				Kind:       "PerconaXtraDBCluster",
 			},
-			ObjectMeta: metav1.ObjectMeta{
+			ObjectMeta: common.ObjectMeta{
 				Name: "test-pxc",
 			},
 			Spec: PerconaXtraDBClusterSpec{

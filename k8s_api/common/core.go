@@ -14,12 +14,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package v1 contains type from k8s.io/api/core/v1.
-package v1
+package common
 
-import (
-	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
-)
+// Extracted from https://pkg.go.dev/k8s.io/api/core/v1
 
 // HostPathVolumeSource represents a host path mapped into a pod.
 // Host path volumes do not support ownership management or SELinux relabeling.
@@ -49,11 +46,11 @@ type PodSpec struct {
 // Pod is a collection of containers that can run on a host. This resource is created
 // by clients and scheduled onto hosts.
 type Pod struct {
-	metav1.TypeMeta // anonymous for embedding
+	TypeMeta // anonymous for embedding
 
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	ObjectMeta `json:"metadata,omitempty"`
 
 	// Specification of the desired behavior of the pod.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status

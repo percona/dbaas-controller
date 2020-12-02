@@ -25,7 +25,6 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 
-	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 	psmdb "github.com/percona-platform/dbaas-controller/k8s_api/psmdb/v1"
 	pxc "github.com/percona-platform/dbaas-controller/k8s_api/pxc/v1"
@@ -193,11 +192,11 @@ func (c *K8Client) ListXtraDBClusters(ctx context.Context) ([]XtraDBCluster, err
 // CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
 func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
 	res := &pxc.PerconaXtraDBCluster{
-		TypeMeta: metav1.TypeMeta{
+		TypeMeta: common.TypeMeta{
 			APIVersion: pxcAPIVersion,
 			Kind:       string(perconaXtraDBClusterKind),
 		},
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: common.ObjectMeta{
 			Name: params.Name,
 		},
 		Spec: pxc.PerconaXtraDBClusterSpec{
@@ -281,11 +280,11 @@ func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams
 // DeleteXtraDBCluster deletes Percona XtraDB cluster with provided name.
 func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, name string) error {
 	res := &pxc.PerconaXtraDBCluster{
-		TypeMeta: metav1.TypeMeta{
+		TypeMeta: common.TypeMeta{
 			APIVersion: pxcAPIVersion,
 			Kind:       string(perconaXtraDBClusterKind),
 		},
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: common.ObjectMeta{
 			Name: name,
 		},
 	}
@@ -421,11 +420,11 @@ func (c *K8Client) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
 	res := &psmdb.PerconaServerMongoDB{
-		TypeMeta: metav1.TypeMeta{
+		TypeMeta: common.TypeMeta{
 			APIVersion: psmdbAPIVersion,
 			Kind:       string(perconaServerMongoDBKind),
 		},
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: common.ObjectMeta{
 			Name: params.Name,
 		},
 		Spec: psmdb.PerconaServerMongoDBSpec{
@@ -529,11 +528,11 @@ func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 // DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
 func (c *K8Client) DeletePSMDBCluster(ctx context.Context, name string) error {
 	res := &psmdb.PerconaServerMongoDB{
-		TypeMeta: metav1.TypeMeta{
+		TypeMeta: common.TypeMeta{
 			APIVersion: psmdbAPIVersion,
 			Kind:       string(perconaServerMongoDBKind),
 		},
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: common.ObjectMeta{
 			Name: name,
 		},
 	}

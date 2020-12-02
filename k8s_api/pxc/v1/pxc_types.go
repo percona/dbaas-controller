@@ -18,7 +18,6 @@
 package v1
 
 import (
-	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
 	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
@@ -126,8 +125,8 @@ type AppStatus struct {
 
 // PerconaXtraDBCluster is the Schema for the perconaxtradbclusters API.
 type PerconaXtraDBCluster struct {
-	metav1.TypeMeta   // anonymous for embedding
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	common.TypeMeta   // anonymous for embedding
+	common.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   PerconaXtraDBClusterSpec   `json:"spec,omitempty"`
 	Status PerconaXtraDBClusterStatus `json:"status,omitempty"`
@@ -135,7 +134,7 @@ type PerconaXtraDBCluster struct {
 
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
 type PerconaXtraDBClusterList struct {
-	metav1.TypeMeta // anonymous for embedding
+	common.TypeMeta // anonymous for embedding
 
 	Items []PerconaXtraDBCluster `json:"items"`
 }

@@ -17,20 +17,20 @@
 package v1
 
 import (
-	metav1 "github.com/percona-platform/dbaas-controller/k8s_api/apimachinery/pkg/apis/meta/v1"
+	"github.com/percona-platform/dbaas-controller/k8s_api/common"
 )
 
 // PerconaXtraDBClusterBackupList holds exported fields representing Percona XtraDB cluster backup list.
 type PerconaXtraDBClusterBackupList struct {
-	metav1.TypeMeta // anonymous for embedding
+	common.TypeMeta // anonymous for embedding
 
 	Items []PerconaXtraDBClusterBackup `json:"items"`
 }
 
 // PerconaXtraDBClusterBackup represents a Percona XtraDB cluster backup.
 type PerconaXtraDBClusterBackup struct {
-	metav1.TypeMeta   // anonymous for embedding
-	metav1.ObjectMeta `json:"metadata"`
+	common.TypeMeta   // anonymous for embedding
+	common.ObjectMeta `json:"metadata"`
 	Spec              PXCBackupSpec   `json:"spec"`
 	Status            PXCBackupStatus `json:"status,omitempty"`
 	SchedulerName     string          `json:"schedulerName,omitempty"`
