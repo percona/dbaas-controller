@@ -20,6 +20,8 @@ package common
 
 // HostPathVolumeSource represents a host path mapped into a pod.
 // Host path volumes do not support ownership management or SELinux relabeling.
+//
+// https://pkg.go.dev/k8s.io/api/core/v1#HostPathVolumeSource
 type HostPathVolumeSource struct {
 	// Path of the directory on the host.
 	// If the path is a symlink, it will follow the link to the real path.
@@ -29,6 +31,8 @@ type HostPathVolumeSource struct {
 
 // EmptyDirVolumeSource represents an empty directory for a pod.
 // Empty directory volumes support ownership management and SELinux relabeling.
+//
+// https://pkg.go.dev/k8s.io/api/core/v1#EmptyDirVolumeSource
 type EmptyDirVolumeSource struct{}
 
 // PodSpec is a description of a pod.
@@ -45,6 +49,8 @@ type PodSpec struct {
 
 // Pod is a collection of containers that can run on a host. This resource is created
 // by clients and scheduled onto hosts.
+//
+// https://pkg.go.dev/k8s.io/api/core/v1#Pod
 type Pod struct {
 	TypeMeta // anonymous for embedding
 
