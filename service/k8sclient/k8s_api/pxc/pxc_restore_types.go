@@ -17,7 +17,7 @@
 package pxc
 
 import (
-	"github.com/percona-platform/dbaas-controller/k8s_api/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/k8s_api/common"
 )
 
 // PerconaXtraDBClusterRestoreSpec defines the desired state of PerconaXtraDBClusterRestore.
