@@ -25,9 +25,9 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/k8s_api/common"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/k8s_api/psmdb"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/k8s_api/pxc"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 )
 
