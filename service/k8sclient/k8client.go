@@ -198,7 +198,6 @@ func (c *K8Client) ListXtraDBClusters(ctx context.Context) ([]XtraDBCluster, err
 // CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
 func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
 	storageName := fmt.Sprintf(pxcBackupStorageName, params.Name)
-	maxUnavailable := intstr.FromInt(1)
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
 			APIVersion: pxcAPIVersion,
@@ -220,8 +219,8 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 				},
-				PodDisruptionBudget: &pxc.PodDisruptionBudgetSpec{
-					MaxUnavailable: &maxUnavailable,
+				PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
+					MaxUnavailable: pointer.ToInt(1),
 				},
 			},
 
@@ -440,7 +439,6 @@ func (c *K8Client) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
-	maxUnavailable := intstr.FromInt(1)
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
 			APIVersion: psmdbAPIVersion,
@@ -488,17 +486,17 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 					},
 				},
 			},
-			Sharding: &shardingSpec{
+			Sharding: &psmdb.ShardingSpec{
 				Enabled: true,
-				ConfigsvrReplSet: &configsvrReplSetSpec{
+				ConfigsvrReplSet: &psmdb.ReplsetSpec{
 					Size:       3,
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
 				},
-				Mongos: &replsetSpec{
+				Mongos: &psmdb.ReplsetSpec{
 					Size: params.Size,
 				},
-				OperationProfiling: &mongodSpecOperationProfiling{
-					Mode: operationProfilingModeSlowOp,
+				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
+					Mode: psmdb.OperationProfilingModeSlowOp,
 				},
 			},
 			Replsets: []*psmdb.ReplsetSpec{
@@ -516,8 +514,8 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 						},
 					},
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
-					PodDisruptionBudget: &pxc.PodDisruptionBudgetSpec{
-						MaxUnavailable: &maxUnavailable,
+					PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
+						MaxUnavailable: pointer.ToInt(1),
 					},
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: &psmdb.PodAffinity{
