@@ -82,6 +82,23 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, createXtraDBClusterResponse)
 
+	// This gets the list of cluster immediately after after the creation.
+	// At this point, k8 doesn't return a valid status (returns empty status) but our controller should
+	// return CLUSTER_STATE_CHANGING. That's what we check here.
+	clusters, err = tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+	})
+	assert.NoError(t, err)
+
+	for _, cluster := range clusters.Clusters {
+		if cluster.Name == name {
+			assert.Equal(t, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING, cluster.State)
+			break
+		}
+	}
+
 	err = waitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
 	assert.NoError(t, err)
 

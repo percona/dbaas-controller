@@ -333,7 +333,7 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 		val := XtraDBCluster{
 			Name:  cluster.Name,
 			Size:  cluster.Spec.ProxySQL.Size,
-			State: pxcStatesMap[cluster.Status.Status],
+			State: getPXCState(cluster.Status.Status),
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
@@ -347,6 +347,14 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 		res[i] = val
 	}
 	return res, nil
+}
+
+func getPXCState(state pxc.AppState) ClusterState {
+	clusterState, ok := pxcStatesMap[state]
+	if !ok {
+		return ClusterStateChanging
+	}
+	return clusterState
 }
 
 // getDeletingClusters returns clusters which are not fully deleted yet.
