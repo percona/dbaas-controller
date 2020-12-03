@@ -9,7 +9,7 @@ go 1.14
 // go get -v github.com/percona-platform/dbaas-api@main
 
 require (
-	github.com/percona-platform/dbaas-api v0.0.0-20201120134348-35cb67a169d7
+	github.com/percona-platform/dbaas-api v0.0.0-20201203131759-1224fc31827f
 	github.com/percona-platform/dbaas-controller v0.1.2
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.7.0

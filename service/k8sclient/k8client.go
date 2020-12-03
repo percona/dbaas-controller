@@ -109,6 +109,8 @@ type PSMDBParams struct {
 	Name       string
 	Size       int32
 	Replicaset *Replicaset
+	Suspend    bool
+	Resume     bool
 }
 
 // XtraDBCluster contains information related to xtradb cluster.
@@ -517,6 +519,13 @@ func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 	}
 
 	cluster.Spec.Replsets[0].Size = params.Size
+
+	if params.Resume {
+		cluster.Spec.Pause = false
+	}
+	if params.Suspend {
+		cluster.Spec.Pause = true
+	}
 
 	if params.Replicaset != nil {
 		cluster.Spec.Replsets[0].Resources = c.updateComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
