@@ -27,14 +27,17 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
-// psmdbStatesMap matches psmdb app states to cluster states.
-var psmdbStatesMap = map[k8sclient.ClusterState]controllerv1beta1.PSMDBClusterState{
-	k8sclient.ClusterStateInvalid:  controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
-	k8sclient.ClusterStateChanging: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
-	k8sclient.ClusterStateReady:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
-	k8sclient.ClusterStateFailed:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
-	k8sclient.ClusterStateDeleting: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
-}
+//nolint:gochecknoglobals
+var (
+	// psmdbStatesMap matches psmdb app states to cluster states.
+	psmdbStatesMap = map[k8sclient.ClusterState]controllerv1beta1.PSMDBClusterState{
+		k8sclient.ClusterStateInvalid:  controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
+		k8sclient.ClusterStateChanging: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
+		k8sclient.ClusterStateReady:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
+		k8sclient.ClusterStateFailed:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
+		k8sclient.ClusterStateDeleting: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
+	}
+)
 
 // PSMDBClusterService implements methods of gRPC server and other business logic related to PSMDB clusters.
 type PSMDBClusterService struct {
@@ -117,7 +120,34 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 
 // UpdatePSMDBCluster updates existing PSMDB cluster.
 func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *controllerv1beta1.UpdatePSMDBClusterRequest) (*controllerv1beta1.UpdatePSMDBClusterResponse, error) {
-	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("This method is not implemented yet."))
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	params := &k8sclient.PSMDBParams{
+		Name: req.Name,
+		Size: req.Params.ClusterSize,
+		Replicaset: &k8sclient.Replicaset{
+			ComputeResources: new(k8sclient.ComputeResources), // this must be present for a valid request
+		},
+	}
+
+	if req.Params.Replicaset.ComputeResources.CpuM > 0 {
+		params.Replicaset.ComputeResources.CPUM = req.Params.Replicaset.ComputeResources.CpuM
+	}
+
+	if req.Params.Replicaset.ComputeResources.MemoryBytes > 0 {
+		params.Replicaset.ComputeResources.MemoryBytes = req.Params.Replicaset.ComputeResources.MemoryBytes
+	}
+
+	err = client.UpdatePSMDBCluster(ctx, params)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return new(controllerv1beta1.UpdatePSMDBClusterResponse), nil
 }
 
 // DeletePSMDBCluster deletes PSMDB cluster.

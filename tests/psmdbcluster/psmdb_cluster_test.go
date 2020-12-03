@@ -17,8 +17,11 @@
 package psmdbcluster
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/stretchr/testify/assert"
@@ -85,6 +88,61 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	}
 	assert.True(t, clusterFound)
 
+	t.Log("Wating for cluster to be ready")
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
+	require.NoError(t, err)
+
+	updateReq := &controllerv1beta1.UpdatePSMDBClusterRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+		Name: name,
+		Params: &controllerv1beta1.PSMDBClusterParams{
+			ClusterSize: 3,
+			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
+				ComputeResources: &controllerv1beta1.ComputeResources{
+					CpuM:        1000,
+					MemoryBytes: 1024 * 1024 * 1024 * 2,
+				},
+				DiskSize: 1024 * 1024 * 1024,
+			},
+		},
+	}
+
+	t.Log("First update")
+	upresp, err := tests.PSMDBClusterAPIClient.UpdatePSMDBCluster(tests.Context, updateReq)
+	assert.NoError(t, err)
+	assert.NotNil(t, upresp)
+
+	// Second update should fail because running an update while the status is changing (there is a previous update running)
+	// is not allowed.
+	t.Log("Second update")
+	upresp, err = tests.PSMDBClusterAPIClient.UpdatePSMDBCluster(tests.Context, updateReq)
+	assert.Error(t, err)
+	assert.Nil(t, upresp)
+
+	t.Log("Wating for cluster to be ready after update")
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
+	require.NoError(t, err)
+
+	clusterFound = false
+	clusters, err = tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+	})
+	assert.NoError(t, err)
+
+	for _, cluster := range clusters.Clusters {
+		if cluster.Name == name {
+			assert.Equal(t, int32(3), cluster.Params.ClusterSize)
+			assert.Equal(t, int64(1024*1024*1024*2), cluster.Params.Replicaset.ComputeResources.MemoryBytes)
+			assert.Equal(t, int32(1000), cluster.Params.Replicaset.ComputeResources.CpuM)
+			clusterFound = true
+		}
+	}
+	assert.True(t, clusterFound)
+
 	restartPSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.RestartPSMDBCluster(tests.Context, &controllerv1beta1.RestartPSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
@@ -102,4 +160,31 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, deletePSMDBClusterResponse)
+}
+
+func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.PSMDBClusterState) error {
+	for {
+		clusters, err := tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: kubeconfig,
+			},
+		})
+		if err != nil {
+			time.Sleep(time.Second)
+			continue
+		}
+
+		for _, cluster := range clusters.Clusters {
+			if cluster.Name == name && cluster.State == state {
+				return nil
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for the cluster to be ready")
+		case <-time.After(1000 * time.Millisecond):
+			continue
+		}
+	}
 }
