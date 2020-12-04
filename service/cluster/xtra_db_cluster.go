@@ -146,8 +146,11 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 	defer client.Cleanup() //nolint:errcheck
 
 	params := &k8sclient.XtraDBParams{
-		Name: req.Name,
-		Size: req.Params.ClusterSize,
+		Name:       req.Name,
+		UpdateSize: req.Params.UpdateClusterSize,
+		Size:       req.Params.ClusterSize,
+		Suspend:    req.Suspend,
+		Resume:     req.Resume,
 	}
 
 	if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {

@@ -93,10 +93,13 @@ type Replicaset struct {
 
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
 type XtraDBParams struct {
-	Name     string
-	Size     int32
-	PXC      *PXC
-	ProxySQL *ProxySQL
+	Name       string
+	UpdateSize bool
+	Size       int32
+	PXC        *PXC
+	ProxySQL   *ProxySQL
+	Suspend    bool
+	Resume     bool
 }
 
 // Cluster contains common information related to cluster.
@@ -263,8 +266,17 @@ func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams
 		return ErrXtraDBClusterNotReady //nolint:wrapcheck
 	}
 
-	cluster.Spec.PXC.Size = params.Size
-	cluster.Spec.ProxySQL.Size = params.Size
+	if params.Resume {
+		cluster.Spec.Pause = false
+	}
+	if params.Suspend {
+		cluster.Spec.Pause = true
+	}
+
+	if params.UpdateSize {
+		cluster.Spec.PXC.Size = params.Size
+		cluster.Spec.ProxySQL.Size = params.Size
+	}
 
 	if params.PXC != nil {
 		cluster.Spec.PXC.Resources = c.updateComputeResources(params.PXC.ComputeResources, cluster.Spec.PXC.Resources)
