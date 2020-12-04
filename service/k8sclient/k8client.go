@@ -107,6 +107,7 @@ type Cluster struct {
 // PSMDBParams contains all parameters required to create or update percona server for mongodb cluster.
 type PSMDBParams struct {
 	Name       string
+	UpdateSize bool
 	Size       int32
 	Replicaset *Replicaset
 	Suspend    bool
@@ -518,7 +519,9 @@ func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 		return errors.Wrapf(ErrPSMDBClusterNotReady, "state is %v", cluster.Status.Status) //nolint:wrapcheck
 	}
 
-	cluster.Spec.Replsets[0].Size = params.Size
+	if params.UpdateSize {
+		cluster.Spec.Replsets[0].Size = params.Size
+	}
 
 	if params.Resume {
 		cluster.Spec.Pause = false
