@@ -342,11 +342,6 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 
 	res := make([]XtraDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
-		// var cluster pxc.PerconaXtraDBCluster
-		// if err := json.Unmarshal(item, &cluster); err != nil {
-		// 	return nil, err
-		// }
-
 		val := XtraDBCluster{
 			Name:  cluster.Name,
 			Size:  cluster.Spec.ProxySQL.Size,
