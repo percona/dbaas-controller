@@ -15,5 +15,5 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/sys v0.0.0-20201029080932-201ba4db2418
-	google.golang.org/grpc v1.33.2
+	google.golang.org/grpc v1.34.0
 )
