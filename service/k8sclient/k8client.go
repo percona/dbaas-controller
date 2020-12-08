@@ -132,6 +132,7 @@ type PSMDBCluster struct {
 	Name       string
 	Size       int32
 	State      ClusterState
+	Message    string
 	Replicaset *Replicaset
 }
 
@@ -603,9 +604,10 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
 		val := PSMDBCluster{
-			Name:  cluster.Name,
-			Size:  cluster.Spec.Replsets[0].Size,
-			State: getReplicasetStatus(cluster),
+			Name:    cluster.Name,
+			Size:    cluster.Spec.Replsets[0].Size,
+			State:   getReplicasetStatus(cluster),
+			Message: cluster.Status.Message,
 		}
 
 		if cluster.Spec.Replsets[0].Resources != nil {
