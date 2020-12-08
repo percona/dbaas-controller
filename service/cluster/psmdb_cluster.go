@@ -80,10 +80,12 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 			}
 		}
 		res.Clusters[i] = &controllerv1beta1.ListPSMDBClustersResponse_Cluster{
-			Name:      cluster.Name,
-			State:     psmdbStatesMap[cluster.State],
-			Operation: nil,
-			Params:    params,
+			Name:  cluster.Name,
+			State: psmdbStatesMap[cluster.State],
+			Operation: &controllerv1beta1.RunningOperation{
+				Message: cluster.Message,
+			},
+			Params: params,
 		}
 	}
 
