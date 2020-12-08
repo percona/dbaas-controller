@@ -34,7 +34,7 @@ const expected = `
         "name": "test-psmdb"
     },
     "spec": {
-		"crVersion": "1.6.0",
+        "crVersion": "1.6.0",
         "allowUnsafeConfigurations": false,
         "image": "percona/percona-server-mongodb-operator:1.4.0-mongod4.2",
         "mongod": {
@@ -96,7 +96,7 @@ const expected = `
                         }
                     }
                 },
-				"podDisruptionBudget": {
+                "podDisruptionBudget": {
                     "maxUnavailable": 1
                 },
                 "affinity": {

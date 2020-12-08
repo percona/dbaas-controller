@@ -47,10 +47,10 @@ const (
 	ClusterStateInvalid ClusterState = 0
 	// ClusterStateChanging represents a cluster being changed (initializing).
 	ClusterStateChanging ClusterState = 1
-	// ClusterStateReady represents a cluster without pending changes (ready).
-	ClusterStateReady ClusterState = 2
 	// ClusterStateFailed represents a failed cluster (error).
-	ClusterStateFailed ClusterState = 3
+	ClusterStateFailed ClusterState = 2
+	// ClusterStateReady represents a cluster without pending changes (ready).
+	ClusterStateReady ClusterState = 3
 	// ClusterStateDeleting represents a cluster which are in deleting state (deleting).
 	ClusterStateDeleting ClusterState = 4
 )
@@ -631,18 +631,17 @@ func getReplicasetStatus(cluster psmdb.PerconaServerMongoDB) ClusterState {
 		return ClusterStateInvalid
 	}
 
-	var status ClusterState
-	var i int
+	// We shouldn't return ready state.
+	status := ClusterStateFailed
 
 	// We need to extract the lowest value so the first time, that's the lowest value.
 	// Its is not possible to get the initial value in other way since cluster.Status.Replsets is a map
 	// not an array.
 	for _, replset := range cluster.Status.Replsets {
 		replStatus := psmdbStatesMap[replset.Status]
-		if replStatus < status || i == 0 {
+		if replStatus < status {
 			status = replStatus
 		}
-		i++
 	}
 
 	return status
