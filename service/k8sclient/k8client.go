@@ -122,6 +122,7 @@ type XtraDBCluster struct {
 	Name     string
 	Size     int32
 	State    ClusterState
+	Message  string
 	PXC      *PXC
 	ProxySQL *ProxySQL
 }
@@ -343,9 +344,10 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 	res := make([]XtraDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
 		val := XtraDBCluster{
-			Name:  cluster.Name,
-			Size:  cluster.Spec.ProxySQL.Size,
-			State: pxcStatesMap[cluster.Status.Status],
+			Name:    cluster.Name,
+			Size:    cluster.Spec.ProxySQL.Size,
+			State:   pxcStatesMap[cluster.Status.Status],
+			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
