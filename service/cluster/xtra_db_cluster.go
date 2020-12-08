@@ -111,14 +111,15 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 		Name: req.Name,
 		Size: req.Params.ClusterSize,
 		PXC: &k8sclient.PXC{
-			DiskSize: convertors.BytesToStr(req.Params.Pxc.DiskSize),
+			ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
+			DiskSize:         convertors.BytesToStr(req.Params.Pxc.DiskSize),
 		},
 		ProxySQL: &k8sclient.ProxySQL{
-			DiskSize: convertors.BytesToStr(req.Params.Proxysql.DiskSize),
+			ComputeResources: computeResources(req.Params.Proxysql.ComputeResources),
+			DiskSize:         convertors.BytesToStr(req.Params.Proxysql.DiskSize),
 		},
+		PMMPublicAddress: req.PmmPublicAddress,
 	}
-	params.PXC.ComputeResources = computeResources(req.Params.Pxc.ComputeResources)
-	params.ProxySQL.ComputeResources = computeResources(req.Params.Proxysql.ComputeResources)
 
 	err = client.CreateXtraDBCluster(ctx, params)
 	if err != nil {

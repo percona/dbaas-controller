@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona-platform/dbaas-controller/tests"
-	"github.com/percona-platform/dbaas-controller/utils/app"
 )
 
 func TestXtraDBClusterAPI(t *testing.T) {
@@ -39,7 +38,8 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")
 	}
 	name := "pxdb-api-test-cluster"
-	ctx := app.Context()
+
+	ctx := context.TODO()
 
 	clusters, err := tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
@@ -107,19 +107,17 @@ func TestXtraDBClusterAPI(t *testing.T) {
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
-		Params: &controllerv1beta1.XtraDBClusterParams{
+		Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
 			ClusterSize: 2,
-			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
+			Pxc: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					MemoryBytes: 1024 * 1024 * 1024 * 2,
 				},
-				DiskSize: 1024 * 1024 * 1024,
 			},
-			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
+			Proxysql: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					MemoryBytes: 1024 * 1024 * 1024 * 2,
 				},
-				DiskSize: 1024 * 1024 * 1024,
 			},
 		},
 	}
