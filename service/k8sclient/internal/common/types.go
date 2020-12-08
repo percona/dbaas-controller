@@ -108,3 +108,9 @@ type PodList struct {
 
 	Items []Pod `json:"items"`
 }
+
+// PodDisruptionBudgetSpec POD disruption budget specs.
+type PodDisruptionBudgetSpec struct {
+	MinAvailable   *int `json:"minAvailable,omitempty"`
+	MaxUnavailable *int `json:"maxUnavailable,omitempty"`
+}
