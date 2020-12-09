@@ -121,6 +121,7 @@ type XtraDBCluster struct {
 	State    ClusterState
 	PXC      *PXC
 	ProxySQL *ProxySQL
+	Hostname string
 }
 
 // PSMDBCluster contains information related to psmdb cluster.
@@ -225,6 +226,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 				},
+				ServiceType: core.ServiceTypeLoadBalancer,
 			},
 
 			PMM: &pxc.PMMSpec{
@@ -331,9 +333,10 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 			return nil, err
 		}
 		val := XtraDBCluster{
-			Name:  cluster.Name,
-			Size:  cluster.Spec.ProxySQL.Size,
-			State: pxcStatesMap[cluster.Status.Status],
+			Name:     cluster.Name,
+			Size:     cluster.Spec.ProxySQL.Size,
+			State:    pxcStatesMap[cluster.Status.Status],
+			Hostname: cluster.Status.Host,
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
@@ -492,9 +495,12 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 							TopologyKey: pointer.ToString(affinityOff),
 						},
 					},
+					Expose: expose{
+						Enabled:    true,
+						ExposeType: core.ServiceTypeLoadBalancer,
+					},
 				},
 			},
-
 			PMM: pmmSpec{
 				Enabled: false,
 			},
@@ -565,6 +571,9 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, item := range list.Items {
 		var cluster perconaServerMongoDB
+		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+		fmt.Println(string(item.Raw))
+		fmt.Println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
 		if err := json.Unmarshal(item.Raw, &cluster); err != nil {
 			return nil, err
 		}

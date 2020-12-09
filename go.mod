@@ -20,8 +20,9 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/jetstack/cert-manager v0.14.0-alpha.0
+	github.com/kr/pretty v0.1.0
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
-	github.com/percona-platform/dbaas-api v0.0.0-20201130143231-496fbe43a782
+	github.com/percona-platform/dbaas-api v0.0.0-20201207170508-7fdf45f83a0d
 	github.com/percona-platform/saas v0.0.0-20201008124851-3c2c6c2ec0ce
 	github.com/percona/pmm v2.11.1+incompatible
 	github.com/pkg/errors v0.9.1
@@ -34,7 +35,7 @@ require (
 	golang.org/x/sys v0.0.0-20201015000850-e3ed0017c211
 	golang.org/x/text v0.3.3
 	golang.org/x/tools v0.0.0-20200616133436-c1934b75d054 // indirect
-	google.golang.org/grpc v1.33.2
+	google.golang.org/grpc v1.34.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	k8s.io/api v0.19.0
 	k8s.io/apimachinery v0.19.0

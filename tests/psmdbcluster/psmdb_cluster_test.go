@@ -52,19 +52,24 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	}
 	require.Falsef(t, clusterFound, "There should not be cluster with name %s", name)
 
+	clusterSize := int32(3)
+	cpum := int32(600)
+	memory := int64(1024 * 1024 * 1024)
+	diskSize := int64(1024 * 1024 * 1024)
+
 	createPSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.CreatePSMDBCluster(tests.Context, &controllerv1beta1.CreatePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
 		Params: &controllerv1beta1.PSMDBClusterParams{
-			ClusterSize: 3,
+			ClusterSize: clusterSize,
 			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        1000,
-					MemoryBytes: 1024 * 1024 * 1024,
+					CpuM:        cpum,
+					MemoryBytes: memory,
 				},
-				DiskSize: 1024 * 1024 * 1024,
+				DiskSize: diskSize,
 			},
 		},
 	})
@@ -80,9 +85,10 @@ func TestPSMDBClusterAPI(t *testing.T) {
 
 	for _, cluster := range clusters.Clusters {
 		if cluster.Name == name {
-			assert.Equal(t, int32(3), cluster.Params.ClusterSize)
-			assert.Equal(t, int64(1024*1024*1024), cluster.Params.Replicaset.ComputeResources.MemoryBytes)
-			assert.Equal(t, int32(1000), cluster.Params.Replicaset.ComputeResources.CpuM)
+			assert.Equal(t, clusterSize, cluster.Params.ClusterSize)
+			assert.Equal(t, memory, cluster.Params.Replicaset.ComputeResources.MemoryBytes)
+			assert.Equal(t, cpum, cluster.Params.Replicaset.ComputeResources.CpuM)
+			assert.Equal(t, diskSize, cluster.Params.Replicaset.DiskSize)
 			clusterFound = true
 		}
 	}
@@ -92,19 +98,20 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
 	require.NoError(t, err)
 
+	updateMemory := 2 * memory
 	updateReq := &controllerv1beta1.UpdatePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
 		Params: &controllerv1beta1.PSMDBClusterParams{
-			ClusterSize: 3,
+			ClusterSize: clusterSize,
 			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        1000,
-					MemoryBytes: 1024 * 1024 * 1024 * 2,
+					CpuM:        cpum,
+					MemoryBytes: updateMemory,
 				},
-				DiskSize: 1024 * 1024 * 1024,
+				DiskSize: diskSize,
 			},
 		},
 	}
@@ -135,13 +142,15 @@ func TestPSMDBClusterAPI(t *testing.T) {
 
 	for _, cluster := range clusters.Clusters {
 		if cluster.Name == name {
-			assert.Equal(t, int32(3), cluster.Params.ClusterSize)
-			assert.Equal(t, int64(1024*1024*1024*2), cluster.Params.Replicaset.ComputeResources.MemoryBytes)
-			assert.Equal(t, int32(1000), cluster.Params.Replicaset.ComputeResources.CpuM)
+			assert.Equal(t, clusterSize, cluster.Params.ClusterSize)
+			assert.Equal(t, updateMemory, cluster.Params.Replicaset.ComputeResources.MemoryBytes)
+			assert.Equal(t, cpum, cluster.Params.Replicaset.ComputeResources.CpuM)
 			clusterFound = true
 		}
 	}
 	assert.True(t, clusterFound)
+	fmt.Println("Sleeping")
+	time.Sleep(5 * time.Minute)
 
 	restartPSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.RestartPSMDBCluster(tests.Context, &controllerv1beta1.RestartPSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
@@ -163,6 +172,8 @@ func TestPSMDBClusterAPI(t *testing.T) {
 }
 
 func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.PSMDBClusterState) error {
+	c := time.After(5 * time.Minute)
+
 	for {
 		clusters, err := tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
@@ -181,6 +192,8 @@ func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name strin
 		}
 
 		select {
+		case <-c:
+			return fmt.Errorf("timeout")
 		case <-ctx.Done():
 			return fmt.Errorf("timeout waiting for the cluster to be ready")
 		case <-time.After(1000 * time.Millisecond):

@@ -38,6 +38,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	if kubeconfig == "" {
 		t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")
 	}
+
 	name := "pxdb-api-test-cluster"
 	ctx := app.Context()
 
@@ -100,7 +101,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 			clusterFound = true
 		}
 	}
-	assert.True(t, clusterFound)
+	require.True(t, clusterFound)
 
 	updateClusterReq := &controllerv1beta1.UpdateXtraDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{

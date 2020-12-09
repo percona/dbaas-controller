@@ -19,6 +19,7 @@ package k8sclient
 
 import (
 	"github.com/percona-platform/dbaas-controller/k8_api/common"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const affinityOff = "none"
@@ -432,5 +433,6 @@ type arbiter struct {
 }
 
 type expose struct {
-	Enabled bool `json:"enabled"`
+	Enabled    bool               `json:"enabled"`
+	ExposeType corev1.ServiceType `json:"exposeType"`
 }
