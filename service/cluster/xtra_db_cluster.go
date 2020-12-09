@@ -146,6 +146,10 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 	}
 	defer client.Cleanup() //nolint:errcheck
 
+	if req.Params.Suspend && req.Params.Resume {
+		return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
+	}
+
 	params := &k8sclient.XtraDBParams{
 		Name:       req.Name,
 		UpdateSize: req.Params.UpdateClusterSize,
