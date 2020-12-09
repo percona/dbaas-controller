@@ -153,21 +153,25 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 		Resume:     req.Params.Resume,
 	}
 
-	if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
-		params.PXC = &k8sclient.PXC{
-			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        convertors.MilliCPUToStr(req.Params.Pxc.ComputeResources.CpuM),
-				MemoryBytes: convertors.BytesToStr(req.Params.Pxc.ComputeResources.MemoryBytes),
-			},
+	if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
+		if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
+			params.PXC = &k8sclient.PXC{
+				ComputeResources: &k8sclient.ComputeResources{
+					CPUM:        convertors.MilliCPUToStr(req.Params.Pxc.ComputeResources.CpuM),
+					MemoryBytes: convertors.BytesToStr(req.Params.Pxc.ComputeResources.MemoryBytes),
+				},
+			}
 		}
 	}
 
-	if req.Params.Proxysql.ComputeResources.CpuM > 0 || req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
-		params.ProxySQL = &k8sclient.ProxySQL{
-			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        convertors.MilliCPUToStr(req.Params.Proxysql.ComputeResources.CpuM),
-				MemoryBytes: convertors.BytesToStr(req.Params.Proxysql.ComputeResources.MemoryBytes),
-			},
+	if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
+		if req.Params.Proxysql.ComputeResources.CpuM > 0 || req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
+			params.ProxySQL = &k8sclient.ProxySQL{
+				ComputeResources: &k8sclient.ComputeResources{
+					CPUM:        convertors.MilliCPUToStr(req.Params.Proxysql.ComputeResources.CpuM),
+					MemoryBytes: convertors.BytesToStr(req.Params.Proxysql.ComputeResources.MemoryBytes),
+				},
+			}
 		}
 	}
 
