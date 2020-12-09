@@ -239,7 +239,8 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			},
 
 			PMM: &pxc.PMMSpec{
-				Enabled:    params.PMMPublicAddress != "",
+				// TODO: workarount to be able development and test dbaas locally.
+				Enabled:    params.PMMPublicAddress != "" && params.PMMPublicAddress != "-",
 				ServerHost: params.PMMPublicAddress,
 				ServerUser: "admin",
 				Image:      pmmClientImage,
