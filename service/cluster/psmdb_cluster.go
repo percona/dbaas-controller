@@ -127,27 +127,34 @@ func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *contr
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	if req.Params.Suspend && req.Params.Resume {
-		return nil, status.Error(codes.InvalidArgument, "field suspend and resume cannot be true simultaneously")
-	}
-
 	params := &k8sclient.PSMDBParams{
-		Name:       req.Name,
-		UpdateSize: req.Params.UpdateClusterSize,
-		Size:       req.Params.ClusterSize,
-		Replicaset: &k8sclient.Replicaset{
-			ComputeResources: new(k8sclient.ComputeResources), // this must be present for a valid request
-		},
-		Suspend: req.Params.Suspend,
-		Resume:  req.Params.Resume,
+		Name: req.Name,
 	}
 
-	if req.Params.Replicaset.ComputeResources.CpuM > 0 {
-		params.Replicaset.ComputeResources.CPUM = convertors.MilliCPUToStr(req.Params.Replicaset.ComputeResources.CpuM)
-	}
+	if req.Params != nil {
+		if req.Params.Suspend && req.Params.Resume {
+			return nil, status.Error(codes.InvalidArgument, "field suspend and resume cannot be true simultaneously")
+		}
+		params.Suspend = req.Params.Suspend
+		params.Resume = req.Params.Resume
 
-	if req.Params.Replicaset.ComputeResources.MemoryBytes > 0 {
-		params.Replicaset.ComputeResources.MemoryBytes = convertors.BytesToStr(req.Params.Replicaset.ComputeResources.MemoryBytes)
+		if req.Params.UpdateClusterSize {
+			params.UpdateSize = req.Params.UpdateClusterSize
+			params.Size = req.Params.ClusterSize
+		}
+
+		if req.Params.Replicaset != nil {
+			params.Replicaset = new(k8sclient.Replicaset)
+			if req.Params.Replicaset.ComputeResources != nil {
+				params.Replicaset.ComputeResources = new(k8sclient.ComputeResources)
+				if req.Params.Replicaset.ComputeResources.CpuM > 0 {
+					params.Replicaset.ComputeResources.CPUM = convertors.MilliCPUToStr(req.Params.Replicaset.ComputeResources.CpuM)
+				}
+				if req.Params.Replicaset.ComputeResources.MemoryBytes > 0 {
+					params.Replicaset.ComputeResources.MemoryBytes = convertors.BytesToStr(req.Params.Replicaset.ComputeResources.MemoryBytes)
+				}
+			}
+		}
 	}
 
 	err = client.UpdatePSMDBCluster(ctx, params)
