@@ -61,7 +61,7 @@ func init() {
 	debugF := flag.Bool("dbaas.debug", false, "Enable debug output [DBAAS_DEBUG].")
 	traceF := flag.Bool("dbaas.trace", false, "Enable trace output [DBAAS_TRACE].")
 	serverURLF := flag.String("dbaas.server-url", "127.0.0.1:20201", "DBaas Controller URL [DBAAS_SERVER_URL].")
-	pmmServerAddressF := flag.String("pmm.server-address", "pmm-server:443", "PMM Server Address [PMM_SERVER_ADDRESS].") // FIXME: fix this once we start using CI.
+	pmmServerAddressF := flag.String("pmm.server-address", "", "PMM Server Address [PMM_SERVER_ADDRESS].") // FIXME: fix this once we start using CI.
 
 	testing.Init()
 	flag.Parse()
