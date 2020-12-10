@@ -151,11 +151,10 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 	}
 
 	params := &k8sclient.XtraDBParams{
-		Name:       req.Name,
-		UpdateSize: req.Params.UpdateClusterSize,
-		Size:       req.Params.ClusterSize,
-		Suspend:    req.Params.Suspend,
-		Resume:     req.Params.Resume,
+		Name:    req.Name,
+		Size:    req.Params.ClusterSize,
+		Suspend: req.Params.Suspend,
+		Resume:  req.Params.Resume,
 	}
 
 	if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
