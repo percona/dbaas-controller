@@ -11,7 +11,7 @@ go 1.14
 require (
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/percona-platform/dbaas-api v0.0.0-20201210100406-24be1f8f5ab6
+	github.com/percona-platform/dbaas-api v0.0.0-20201210140639-85960ed87d98
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1

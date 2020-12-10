@@ -135,13 +135,10 @@ func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *contr
 		if req.Params.Suspend && req.Params.Resume {
 			return nil, status.Error(codes.InvalidArgument, "field suspend and resume cannot be true simultaneously")
 		}
+
 		params.Suspend = req.Params.Suspend
 		params.Resume = req.Params.Resume
-
-		if req.Params.UpdateClusterSize {
-			params.UpdateSize = req.Params.UpdateClusterSize
-			params.Size = req.Params.ClusterSize
-		}
+		params.Size = req.Params.ClusterSize
 
 		if req.Params.Replicaset != nil {
 			params.Replicaset = new(k8sclient.Replicaset)
