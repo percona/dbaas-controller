@@ -282,7 +282,7 @@ func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams
 
 	// This is to prevent concurrent updates
 	if cluster.Status.PXC.Status != pxc.AppStateReady {
-		return ErrXtraDBClusterNotReady //nolint:wrapcheck
+		return errors.Wrapf(ErrXtraDBClusterNotReady, "state is %v", cluster.Status.Status) //nolint:wrapcheck
 	}
 
 	cluster.Spec.PXC.Size = params.Size
