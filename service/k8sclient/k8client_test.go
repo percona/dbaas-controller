@@ -145,8 +145,9 @@ func TestK8Client(t *testing.T) {
 		l.Info("PSMDB Cluster is restarted")
 
 		err = client.UpdatePSMDBCluster(ctx, &PSMDBParams{
-			Name: name,
-			Size: 5,
+			Name:       name,
+			UpdateSize: true,
+			Size:       5,
 		})
 		require.NoError(t, err)
 		l.Info("PSMDB Cluster is updated")
