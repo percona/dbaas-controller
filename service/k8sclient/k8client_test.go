@@ -167,6 +167,13 @@ func TestK8Client(t *testing.T) {
 		})
 		l.Info("PSMDB Cluster is deleted")
 	})
+
+	t.Run("CheckOperators", func(t *testing.T) {
+		operators, err := client.CheckOperators(ctx)
+		require.NoError(t, err)
+		require.Equal(t, operators.Xtradb, OperatorStatusOK)
+		require.Equal(t, operators.Psmdb, OperatorStatusOK)
+	})
 }
 
 func assertListXtraDBCluster(t *testing.T, ctx context.Context, client *K8Client, name string, conditionFunc func(cluster *XtraDBCluster) bool) {
