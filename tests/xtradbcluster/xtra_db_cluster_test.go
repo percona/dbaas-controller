@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona-platform/dbaas-controller/tests"
-	"github.com/percona-platform/dbaas-controller/utils/app"
 )
 
 func TestXtraDBClusterAPI(t *testing.T) {
@@ -39,7 +38,8 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")
 	}
 	name := "pxdb-api-test-cluster"
-	ctx := app.Context()
+
+	ctx := context.TODO()
 
 	clusters, err := tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{

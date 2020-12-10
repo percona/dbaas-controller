@@ -47,24 +47,28 @@ const (
 	ClusterStateInvalid ClusterState = 0
 	// ClusterStateChanging represents a cluster being changed (initializing).
 	ClusterStateChanging ClusterState = 1
-	// ClusterStateReady represents a cluster without pending changes (ready).
-	ClusterStateReady ClusterState = 2
 	// ClusterStateFailed represents a failed cluster (error).
-	ClusterStateFailed ClusterState = 3
+	ClusterStateFailed ClusterState = 2
+	// ClusterStateReady represents a cluster without pending changes (ready).
+	ClusterStateReady ClusterState = 3
 	// ClusterStateDeleting represents a cluster which are in deleting state (deleting).
 	ClusterStateDeleting ClusterState = 4
 )
 
 const (
-	pxcBackupImage       = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0-backup"
-	pxcImage             = "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0"
-	pxcBackupStorageName = "test-backup-storage"
-	pxcAPIVersion        = "pxc.percona.com/v1-4-0"
-	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.4.0-proxysql"
+	pmmClientImage = "perconalab/pmm-client:dev-latest"
 
-	psmdbBackupImage = "percona/percona-server-mongodb-operator:1.4.0-backup"
-	psmdbImage       = "percona/percona-server-mongodb-operator:1.4.0-mongod4.2"
-	psmdbAPIVersion  = "psmdb.percona.com/v1-4-0"
+	pxcCRVersion         = "1.7.0"
+	pxcBackupImage       = "percona/percona-xtradb-cluster-operator:1.6.0-pxc8.0-backup"
+	pxcImage             = "percona/percona-xtradb-cluster:8.0.20-11.1"
+	pxcBackupStorageName = "pxc-backup-storage-%s"
+	pxcAPIVersion        = "pxc.percona.com/v1-6-0"
+	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.6.0-proxysql"
+
+	psmdbCRVersion   = "1.6.0"
+	psmdbBackupImage = "percona/percona-server-mongodb-operator:1.5.0-backup"
+	psmdbImage       = "percona/percona-server-mongodb:4.2.8-8"
+	psmdbAPIVersion  = "psmdb.percona.com/v1-6-0"
 )
 
 // ComputeResources represents container computer resources requests or limits.
@@ -93,10 +97,11 @@ type Replicaset struct {
 
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
 type XtraDBParams struct {
-	Name     string
-	Size     int32
-	PXC      *PXC
-	ProxySQL *ProxySQL
+	Name             string
+	Size             int32
+	PXC              *PXC
+	ProxySQL         *ProxySQL
+	PMMPublicAddress string
 }
 
 // Cluster contains common information related to cluster.
@@ -106,12 +111,13 @@ type Cluster struct {
 
 // PSMDBParams contains all parameters required to create or update percona server for mongodb cluster.
 type PSMDBParams struct {
-	Name       string
-	UpdateSize bool
-	Size       int32
-	Replicaset *Replicaset
-	Suspend    bool
-	Resume     bool
+	Name             string
+	UpdateSize       bool
+	Size             int32
+	Replicaset       *Replicaset
+	PMMPublicAddress string
+	Suspend          bool
+	Resume           bool
 }
 
 // XtraDBCluster contains information related to xtradb cluster.
@@ -194,6 +200,7 @@ func (c *K8Client) ListXtraDBClusters(ctx context.Context) ([]XtraDBCluster, err
 
 // CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
 func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
+	storageName := fmt.Sprintf(pxcBackupStorageName, params.Name)
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
 			APIVersion: pxcAPIVersion,
@@ -203,6 +210,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			Name: params.Name,
 		},
 		Spec: pxc.PerconaXtraDBClusterSpec{
+			CRVersion:         pxcCRVersion,
 			AllowUnsafeConfig: true,
 			SecretsName:       "my-cluster-secrets",
 
@@ -213,6 +221,9 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				VolumeSpec: c.volumeSpec(params.PXC.DiskSize),
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
+				},
+				PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
+					MaxUnavailable: pointer.ToInt(1),
 				},
 			},
 
@@ -228,19 +239,28 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 			},
 
 			PMM: &pxc.PMMSpec{
-				Enabled: false,
+				Enabled:    params.PMMPublicAddress != "",
+				ServerHost: params.PMMPublicAddress,
+				ServerUser: "admin",
+				Image:      pmmClientImage,
+				Resources: &common.PodResources{
+					Requests: &common.ResourcesList{
+						Memory: "500M",
+						CPU:    "500m",
+					},
+				},
 			},
 
 			Backup: &pxc.PXCScheduledBackup{
 				Image: pxcBackupImage,
 				Schedule: []pxc.PXCScheduledBackupSchedule{{
 					Name:        "test",
-					Schedule:    "*/1 * * * *",
+					Schedule:    "*/30 * * * *",
 					Keep:        3,
-					StorageName: pxcBackupStorageName,
+					StorageName: storageName,
 				}},
 				Storages: map[string]*pxc.BackupStorageSpec{
-					pxcBackupStorageName: {
+					storageName: {
 						Type:   pxc.BackupStorageFilesystem,
 						Volume: c.volumeSpec(params.PXC.DiskSize),
 					},
@@ -325,11 +345,6 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 
 	res := make([]XtraDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
-		// var cluster pxc.PerconaXtraDBCluster
-		// if err := json.Unmarshal(item, &cluster); err != nil {
-		// 	return nil, err
-		// }
-
 		val := XtraDBCluster{
 			Name:  cluster.Name,
 			Size:  cluster.Spec.ProxySQL.Size,
@@ -431,7 +446,8 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			Name: params.Name,
 		},
 		Spec: psmdb.PerconaServerMongoDBSpec{
-			Image: psmdbImage,
+			CRVersion: psmdbCRVersion,
+			Image:     psmdbImage,
 			Secrets: &psmdb.SecretsSpec{
 				Users: "my-cluster-name-secrets",
 			},
@@ -468,6 +484,19 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 					},
 				},
 			},
+			Sharding: &psmdb.ShardingSpec{
+				Enabled: true,
+				ConfigsvrReplSet: &psmdb.ReplsetSpec{
+					Size:       3,
+					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
+				},
+				Mongos: &psmdb.ReplsetSpec{
+					Size: params.Size,
+				},
+				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
+					Mode: psmdb.OperationProfilingModeSlowOp,
+				},
+			},
 			Replsets: []*psmdb.ReplsetSpec{
 				{
 					Name:      "rs0",
@@ -483,6 +512,9 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 						},
 					},
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
+					PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
+						MaxUnavailable: pointer.ToInt(1),
+					},
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: &psmdb.PodAffinity{
 							TopologyKey: pointer.ToString(psmdb.AffinityOff),
@@ -492,7 +524,15 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			},
 
 			PMM: psmdb.PmmSpec{
-				Enabled: false,
+				Enabled:    params.PMMPublicAddress != "",
+				ServerHost: params.PMMPublicAddress,
+				Image:      pmmClientImage,
+				Resources: &common.PodResources{
+					Requests: &common.ResourcesList{
+						Memory: "500M",
+						CPU:    "500m",
+					},
+				},
 			},
 
 			Backup: psmdb.BackupSpec{
@@ -502,7 +542,10 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 			},
 		},
 	}
-
+	if params.Replicaset != nil {
+		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+	}
 	return c.kubeCtl.Apply(ctx, res)
 }
 
@@ -600,18 +643,17 @@ func getReplicasetStatus(cluster psmdb.PerconaServerMongoDB) ClusterState {
 		return ClusterStateInvalid
 	}
 
-	var status ClusterState
-	var i int
+	// We shouldn't return ready state.
+	status := ClusterStateFailed
 
 	// We need to extract the lowest value so the first time, that's the lowest value.
 	// Its is not possible to get the initial value in other way since cluster.Status.Replsets is a map
 	// not an array.
 	for _, replset := range cluster.Status.Replsets {
 		replStatus := psmdbStatesMap[replset.Status]
-		if replStatus < status || i == 0 {
+		if replStatus < status {
 			status = replStatus
 		}
-		i++
 	}
 
 	return status

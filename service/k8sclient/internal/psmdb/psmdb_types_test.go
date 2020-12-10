@@ -34,6 +34,7 @@ const expected = `
         "name": "test-psmdb"
     },
     "spec": {
+        "crVersion": "1.6.0",
         "allowUnsafeConfigurations": false,
         "image": "percona/percona-server-mongodb-operator:1.4.0-mongod4.2",
         "mongod": {
@@ -95,6 +96,9 @@ const expected = `
                         }
                     }
                 },
+                "podDisruptionBudget": {
+                    "maxUnavailable": 1
+                },
                 "affinity": {
                     "antiAffinityTopologyKey": "none"
                 }
@@ -125,7 +129,8 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 				Name: "test-psmdb",
 			},
 			Spec: PerconaServerMongoDBSpec{
-				Image: "percona/percona-server-mongodb-operator:1.4.0-mongod4.2",
+				CRVersion: "1.6.0",
+				Image:     "percona/percona-server-mongodb-operator:1.4.0-mongod4.2",
 				Secrets: &SecretsSpec{
 					Users: "my-cluster-name-secrets",
 				},
@@ -171,6 +176,9 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 								CPU:    "500m",
 								Memory: "800000000",
 							},
+						},
+						PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
+							MaxUnavailable: pointer.ToInt(1),
 						},
 						Arbiter: Arbiter{
 							Enabled: false,

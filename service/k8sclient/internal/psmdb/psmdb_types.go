@@ -55,8 +55,16 @@ const (
 	platformOpenshift  platform = "openshift"
 )
 
+type ShardingSpec struct {
+	Enabled            bool                          `json:"enabled"`
+	ConfigsvrReplSet   *ReplsetSpec                  `json:"configsvrReplSet"`
+	Mongos             *ReplsetSpec                  `json:"mongos"`
+	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
+}
+
 // PerconaServerMongoDBSpec defines the desired state of PerconaServerMongoDB.
 type PerconaServerMongoDBSpec struct {
+	CRVersion               string         `json:"crVersion,omitempty"`
 	Pause                   bool           `json:"pause,omitempty"`
 	UnsafeConf              bool           `json:"allowUnsafeConfigurations"`
 	RunUID                  int64          `json:"runUid,omitempty"`
@@ -69,6 +77,7 @@ type PerconaServerMongoDBSpec struct {
 	PMM                     PmmSpec        `json:"pmm,omitempty"`
 	SchedulerName           string         `json:"schedulerName,omitempty"`
 	ClusterServiceDNSSuffix string         `json:"clusterServiceDNSSuffix,omitempty"`
+	Sharding                *ShardingSpec  `json:"sharding,omitempty"`
 }
 
 type replsetMemberStatus struct {
@@ -154,11 +163,6 @@ type MultiAZ struct {
 	Labels            map[string]string `json:"labels,omitempty"`
 }
 
-type podDisruptionBudgetSpec struct {
-	MinAvailable   *string `json:"minAvailable,omitempty"`
-	MaxUnavailable *string `json:"maxUnavailable,omitempty"`
-}
-
 // PodAffinity define pod affinity.
 type PodAffinity struct {
 	TopologyKey *string `json:"antiAffinityTopologyKey,omitempty"`
@@ -166,14 +170,15 @@ type PodAffinity struct {
 
 // ReplsetSpec defines replicaton set specification.
 type ReplsetSpec struct {
-	Expose        expose                 `json:"expose,omitempty"`
-	Size          int32                  `json:"size"`
-	Arbiter       Arbiter                `json:"arbiter,omitempty"`
-	Resources     *common.PodResources   `json:"resources,omitempty"`
-	Name          string                 `json:"name"`
-	ClusterRole   clusterRole            `json:"clusterRole,omitempty"`
-	VolumeSpec    *common.VolumeSpec     `json:"volumeSpec,omitempty"`
-	LivenessProbe *livenessProbeExtended `json:"livenessProbe,omitempty"`
+	Expose              expose                          `json:"expose,omitempty"`
+	Size                int32                           `json:"size"`
+	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
+	Resources           *common.PodResources            `json:"resources,omitempty"`
+	Name                string                          `json:"name"`
+	ClusterRole         clusterRole                     `json:"clusterRole,omitempty"`
+	VolumeSpec          *common.VolumeSpec              `json:"volumeSpec,omitempty"`
+	LivenessProbe       *livenessProbeExtended          `json:"livenessProbe,omitempty"`
+	PodDisruptionBudget *common.PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
 	MultiAZ
 }
 
