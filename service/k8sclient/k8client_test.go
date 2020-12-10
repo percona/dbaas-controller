@@ -85,8 +85,9 @@ func TestK8Client(t *testing.T) {
 		l.Info("XtraDB Cluster is restarted")
 
 		err = client.UpdateXtraDBCluster(ctx, &XtraDBParams{
-			Name: name,
-			Size: 3,
+			Name:       name,
+			UpdateSize: true,
+			Size:       3,
 		})
 		require.NoError(t, err)
 		l.Info("XtraDB Cluster is updated")
