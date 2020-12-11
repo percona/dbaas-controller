@@ -107,10 +107,7 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 		PMMPublicAddress: req.PmmPublicAddress,
 	}
 	if req.Params.Replicaset.ComputeResources != nil {
-		params.Replicaset.ComputeResources = &k8sclient.ComputeResources{
-			CPUM:        convertors.MilliCPUToStr(req.Params.Replicaset.ComputeResources.CpuM),
-			MemoryBytes: convertors.BytesToStr(req.Params.Replicaset.ComputeResources.MemoryBytes),
-		}
+		params.Replicaset.ComputeResources = computeResources(req.Params.Replicaset.ComputeResources)
 	}
 	err = client.CreatePSMDBCluster(ctx, params)
 	if err != nil {
@@ -143,12 +140,8 @@ func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *contr
 		if req.Params.Replicaset != nil {
 			params.Replicaset = new(k8sclient.Replicaset)
 			if req.Params.Replicaset.ComputeResources != nil {
-				params.Replicaset.ComputeResources = new(k8sclient.ComputeResources)
-				if req.Params.Replicaset.ComputeResources.CpuM > 0 {
-					params.Replicaset.ComputeResources.CPUM = convertors.MilliCPUToStr(req.Params.Replicaset.ComputeResources.CpuM)
-				}
-				if req.Params.Replicaset.ComputeResources.MemoryBytes > 0 {
-					params.Replicaset.ComputeResources.MemoryBytes = convertors.BytesToStr(req.Params.Replicaset.ComputeResources.MemoryBytes)
+				if req.Params.Replicaset.ComputeResources.CpuM > 0 || req.Params.Replicaset.ComputeResources.MemoryBytes > 0 {
+					params.Replicaset.ComputeResources = computeResources(req.Params.Replicaset.ComputeResources)
 				}
 			}
 		}
