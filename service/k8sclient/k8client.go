@@ -769,8 +769,7 @@ func (c *K8Client) CheckOperators(ctx context.Context) (*Operators, error) {
 }
 
 func (c *K8Client) checkOperatorStatus(installedVersions []string, expectedAPIVersion string) (operator OperatorStatus) {
-	parts := strings.Split(expectedAPIVersion, "/")
-	apiNamespace := parts[0]
+	apiNamespace := strings.Split(expectedAPIVersion, "/")[0]
 	installed := false
 	for _, version := range installedVersions {
 		switch {
