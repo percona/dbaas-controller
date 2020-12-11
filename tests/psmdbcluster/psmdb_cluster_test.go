@@ -64,9 +64,10 @@ func TestPSMDBClusterAPI(t *testing.T) {
 					CpuM:        1000,
 					MemoryBytes: 1024 * 1024 * 1024,
 				},
-				DiskSize: 1024 * 1024 * 1024,
+				DiskSize: 2 * 1024 * 1024 * 1024,
 			},
 		},
+		PmmPublicAddress: tests.PMMServerAddress,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createPSMDBClusterResponse)
@@ -83,12 +84,13 @@ func TestPSMDBClusterAPI(t *testing.T) {
 			assert.Equal(t, int32(3), cluster.Params.ClusterSize)
 			assert.Equal(t, int64(1024*1024*1024), cluster.Params.Replicaset.ComputeResources.MemoryBytes)
 			assert.Equal(t, int32(1000), cluster.Params.Replicaset.ComputeResources.CpuM)
+			assert.Equal(t, int64(2*1024*1024*1024), cluster.Params.Replicaset.DiskSize)
 			clusterFound = true
 		}
 	}
 	assert.True(t, clusterFound)
 
-	t.Log("Wating for cluster to be ready")
+	t.Log("Waiting for cluster to be ready")
 	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
 	require.NoError(t, err)
 
