@@ -75,7 +75,7 @@ const (
 type OperatorStatus int32
 
 const (
-	// OPERATORS_STATUS_OK represents that operators are installed and have supported API version.
+	// OperatorStatusOK represents that operators are installed and have supported API version.
 	OperatorStatusOK OperatorStatus = 1
 	// OperatorStatusUnsupported represents that operators are installed, but doesn't have supported API version.
 	OperatorStatusUnsupported OperatorStatus = 2
@@ -83,6 +83,7 @@ const (
 	OperatorStatusNotInstalled OperatorStatus = 3
 )
 
+// Operators contains statuses of operators.
 type Operators struct {
 	Xtradb OperatorStatus
 	Psmdb  OperatorStatus
@@ -752,6 +753,7 @@ func (c *K8Client) volumeSpec(diskSize string) *common.VolumeSpec {
 	}
 }
 
+// CheckOperators checks if operator installed and have required API version.
 func (c *K8Client) CheckOperators(ctx context.Context) (*Operators, error) {
 	output, err := c.kubeCtl.Run(ctx, []string{"api-versions"}, "")
 	if err != nil {
@@ -766,13 +768,13 @@ func (c *K8Client) CheckOperators(ctx context.Context) (*Operators, error) {
 	}, nil
 }
 
-func (c *K8Client) checkOperatorStatus(installedVersions []string, expectedApiVersion string) (operator OperatorStatus) {
-	parts := strings.Split(expectedApiVersion, "/")
+func (c *K8Client) checkOperatorStatus(installedVersions []string, expectedAPIVersion string) (operator OperatorStatus) {
+	parts := strings.Split(expectedAPIVersion, "/")
 	apiNamespace := parts[0]
 	installed := false
 	for _, version := range installedVersions {
 		switch {
-		case version == expectedApiVersion:
+		case version == expectedAPIVersion:
 			return OperatorStatusOK
 		case strings.HasPrefix(version, apiNamespace):
 			installed = true
