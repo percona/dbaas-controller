@@ -69,6 +69,7 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 	for i, cluster := range PSMDBClusters {
 		params := &controllerv1beta1.PSMDBClusterParams{
 			ClusterSize: cluster.Size,
+			Paused:      cluster.Pause,
 			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
 				DiskSize: convertors.StrToBytes(cluster.Replicaset.DiskSize),
 			},

@@ -131,6 +131,7 @@ type XtraDBCluster struct {
 // PSMDBCluster contains information related to psmdb cluster.
 type PSMDBCluster struct {
 	Name       string
+	Pause      bool
 	Size       int32
 	State      ClusterState
 	Replicaset *Replicaset
@@ -615,6 +616,7 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 			Name:  cluster.Name,
 			Size:  cluster.Spec.Replsets[0].Size,
 			State: getReplicasetStatus(cluster),
+			Pause: cluster.Spec.Pause,
 		}
 
 		if cluster.Spec.Replsets[0].Resources != nil {
