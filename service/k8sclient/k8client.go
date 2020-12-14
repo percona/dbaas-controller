@@ -126,6 +126,7 @@ type XtraDBCluster struct {
 	State    ClusterState
 	PXC      *PXC
 	ProxySQL *ProxySQL
+	Pause    bool
 }
 
 // PSMDBCluster contains information related to psmdb cluster.
@@ -365,6 +366,7 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 				DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
 			},
+			Pause: cluster.Spec.Pause,
 		}
 
 		res[i] = val
