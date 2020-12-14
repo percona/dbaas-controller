@@ -608,13 +608,12 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 			Size:    cluster.Spec.Replsets[0].Size,
 			State:   getReplicasetStatus(cluster),
 			Message: cluster.Status.Message,
+			Replicaset: &Replicaset{
+				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
+				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
+			},
 		}
 
-		if cluster.Spec.Replsets[0].Resources != nil {
-			val.Replicaset = &Replicaset{
-				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
-			}
-		}
 		res[i] = val
 	}
 	return res, nil
