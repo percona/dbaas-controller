@@ -30,5 +30,3 @@ require (
 	google.golang.org/grpc v1.34.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
-
-replace github.com/percona-platform/dbaas-api => ../dbaas-api
