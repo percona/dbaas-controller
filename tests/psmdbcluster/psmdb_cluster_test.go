@@ -88,15 +88,27 @@ func TestPSMDBClusterAPI(t *testing.T) {
 			assert.Equal(t, clusterSize, cluster.Params.ClusterSize)
 			assert.Equal(t, memory, cluster.Params.Replicaset.ComputeResources.MemoryBytes)
 			assert.Equal(t, cpum, cluster.Params.Replicaset.ComputeResources.CpuM)
-			assert.Equal(t, diskSize, cluster.Params.Replicaset.DiskSize)
+			//  assert.Equal(t, diskSize, cluster.Params.Replicaset.DiskSize)
 			clusterFound = true
 		}
 	}
 	assert.True(t, clusterFound)
 
+	// There is no Ingress in minikube
+	if os.Getenv("IN_EKS") != "" {
+		cluster, err := tests.PSMDBClusterAPIClient.GetPSMDBCluster(tests.Context, &controllerv1beta1.GetPSMDBClusterRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: kubeconfig,
+			},
+			Name: name,
+		})
+		assert.NoError(t, err)
+		assert.NotEmpty(t, cluster.Credentials.Host)
+	}
+
 	t.Log("Wating for cluster to be ready")
 	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	updateMemory := 2 * memory
 	updateReq := &controllerv1beta1.UpdatePSMDBClusterRequest{
@@ -104,14 +116,13 @@ func TestPSMDBClusterAPI(t *testing.T) {
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
-		Params: &controllerv1beta1.PSMDBClusterParams{
+		Params: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
 			ClusterSize: clusterSize,
-			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
+			Replicaset: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        cpum,
 					MemoryBytes: updateMemory,
 				},
-				DiskSize: diskSize,
 			},
 		},
 	}
@@ -139,7 +150,6 @@ func TestPSMDBClusterAPI(t *testing.T) {
 		},
 	})
 	assert.NoError(t, err)
-
 	for _, cluster := range clusters.Clusters {
 		if cluster.Name == name {
 			assert.Equal(t, clusterSize, cluster.Params.ClusterSize)
@@ -149,8 +159,6 @@ func TestPSMDBClusterAPI(t *testing.T) {
 		}
 	}
 	assert.True(t, clusterFound)
-	fmt.Println("Sleeping")
-	time.Sleep(5 * time.Minute)
 
 	restartPSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.RestartPSMDBCluster(tests.Context, &controllerv1beta1.RestartPSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{

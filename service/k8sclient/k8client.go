@@ -121,7 +121,7 @@ type XtraDBCluster struct {
 	State    ClusterState
 	PXC      *PXC
 	ProxySQL *ProxySQL
-	Hostname string
+	Host     string
 }
 
 // PSMDBCluster contains information related to psmdb cluster.
@@ -130,6 +130,23 @@ type PSMDBCluster struct {
 	Size       int32
 	State      ClusterState
 	Replicaset *Replicaset
+}
+
+// PSMDBCredentials represents PSMDB connection credentials.
+type PSMDBCredentials struct {
+	Username   string
+	Password   string
+	Host       string
+	Port       int32
+	Replicaset string
+}
+
+// XtraDBCredentials represents XtraDB connection credentials.
+type XtraDBCredentials struct {
+	Username string
+	Password string
+	Host     string
+	Port     int32
 }
 
 // pxcStatesMap matches pxc app states to cluster states.
@@ -226,6 +243,9 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 				},
+				// This enables ingress for the cluster and exposes the cluster to the world.
+				// The cluster will have an internal IP and a world accessible hostname.
+				// This feature cannot be tested with minikube. Please use EKS for testing.
 				ServiceType: core.ServiceTypeLoadBalancer,
 			},
 
@@ -296,6 +316,22 @@ func (c *K8Client) DeleteXtraDBCluster(ctx context.Context, name string) error {
 	return c.kubeCtl.Delete(ctx, res)
 }
 
+// GetXtraDBCluster returns an XtraDB cluster credentials.
+func (c *K8Client) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBCredentials, error) {
+	var cluster pxc.PerconaXtraDBCluster
+
+	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), name, &cluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot get XtraDb cluster")
+	}
+
+	credentials := &XtraDBCredentials{
+		Host: cluster.Status.Host,
+	}
+
+	return credentials, nil
+}
+
 func (c *K8Client) restartDBClusterCmd(name, kind string) []string {
 	return []string{"rollout", "restart", "StatefulSets", fmt.Sprintf("%s-%s", name, kind)}
 }
@@ -333,10 +369,10 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 			return nil, err
 		}
 		val := XtraDBCluster{
-			Name:     cluster.Name,
-			Size:     cluster.Spec.ProxySQL.Size,
-			State:    pxcStatesMap[cluster.Status.Status],
-			Hostname: cluster.Status.Host,
+			Name:  cluster.Name,
+			Size:  cluster.Spec.ProxySQL.Size,
+			State: pxcStatesMap[cluster.Status.Status],
+			Host:  cluster.Status.Host,
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
@@ -495,6 +531,9 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 							TopologyKey: pointer.ToString(affinityOff),
 						},
 					},
+					// This enables ingress for the cluster and exposes the cluster to the world.
+					// The cluster will have an internal IP and a world accessible hostname.
+					// This feature cannot be tested with minikube. Please use EKS for testing.
 					Expose: expose{
 						Enabled:    true,
 						ExposeType: core.ServiceTypeLoadBalancer,
@@ -560,6 +599,25 @@ func (c *K8Client) RestartPSMDBCluster(ctx context.Context, name string) error {
 	return err
 }
 
+// GetPSMDBCluster returns a PSMDB cluster.
+func (c *K8Client) GetPSMDBCluster(ctx context.Context, name string) (*PSMDBCredentials, error) {
+	var cluster perconaServerMongoDB
+	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), name, &cluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot get PSMDB cluster")
+	}
+
+	credentials := &PSMDBCredentials{
+		Username:   "root",
+		Password:   "root_password",
+		Host:       cluster.Status.Host,
+		Port:       27017,
+		Replicaset: "rs0",
+	}
+
+	return credentials, nil
+}
+
 // getPSMDBClusters returns Percona Server for MongoDB clusters.
 func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error) {
 	var list meta.List
@@ -571,9 +629,6 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, item := range list.Items {
 		var cluster perconaServerMongoDB
-		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-		fmt.Println(string(item.Raw))
-		fmt.Println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
 		if err := json.Unmarshal(item.Raw, &cluster); err != nil {
 			return nil, err
 		}

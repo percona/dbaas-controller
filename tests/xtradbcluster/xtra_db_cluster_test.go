@@ -32,6 +32,29 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/app"
 )
 
+// func TestGetXtraDBClusterAPI(t *testing.T) {
+// 	// PERCONA_TEST_DBAAS_KUBECONFIG=$(minikube kubectl -- config view --flatten --minify --output json)
+// 	kubeconfig := os.Getenv("PERCONA_TEST_DBAAS_KUBECONFIG")
+// 	if kubeconfig == "" {
+// 		t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")
+// 	}
+//
+// 	if os.Getenv("IN_EKS") == "" {
+// 		t.Skip("This tests needs to run in an EKS cluster")
+// 	}
+//
+// 	name := "pxdb-api-test-cluster"
+//
+// 	cluster, err := tests.XtraDBClusterAPIClient.GetXtraDBCluster(tests.Context, &controllerv1beta1.GetXtraDBClusterRequest{
+// 		KubeAuth: &controllerv1beta1.KubeAuth{
+// 			Kubeconfig: kubeconfig,
+// 		},
+// 		Name: name,
+// 	})
+// 	assert.NoError(t, err)
+// 	assert.NotEmpty(t, cluster.Credentials)
+// }
+
 func TestXtraDBClusterAPI(t *testing.T) {
 	// PERCONA_TEST_DBAAS_KUBECONFIG=$(minikube kubectl -- config view --flatten --minify --output json)
 	kubeconfig := os.Getenv("PERCONA_TEST_DBAAS_KUBECONFIG")
@@ -103,24 +126,34 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	}
 	require.True(t, clusterFound)
 
+	// There is no Ingress in minikube
+	if os.Getenv("IN_EKS") != "" {
+		cluster, err := tests.XtraDBClusterAPIClient.GetXtraDBCluster(tests.Context, &controllerv1beta1.GetXtraDBClusterRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: kubeconfig,
+			},
+			Name: name,
+		})
+		assert.NoError(t, err)
+		assert.NotEmpty(t, cluster.Credentials.Host)
+	}
+
 	updateClusterReq := &controllerv1beta1.UpdateXtraDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
-		Params: &controllerv1beta1.XtraDBClusterParams{
+		Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
 			ClusterSize: 2,
-			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
+			Pxc: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					MemoryBytes: 1024 * 1024 * 1024 * 2,
 				},
-				DiskSize: 1024 * 1024 * 1024,
 			},
-			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
+			Proxysql: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					MemoryBytes: 1024 * 1024 * 1024 * 2,
 				},
-				DiskSize: 1024 * 1024 * 1024,
 			},
 		},
 	}
