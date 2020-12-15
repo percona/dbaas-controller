@@ -616,18 +616,15 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
-<<<<<<< HEAD
-=======
 		message := cluster.Status.Message
 		conditions := cluster.Status.Conditions
 		if message == "" && len(conditions) > 0 {
 			message = conditions[len(conditions)-1].Message
 		}
->>>>>>> 088d5a82823b8a5168da75574f24969758d4951a
 		val := PSMDBCluster{
-			Name:  cluster.Name,
-			Size:  cluster.Spec.Replsets[0].Size,
-			State: getReplicasetStatus(cluster),
+			Name:    cluster.Name,
+			Size:    cluster.Spec.Replsets[0].Size,
+			State:   getReplicasetStatus(cluster),
 			Message: message,
 			Replicaset: &Replicaset{
 				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
