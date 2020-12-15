@@ -124,6 +124,7 @@ type XtraDBCluster struct {
 	Name     string
 	Size     int32
 	State    ClusterState
+	Message  string
 	PXC      *PXC
 	ProxySQL *ProxySQL
 	Pause    bool
@@ -134,6 +135,7 @@ type PSMDBCluster struct {
 	Name       string
 	Size       int32
 	State      ClusterState
+	Message    string
 	Replicaset *Replicaset
 }
 
@@ -355,9 +357,10 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 	res := make([]XtraDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
 		val := XtraDBCluster{
-			Name:  cluster.Name,
-			Size:  cluster.Spec.ProxySQL.Size,
-			State: pxcStatesMap[cluster.Status.Status],
+			Name:    cluster.Name,
+			Size:    cluster.Spec.ProxySQL.Size,
+			State:   pxcStatesMap[cluster.Status.Status],
+			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
@@ -613,17 +616,25 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
+<<<<<<< HEAD
+=======
+		message := cluster.Status.Message
+		conditions := cluster.Status.Conditions
+		if message == "" && len(conditions) > 0 {
+			message = conditions[len(conditions)-1].Message
+		}
+>>>>>>> 088d5a82823b8a5168da75574f24969758d4951a
 		val := PSMDBCluster{
 			Name:  cluster.Name,
 			Size:  cluster.Spec.Replsets[0].Size,
 			State: getReplicasetStatus(cluster),
+			Message: message,
+			Replicaset: &Replicaset{
+				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
+				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
+			},
 		}
 
-		if cluster.Spec.Replsets[0].Resources != nil {
-			val.Replicaset = &Replicaset{
-				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
-			}
-		}
 		res[i] = val
 	}
 	return res, nil
