@@ -91,10 +91,10 @@ env-up-start:
 	minikube profile list
 	minikube addons list
 	minikube kubectl -- version
-	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/bundle.yaml  | minikube kubectl -- apply -f -
-	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/release-1.4.0/deploy/secrets.yaml | minikube kubectl -- apply -f -
-	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/release-1.4.0/deploy/bundle.yaml  | minikube kubectl -- apply -f -
-	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/release-1.4.0/deploy/secrets.yaml | minikube kubectl -- apply -f -
+	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/pmm-branch/deploy/bundle.yaml | minikube kubectl -- apply -f -
+	minikube kubectl -- apply -f ./secrets-pxc.yaml
+	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/pmm-branch/deploy/bundle.yaml  | minikube kubectl -- apply -f -
+	minikube kubectl -- apply -f ./secrets-psmdb.yaml
 	minikube kubectl -- get nodes
 	minikube kubectl -- get pods
 
@@ -117,3 +117,5 @@ collect-debugdata:                ## Collect debugdata
 	minikube kubectl -- get events --sort-by=lastTimestamp > ./debugdata/events.txt
 	minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-xtradb-cluster-operator' > ./debugdata/pxc-operators.txt
 	minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-xtradb-cluster' > ./debugdata/pxc-clusters.txt
+	minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator' > ./debugdata/psmdb-operators.txt
+	minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb' > ./debugdata/psmdb-clusters.txt

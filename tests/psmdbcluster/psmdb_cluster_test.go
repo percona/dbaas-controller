@@ -72,6 +72,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 				DiskSize: diskSize,
 			},
 		},
+		PmmPublicAddress: tests.PMMServerAddress,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createPSMDBClusterResponse)
@@ -88,7 +89,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 			assert.Equal(t, clusterSize, cluster.Params.ClusterSize)
 			assert.Equal(t, memory, cluster.Params.Replicaset.ComputeResources.MemoryBytes)
 			assert.Equal(t, cpum, cluster.Params.Replicaset.ComputeResources.CpuM)
-			//  assert.Equal(t, diskSize, cluster.Params.Replicaset.DiskSize)
+			assert.Equal(t, diskSize, cluster.Params.Replicaset.DiskSize)
 			clusterFound = true
 		}
 	}

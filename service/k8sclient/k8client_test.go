@@ -47,6 +47,7 @@ func TestK8Client(t *testing.T) {
 
 	l := logger.Get(ctx)
 
+	pmmPublicAddress := ""
 	t.Run("XtraDB", func(t *testing.T) {
 		name := "test-cluster-xtradb"
 		_ = client.DeleteXtraDBCluster(ctx, name)
@@ -58,10 +59,11 @@ func TestK8Client(t *testing.T) {
 		l.Info("No XtraDB Clusters running")
 
 		err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
-			Name:     name,
-			Size:     2,
-			PXC:      &PXC{DiskSize: 1024 * 1024 * 1024},
-			ProxySQL: &ProxySQL{DiskSize: 1024 * 1024 * 1024},
+			Name:             name,
+			Size:             1,
+			PXC:              &PXC{DiskSize: "1000000000"},
+			ProxySQL:         &ProxySQL{DiskSize: "1000000000"},
+			PMMPublicAddress: pmmPublicAddress,
 		})
 		require.NoError(t, err)
 
@@ -117,9 +119,10 @@ func TestK8Client(t *testing.T) {
 		l.Info("No PSMDB Clusters running")
 
 		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name:       name,
-			Size:       3,
-			Replicaset: &Replicaset{DiskSize: 1024 * 1024 * 1024},
+			Name:             name,
+			Size:             3,
+			Replicaset:       &Replicaset{DiskSize: "1000000000"},
+			PMMPublicAddress: pmmPublicAddress,
 		})
 		require.NoError(t, err)
 
@@ -196,9 +199,9 @@ func assertListPSMDBCluster(t *testing.T, ctx context.Context, client *K8Client,
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 	for {
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 		clusters, err := client.ListPSMDBClusters(timeoutCtx)
-		require.NoError(t, err)
+		require.NoErrorf(t, err, "timeout for waiting condition: %v", clusters)
 
 		l.Debug(clusters)
 
