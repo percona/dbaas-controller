@@ -78,6 +78,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 				DiskSize: 1024 * 1024 * 1024,
 			},
 		},
+		PmmPublicAddress: tests.PMMServerAddress,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createXtraDBClusterResponse)

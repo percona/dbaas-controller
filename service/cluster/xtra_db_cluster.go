@@ -89,10 +89,12 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 		}
 
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{
-			Name:      cluster.Name,
-			State:     pxcStatesMap[cluster.State],
-			Operation: nil,
-			Params:    params,
+			Name:  cluster.Name,
+			State: pxcStatesMap[cluster.State],
+			Operation: &controllerv1beta1.RunningOperation{
+				Message: cluster.Message,
+			},
+			Params: params,
 		}
 	}
 
