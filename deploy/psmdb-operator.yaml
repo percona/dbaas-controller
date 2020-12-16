@@ -249,7 +249,7 @@ spec:
       serviceAccountName: percona-server-mongodb-operator
       containers:
         - name: percona-server-mongodb-operator
-          image: perconalab/percona-server-mongodb-operator:latest
+          image: perconalab/percona-server-mongodb-operator:1.6.0
           ports:
           - containerPort: 60000
             name: metrics

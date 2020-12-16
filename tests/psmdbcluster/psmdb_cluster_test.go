@@ -181,8 +181,6 @@ func TestPSMDBClusterAPI(t *testing.T) {
 }
 
 func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.PSMDBClusterState) error {
-	c := time.After(5 * time.Minute)
-
 	for {
 		clusters, err := tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
@@ -201,8 +199,6 @@ func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name strin
 		}
 
 		select {
-		case <-c:
-			return fmt.Errorf("timeout")
 		case <-ctx.Done():
 			return fmt.Errorf("timeout waiting for the cluster to be ready")
 		case <-time.After(1000 * time.Millisecond):

@@ -31,29 +31,6 @@ import (
 	"github.com/percona-platform/dbaas-controller/tests"
 )
 
-// func TestGetXtraDBClusterAPI(t *testing.T) {
-// 	// PERCONA_TEST_DBAAS_KUBECONFIG=$(minikube kubectl -- config view --flatten --minify --output json)
-// 	kubeconfig := os.Getenv("PERCONA_TEST_DBAAS_KUBECONFIG")
-// 	if kubeconfig == "" {
-// 		t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")
-// 	}
-//
-// 	if os.Getenv("IN_EKS") == "" {
-// 		t.Skip("This tests needs to run in an EKS cluster")
-// 	}
-//
-// 	name := "pxdb-api-test-cluster"
-//
-// 	cluster, err := tests.XtraDBClusterAPIClient.GetXtraDBCluster(tests.Context, &controllerv1beta1.GetXtraDBClusterRequest{
-// 		KubeAuth: &controllerv1beta1.KubeAuth{
-// 			Kubeconfig: kubeconfig,
-// 		},
-// 		Name: name,
-// 	})
-// 	assert.NoError(t, err)
-// 	assert.NotEmpty(t, cluster.Credentials)
-// }
-
 func TestXtraDBClusterAPI(t *testing.T) {
 	// PERCONA_TEST_DBAAS_KUBECONFIG=$(minikube kubectl -- config view --flatten --minify --output json)
 	kubeconfig := os.Getenv("PERCONA_TEST_DBAAS_KUBECONFIG")
