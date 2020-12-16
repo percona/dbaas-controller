@@ -117,6 +117,8 @@ type PSMDBParams struct {
 	Size             int32
 	Replicaset       *Replicaset
 	PMMPublicAddress string
+	Suspend          bool
+	Resume           bool
 }
 
 // XtraDBCluster contains information related to xtradb cluster.
@@ -133,6 +135,7 @@ type XtraDBCluster struct {
 // PSMDBCluster contains information related to psmdb cluster.
 type PSMDBCluster struct {
 	Name       string
+	Pause      bool
 	Size       int32
 	State      ClusterState
 	Message    string
@@ -575,7 +578,16 @@ func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 		return errors.Wrapf(ErrPSMDBClusterNotReady, "state is %v", cluster.Status.Status) //nolint:wrapcheck
 	}
 
-	cluster.Spec.Replsets[0].Size = params.Size
+	if params.Size > 0 {
+		cluster.Spec.Replsets[0].Size = params.Size
+	}
+
+	if params.Resume {
+		cluster.Spec.Pause = false
+	}
+	if params.Suspend {
+		cluster.Spec.Pause = true
+	}
 
 	if params.Replicaset != nil {
 		cluster.Spec.Replsets[0].Resources = c.updateComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
@@ -625,6 +637,7 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 			Name:    cluster.Name,
 			Size:    cluster.Spec.Replsets[0].Size,
 			State:   getReplicasetStatus(cluster),
+			Pause:   cluster.Spec.Pause,
 			Message: message,
 			Replicaset: &Replicaset{
 				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
