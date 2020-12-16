@@ -19,7 +19,6 @@ package pxc
 
 import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
@@ -140,6 +139,29 @@ type PerconaXtraDBClusterList struct {
 	Items []PerconaXtraDBCluster `json:"items"`
 }
 
+// ServiceType represents the expose type to open the cluster to the world.
+type ServiceType string
+
+const (
+	// ServiceTypeClusterIP means a service will only be accessible inside the
+	// cluster, via the cluster IP.
+	ServiceTypeClusterIP ServiceType = "ClusterIP"
+
+	// ServiceTypeNodePort means a service will be exposed on one port of
+	// every node, in addition to 'ClusterIP' type.
+	ServiceTypeNodePort ServiceType = "NodePort"
+
+	// ServiceTypeLoadBalancer means a service will be exposed via an
+	// external load balancer (if the cloud provider supports it), in addition
+	// to 'NodePort' type.
+	ServiceTypeLoadBalancer ServiceType = "LoadBalancer"
+
+	// ServiceTypeExternalName means a service consists of only a reference to
+	// an external name that kubedns or equivalent will return as a CNAME
+	// record, with no exposing or proxying of any pods involved.
+	ServiceTypeExternalName ServiceType = "ExternalName"
+)
+
 // PodSpec hold pod's exported fields representing the pod configuration.
 type PodSpec struct { //nolint:maligned
 	Enabled                       bool                            `json:"enabled,omitempty"`
@@ -167,7 +189,7 @@ type PodSpec struct { //nolint:maligned
 	ServiceAccountName            string                          `json:"serviceAccountName,omitempty"`
 	ImagePullPolicy               common.PullPolicy               `json:"imagePullPolicy,omitempty"`
 	PodDisruptionBudget           *common.PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
-	ServiceType                   corev1.ServiceType
+	ServiceType                   ServiceType
 }
 
 // PodAffinity POD's affinity.

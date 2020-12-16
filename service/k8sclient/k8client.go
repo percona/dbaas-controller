@@ -29,7 +29,6 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // ClusterKind is a kind of a cluster.
@@ -257,7 +256,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				// This enables ingress for the cluster and exposes the cluster to the world.
 				// The cluster will have an internal IP and a world accessible hostname.
 				// This feature cannot be tested with minikube. Please use EKS for testing.
-				ServiceType: corev1.ServiceTypeLoadBalancer,
+				ServiceType: pxc.ServiceTypeLoadBalancer,
 			},
 
 			PMM: &pxc.PMMSpec{
@@ -565,7 +564,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 					// This feature cannot be tested with minikube. Please use EKS for testing.
 					Expose: psmdb.Expose{
 						Enabled:    true,
-						ExposeType: corev1.ServiceTypeLoadBalancer,
+						ExposeType: psmdb.ServiceTypeLoadBalancer,
 					},
 				},
 			},

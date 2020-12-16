@@ -17,14 +17,8 @@
 // Package psmdb contains API Schema definitions for the psmdb v1 API group.
 package psmdb
 
-// <<<<<<< HEAD:service/k8sclient/psmdb_objects.go
-// 	"github.com/percona-platform/dbaas-controller/k8_api/common"
-// =======
-// 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
-// >>>>>>> main:service/k8sclient/internal/psmdb/psmdb_types.go
 import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // AffinityOff turn off affinity.
@@ -175,10 +169,33 @@ type PodAffinity struct {
 	TopologyKey *string `json:"antiAffinityTopologyKey,omitempty"`
 }
 
+// ServiceType represents the expose type to open the cluster to the world.
+type ServiceType string
+
+const (
+	// ServiceTypeClusterIP means a service will only be accessible inside the
+	// cluster, via the cluster IP.
+	ServiceTypeClusterIP ServiceType = "ClusterIP"
+
+	// ServiceTypeNodePort means a service will be exposed on one port of
+	// every node, in addition to 'ClusterIP' type.
+	ServiceTypeNodePort ServiceType = "NodePort"
+
+	// ServiceTypeLoadBalancer means a service will be exposed via an
+	// external load balancer (if the cloud provider supports it), in addition
+	// to 'NodePort' type.
+	ServiceTypeLoadBalancer ServiceType = "LoadBalancer"
+
+	// ServiceTypeExternalName means a service consists of only a reference to
+	// an external name that kubedns or equivalent will return as a CNAME
+	// record, with no exposing or proxying of any pods involved.
+	ServiceTypeExternalName ServiceType = "ExternalName"
+)
+
 // Expose holds information about how the cluster is exposed to the worl via ingress.
 type Expose struct {
-	Enabled    bool               `json:"enabled"`
-	ExposeType corev1.ServiceType `json:"exposeType"`
+	Enabled    bool        `json:"enabled"`
+	ExposeType ServiceType `json:"exposeType"`
 }
 
 // ReplsetSpec defines replicaton set specification.
@@ -420,9 +437,4 @@ type Arbiter struct {
 	Enabled bool  `json:"enabled"`
 	Size    int32 `json:"size"`
 	MultiAZ
-}
-
-type expose struct {
-	Enabled    bool               `json:"enabled"`
-	ExposeType corev1.ServiceType `json:"exposeType"`
 }
