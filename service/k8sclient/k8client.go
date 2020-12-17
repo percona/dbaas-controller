@@ -102,6 +102,8 @@ type XtraDBParams struct {
 	PXC              *PXC
 	ProxySQL         *ProxySQL
 	PMMPublicAddress string
+	Suspend          bool
+	Resume           bool
 }
 
 // Cluster contains common information related to cluster.
@@ -115,6 +117,8 @@ type PSMDBParams struct {
 	Size             int32
 	Replicaset       *Replicaset
 	PMMPublicAddress string
+	Suspend          bool
+	Resume           bool
 }
 
 // XtraDBCluster contains information related to xtradb cluster.
@@ -125,11 +129,13 @@ type XtraDBCluster struct {
 	Message  string
 	PXC      *PXC
 	ProxySQL *ProxySQL
+	Pause    bool
 }
 
 // PSMDBCluster contains information related to psmdb cluster.
 type PSMDBCluster struct {
 	Name       string
+	Pause      bool
 	Size       int32
 	State      ClusterState
 	Message    string
@@ -303,11 +309,20 @@ func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams
 
 	// This is to prevent concurrent updates
 	if cluster.Status.PXC.Status != pxc.AppStateReady {
-		return ErrXtraDBClusterNotReady //nolint:wrapcheck
+		return errors.Wrapf(ErrXtraDBClusterNotReady, "state is %v", cluster.Status.Status) //nolint:wrapcheck
 	}
 
-	cluster.Spec.PXC.Size = params.Size
-	cluster.Spec.ProxySQL.Size = params.Size
+	if params.Resume {
+		cluster.Spec.Pause = false
+	}
+	if params.Suspend {
+		cluster.Spec.Pause = true
+	}
+
+	if params.Size > 0 {
+		cluster.Spec.PXC.Size = params.Size
+		cluster.Spec.ProxySQL.Size = params.Size
+	}
 
 	if params.PXC != nil {
 		cluster.Spec.PXC.Resources = c.updateComputeResources(params.PXC.ComputeResources, cluster.Spec.PXC.Resources)
@@ -395,6 +410,7 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 				DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
 			},
+			Pause: cluster.Spec.Pause,
 		}
 
 		res[i] = val
@@ -607,7 +623,16 @@ func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 		return errors.Wrapf(ErrPSMDBClusterNotReady, "state is %v", cluster.Status.Status) //nolint:wrapcheck
 	}
 
-	cluster.Spec.Replsets[0].Size = params.Size
+	if params.Size > 0 {
+		cluster.Spec.Replsets[0].Size = params.Size
+	}
+
+	if params.Resume {
+		cluster.Spec.Pause = false
+	}
+	if params.Suspend {
+		cluster.Spec.Pause = true
+	}
 
 	if params.Replicaset != nil {
 		cluster.Spec.Replsets[0].Resources = c.updateComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
@@ -676,6 +701,7 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 			Name:    cluster.Name,
 			Size:    cluster.Spec.Replsets[0].Size,
 			State:   getReplicasetStatus(cluster),
+			Pause:   cluster.Spec.Pause,
 			Message: message,
 			Replicaset: &Replicaset{
 				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),

@@ -170,6 +170,35 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, restartPSMDBClusterResponse)
 
+	// Suspend  cluster
+	suspendReq := &controllerv1beta1.UpdatePSMDBClusterRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+		Name: name,
+		Params: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
+			Suspend: true,
+		},
+	}
+	t.Log("Suspend cluster")
+	suspendResp, err := tests.PSMDBClusterAPIClient.UpdatePSMDBCluster(tests.Context, suspendReq)
+	assert.NoError(t, err)
+	assert.NotNil(t, suspendResp)
+
+	clusters, err = tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+	})
+	assert.NoError(t, err)
+
+	for _, cluster := range clusters.Clusters {
+		if cluster.Name == name {
+			assert.True(t, cluster.Params.Paused)
+			break
+		}
+	}
+
 	deletePSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.DeletePSMDBCluster(tests.Context, &controllerv1beta1.DeletePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,

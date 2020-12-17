@@ -142,6 +142,7 @@ type PerconaXtraDBClusterList struct {
 // PodSpec hold pod's exported fields representing the pod configuration.
 type PodSpec struct { //nolint:maligned
 	Enabled                       bool                            `json:"enabled,omitempty"`
+	Pause                         bool                            `json:"pause,omitempty"`
 	Size                          int32                           `json:"size,omitempty"`
 	Image                         string                          `json:"image,omitempty"`
 	Resources                     *common.PodResources            `json:"resources,omitempty"`
