@@ -70,7 +70,8 @@ const expected = `
         "replsets": [
             {
                 "expose": {
-                    "enabled": false
+                    "enabled": false,
+					"exposeType": ""
                 },
                 "size": 3,
                 "arbiter": {

@@ -98,12 +98,12 @@ type Replicaset struct {
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
 type XtraDBParams struct {
 	Name             string
-	Size             int32
-	PXC              *PXC
-	ProxySQL         *ProxySQL
 	PMMPublicAddress string
+	Size             int32
 	Suspend          bool
 	Resume           bool
+	PXC              *PXC
+	ProxySQL         *ProxySQL
 }
 
 // Cluster contains common information related to cluster.
@@ -114,11 +114,11 @@ type Cluster struct {
 // PSMDBParams contains all parameters required to create or update percona server for mongodb cluster.
 type PSMDBParams struct {
 	Name             string
-	Size             int32
-	Replicaset       *Replicaset
 	PMMPublicAddress string
+	Size             int32
 	Suspend          bool
 	Resume           bool
+	Replicaset       *Replicaset
 }
 
 // XtraDBCluster contains information related to xtradb cluster.
@@ -160,7 +160,7 @@ type XtraDBCredentials struct {
 }
 
 // pxcStatesMap matches pxc app states to cluster states.
-var pxcStatesMap = map[pxc.AppState]ClusterState{
+var pxcStatesMap = map[pxc.AppState]ClusterState{ //nolint:gochecknoglobals
 	pxc.AppStateUnknown: ClusterStateInvalid,
 	pxc.AppStateInit:    ClusterStateChanging,
 	pxc.AppStateReady:   ClusterStateReady,
@@ -168,7 +168,7 @@ var pxcStatesMap = map[pxc.AppState]ClusterState{
 }
 
 // psmdbStatesMap matches psmdb app states to cluster states.
-var psmdbStatesMap = map[psmdb.AppState]ClusterState{
+var psmdbStatesMap = map[psmdb.AppState]ClusterState{ //nolint:gochecknoglobals
 	psmdb.AppStateUnknown: ClusterStateInvalid,
 	psmdb.AppStatePending: ClusterStateChanging,
 	psmdb.AppStateInit:    ClusterStateChanging,
@@ -261,7 +261,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				// This enables ingress for the cluster and exposes the cluster to the world.
 				// The cluster will have an internal IP and a world accessible hostname.
 				// This feature cannot be tested with minikube. Please use EKS for testing.
-				ServiceType: pxc.ServiceTypeLoadBalancer,
+				ServiceType: common.ServiceTypeLoadBalancer,
 			},
 
 			PMM: &pxc.PMMSpec{
@@ -400,7 +400,6 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 			Name:    cluster.Name,
 			Size:    cluster.Spec.ProxySQL.Size,
 			State:   pxcStatesMap[cluster.Status.Status],
-			Host:    cluster.Status.Host,
 			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
@@ -579,7 +578,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 					// This feature cannot be tested with minikube. Please use EKS for testing.
 					Expose: psmdb.Expose{
 						Enabled:    true,
-						ExposeType: psmdb.ServiceTypeLoadBalancer,
+						ExposeType: common.ServiceTypeLoadBalancer,
 					},
 				},
 			},
