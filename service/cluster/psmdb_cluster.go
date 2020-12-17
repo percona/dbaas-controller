@@ -108,14 +108,18 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 			DiskSize: convertors.BytesToStr(req.Params.Replicaset.DiskSize),
 		},
 		PMMPublicAddress: req.PmmPublicAddress,
+		Expose:           req.Expose,
 	}
+
 	if req.Params.Replicaset.ComputeResources != nil {
 		params.Replicaset.ComputeResources = computeResources(req.Params.Replicaset.ComputeResources)
 	}
+
 	err = client.CreatePSMDBCluster(ctx, params)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
 	return new(controllerv1beta1.CreatePSMDBClusterResponse), nil
 }
 

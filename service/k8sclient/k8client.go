@@ -102,6 +102,7 @@ type XtraDBParams struct {
 	Size             int32
 	Suspend          bool
 	Resume           bool
+	Expose           bool
 	PXC              *PXC
 	ProxySQL         *ProxySQL
 }
@@ -118,6 +119,7 @@ type PSMDBParams struct {
 	Size             int32
 	Suspend          bool
 	Resume           bool
+	Expose           bool
 	Replicaset       *Replicaset
 }
 
@@ -258,10 +260,6 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 				},
-				// This enables ingress for the cluster and exposes the cluster to the world.
-				// The cluster will have an internal IP and a world accessible hostname.
-				// This feature cannot be tested with minikube. Please use EKS for testing.
-				ServiceType: common.ServiceTypeLoadBalancer,
 			},
 
 			PMM: &pxc.PMMSpec{
@@ -294,6 +292,13 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 				ServiceAccountName: "percona-xtradb-cluster-operator",
 			},
 		},
+	}
+
+	// This enables ingress for the cluster and exposes the cluster to the world.
+	// The cluster will have an internal IP and a world accessible hostname.
+	// This feature cannot be tested with minikube. Please use EKS for testing.
+	if params.Expose {
+		res.Spec.ProxySQL.ServiceType = common.ServiceTypeLoadBalancer
 	}
 
 	return c.kubeCtl.Apply(ctx, res)
@@ -573,13 +578,6 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 							TopologyKey: pointer.ToString(psmdb.AffinityOff),
 						},
 					},
-					// This enables ingress for the cluster and exposes the cluster to the world.
-					// The cluster will have an internal IP and a world accessible hostname.
-					// This feature cannot be tested with minikube. Please use EKS for testing.
-					Expose: psmdb.Expose{
-						Enabled:    true,
-						ExposeType: common.ServiceTypeLoadBalancer,
-					},
 				},
 			},
 
@@ -606,6 +604,19 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	}
+
+	// This enables ingress for the cluster and exposes the cluster to the world.
+	// The cluster will have an internal IP and a world accessible hostname.
+	// This feature cannot be tested with minikube. Please use EKS for testing.
+	if params.Expose {
+		for i := 0; i < len(res.Spec.Replsets); i++ {
+			res.Spec.Replsets[i].Expose = psmdb.Expose{
+				Enabled:    true,
+				ExposeType: common.ServiceTypeLoadBalancer,
+			}
+		}
+	}
+
 	return c.kubeCtl.Apply(ctx, res)
 }
 

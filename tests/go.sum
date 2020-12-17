@@ -40,6 +40,8 @@ github.com/percona-platform/dbaas-api v0.0.0-20201215204541-231d0e0b8953 h1:MhLj
 github.com/percona-platform/dbaas-api v0.0.0-20201215204541-231d0e0b8953/go.mod h1:xLjIJU72CfIhawNYZiSmO6itB+qwfswq+8viBMlg3BY=
 github.com/percona-platform/dbaas-api v0.0.0-20201216003837-68dead64fa93 h1:J8kA2Z0msw9LqyTZkr1/GRP6+E6Mtx+g3XPAnKogu34=
 github.com/percona-platform/dbaas-api v0.0.0-20201216003837-68dead64fa93/go.mod h1:xLjIJU72CfIhawNYZiSmO6itB+qwfswq+8viBMlg3BY=
+github.com/percona-platform/dbaas-api v0.0.0-20201217181941-cc1aea155a80 h1:E3lWsaISR956SoYSUUtN6Pe/hlqtTSeKSK0ue24g9Nw=
+github.com/percona-platform/dbaas-api v0.0.0-20201217181941-cc1aea155a80/go.mod h1:xLjIJU72CfIhawNYZiSmO6itB+qwfswq+8viBMlg3BY=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

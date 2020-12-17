@@ -17,7 +17,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/percona-platform/dbaas-api v0.0.0-20201216003837-68dead64fa93
+	github.com/percona-platform/dbaas-api v0.0.0-20201217181941-cc1aea155a80
 	github.com/percona-platform/saas v0.0.0-20201208060513-b395fb361ebd
 	github.com/percona/pmm v2.12.0+incompatible
 	github.com/pkg/errors v0.9.1
