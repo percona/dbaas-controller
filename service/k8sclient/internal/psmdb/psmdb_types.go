@@ -169,33 +169,10 @@ type PodAffinity struct {
 	TopologyKey *string `json:"antiAffinityTopologyKey,omitempty"`
 }
 
-// ServiceType represents the expose type to open the cluster to the world.
-type ServiceType string
-
-const (
-	// ServiceTypeClusterIP means a service will only be accessible inside the
-	// cluster, via the cluster IP.
-	ServiceTypeClusterIP ServiceType = "ClusterIP"
-
-	// ServiceTypeNodePort means a service will be exposed on one port of
-	// every node, in addition to 'ClusterIP' type.
-	ServiceTypeNodePort ServiceType = "NodePort"
-
-	// ServiceTypeLoadBalancer means a service will be exposed via an
-	// external load balancer (if the cloud provider supports it), in addition
-	// to 'NodePort' type.
-	ServiceTypeLoadBalancer ServiceType = "LoadBalancer"
-
-	// ServiceTypeExternalName means a service consists of only a reference to
-	// an external name that kubedns or equivalent will return as a CNAME
-	// record, with no exposing or proxying of any pods involved.
-	ServiceTypeExternalName ServiceType = "ExternalName"
-)
-
 // Expose holds information about how the cluster is exposed to the worl via ingress.
 type Expose struct {
-	Enabled    bool        `json:"enabled"`
-	ExposeType ServiceType `json:"exposeType"`
+	Enabled    bool               `json:"enabled"`
+	ExposeType common.ServiceType `json:"exposeType"`
 }
 
 // ReplsetSpec defines replicaton set specification.

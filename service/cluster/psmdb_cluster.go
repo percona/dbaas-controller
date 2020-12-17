@@ -198,7 +198,10 @@ func (s *PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *controll
 
 	resp := &controllerv1beta1.GetPSMDBClusterResponse{
 		Credentials: &controllerv1beta1.PSMDBCredentials{
-			Host: cluster.Host,
+			Username: cluster.Username,
+			Password: cluster.Password,
+			Host:     cluster.Host,
+			Port:     cluster.Port,
 		},
 	}
 

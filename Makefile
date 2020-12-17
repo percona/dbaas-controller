@@ -4,6 +4,34 @@ help:                             ## Display this help message
 	@echo "Please use \`make <target>\` where <target> is one of:"
 	@grep '^[a-zA-Z]' $(MAKEFILE_LIST) | \
 		awk -F ':.*?## ' 'NF==2 {printf "  %-26s%s\n", $$1, $$2}'
+	@echo " To deploy operators in an EKS cluster:"
+	@echo ""
+	@echo " Steps:"
+	@echo " - Install AWS CLI https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html"
+	@echo " - Use `aws configure` and add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` with your credentials."
+	@echo " - Create a cluster with the following command  :"
+	@echo " - eksctl create cluster --write-kubeconfig —name=your-cluster-name —zones=us-west-2a,us-west-2b --kubeconfig <PATH_TO_KUBECONFIG>"
+	@echo " - Add your ACCESS and SECRET key from stage 3 to env section of your kube config file"
+	@echo " "
+	@echo "  	env:"
+	@echo "   	- name: AWS_STS_REGIONAL_ENDPOINTS"
+	@echo "     	value: regional"
+	@echo "   	- name: AWS_DEFAULT_REGION"
+	@echo "     	value: us-west-2"
+	@echo "   	- name: AWS_ACCESS_KEY_ID"
+	@echo "     	value: XXXXXXXXXXXXXXXXXXXXXXXX"
+	@echo "   	- name: AWS_SECRET_ACCESS_KEY"
+	@echo "     	value: XXXXXXXXXXXXXXXXXXXXXXXX"
+	@echo " "
+	@echo " - Replace aws to aws-iam-authenticator in users.user.exec.command of your kube config file and replace in args"
+	@echo "         - eks"
+	@echo "         - get-token"
+	@echo "         - --cluster-name"
+	@echo "         - <cluster-name>"
+	@echo " with"
+	@echo "        - token"
+	@echo "         - -i"
+	@echo ""
 
 KUBERNETES_VERSION ?= 1.16.8
 
@@ -15,6 +43,10 @@ PMM_RELEASE_VERSION ?=
 PMM_RELEASE_TIMESTAMP ?= $(shell date '+%s')
 PMM_RELEASE_FULLCOMMIT ?= $(shell git rev-parse HEAD)
 PMM_RELEASE_BRANCH ?= $(shell git describe --always --contains --all)
+PATH_TO_KUBECONFIG ?= ${HOME}/.kube/config_eks
+PMM_USER ?= $(shell echo -n 'admin' | base64)
+PMM_PASS ?= $(shell echo -n 'admin_password' | base64)
+KUBECTL_CMD = "kubectl --kubeconfig ${PATH_TO_KUBECONFIG}"
 
 PMM_LD_FLAGS = -ldflags " \
 			-X 'github.com/percona/pmm/version.ProjectName=dbaas-controller' \
@@ -119,3 +151,19 @@ collect-debugdata:                ## Collect debugdata
 	minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-xtradb-cluster' > ./debugdata/pxc-clusters.txt
 	minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator' > ./debugdata/psmdb-operators.txt
 	minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb' > ./debugdata/psmdb-clusters.txt
+
+eks-install-operators:            ## Install Kubernetes operators in EKS.
+	# Install the PXC operator
+	cat ./deploy/pxc-operator.yaml | ${KUBECTL_CMD} apply -f -
+	cat ./deploy/pxc-secrets.yaml | sed "s/pmmserver:.*=/pmmserver: ${PMM_PASS}/g" | ${KUBECTL_CMD} apply -f -
+	# Install the PSMDB operator
+	cat ./deploy/psmdb-operator.yaml | ${KUBECTL_CMD} apply -f -
+	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*$/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*=$/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | ${KUBECTL_CMD} apply -f -
+
+eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage. 
+	# Delete the PXC operator
+	cat ${TOP_DIR}/deploy/pxc-operator.yaml | ${KUBECTL_CMD} delete -f -
+	cat ${TOP_DIR}/deploy/pxc-secrets.yaml | sed "s/pmmserver:.*=/pmmserver: ${PMM_PASS}/g" | ${KUBECTL_CMD} delete -f -
+	# Delete the PSMDB operator
+	cat ${TOP_DIR}/deploy/psmdb-operator.yaml | ${KUBECTL_CMD} delete -f -
+	cat ${TOP_DIR}/deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*$/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*=$/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | ${KUBECTL_CMD} delete -f -

@@ -125,7 +125,6 @@ type XtraDBCluster struct {
 	Message  string
 	PXC      *PXC
 	ProxySQL *ProxySQL
-	Host     string
 }
 
 // PSMDBCluster contains information related to psmdb cluster.
