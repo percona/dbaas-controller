@@ -247,9 +247,9 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 		if err := e.Encode(stdin); err != nil {
 			return nil, err
 		}
-		l.Infof("Running %s with input:\n%s", argsString, inBuf.String())
+		l.Debugf("Running %s with input:\n%s", argsString, inBuf.String())
 	} else {
-		l.Infof("Running %s", argsString)
+		l.Debugf("Running %s", argsString)
 	}
 
 	var outBuf bytes.Buffer

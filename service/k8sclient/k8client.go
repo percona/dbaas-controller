@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
@@ -104,7 +105,6 @@ type XtraDBParams struct {
 	Size             int32
 	Suspend          bool
 	Resume           bool
-	Expose           bool
 	PXC              *PXC
 	ProxySQL         *ProxySQL
 }
@@ -121,7 +121,6 @@ type PSMDBParams struct {
 	Size             int32
 	Suspend          bool
 	Resume           bool
-	Expose           bool
 	Replicaset       *Replicaset
 }
 
@@ -161,6 +160,41 @@ type XtraDBCredentials struct {
 	Password string
 	Host     string
 	Port     int32
+}
+
+// StorageClass represents a cluster storage class information.
+// We use the Items.Provisioner to detect if we are running against minikube or AWS.
+// Returned value examples:
+// - AWS EKS: kubernetes.io/aws-ebs
+// - Minukube: k8s.io/minikube-hostpath
+type StorageClass struct {
+	APIVersion string `json:"apiVersion"`
+	Items      []struct {
+		APIVersion string `json:"apiVersion"`
+		Kind       string `json:"kind"`
+		Metadata   struct {
+			Annotations struct {
+				KubectlKubernetesIoLastAppliedConfiguration string `json:"kubectl.kubernetes.io/last-applied-configuration"`
+				StorageclassKubernetesIoIsDefaultClass      string `json:"storageclass.kubernetes.io/is-default-class"`
+			} `json:"annotations"`
+			CreationTimestamp time.Time `json:"creationTimestamp"`
+			Labels            struct {
+				AddonmanagerKubernetesIoMode string `json:"addonmanager.kubernetes.io/mode"`
+			} `json:"labels"`
+			Name            string `json:"name"`
+			ResourceVersion string `json:"resourceVersion"`
+			SelfLink        string `json:"selfLink"`
+			UID             string `json:"uid"`
+		} `json:"metadata"`
+		Provisioner       string `json:"provisioner"`
+		ReclaimPolicy     string `json:"reclaimPolicy"`
+		VolumeBindingMode string `json:"volumeBindingMode"`
+	} `json:"items"`
+	Kind     string `json:"kind"`
+	Metadata struct {
+		ResourceVersion string `json:"resourceVersion"`
+		SelfLink        string `json:"selfLink"`
+	} `json:"metadata"`
 }
 
 // pxcStatesMap matches pxc app states to cluster states.
@@ -299,7 +333,7 @@ func (c *K8Client) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams
 	// This enables ingress for the cluster and exposes the cluster to the world.
 	// The cluster will have an internal IP and a world accessible hostname.
 	// This feature cannot be tested with minikube. Please use EKS for testing.
-	if params.Expose {
+	if isMinikube, err := c.isMinikube(ctx); err == nil && !isMinikube {
 		res.Spec.ProxySQL.ServiceType = common.ServiceTypeLoadBalancer
 	}
 
@@ -370,6 +404,35 @@ func (c *K8Client) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBCr
 	}
 
 	return credentials, nil
+}
+
+// GetXtraDBCluster returns an XtraDB cluster credentials.
+func (c *K8Client) getStorageClass(ctx context.Context) (*StorageClass, error) {
+	var storageClass *StorageClass
+
+	err := c.kubeCtl.Get(ctx, "storageclass", "", &storageClass)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot get storageClass")
+	}
+
+	return storageClass, nil
+}
+
+func (c *K8Client) isMinikube(ctx context.Context) (bool, error) {
+	sc, err := c.getStorageClass(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	if len(sc.Items) == 0 {
+		return false, fmt.Errorf("cannot get storage class. empty items list")
+	}
+
+	if strings.Contains(sc.Items[0].Provisioner, "minikube") {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (c *K8Client) restartDBClusterCmd(name, kind string) []string {
@@ -607,10 +670,10 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	}
 
-	// This enables ingress for the cluster and exposes the cluster to the world.
-	// The cluster will have an internal IP and a world accessible hostname.
-	// This feature cannot be tested with minikube. Please use EKS for testing.
-	if params.Expose {
+	if isMinikube, err := c.isMinikube(ctx); err == nil && !isMinikube {
+		// This enables ingress for the cluster and exposes the cluster to the world.
+		// The cluster will have an internal IP and a world accessible hostname.
+		// This feature cannot be tested with minikube. Please use EKS for testing.
 		for i := 0; i < len(res.Spec.Replsets); i++ {
 			res.Spec.Replsets[i].Expose = psmdb.Expose{
 				Enabled:    true,

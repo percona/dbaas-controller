@@ -63,17 +63,17 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		},
 		Name: name,
 		Params: &controllerv1beta1.XtraDBClusterParams{
-			ClusterSize: 1,
+			ClusterSize: 2,
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        200,
+					CpuM:        600,
 					MemoryBytes: 1024 * 1024 * 1024,
 				},
 				DiskSize: 1024 * 1024 * 1024,
 			},
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        200,
+					CpuM:        600,
 					MemoryBytes: 1024 * 1024 * 1024,
 				},
 				DiskSize: 1024 * 1024 * 1024,
@@ -96,9 +96,9 @@ func TestXtraDBClusterAPI(t *testing.T) {
 
 	for _, cluster := range clusters.Clusters {
 		if cluster.Name == name {
-			assert.Equal(t, int32(1), cluster.Params.ClusterSize)
+			assert.Equal(t, int32(2), cluster.Params.ClusterSize)
 			assert.Equal(t, int64(1024*1024*1024), cluster.Params.Proxysql.ComputeResources.MemoryBytes)
-			assert.Equal(t, int32(200), cluster.Params.Proxysql.ComputeResources.CpuM)
+			assert.Equal(t, int32(600), cluster.Params.Proxysql.ComputeResources.CpuM)
 			clusterFound = true
 		}
 	}
@@ -122,7 +122,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		},
 		Name: name,
 		Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
-			ClusterSize: 2,
+			ClusterSize: 3,
 			Pxc: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					MemoryBytes: 512 * 1024 * 1024 * 2,
@@ -162,7 +162,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		},
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, int32(2), clusters.Clusters[0].Params.ClusterSize)
+	assert.Equal(t, int32(3), clusters.Clusters[0].Params.ClusterSize)
 	assert.Equal(t, int64(512*1024*1024*2), clusters.Clusters[0].Params.Pxc.ComputeResources.MemoryBytes)
 	assert.Equal(t, int64(512*1024*1024*2), clusters.Clusters[0].Params.Proxysql.ComputeResources.MemoryBytes)
 

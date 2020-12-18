@@ -53,7 +53,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	require.Falsef(t, clusterFound, "There should not be cluster with name %s", name)
 
 	clusterSize := int32(3)
-	cpum := int32(600)
+	cpum := int32(1024)
 	memory := int64(1024 * 1024 * 1024)
 	diskSize := int64(1024 * 1024 * 1024)
 
@@ -95,6 +95,10 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	}
 	assert.True(t, clusterFound)
 
+	t.Log("Wating for cluster to be ready")
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
+	assert.NoError(t, err)
+
 	// There is no Ingress in minikube
 	if os.Getenv("IN_EKS") != "" {
 		cluster, err := tests.PSMDBClusterAPIClient.GetPSMDBCluster(tests.Context, &controllerv1beta1.GetPSMDBClusterRequest{
@@ -106,10 +110,6 @@ func TestPSMDBClusterAPI(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotEmpty(t, cluster.Credentials.Host)
 	}
-
-	t.Log("Wating for cluster to be ready")
-	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
-	assert.NoError(t, err)
 
 	updateMemory := 2 * memory
 	updateReq := &controllerv1beta1.UpdatePSMDBClusterRequest{
