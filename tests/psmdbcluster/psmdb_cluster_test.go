@@ -168,19 +168,28 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, suspendResp)
 
-	clusters, err = tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
+	t.Log("Waiting for cluster to be suspended")
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED)
+	require.NoError(t, err)
+
+	// Resume cluster
+	resumeReq := &controllerv1beta1.UpdatePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
-	})
-	assert.NoError(t, err)
-
-	for _, cluster := range clusters.Clusters {
-		if cluster.Name == name {
-			assert.True(t, cluster.Params.Paused)
-			break
-		}
+		Name: name,
+		Params: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
+			Resume: true,
+		},
 	}
+	t.Log("Resume cluster")
+	resumeResp, err := tests.PSMDBClusterAPIClient.UpdatePSMDBCluster(tests.Context, resumeReq)
+	assert.NoError(t, err)
+	assert.NotNil(t, resumeResp)
+
+	t.Log("Waiting for cluster to be resumend")
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
+	require.NoError(t, err)
 
 	deletePSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.DeletePSMDBCluster(tests.Context, &controllerv1beta1.DeletePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
