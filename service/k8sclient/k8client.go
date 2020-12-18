@@ -363,7 +363,7 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 		val := XtraDBCluster{
 			Name:    cluster.Name,
 			Size:    cluster.Spec.ProxySQL.Size,
-			State:   pxcStatesMap[cluster.Status.Status],
+			State:   getPXCState(cluster.Status.Status),
 			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
