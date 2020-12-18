@@ -37,6 +37,7 @@ var (
 		k8sclient.ClusterStateReady:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
 		k8sclient.ClusterStateFailed:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
 		k8sclient.ClusterStateDeleting: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
+		k8sclient.ClusterStatePaused:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
 	}
 )
 
@@ -69,7 +70,6 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 	for i, cluster := range PSMDBClusters {
 		params := &controllerv1beta1.PSMDBClusterParams{
 			ClusterSize: cluster.Size,
-			Paused:      cluster.Pause,
 			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
 				DiskSize: convertors.StrToBytes(cluster.Replicaset.DiskSize),
 			},
@@ -87,6 +87,10 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 				Message: cluster.Message,
 			},
 			Params: params,
+		}
+
+		if cluster.State == k8sclient.ClusterStateReady && cluster.Pause {
+			res.Clusters[i].State = controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED
 		}
 	}
 

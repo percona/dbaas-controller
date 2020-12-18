@@ -182,7 +182,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, suspendXtraDBClusterResponse)
 
-	err = waitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
+	err = waitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED)
 	require.NoError(t, err)
 
 	resumeClusterReq := &controllerv1beta1.UpdateXtraDBClusterRequest{
