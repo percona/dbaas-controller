@@ -64,9 +64,10 @@ func TestPSMDBClusterAPI(t *testing.T) {
 					CpuM:        1000,
 					MemoryBytes: 1024 * 1024 * 1024,
 				},
-				DiskSize: 1024 * 1024 * 1024,
+				DiskSize: 2 * 1024 * 1024 * 1024,
 			},
 		},
+		PmmPublicAddress: tests.PMMServerAddress,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createPSMDBClusterResponse)
@@ -83,12 +84,13 @@ func TestPSMDBClusterAPI(t *testing.T) {
 			assert.Equal(t, int32(3), cluster.Params.ClusterSize)
 			assert.Equal(t, int64(1024*1024*1024), cluster.Params.Replicaset.ComputeResources.MemoryBytes)
 			assert.Equal(t, int32(1000), cluster.Params.Replicaset.ComputeResources.CpuM)
+			assert.Equal(t, int64(2*1024*1024*1024), cluster.Params.Replicaset.DiskSize)
 			clusterFound = true
 		}
 	}
 	assert.True(t, clusterFound)
 
-	t.Log("Wating for cluster to be ready")
+	t.Log("Waiting for cluster to be ready")
 	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
 	require.NoError(t, err)
 
@@ -97,14 +99,13 @@ func TestPSMDBClusterAPI(t *testing.T) {
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
-		Params: &controllerv1beta1.PSMDBClusterParams{
+		Params: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
 			ClusterSize: 3,
-			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
+			Replicaset: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        1000,
 					MemoryBytes: 1024 * 1024 * 1024 * 2,
 				},
-				DiskSize: 1024 * 1024 * 1024,
 			},
 		},
 	}
@@ -151,6 +152,35 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, restartPSMDBClusterResponse)
+
+	// Suspend  cluster
+	suspendReq := &controllerv1beta1.UpdatePSMDBClusterRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+		Name: name,
+		Params: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
+			Suspend: true,
+		},
+	}
+	t.Log("Suspend cluster")
+	suspendResp, err := tests.PSMDBClusterAPIClient.UpdatePSMDBCluster(tests.Context, suspendReq)
+	assert.NoError(t, err)
+	assert.NotNil(t, suspendResp)
+
+	clusters, err = tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+	})
+	assert.NoError(t, err)
+
+	for _, cluster := range clusters.Clusters {
+		if cluster.Name == name {
+			assert.True(t, cluster.Params.Paused)
+			break
+		}
+	}
 
 	deletePSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.DeletePSMDBCluster(tests.Context, &controllerv1beta1.DeletePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{

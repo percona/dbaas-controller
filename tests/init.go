@@ -41,6 +41,9 @@ var (
 	// True if -debug or -trace flag is passed.
 	Debug bool
 
+	// PMM Server Address.
+	PMMServerAddress string
+
 	// XtraDBClusterAPIClient contains client for dbaas-controller API related to XtraDB clusters.
 	XtraDBClusterAPIClient dbaasClient.XtraDBClusterAPIClient
 
@@ -58,14 +61,16 @@ func init() {
 	debugF := flag.Bool("dbaas.debug", false, "Enable debug output [DBAAS_DEBUG].")
 	traceF := flag.Bool("dbaas.trace", false, "Enable trace output [DBAAS_TRACE].")
 	serverURLF := flag.String("dbaas.server-url", "127.0.0.1:20201", "DBaas Controller URL [DBAAS_SERVER_URL].")
+	pmmServerAddressF := flag.String("pmm.server-address", "", "PMM Server Address [PMM_SERVER_ADDRESS].") // FIXME: fix this once we start using CI.
 
 	testing.Init()
 	flag.Parse()
 
 	for envVar, f := range map[string]*flag.Flag{
-		"DBAAS_DEBUG":      flag.Lookup("dbaas.debug"),
-		"DBAAS_TRACE":      flag.Lookup("dbaas.trace"),
-		"DBAAS_SERVER_URL": flag.Lookup("dbaas.server-url"),
+		"DBAAS_DEBUG":        flag.Lookup("dbaas.debug"),
+		"DBAAS_TRACE":        flag.Lookup("dbaas.trace"),
+		"DBAAS_SERVER_URL":   flag.Lookup("dbaas.server-url"),
+		"PMM_SERVER_ADDRESS": flag.Lookup("pmm.server-address"),
 	} {
 		env, ok := os.LookupEnv(envVar)
 		if ok {
@@ -84,6 +89,8 @@ func init() {
 		logrus.SetReportCaller(true)
 	}
 	Debug = *debugF || *traceF
+
+	PMMServerAddress = *pmmServerAddressF
 
 	var cancel context.CancelFunc
 	Context, cancel = context.WithCancel(context.Background())

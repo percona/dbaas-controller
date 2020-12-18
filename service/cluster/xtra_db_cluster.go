@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
+	"github.com/percona-platform/dbaas-controller/utils/convertors"
 )
 
 //nolint:gochecknoglobals
@@ -68,30 +69,33 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 		params := &controllerv1beta1.XtraDBClusterParams{
 			ClusterSize: cluster.Size,
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
-				DiskSize: cluster.PXC.DiskSize,
+				DiskSize: convertors.StrToBytes(cluster.PXC.DiskSize),
 			},
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				DiskSize: cluster.ProxySQL.DiskSize,
+				DiskSize: convertors.StrToBytes(cluster.ProxySQL.DiskSize),
 			},
+			Paused: cluster.Pause,
 		}
 		if cluster.PXC.ComputeResources != nil {
 			params.Pxc.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        cluster.PXC.ComputeResources.CPUM,
-				MemoryBytes: cluster.PXC.ComputeResources.MemoryBytes,
+				CpuM:        convertors.StrToMilliCPU(cluster.PXC.ComputeResources.CPUM),
+				MemoryBytes: convertors.StrToBytes(cluster.PXC.ComputeResources.MemoryBytes),
 			}
 		}
 		if cluster.ProxySQL.ComputeResources != nil {
 			params.Proxysql.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        cluster.ProxySQL.ComputeResources.CPUM,
-				MemoryBytes: cluster.ProxySQL.ComputeResources.MemoryBytes,
+				CpuM:        convertors.StrToMilliCPU(cluster.ProxySQL.ComputeResources.CPUM),
+				MemoryBytes: convertors.StrToBytes(cluster.ProxySQL.ComputeResources.MemoryBytes),
 			}
 		}
 
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{
-			Name:      cluster.Name,
-			State:     pxcStatesMap[cluster.State],
-			Operation: nil,
-			Params:    params,
+			Name:  cluster.Name,
+			State: pxcStatesMap[cluster.State],
+			Operation: &controllerv1beta1.RunningOperation{
+				Message: cluster.Message,
+			},
+			Params: params,
 		}
 	}
 
@@ -110,14 +114,15 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 		Name: req.Name,
 		Size: req.Params.ClusterSize,
 		PXC: &k8sclient.PXC{
-			DiskSize: req.Params.Pxc.DiskSize,
+			ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
+			DiskSize:         convertors.BytesToStr(req.Params.Pxc.DiskSize),
 		},
 		ProxySQL: &k8sclient.ProxySQL{
-			DiskSize: req.Params.Proxysql.DiskSize,
+			ComputeResources: computeResources(req.Params.Proxysql.ComputeResources),
+			DiskSize:         convertors.BytesToStr(req.Params.Proxysql.DiskSize),
 		},
+		PMMPublicAddress: req.PmmPublicAddress,
 	}
-	params.PXC.ComputeResources = computeResources(req.Params.Pxc.ComputeResources)
-	params.ProxySQL.ComputeResources = computeResources(req.Params.Proxysql.ComputeResources)
 
 	err = client.CreateXtraDBCluster(ctx, params)
 	if err != nil {
@@ -131,8 +136,8 @@ func computeResources(pxcRes *controllerv1beta1.ComputeResources) *k8sclient.Com
 		return nil
 	}
 	return &k8sclient.ComputeResources{
-		CPUM:        pxcRes.CpuM,
-		MemoryBytes: pxcRes.MemoryBytes,
+		CPUM:        convertors.MilliCPUToStr(pxcRes.CpuM),
+		MemoryBytes: convertors.BytesToStr(pxcRes.MemoryBytes),
 	}
 }
 
@@ -144,26 +149,30 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	params := &k8sclient.XtraDBParams{
-		Name: req.Name,
-		Size: req.Params.ClusterSize,
+	if req.Params.Suspend && req.Params.Resume {
+		return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
 	}
 
-	if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
-		params.PXC = &k8sclient.PXC{
-			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        req.Params.Pxc.ComputeResources.CpuM,
-				MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
-			},
+	params := &k8sclient.XtraDBParams{
+		Name:    req.Name,
+		Size:    req.Params.ClusterSize,
+		Suspend: req.Params.Suspend,
+		Resume:  req.Params.Resume,
+	}
+
+	if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
+		if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
+			params.PXC = &k8sclient.PXC{
+				ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
+			}
 		}
 	}
 
-	if req.Params.Proxysql.ComputeResources.CpuM > 0 || req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
-		params.ProxySQL = &k8sclient.ProxySQL{
-			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        req.Params.Proxysql.ComputeResources.CpuM,
-				MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
-			},
+	if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
+		if req.Params.Proxysql.ComputeResources.CpuM > 0 || req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
+			params.ProxySQL = &k8sclient.ProxySQL{
+				ComputeResources: computeResources(req.Params.Proxysql.ComputeResources),
+			}
 		}
 	}
 

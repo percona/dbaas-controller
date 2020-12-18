@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
+	"github.com/percona-platform/dbaas-controller/utils/convertors"
 )
 
 //nolint:gochecknoglobals
@@ -68,21 +69,24 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 	for i, cluster := range PSMDBClusters {
 		params := &controllerv1beta1.PSMDBClusterParams{
 			ClusterSize: cluster.Size,
+			Paused:      cluster.Pause,
 			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
-				DiskSize: cluster.Replicaset.DiskSize,
+				DiskSize: convertors.StrToBytes(cluster.Replicaset.DiskSize),
 			},
 		}
 		if cluster.Replicaset.ComputeResources != nil {
 			params.Replicaset.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        cluster.Replicaset.ComputeResources.CPUM,
-				MemoryBytes: cluster.Replicaset.ComputeResources.MemoryBytes,
+				CpuM:        convertors.StrToMilliCPU(cluster.Replicaset.ComputeResources.CPUM),
+				MemoryBytes: convertors.StrToBytes(cluster.Replicaset.ComputeResources.MemoryBytes),
 			}
 		}
 		res.Clusters[i] = &controllerv1beta1.ListPSMDBClustersResponse_Cluster{
-			Name:      cluster.Name,
-			State:     psmdbStatesMap[cluster.State],
-			Operation: nil,
-			Params:    params,
+			Name:  cluster.Name,
+			State: psmdbStatesMap[cluster.State],
+			Operation: &controllerv1beta1.RunningOperation{
+				Message: cluster.Message,
+			},
+			Params: params,
 		}
 	}
 
@@ -101,14 +105,12 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 		Name: req.Name,
 		Size: req.Params.ClusterSize,
 		Replicaset: &k8sclient.Replicaset{
-			DiskSize: req.Params.Replicaset.DiskSize,
+			DiskSize: convertors.BytesToStr(req.Params.Replicaset.DiskSize),
 		},
+		PMMPublicAddress: req.PmmPublicAddress,
 	}
 	if req.Params.Replicaset.ComputeResources != nil {
-		params.Replicaset.ComputeResources = &k8sclient.ComputeResources{
-			CPUM:        req.Params.Replicaset.ComputeResources.CpuM,
-			MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
-		}
+		params.Replicaset.ComputeResources = computeResources(req.Params.Replicaset.ComputeResources)
 	}
 	err = client.CreatePSMDBCluster(ctx, params)
 	if err != nil {
@@ -127,18 +129,25 @@ func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *contr
 
 	params := &k8sclient.PSMDBParams{
 		Name: req.Name,
-		Size: req.Params.ClusterSize,
-		Replicaset: &k8sclient.Replicaset{
-			ComputeResources: new(k8sclient.ComputeResources), // this must be present for a valid request
-		},
 	}
 
-	if req.Params.Replicaset.ComputeResources.CpuM > 0 {
-		params.Replicaset.ComputeResources.CPUM = req.Params.Replicaset.ComputeResources.CpuM
-	}
+	if req.Params != nil {
+		if req.Params.Suspend && req.Params.Resume {
+			return nil, status.Error(codes.InvalidArgument, "field suspend and resume cannot be true simultaneously")
+		}
 
-	if req.Params.Replicaset.ComputeResources.MemoryBytes > 0 {
-		params.Replicaset.ComputeResources.MemoryBytes = req.Params.Replicaset.ComputeResources.MemoryBytes
+		params.Suspend = req.Params.Suspend
+		params.Resume = req.Params.Resume
+		params.Size = req.Params.ClusterSize
+
+		if req.Params.Replicaset != nil {
+			params.Replicaset = new(k8sclient.Replicaset)
+			if req.Params.Replicaset.ComputeResources != nil {
+				if req.Params.Replicaset.ComputeResources.CpuM > 0 || req.Params.Replicaset.ComputeResources.MemoryBytes > 0 {
+					params.Replicaset.ComputeResources = computeResources(req.Params.Replicaset.ComputeResources)
+				}
+			}
+		}
 	}
 
 	err = client.UpdatePSMDBCluster(ctx, params)
