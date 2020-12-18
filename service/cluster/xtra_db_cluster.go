@@ -74,7 +74,6 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
 				DiskSize: convertors.StrToBytes(cluster.ProxySQL.DiskSize),
 			},
-			Paused: cluster.Pause,
 		}
 		if cluster.PXC.ComputeResources != nil {
 			params.Pxc.ComputeResources = &controllerv1beta1.ComputeResources{
@@ -96,6 +95,10 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 				Message: cluster.Message,
 			},
 			Params: params,
+		}
+
+		if cluster.State == k8sclient.ClusterStateReady && cluster.Pause {
+			res.Clusters[i].State = controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED
 		}
 	}
 

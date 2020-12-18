@@ -53,6 +53,8 @@ const (
 	ClusterStateReady ClusterState = 3
 	// ClusterStateDeleting represents a cluster which are in deleting state (deleting).
 	ClusterStateDeleting ClusterState = 4
+	// ClusterStatePaused represents a paused cluster state (status.state.ready and spec.pause.true).
+	ClusterStatePaused ClusterState = 5
 )
 
 const (
