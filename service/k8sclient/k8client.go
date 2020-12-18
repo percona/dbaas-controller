@@ -29,6 +29,7 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // ClusterKind is a kind of a cluster.
@@ -364,7 +365,7 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 		val := XtraDBCluster{
 			Name:    cluster.Name,
 			Size:    cluster.Spec.ProxySQL.Size,
-			State:   pxcStatesMap[cluster.Status.Status],
+			State:   getPXCState(cluster.Status.Status),
 			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
@@ -380,6 +381,17 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 		res[i] = val
 	}
 	return res, nil
+}
+
+func getPXCState(state pxc.AppState) ClusterState {
+	clusterState, ok := pxcStatesMap[state]
+	if !ok {
+		l := logger.Get(context.Background())
+		l = l.WithField("component", "K8Client")
+		l.Warn("Cannot get cluster state. Setting status to ClusterStateChanging")
+		return ClusterStateChanging
+	}
+	return clusterState
 }
 
 // getDeletingClusters returns clusters which are not fully deleted yet.
