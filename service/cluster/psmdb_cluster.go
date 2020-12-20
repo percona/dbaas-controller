@@ -37,6 +37,7 @@ var (
 		k8sclient.ClusterStateReady:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
 		k8sclient.ClusterStateFailed:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
 		k8sclient.ClusterStateDeleting: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
+		k8sclient.ClusterStatePaused:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
 	}
 )
 
@@ -80,10 +81,16 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 			}
 		}
 		res.Clusters[i] = &controllerv1beta1.ListPSMDBClustersResponse_Cluster{
-			Name:      cluster.Name,
-			State:     psmdbStatesMap[cluster.State],
-			Operation: nil,
-			Params:    params,
+			Name:  cluster.Name,
+			State: psmdbStatesMap[cluster.State],
+			Operation: &controllerv1beta1.RunningOperation{
+				Message: cluster.Message,
+			},
+			Params: params,
+		}
+
+		if cluster.State == k8sclient.ClusterStateReady && cluster.Pause {
+			res.Clusters[i].State = controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED
 		}
 	}
 
@@ -107,10 +114,7 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 		PMMPublicAddress: req.PmmPublicAddress,
 	}
 	if req.Params.Replicaset.ComputeResources != nil {
-		params.Replicaset.ComputeResources = &k8sclient.ComputeResources{
-			CPUM:        convertors.MilliCPUToStr(req.Params.Replicaset.ComputeResources.CpuM),
-			MemoryBytes: convertors.BytesToStr(req.Params.Replicaset.ComputeResources.MemoryBytes),
-		}
+		params.Replicaset.ComputeResources = computeResources(req.Params.Replicaset.ComputeResources)
 	}
 	err = client.CreatePSMDBCluster(ctx, params)
 	if err != nil {
@@ -129,18 +133,25 @@ func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *contr
 
 	params := &k8sclient.PSMDBParams{
 		Name: req.Name,
-		Size: req.Params.ClusterSize,
-		Replicaset: &k8sclient.Replicaset{
-			ComputeResources: new(k8sclient.ComputeResources), // this must be present for a valid request
-		},
 	}
 
-	if req.Params.Replicaset.ComputeResources.CpuM > 0 {
-		params.Replicaset.ComputeResources.CPUM = convertors.MilliCPUToStr(req.Params.Replicaset.ComputeResources.CpuM)
-	}
+	if req.Params != nil {
+		if req.Params.Suspend && req.Params.Resume {
+			return nil, status.Error(codes.InvalidArgument, "field suspend and resume cannot be true simultaneously")
+		}
 
-	if req.Params.Replicaset.ComputeResources.MemoryBytes > 0 {
-		params.Replicaset.ComputeResources.MemoryBytes = convertors.BytesToStr(req.Params.Replicaset.ComputeResources.MemoryBytes)
+		params.Suspend = req.Params.Suspend
+		params.Resume = req.Params.Resume
+		params.Size = req.Params.ClusterSize
+
+		if req.Params.Replicaset != nil {
+			params.Replicaset = new(k8sclient.Replicaset)
+			if req.Params.Replicaset.ComputeResources != nil {
+				if req.Params.Replicaset.ComputeResources.CpuM > 0 || req.Params.Replicaset.ComputeResources.MemoryBytes > 0 {
+					params.Replicaset.ComputeResources = computeResources(req.Params.Replicaset.ComputeResources)
+				}
+			}
+		}
 	}
 
 	err = client.UpdatePSMDBCluster(ctx, params)

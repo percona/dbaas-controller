@@ -29,6 +29,7 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // ClusterKind is a kind of a cluster.
@@ -53,6 +54,8 @@ const (
 	ClusterStateReady ClusterState = 3
 	// ClusterStateDeleting represents a cluster which are in deleting state (deleting).
 	ClusterStateDeleting ClusterState = 4
+	// ClusterStatePaused represents a paused cluster state (status.state.ready and spec.pause.true).
+	ClusterStatePaused ClusterState = 5
 )
 
 const (
@@ -120,6 +123,8 @@ type XtraDBParams struct {
 	PXC              *PXC
 	ProxySQL         *ProxySQL
 	PMMPublicAddress string
+	Suspend          bool
+	Resume           bool
 }
 
 // Cluster contains common information related to cluster.
@@ -133,6 +138,8 @@ type PSMDBParams struct {
 	Size             int32
 	Replicaset       *Replicaset
 	PMMPublicAddress string
+	Suspend          bool
+	Resume           bool
 }
 
 // XtraDBCluster contains information related to xtradb cluster.
@@ -140,15 +147,19 @@ type XtraDBCluster struct {
 	Name     string
 	Size     int32
 	State    ClusterState
+	Message  string
 	PXC      *PXC
 	ProxySQL *ProxySQL
+	Pause    bool
 }
 
 // PSMDBCluster contains information related to psmdb cluster.
 type PSMDBCluster struct {
 	Name       string
+	Pause      bool
 	Size       int32
 	State      ClusterState
+	Message    string
 	Replicaset *Replicaset
 }
 
@@ -298,11 +309,20 @@ func (c *K8Client) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams
 
 	// This is to prevent concurrent updates
 	if cluster.Status.PXC.Status != pxc.AppStateReady {
-		return ErrXtraDBClusterNotReady //nolint:wrapcheck
+		return errors.Wrapf(ErrXtraDBClusterNotReady, "state is %v", cluster.Status.Status) //nolint:wrapcheck
 	}
 
-	cluster.Spec.PXC.Size = params.Size
-	cluster.Spec.ProxySQL.Size = params.Size
+	if params.Resume {
+		cluster.Spec.Pause = false
+	}
+	if params.Suspend {
+		cluster.Spec.Pause = true
+	}
+
+	if params.Size > 0 {
+		cluster.Spec.PXC.Size = params.Size
+		cluster.Spec.ProxySQL.Size = params.Size
+	}
 
 	if params.PXC != nil {
 		cluster.Spec.PXC.Resources = c.updateComputeResources(params.PXC.ComputeResources, cluster.Spec.PXC.Resources)
@@ -361,9 +381,10 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 	res := make([]XtraDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
 		val := XtraDBCluster{
-			Name:  cluster.Name,
-			Size:  cluster.Spec.ProxySQL.Size,
-			State: pxcStatesMap[cluster.Status.Status],
+			Name:    cluster.Name,
+			Size:    cluster.Spec.ProxySQL.Size,
+			State:   getPXCState(cluster.Status.Status),
+			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
@@ -372,11 +393,23 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 				DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
 			},
+			Pause: cluster.Spec.Pause,
 		}
 
 		res[i] = val
 	}
 	return res, nil
+}
+
+func getPXCState(state pxc.AppState) ClusterState {
+	clusterState, ok := pxcStatesMap[state]
+	if !ok {
+		l := logger.Get(context.Background())
+		l = l.WithField("component", "K8Client")
+		l.Warn("Cannot get cluster state. Setting status to ClusterStateChanging")
+		return ClusterStateChanging
+	}
+	return clusterState
 }
 
 // getDeletingClusters returns clusters which are not fully deleted yet.
@@ -577,7 +610,16 @@ func (c *K8Client) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 		return errors.Wrapf(ErrPSMDBClusterNotReady, "state is %v", cluster.Status.Status) //nolint:wrapcheck
 	}
 
-	cluster.Spec.Replsets[0].Size = params.Size
+	if params.Size > 0 {
+		cluster.Spec.Replsets[0].Size = params.Size
+	}
+
+	if params.Resume {
+		cluster.Spec.Pause = false
+	}
+	if params.Suspend {
+		cluster.Spec.Pause = true
+	}
 
 	if params.Replicaset != nil {
 		cluster.Spec.Replsets[0].Resources = c.updateComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
@@ -618,17 +660,23 @@ func (c *K8Client) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error)
 
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
+		message := cluster.Status.Message
+		conditions := cluster.Status.Conditions
+		if message == "" && len(conditions) > 0 {
+			message = conditions[len(conditions)-1].Message
+		}
 		val := PSMDBCluster{
-			Name:  cluster.Name,
-			Size:  cluster.Spec.Replsets[0].Size,
-			State: getReplicasetStatus(cluster),
+			Name:    cluster.Name,
+			Size:    cluster.Spec.Replsets[0].Size,
+			State:   getReplicasetStatus(cluster),
+			Pause:   cluster.Spec.Pause,
+			Message: message,
+			Replicaset: &Replicaset{
+				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
+				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
+			},
 		}
 
-		if cluster.Spec.Replsets[0].Resources != nil {
-			val.Replicaset = &Replicaset{
-				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
-			}
-		}
 		res[i] = val
 	}
 	return res, nil

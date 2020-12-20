@@ -89,10 +89,16 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 		}
 
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{
-			Name:      cluster.Name,
-			State:     pxcStatesMap[cluster.State],
-			Operation: nil,
-			Params:    params,
+			Name:  cluster.Name,
+			State: pxcStatesMap[cluster.State],
+			Operation: &controllerv1beta1.RunningOperation{
+				Message: cluster.Message,
+			},
+			Params: params,
+		}
+
+		if cluster.State == k8sclient.ClusterStateReady && cluster.Pause {
+			res.Clusters[i].State = controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED
 		}
 	}
 
@@ -146,26 +152,30 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	params := &k8sclient.XtraDBParams{
-		Name: req.Name,
-		Size: req.Params.ClusterSize,
+	if req.Params.Suspend && req.Params.Resume {
+		return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
 	}
 
-	if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
-		params.PXC = &k8sclient.PXC{
-			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        convertors.MilliCPUToStr(req.Params.Pxc.ComputeResources.CpuM),
-				MemoryBytes: convertors.BytesToStr(req.Params.Pxc.ComputeResources.MemoryBytes),
-			},
+	params := &k8sclient.XtraDBParams{
+		Name:    req.Name,
+		Size:    req.Params.ClusterSize,
+		Suspend: req.Params.Suspend,
+		Resume:  req.Params.Resume,
+	}
+
+	if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
+		if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
+			params.PXC = &k8sclient.PXC{
+				ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
+			}
 		}
 	}
 
-	if req.Params.Proxysql.ComputeResources.CpuM > 0 || req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
-		params.ProxySQL = &k8sclient.ProxySQL{
-			ComputeResources: &k8sclient.ComputeResources{
-				CPUM:        convertors.MilliCPUToStr(req.Params.Proxysql.ComputeResources.CpuM),
-				MemoryBytes: convertors.BytesToStr(req.Params.Proxysql.ComputeResources.MemoryBytes),
-			},
+	if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
+		if req.Params.Proxysql.ComputeResources.CpuM > 0 || req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
+			params.ProxySQL = &k8sclient.ProxySQL{
+				ComputeResources: computeResources(req.Params.Proxysql.ComputeResources),
+			}
 		}
 	}
 
