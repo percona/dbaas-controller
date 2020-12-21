@@ -30,6 +30,7 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // ClusterKind is a kind of a cluster.
@@ -73,6 +74,24 @@ const (
 	psmdbImage       = "percona/percona-server-mongodb:4.2.8-8"
 	psmdbAPIVersion  = "psmdb.percona.com/v1-6-0"
 )
+
+// OperatorStatus represents status of operator.
+type OperatorStatus int32
+
+const (
+	// OperatorStatusOK represents that operators are installed and have supported API version.
+	OperatorStatusOK OperatorStatus = 1
+	// OperatorStatusUnsupported represents that operators are installed, but doesn't have supported API version.
+	OperatorStatusUnsupported OperatorStatus = 2
+	// OperatorStatusNotInstalled represents that operators are not installed.
+	OperatorStatusNotInstalled OperatorStatus = 3
+)
+
+// Operators contains statuses of operators.
+type Operators struct {
+	Xtradb OperatorStatus
+	Psmdb  OperatorStatus
+}
 
 // ComputeResources represents container computer resources requests or limits.
 type ComputeResources struct {
@@ -469,7 +488,7 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 		val := XtraDBCluster{
 			Name:    cluster.Name,
 			Size:    cluster.Spec.ProxySQL.Size,
-			State:   pxcStatesMap[cluster.Status.Status],
+			State:   getPXCState(cluster.Status.Status),
 			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
@@ -485,6 +504,17 @@ func (c *K8Client) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluste
 		res[i] = val
 	}
 	return res, nil
+}
+
+func getPXCState(state pxc.AppState) ClusterState {
+	clusterState, ok := pxcStatesMap[state]
+	if !ok {
+		l := logger.Get(context.Background())
+		l = l.WithField("component", "K8Client")
+		l.Warn("Cannot get cluster state. Setting status to ClusterStateChanging")
+		return ClusterStateChanging
+	}
+	return clusterState
 }
 
 // getDeletingClusters returns clusters which are not fully deleted yet.
@@ -906,4 +936,36 @@ func (c *K8Client) volumeSpec(diskSize string) *common.VolumeSpec {
 			},
 		},
 	}
+}
+
+// CheckOperators checks if operator installed and have required API version.
+func (c *K8Client) CheckOperators(ctx context.Context) (*Operators, error) {
+	output, err := c.kubeCtl.Run(ctx, []string{"api-versions"}, "")
+	if err != nil {
+		return nil, errors.Wrap(err, "can't get api versions list")
+	}
+
+	apiVersions := strings.Split(string(output), "\n")
+
+	return &Operators{
+		Xtradb: c.checkOperatorStatus(apiVersions, pxcAPIVersion),
+		Psmdb:  c.checkOperatorStatus(apiVersions, psmdbAPIVersion),
+	}, nil
+}
+
+func (c *K8Client) checkOperatorStatus(installedVersions []string, expectedAPIVersion string) (operator OperatorStatus) {
+	apiNamespace := strings.Split(expectedAPIVersion, "/")[0]
+	installed := false
+	for _, version := range installedVersions {
+		switch {
+		case version == expectedAPIVersion:
+			return OperatorStatusOK
+		case strings.HasPrefix(version, apiNamespace):
+			installed = true
+		}
+	}
+	if installed {
+		return OperatorStatusUnsupported
+	}
+	return OperatorStatusNotInstalled
 }
