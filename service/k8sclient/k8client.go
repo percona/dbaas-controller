@@ -185,7 +185,7 @@ type XtraDBCredentials struct {
 // We use the Items.Provisioner to detect if we are running against minikube or AWS.
 // Returned value examples:
 // - AWS EKS: kubernetes.io/aws-ebs
-// - Minukube: k8s.io/minikube-hostpath
+// - Minukube: k8s.io/minikube-hostpath.
 type StorageClass struct {
 	APIVersion string `json:"apiVersion"`
 	Items      []struct {

@@ -162,8 +162,8 @@ eks-install-operators:            ## Install Kubernetes operators in EKS.
 
 eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage. 
 	# Delete the PXC operator
-	cat ${TOP_DIR}/deploy/pxc-operator.yaml | ${KUBECTL_CMD} delete -f -
-	cat ${TOP_DIR}/deploy/pxc-secrets.yaml | sed "s/pmmserver:.*=/pmmserver: ${PMM_PASS}/g" | ${KUBECTL_CMD} delete -f -
+	cat ./deploy/pxc-operator.yaml | ${KUBECTL_CMD} delete -f -
+	cat ./deploy/pxc-secrets.yaml | sed "s/pmmserver:.*=/pmmserver: ${PMM_PASS}/g" | ${KUBECTL_CMD} delete -f -
 	# Delete the PSMDB operator
-	cat ${TOP_DIR}/deploy/psmdb-operator.yaml | ${KUBECTL_CMD} delete -f -
-	cat ${TOP_DIR}/deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*$/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*=$/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | ${KUBECTL_CMD} delete -f -
+	cat ./deploy/psmdb-operator.yaml | ${KUBECTL_CMD} delete -f -
+	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*$/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*=$/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | ${KUBECTL_CMD} delete -f -
