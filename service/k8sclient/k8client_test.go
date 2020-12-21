@@ -64,7 +64,6 @@ func TestK8Client(t *testing.T) {
 			PXC:              &PXC{DiskSize: "1000000000"},
 			ProxySQL:         &ProxySQL{DiskSize: "1000000000"},
 			PMMPublicAddress: pmmPublicAddress,
-			Expose:           false,
 		})
 		require.NoError(t, err)
 
@@ -124,7 +123,6 @@ func TestK8Client(t *testing.T) {
 			Size:             3,
 			Replicaset:       &Replicaset{DiskSize: "1000000000"},
 			PMMPublicAddress: pmmPublicAddress,
-			Expose:           false,
 		})
 		require.NoError(t, err)
 
