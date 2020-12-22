@@ -71,7 +71,7 @@ const expected = `
             {
                 "expose": {
                     "enabled": false,
-					"exposeType": ""
+                    "exposeType": ""
                 },
                 "size": 3,
                 "arbiter": {

@@ -419,7 +419,10 @@ func (c *K8Client) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBCr
 	}
 
 	credentials := &XtraDBCredentials{
-		Host: cluster.Status.Host,
+		Host:     cluster.Status.Host,
+		Port:     3306,
+		Username: "root",
+		Password: "root_password",
 	}
 
 	return credentials, nil

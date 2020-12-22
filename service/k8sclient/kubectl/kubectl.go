@@ -275,7 +275,7 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 		}
 	}
 
-	l.Infof(outBuf.String())
-	l.Infof(errBuf.String())
+	l.Debugf(outBuf.String())
+	l.Debugf(errBuf.String())
 	return outBuf.Bytes(), err
 }

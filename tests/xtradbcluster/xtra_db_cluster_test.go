@@ -57,26 +57,31 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	}
 	require.Falsef(t, clusterFound, "There should not be cluster with name %s", name)
 
+	clusterSize := int32(1)
+	cpuM := int32(200)
+	memoryBytes := int64(1024 * 1024 * 1024)
+	diskSize := int64(1024 * 1024 * 1024)
+
 	createXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.CreateXtraDBCluster(tests.Context, &controllerv1beta1.CreateXtraDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
 		Params: &controllerv1beta1.XtraDBClusterParams{
-			ClusterSize: 2,
+			ClusterSize: clusterSize,
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        600,
-					MemoryBytes: 1024 * 1024 * 1024,
+					CpuM:        cpuM,
+					MemoryBytes: memoryBytes,
 				},
-				DiskSize: 1024 * 1024 * 1024,
+				DiskSize: diskSize,
 			},
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        600,
-					MemoryBytes: 1024 * 1024 * 1024,
+					CpuM:        cpuM,
+					MemoryBytes: memoryBytes,
 				},
-				DiskSize: 1024 * 1024 * 1024,
+				DiskSize: diskSize,
 			},
 		},
 		PmmPublicAddress: tests.PMMServerAddress,
@@ -113,9 +118,9 @@ func TestXtraDBClusterAPI(t *testing.T) {
 
 	for _, cluster := range clusters.Clusters {
 		if cluster.Name == name {
-			assert.Equal(t, int32(2), cluster.Params.ClusterSize)
-			assert.Equal(t, int64(1024*1024*1024), cluster.Params.Proxysql.ComputeResources.MemoryBytes)
-			assert.Equal(t, int32(600), cluster.Params.Proxysql.ComputeResources.CpuM)
+			assert.Equal(t, clusterSize, cluster.Params.ClusterSize)
+			assert.Equal(t, memoryBytes, cluster.Params.Proxysql.ComputeResources.MemoryBytes)
+			assert.Equal(t, cpuM, cluster.Params.Proxysql.ComputeResources.CpuM)
 			clusterFound = true
 		}
 	}
@@ -133,21 +138,24 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		assert.NotEmpty(t, cluster.Credentials.Host)
 	}
 
+	clusterSize = 3
+	memoryBytes = 512 * 1024 * 1024 * 2
+
 	updateClusterReq := &controllerv1beta1.UpdateXtraDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
 		Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
-			ClusterSize: 3,
+			ClusterSize: clusterSize,
 			Pxc: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					MemoryBytes: 512 * 1024 * 1024 * 2,
+					MemoryBytes: memoryBytes,
 				},
 			},
 			Proxysql: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					MemoryBytes: 512 * 1024 * 1024 * 2,
+					MemoryBytes: memoryBytes,
 				},
 			},
 		},
@@ -179,9 +187,9 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		},
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, int32(3), clusters.Clusters[0].Params.ClusterSize)
-	assert.Equal(t, int64(512*1024*1024*2), clusters.Clusters[0].Params.Pxc.ComputeResources.MemoryBytes)
-	assert.Equal(t, int64(512*1024*1024*2), clusters.Clusters[0].Params.Proxysql.ComputeResources.MemoryBytes)
+	assert.Equal(t, clusterSize, clusters.Clusters[0].Params.ClusterSize)
+	assert.Equal(t, memoryBytes, clusters.Clusters[0].Params.Pxc.ComputeResources.MemoryBytes)
+	assert.Equal(t, memoryBytes, clusters.Clusters[0].Params.Proxysql.ComputeResources.MemoryBytes)
 
 	suspendClusterReq := &controllerv1beta1.UpdateXtraDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{

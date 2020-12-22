@@ -43,9 +43,9 @@ PMM_RELEASE_VERSION ?=
 PMM_RELEASE_TIMESTAMP ?= $(shell date '+%s')
 PMM_RELEASE_FULLCOMMIT ?= $(shell git rev-parse HEAD)
 PMM_RELEASE_BRANCH ?= $(shell git describe --always --contains --all)
-PATH_TO_KUBECONFIG ?= ${HOME}/.kube/config_eks
 PMM_USER ?= $(shell echo -n 'admin' | base64)
 PMM_PASS ?= $(shell echo -n 'admin_password' | base64)
+PATH_TO_KUBECONFIG ?= ${HOME}/.kube/config
 KUBECTL_CMD = "kubectl --kubeconfig ${PATH_TO_KUBECONFIG}"
 
 PMM_LD_FLAGS = -ldflags " \
