@@ -95,7 +95,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	}
 	assert.True(t, clusterFound)
 
-	t.Log("Wating for cluster to be ready")
+	t.Log("Waiting for cluster to be ready")
 	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
 	assert.NoError(t, err)
 
