@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -109,6 +110,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, cluster.Credentials.Host)
+		assert.True(t, strings.Contains(cluster.Credentials.Host, "amazon"))
 	}
 
 	updateMemory := 2 * memory

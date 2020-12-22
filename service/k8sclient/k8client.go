@@ -707,11 +707,9 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 		// This enables ingress for the cluster and exposes the cluster to the world.
 		// The cluster will have an internal IP and a world accessible hostname.
 		// This feature cannot be tested with minikube. Please use EKS for testing.
-		for i := 0; i < len(res.Spec.Replsets); i++ {
-			res.Spec.Replsets[i].Expose = psmdb.Expose{
-				Enabled:    true,
-				ExposeType: common.ServiceTypeLoadBalancer,
-			}
+		res.Spec.Sharding.Mongos.Expose = psmdb.Expose{
+			Enabled:    true,
+			ExposeType: common.ServiceTypeLoadBalancer,
 		}
 	}
 
