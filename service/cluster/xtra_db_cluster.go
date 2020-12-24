@@ -217,6 +217,31 @@ func (s *XtraDBClusterService) RestartXtraDBCluster(ctx context.Context, req *co
 	return new(controllerv1beta1.RestartXtraDBClusterResponse), nil
 }
 
+// GetXtraDBCluster returns an XtraDB cluster connection credentials.
+func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *controllerv1beta1.GetXtraDBClusterRequest) (*controllerv1beta1.GetXtraDBClusterResponse, error) {
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	cluster, err := client.GetXtraDBCluster(ctx, req.Name)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	resp := &controllerv1beta1.GetXtraDBClusterResponse{
+		Credentials: &controllerv1beta1.XtraDBCredentials{
+			Username: cluster.Username,
+			Password: cluster.Password,
+			Host:     cluster.Host,
+			Port:     cluster.Port,
+		},
+	}
+
+	return resp, nil
+}
+
 // Check interface.
 var (
 	_ controllerv1beta1.XtraDBClusterAPIServer = (*XtraDBClusterService)(nil)

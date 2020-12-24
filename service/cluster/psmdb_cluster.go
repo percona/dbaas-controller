@@ -113,13 +113,16 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 		},
 		PMMPublicAddress: req.PmmPublicAddress,
 	}
+
 	if req.Params.Replicaset.ComputeResources != nil {
 		params.Replicaset.ComputeResources = computeResources(req.Params.Replicaset.ComputeResources)
 	}
+
 	err = client.CreatePSMDBCluster(ctx, params)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
 	return new(controllerv1beta1.CreatePSMDBClusterResponse), nil
 }
 
@@ -190,6 +193,31 @@ func (s *PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *cont
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return new(controllerv1beta1.RestartPSMDBClusterResponse), nil
+}
+
+// GetPSMDBCluster returns a PSMDB cluster connection credentials.
+func (s *PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *controllerv1beta1.GetPSMDBClusterRequest) (*controllerv1beta1.GetPSMDBClusterResponse, error) {
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	cluster, err := client.GetPSMDBCluster(ctx, req.Name)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	resp := &controllerv1beta1.GetPSMDBClusterResponse{
+		Credentials: &controllerv1beta1.PSMDBCredentials{
+			Username: cluster.Username,
+			Password: cluster.Password,
+			Host:     cluster.Host,
+			Port:     cluster.Port,
+		},
+	}
+
+	return resp, nil
 }
 
 // Check interface.

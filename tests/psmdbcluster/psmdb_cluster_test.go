@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -52,19 +53,24 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	}
 	require.Falsef(t, clusterFound, "There should not be cluster with name %s", name)
 
+	clusterSize := int32(3)
+	cpum := int32(1024)
+	memory := int64(1024 * 1024 * 1024)
+	diskSize := int64(1024 * 1024 * 1024)
+
 	createPSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.CreatePSMDBCluster(tests.Context, &controllerv1beta1.CreatePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
 		Params: &controllerv1beta1.PSMDBClusterParams{
-			ClusterSize: 3,
+			ClusterSize: clusterSize,
 			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        1000,
-					MemoryBytes: 1024 * 1024 * 1024,
+					CpuM:        cpum,
+					MemoryBytes: memory,
 				},
-				DiskSize: 2 * 1024 * 1024 * 1024,
+				DiskSize: diskSize,
 			},
 		},
 		PmmPublicAddress: tests.PMMServerAddress,
@@ -81,10 +87,10 @@ func TestPSMDBClusterAPI(t *testing.T) {
 
 	for _, cluster := range clusters.Clusters {
 		if cluster.Name == name {
-			assert.Equal(t, int32(3), cluster.Params.ClusterSize)
-			assert.Equal(t, int64(1024*1024*1024), cluster.Params.Replicaset.ComputeResources.MemoryBytes)
-			assert.Equal(t, int32(1000), cluster.Params.Replicaset.ComputeResources.CpuM)
-			assert.Equal(t, int64(2*1024*1024*1024), cluster.Params.Replicaset.DiskSize)
+			assert.Equal(t, clusterSize, cluster.Params.ClusterSize)
+			assert.Equal(t, memory, cluster.Params.Replicaset.ComputeResources.MemoryBytes)
+			assert.Equal(t, cpum, cluster.Params.Replicaset.ComputeResources.CpuM)
+			assert.Equal(t, diskSize, cluster.Params.Replicaset.DiskSize)
 			clusterFound = true
 		}
 	}
@@ -92,19 +98,33 @@ func TestPSMDBClusterAPI(t *testing.T) {
 
 	t.Log("Waiting for cluster to be ready")
 	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
+	// There is no Ingress in minikube
+	if os.Getenv("IN_EKS") != "" {
+		cluster, err := tests.PSMDBClusterAPIClient.GetPSMDBCluster(tests.Context, &controllerv1beta1.GetPSMDBClusterRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: kubeconfig,
+			},
+			Name: name,
+		})
+		assert.NoError(t, err)
+		assert.NotEmpty(t, cluster.Credentials.Host)
+		assert.True(t, strings.Contains(cluster.Credentials.Host, "amazon"))
+	}
+
+	updateMemory := 2 * memory
 	updateReq := &controllerv1beta1.UpdatePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
 		Params: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
-			ClusterSize: 3,
+			ClusterSize: clusterSize,
 			Replicaset: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        1000,
-					MemoryBytes: 1024 * 1024 * 1024 * 2,
+					CpuM:        cpum,
+					MemoryBytes: updateMemory,
 				},
 			},
 		},
@@ -133,12 +153,11 @@ func TestPSMDBClusterAPI(t *testing.T) {
 		},
 	})
 	assert.NoError(t, err)
-
 	for _, cluster := range clusters.Clusters {
 		if cluster.Name == name {
-			assert.Equal(t, int32(3), cluster.Params.ClusterSize)
-			assert.Equal(t, int64(1024*1024*1024*2), cluster.Params.Replicaset.ComputeResources.MemoryBytes)
-			assert.Equal(t, int32(1000), cluster.Params.Replicaset.ComputeResources.CpuM)
+			assert.Equal(t, clusterSize, cluster.Params.ClusterSize)
+			assert.Equal(t, updateMemory, cluster.Params.Replicaset.ComputeResources.MemoryBytes)
+			assert.Equal(t, cpum, cluster.Params.Replicaset.ComputeResources.CpuM)
 			clusterFound = true
 		}
 	}

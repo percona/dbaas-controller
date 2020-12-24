@@ -167,6 +167,7 @@ type PodSpec struct { //nolint:maligned
 	ServiceAccountName            string                          `json:"serviceAccountName,omitempty"`
 	ImagePullPolicy               common.PullPolicy               `json:"imagePullPolicy,omitempty"`
 	PodDisruptionBudget           *common.PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+	ServiceType                   common.ServiceType              `json:"serviceType,omitempty"`
 }
 
 // PodAffinity POD's affinity.

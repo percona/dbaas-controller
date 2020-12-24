@@ -119,6 +119,7 @@ type perconaServerMongoDBStatus struct {
 	Conditions         []clusterCondition        `json:"conditions,omitempty"`
 	Replsets           map[string]*replsetStatus `json:"replsets,omitempty"`
 	ObservedGeneration int64                     `json:"observedGeneration,omitempty"`
+	Host               string                    `json:"host,omitempty"`
 }
 
 type conditionStatus string
@@ -168,9 +169,15 @@ type PodAffinity struct {
 	TopologyKey *string `json:"antiAffinityTopologyKey,omitempty"`
 }
 
+// Expose holds information about how the cluster is exposed to the worl via ingress.
+type Expose struct {
+	Enabled    bool               `json:"enabled"`
+	ExposeType common.ServiceType `json:"exposeType"`
+}
+
 // ReplsetSpec defines replicaton set specification.
 type ReplsetSpec struct {
-	Expose              expose                          `json:"expose,omitempty"`
+	Expose              Expose                          `json:"expose,omitempty"`
 	Size                int32                           `json:"size"`
 	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
 	Resources           *common.PodResources            `json:"resources,omitempty"`
@@ -407,8 +414,4 @@ type Arbiter struct {
 	Enabled bool  `json:"enabled"`
 	Size    int32 `json:"size"`
 	MultiAZ
-}
-
-type expose struct {
-	Enabled bool `json:"enabled"`
 }
