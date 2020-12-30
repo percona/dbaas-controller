@@ -46,7 +46,7 @@ PMM_RELEASE_BRANCH ?= $(shell git describe --always --contains --all)
 PMM_USER ?= $(shell echo -n 'admin' | base64)
 PMM_PASS ?= $(shell echo -n 'admin_password' | base64)
 PATH_TO_KUBECONFIG ?= ${HOME}/.kube/config
-KUBECTL_CMD = "kubectl --kubeconfig ${PATH_TO_KUBECONFIG}"
+KUBECTL_CMD ?= "kubectl --kubeconfig ${PATH_TO_KUBECONFIG}"
 
 PMM_LD_FLAGS = -ldflags " \
 			-X 'github.com/percona/pmm/version.ProjectName=dbaas-controller' \
