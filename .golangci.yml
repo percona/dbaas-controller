@@ -10,6 +10,13 @@ linters-settings:
       - errors
       # use "github.com/golang/protobuf/proto" instead
       - github.com/gogo/protobuf/proto
+      # Use service/k8sclient/internal/... instead
+      - k8s.io/api/core/v1
+      - k8s.io/apimachinery/pkg/api/resource
+      - k8s.io/apimachinery/pkg/apis/meta/v1
+      - k8s.io/apimachinery/pkg/apis/runtime
+      - k8s.io/apimachinery/pkg/apis/types
+      - k8s.io/apimachinery/pkg/apis/util/intstr
 
   goimports:
     local-prefixes: github.com/percona-platform/dbaas-controller
@@ -23,12 +30,14 @@ linters-settings:
 linters:
   enable-all: true
   disable:
-    - goerr113  # we use pkg/errors for stack traces
-    - gomnd     # too annoying
-    - lll       # gRPC types are long
-    - wsl       # too annoying
-    - unused    # too many false positives
-    - nlreturn  # too annoying
+    - goerr113          # we use pkg/errors for stack traces
+    - gomnd             # too annoying
+    - lll               # gRPC types are long
+    - wsl               # too annoying
+    - unused            # too many false positives
+    - nlreturn          # too annoying
+    - exhaustivestruct  # too annoying
+    - wrapcheck         # we don't wrap errors
 
 issues:
   exclude-use-default: false

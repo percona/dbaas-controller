@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package v1
+package pxc
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
 )
 
 // PerconaXtraDBClusterRestoreSpec defines the desired state of PerconaXtraDBClusterRestore.
@@ -29,16 +29,14 @@ type PerconaXtraDBClusterRestoreSpec struct {
 
 // PerconaXtraDBClusterRestoreStatus defines the observed state of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreStatus struct {
-	State         BcpRestoreStates `json:"state,omitempty"`
-	Comments      string           `json:"comments,omitempty"`
-	CompletedAt   *metav1.Time     `json:"completed,omitempty"`
-	LastScheduled *metav1.Time     `json:"lastscheduled,omitempty"`
+	State    BcpRestoreStates `json:"state,omitempty"`
+	Comments string           `json:"comments,omitempty"`
 }
 
 // PerconaXtraDBClusterRestore is the Schema for the perconaxtradbclusterrestores API.
 type PerconaXtraDBClusterRestore struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	common.TypeMeta   // anonymous for embedding
+	common.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   PerconaXtraDBClusterRestoreSpec   `json:"spec,omitempty"`
 	Status PerconaXtraDBClusterRestoreStatus `json:"status,omitempty"`
@@ -46,9 +44,9 @@ type PerconaXtraDBClusterRestore struct {
 
 // PerconaXtraDBClusterRestoreList contains a list of PerconaXtraDBClusterRestore.
 type PerconaXtraDBClusterRestoreList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []PerconaXtraDBClusterRestore `json:"items"`
+	common.TypeMeta // anonymous for embedding
+
+	Items []PerconaXtraDBClusterRestore `json:"items"`
 }
 
 // BcpRestoreStates backup restore states.

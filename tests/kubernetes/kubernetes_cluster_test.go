@@ -42,6 +42,9 @@ func TestKubernetesClusterAPI(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.NotNil(t, response)
+		require.Equal(t, response.Status, controllerv1beta1.KubernetesClusterStatus_KUBERNETES_CLUSTER_STATUS_OK)
+		require.Equal(t, response.Operators.Psmdb.Status, controllerv1beta1.OperatorsStatus_OPERATORS_STATUS_OK)
+		require.Equal(t, response.Operators.Xtradb.Status, controllerv1beta1.OperatorsStatus_OPERATORS_STATUS_OK)
 	})
 
 	t.Run("Wrong", func(t *testing.T) {
