@@ -83,6 +83,6 @@ type Secret struct {
 type SecretType string
 
 const (
-	// SecretTypeOpaque is the default. Arbitrary user-defined data
+	// SecretTypeOpaque is the default. Arbitrary user-defined data.
 	SecretTypeOpaque SecretType = "Opaque"
 )
