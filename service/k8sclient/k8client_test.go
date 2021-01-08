@@ -176,7 +176,7 @@ func TestK8Client(t *testing.T) {
 	})
 }
 
-func assertListXtraDBCluster(t *testing.T, ctx context.Context, client *K8Client, name string, conditionFunc func(cluster *XtraDBCluster) bool) {
+func assertListXtraDBCluster(t *testing.T, ctx context.Context, client *K8sClient, name string, conditionFunc func(cluster *XtraDBCluster) bool) {
 	l := logger.Get(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
@@ -201,7 +201,7 @@ func assertListXtraDBCluster(t *testing.T, ctx context.Context, client *K8Client
 	}
 }
 
-func assertListPSMDBCluster(t *testing.T, ctx context.Context, client *K8Client, name string, conditionFunc func(cluster *PSMDBCluster) bool) {
+func assertListPSMDBCluster(t *testing.T, ctx context.Context, client *K8sClient, name string, conditionFunc func(cluster *PSMDBCluster) bool) {
 	l := logger.Get(ctx)
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
