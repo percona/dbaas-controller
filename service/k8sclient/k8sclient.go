@@ -677,7 +677,6 @@ func (c *K8sClient) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, erro
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
-
 	var secret common.Secret
 	err := c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPSMDBSecretName, &secret)
 	if err != nil {
