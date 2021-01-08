@@ -64,6 +64,9 @@ const (
 const (
 	pmmClientImage = "perconalab/pmm-client:dev-latest"
 
+	k8sAPIVersion     = "v1"
+	k8sMetaKindSecret = "Secret"
+
 	pxcCRVersion         = "1.7.0"
 	pxcBackupImage       = "percona/percona-xtradb-cluster-operator:1.6.0-pxc8.0-backup"
 	pxcImage             = "percona/percona-xtradb-cluster:8.0.20-11.1"
@@ -71,12 +74,14 @@ const (
 	pxcAPIVersion        = "pxc.percona.com/v1-6-0"
 	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.6.0-proxysql"
 	pxcSecretNameTmpl    = "dbaas-%s-pxc-secrets"
+	defaultPXCSecretName = "my-cluster-secrets"
 
-	psmdbCRVersion      = "1.6.0"
-	psmdbBackupImage    = "percona/percona-server-mongodb-operator:1.5.0-backup"
-	psmdbImage          = "percona/percona-server-mongodb:4.2.8-8"
-	psmdbAPIVersion     = "psmdb.percona.com/v1-6-0"
-	psmdbSecretNameTmpl = "dbaas-%s-psmdb-secrets"
+	psmdbCRVersion         = "1.6.0"
+	psmdbBackupImage       = "percona/percona-server-mongodb-operator:1.5.0-backup"
+	psmdbImage             = "percona/percona-server-mongodb:4.2.8-8"
+	psmdbAPIVersion        = "psmdb.percona.com/v1-6-0"
+	psmdbSecretNameTmpl    = "dbaas-%s-psmdb-secrets"
+	defaultPSMDBSecretName = "my-cluster-name-secrets"
 )
 
 // OperatorStatus represents status of operator.
@@ -247,16 +252,20 @@ var (
 // K8sClient is a client for Kubernetes.
 type K8sClient struct {
 	kubeCtl *kubectl.KubeCtl
+	l       logger.Logger
 }
 
 // New returns new K8sClient object.
 func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
+	l := logger.Get(ctx)
+	l = l.WithField("component", "K8sClient")
 	kubeCtl, err := kubectl.NewKubeCtl(ctx, kubeconfig)
 	if err != nil {
 		return nil, err
 	}
 	return &K8sClient{
 		kubeCtl: kubeCtl,
+		l:       l,
 	}, nil
 }
 
@@ -285,8 +294,8 @@ func (c *K8sClient) ListXtraDBClusters(ctx context.Context) ([]XtraDBCluster, er
 func (c *K8sClient) CreateSecret(ctx context.Context, secretName string, data map[string][]byte) error {
 	secret := common.Secret{
 		TypeMeta: common.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
+			APIVersion: k8sAPIVersion,
+			Kind:       k8sMetaKindSecret,
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name: secretName,
@@ -310,20 +319,20 @@ func randSeq(n int) string {
 
 // CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
 func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
+	var secret common.Secret
+	err := c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPXCSecretName, &secret)
+	if err != nil {
+		return errors.Wrap(err, "cannot get default PXC secrets")
+	}
+
 	secretName := fmt.Sprintf(pxcSecretNameTmpl, params.Name)
 	pwd := randSeq(passwordLength)
 
 	// TODO: add a link to ticket to set random password for all other users.
-	data := map[string][]byte{
-		"root":         []byte(pwd),
-		"xtrabackup":   []byte("backup_password"),
-		"monitor":      []byte("monitor"),
-		"clustercheck": []byte("clustercheckpassword"),
-		"proxyadmin":   []byte("admin_password"),
-		"pmmserver":    []byte("admin"),
-		"operator":     []byte("operatoradmin"),
-	}
-	err := c.CreateSecret(ctx, secretName, data)
+	data := secret.Data
+	data["root"] = []byte(pwd)
+
+	err = c.CreateSecret(ctx, secretName, data)
 	if err != nil {
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
@@ -446,18 +455,6 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 // DeleteXtraDBCluster deletes Percona XtraDB cluster with provided name.
 func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error {
-	secret := &common.Secret{
-		TypeMeta: common.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-		ObjectMeta: common.ObjectMeta{
-			Name: fmt.Sprintf(pxcSecretNameTmpl, name),
-		},
-	}
-
-	_ = c.kubeCtl.Delete(ctx, secret)
-
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
 			APIVersion: pxcAPIVersion,
@@ -467,7 +464,27 @@ func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error 
 			Name: name,
 		},
 	}
-	return c.kubeCtl.Delete(ctx, res)
+	err := c.kubeCtl.Delete(ctx, res)
+	if err != nil {
+		return errors.Wrap(err, "cannot delete PXC")
+	}
+
+	secret := &common.Secret{
+		TypeMeta: common.TypeMeta{
+			APIVersion: k8sAPIVersion,
+			Kind:       k8sMetaKindSecret,
+		},
+		ObjectMeta: common.ObjectMeta{
+			Name: fmt.Sprintf(pxcSecretNameTmpl, name),
+		},
+	}
+
+	err = c.kubeCtl.Delete(ctx, secret)
+	if err != nil {
+		c.l.Errorf("cannot delete secret for %s: %v", name, err)
+	}
+
+	return nil
 }
 
 // GetXtraDBCluster returns an XtraDB cluster credentials.
@@ -475,7 +492,7 @@ func (c *K8sClient) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBC
 	var cluster pxc.PerconaXtraDBCluster
 
 	var secret common.Secret
-	err := c.kubeCtl.Get(ctx, "Secret", fmt.Sprintf(pxcSecretNameTmpl, name), &secret)
+	err := c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(pxcSecretNameTmpl, name), &secret)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get XtraDb cluster secrets")
 	}
@@ -660,24 +677,21 @@ func (c *K8sClient) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, erro
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
+
+	var secret common.Secret
+	err := c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPSMDBSecretName, &secret)
+	if err != nil {
+		return errors.Wrap(err, "cannot get default PSMDB secrets")
+	}
+
 	secretName := fmt.Sprintf(psmdbSecretNameTmpl, params.Name)
 	pwd := randSeq(passwordLength)
 
 	// TODO: add a link to ticket to set random password for all other users.
-	data := map[string][]byte{
-		"MONGODB_BACKUP_USER":              []byte("backup"),
-		"MONGODB_BACKUP_PASSWORD":          []byte("backup123456"),
-		"MONGODB_CLUSTER_ADMIN_USER":       []byte("clusterAdmin"),
-		"MONGODB_CLUSTER_ADMIN_PASSWORD":   []byte("clusterAdmin123456"),
-		"MONGODB_CLUSTER_MONITOR_USER":     []byte("clusterMonitor"),
-		"MONGODB_CLUSTER_MONITOR_PASSWORD": []byte("clusterMonitor123456"),
-		"MONGODB_USER_ADMIN_USER":          []byte("userAdmin"),
-		"MONGODB_USER_ADMIN_PASSWORD":      []byte(pwd),
-		"PMM_SERVER_USER":                  []byte("admin"),
-		"PMM_SERVER_PASSWORD":              []byte("admin"),
-	}
+	data := secret.Data
+	data["MONGODB_USER_ADMIN_PASSWORD"] = []byte(pwd)
 
-	err := c.CreateSecret(ctx, secretName, data)
+	err = c.CreateSecret(ctx, secretName, data)
 	if err != nil {
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
@@ -838,18 +852,6 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 // DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
 func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
-	secret := &common.Secret{
-		TypeMeta: common.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-		ObjectMeta: common.ObjectMeta{
-			Name: fmt.Sprintf(psmdbSecretNameTmpl, name),
-		},
-	}
-
-	_ = c.kubeCtl.Delete(ctx, secret)
-
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
 			APIVersion: psmdbAPIVersion,
@@ -859,7 +861,27 @@ func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
 			Name: name,
 		},
 	}
-	return c.kubeCtl.Delete(ctx, res)
+	err := c.kubeCtl.Delete(ctx, res)
+	if err != nil {
+		return errors.Wrap(err, "cannot delete PSMDB")
+	}
+
+	secret := &common.Secret{
+		TypeMeta: common.TypeMeta{
+			APIVersion: k8sAPIVersion,
+			Kind:       k8sMetaKindSecret,
+		},
+		ObjectMeta: common.ObjectMeta{
+			Name: fmt.Sprintf(psmdbSecretNameTmpl, name),
+		},
+	}
+
+	err = c.kubeCtl.Delete(ctx, secret)
+	if err != nil {
+		c.l.Errorf("cannot delete secret for %s: %v", name, err)
+	}
+
+	return nil
 }
 
 // RestartPSMDBCluster restarts Percona server for mongodb cluster with provided name.
@@ -879,7 +901,7 @@ func (c *K8sClient) GetPSMDBCluster(ctx context.Context, name string) (*PSMDBCre
 	}
 
 	var secret common.Secret
-	err = c.kubeCtl.Get(ctx, "Secret", fmt.Sprintf(psmdbSecretNameTmpl, name), &secret)
+	err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(psmdbSecretNameTmpl, name), &secret)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get PSMDB cluster secrets")
 	}
