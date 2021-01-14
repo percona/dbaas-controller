@@ -490,23 +490,27 @@ func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error 
 // GetXtraDBCluster returns an XtraDB cluster credentials.
 func (c *K8sClient) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBCredentials, error) {
 	var cluster pxc.PerconaXtraDBCluster
-
-	var secret common.Secret
-	err := c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(pxcSecretNameTmpl, name), &secret)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot get XtraDb cluster secrets")
-	}
-
-	err = c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), name, &cluster)
+	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), name, &cluster)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get XtraDb cluster")
+	}
+
+	password := ""
+	var secret common.Secret
+	// Retrieve secrets only for ready cluster.
+	if cluster.Status.Status == pxc.AppStateReady {
+		err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(pxcSecretNameTmpl, name), &secret)
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot get XtraDb cluster secrets")
+		}
+		password = string(secret.Data["root"])
 	}
 
 	credentials := &XtraDBCredentials{
 		Host:     cluster.Status.Host,
 		Port:     3306,
 		Username: "root",
-		Password: string(secret.Data["root"]),
+		Password: password,
 	}
 
 	return credentials, nil
@@ -899,15 +903,22 @@ func (c *K8sClient) GetPSMDBCluster(ctx context.Context, name string) (*PSMDBCre
 		return nil, errors.Wrap(err, "cannot get PSMDB cluster")
 	}
 
+	password := ""
+	username := ""
 	var secret common.Secret
-	err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(psmdbSecretNameTmpl, name), &secret)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot get PSMDB cluster secrets")
+	// Retrieve secrets only for ready cluster.
+	if cluster.Status.Status == psmdb.AppStateReady {
+		err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(psmdbSecretNameTmpl, name), &secret)
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot get PSMDB cluster secrets")
+		}
+		username = string(secret.Data["MONGODB_USER_ADMIN_USER"])
+		password = string(secret.Data["MONGODB_USER_ADMIN_PASSWORD"])
 	}
 
 	credentials := &PSMDBCredentials{
-		Username:   string(secret.Data["MONGODB_USER_ADMIN_USER"]),
-		Password:   string(secret.Data["MONGODB_USER_ADMIN_PASSWORD"]),
+		Username:   username,
+		Password:   password,
 		Host:       cluster.Status.Host,
 		Port:       27017,
 		Replicaset: "rs0",
