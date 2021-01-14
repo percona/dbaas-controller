@@ -593,6 +593,12 @@ func (c *K8Client) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
+	affinity := &psmdb.PodAffinity{
+		TopologyKey: pointer.ToString(psmdb.AffinityOff),
+	}
+	if isMinikube, err := c.isMinikube(ctx); err == nil && !isMinikube {
+		affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
+	}
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
 			APIVersion: psmdbAPIVersion,
@@ -645,9 +651,29 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 				ConfigsvrReplSet: &psmdb.ReplsetSpec{
 					Size:       3,
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
+					Arbiter: psmdb.Arbiter{
+						Enabled: false,
+						Size:    1,
+						MultiAZ: psmdb.MultiAZ{
+							Affinity: affinity,
+						},
+					},
+					MultiAZ: psmdb.MultiAZ{
+						Affinity: affinity,
+					},
 				},
 				Mongos: &psmdb.ReplsetSpec{
+					Arbiter: psmdb.Arbiter{
+						Enabled: false,
+						Size:    1,
+						MultiAZ: psmdb.MultiAZ{
+							Affinity: affinity,
+						},
+					},
 					Size: params.Size,
+					MultiAZ: psmdb.MultiAZ{
+						Affinity: affinity,
+					},
 				},
 				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
 					Mode: psmdb.OperationProfilingModeSlowOp,
@@ -662,9 +688,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 						Enabled: false,
 						Size:    1,
 						MultiAZ: psmdb.MultiAZ{
-							Affinity: &psmdb.PodAffinity{
-								TopologyKey: pointer.ToString("kubernetes.io/hostname"),
-							},
+							Affinity: affinity,
 						},
 					},
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
@@ -672,9 +696,7 @@ func (c *K8Client) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) 
 						MaxUnavailable: pointer.ToInt(1),
 					},
 					MultiAZ: psmdb.MultiAZ{
-						Affinity: &psmdb.PodAffinity{
-							TopologyKey: pointer.ToString(psmdb.AffinityOff),
-						},
+						Affinity: affinity,
 					},
 				},
 			},
