@@ -96,6 +96,8 @@ const (
 	OperatorStatusNotInstalled OperatorStatus = 3
 )
 
+const clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
+
 // Operators contains statuses of operators.
 type Operators struct {
 	Xtradb OperatorStatus
@@ -347,6 +349,12 @@ func randSeq(n int) string {
 
 // CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
 func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
+	var cluster pxc.PerconaXtraDBCluster
+	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
+	if err == nil {
+		return fmt.Errorf(clusterWithSameNameExistsErrTemplate, params.Name)
+	}
+
 	var secret common.Secret
 	err := c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPXCSecretName, &secret)
 	if err != nil {
@@ -364,7 +372,6 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	if err != nil {
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
-
 	storageName := fmt.Sprintf(pxcBackupStorageName, params.Name)
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
@@ -716,6 +723,12 @@ func (c *K8sClient) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, erro
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
+	var cluster psmdb.PerconaServerMongoDB
+	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), params.Name, &cluster)
+	if err == nil {
+		return fmt.Errorf(clusterWithSameNameExistsErrTemplate, params.Name)
+	}
+
 	var secret common.Secret
 	err := c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPSMDBSecretName, &secret)
 	if err != nil {
