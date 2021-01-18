@@ -73,6 +73,26 @@ func TestK8Client(t *testing.T) {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
 
+		getCluster := func(name string) (cluster XtraDBCluster) {
+			clusters, err := client.ListXtraDBClusters(ctx)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			for _, c := range clusters {
+				if c.Name == name {
+					cluster = c
+					return
+				}
+			}
+			return
+		}
+		t.Run("All pods are ready", func(t *testing.T) {
+			cluster := getCluster(name)
+			assert.Equal(t, int32(6), cluster.DetailedState.CountReadyPods())
+			assert.Equal(t, int32(6), cluster.DetailedState.CountAllPods())
+		})
+
 		err = client.RestartXtraDBCluster(ctx, name)
 		require.NoError(t, err)
 		assertListXtraDBCluster(t, ctx, client, name, func(cluster *XtraDBCluster) bool {
@@ -126,10 +146,29 @@ func TestK8Client(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		l.Info("PSMDB Cluster is created")
-
 		assertListPSMDBCluster(t, ctx, client, name, func(cluster *PSMDBCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
+		})
+
+		getCluster := func(name string) (cluster PSMDBCluster) {
+			clusters, err := client.ListPSMDBClusters(ctx)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			for _, c := range clusters {
+				if c.Name == name {
+					cluster = c
+					return
+				}
+			}
+			return
+		}
+
+		t.Run("All pods are ready", func(t *testing.T) {
+			cluster := getCluster(name)
+			assert.Equal(t, cluster.DetailedState.CountReadyPods(), 6)
+			assert.Equal(t, cluster.DetailedState.CountAllPods(), 6)
 		})
 
 		err = client.RestartPSMDBCluster(ctx, name)
