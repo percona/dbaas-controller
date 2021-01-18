@@ -308,7 +308,8 @@ func (c *K8sClient) CreateSecret(ctx context.Context, secretName string, data ma
 
 func randSeq(n int) string {
 	rand.Seed(time.Now().UnixNano())
-	symbols := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~=+%^*/()[]{}/!@#$?|")
+	// PSMDB do not support all special characters in password https://jira.percona.com/browse/K8SPSMDB-364
+	symbols := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~=+%^*/(){}!$|")
 	symbolsLen := len(symbols)
 	b := make([]rune, n)
 	for i := range b {
@@ -497,8 +498,8 @@ func (c *K8sClient) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBC
 
 	password := ""
 	var secret common.Secret
-	// Retrieve secrets only for ready cluster.
-	if cluster.Status.Status == pxc.AppStateReady {
+	// Retrieve secrets only for initializing or ready cluster.
+	if cluster.Status.Status == pxc.AppStateReady || cluster.Status.Status == pxc.AppStateInit {
 		err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(pxcSecretNameTmpl, name), &secret)
 		if err != nil {
 			return nil, errors.Wrap(err, "cannot get XtraDb cluster secrets")
@@ -690,7 +691,6 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	secretName := fmt.Sprintf(psmdbSecretNameTmpl, params.Name)
 	pwd := randSeq(passwordLength)
 
-	// TODO: add a link to ticket to set random password for all other users.
 	data := secret.Data
 	data["MONGODB_USER_ADMIN_PASSWORD"] = []byte(pwd)
 
@@ -817,6 +817,13 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			Enabled:    true,
 			ExposeType: common.ServiceTypeLoadBalancer,
 		}
+	} else {
+		// https://www.percona.com/doc/kubernetes-operator-for-psmongodb/minikube.html
+		// > Install Percona Server for MongoDB on Minikube
+		// > ...
+		// > set affinity.antiAffinityTopologyKey key to "none"
+		// > (the Operator will be unable to spread the cluster on several nodes)
+		res.Spec.Replsets[0].Arbiter.Affinity.TopologyKey = pointer.ToString("none")
 	}
 
 	return c.kubeCtl.Apply(ctx, res)
@@ -906,8 +913,8 @@ func (c *K8sClient) GetPSMDBCluster(ctx context.Context, name string) (*PSMDBCre
 	password := ""
 	username := ""
 	var secret common.Secret
-	// Retrieve secrets only for ready cluster.
-	if cluster.Status.Status == psmdb.AppStateReady {
+	// Retrieve secrets only for initializing or ready cluster.
+	if cluster.Status.Status == psmdb.AppStateReady || cluster.Status.Status == psmdb.AppStateInit {
 		err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(psmdbSecretNameTmpl, name), &secret)
 		if err != nil {
 			return nil, errors.Wrap(err, "cannot get PSMDB cluster secrets")
