@@ -169,7 +169,7 @@ type XtraDBCluster struct {
 	PXC           *PXC
 	ProxySQL      *ProxySQL
 	Pause         bool
-	DetailedState *DetailedState
+	DetailedState DetailedState
 }
 
 // PSMDBCluster contains information related to psmdb cluster.
@@ -180,7 +180,7 @@ type PSMDBCluster struct {
 	State         ClusterState
 	Message       string
 	Replicaset    *Replicaset
-	DetailedState *DetailedState
+	DetailedState DetailedState
 }
 
 // PSMDBCredentials represents PSMDB connection credentials.
@@ -265,14 +265,14 @@ type K8sClient struct {
 	l       logger.Logger
 }
 
-func (d *DetailedState) CountReadyPods() (count int32) {
+func (d DetailedState) CountReadyPods() (count int32) {
 	for _, status := range d {
 		count += status.ready
 	}
 	return
 }
 
-func (d *DetailedState) CountAllPods() (count int32) {
+func (d DetailedState) CountAllPods() (count int32) {
 	for _, status := range d {
 		count += status.size
 	}
@@ -615,13 +615,11 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
 			},
 			Pause: cluster.Spec.Pause,
-			DetailedState: &DetailedState{
-				status: []appStatus{
-					appStatus{cluster.Status.PMM.Ready, cluster.Status.PMM.Size},
-					appStatus{cluster.Status.HAProxy.Ready, cluster.Status.HAProxy.Size},
-					appStatus{cluster.Status.ProxySQL.Ready, cluster.Status.ProxySQL.Size},
-					appStatus{cluster.Status.PXC.Ready, cluster.Status.PXC.Size},
-				},
+			DetailedState: []appStatus{
+				appStatus{cluster.Status.PMM.Ready, cluster.Status.PMM.Size},
+				appStatus{cluster.Status.HAProxy.Ready, cluster.Status.HAProxy.Size},
+				appStatus{cluster.Status.ProxySQL.Ready, cluster.Status.ProxySQL.Size},
+				appStatus{cluster.Status.PXC.Ready, cluster.Status.PXC.Size},
 			},
 		}
 
@@ -691,7 +689,7 @@ func (c *K8sClient) getDeletingXtraDBClusters(ctx context.Context, clusters []Xt
 			State:         ClusterStateDeleting,
 			PXC:           new(PXC),
 			ProxySQL:      new(ProxySQL),
-			DetailedState: &DetailedState{status: []appStatus{}},
+			DetailedState: []appStatus{},
 		}
 	}
 	return xtradbClusters, nil
@@ -1018,9 +1016,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
-			DetailedState: &DetailedState{
-				status: status,
-			},
+			DetailedState: status,
 		}
 
 		res[i] = val
@@ -1078,7 +1074,7 @@ func (c *K8sClient) getDeletingPSMDBClusters(ctx context.Context, clusters []PSM
 			Size:          0,
 			State:         ClusterStateDeleting,
 			Replicaset:    new(Replicaset),
-			DetailedState: &DetailedState{status: []appStatus{}},
+			DetailedState: []appStatus{},
 		}
 	}
 	return xtradbClusters, nil
