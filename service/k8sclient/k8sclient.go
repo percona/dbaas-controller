@@ -157,10 +157,8 @@ type appStatus struct {
 	ready int32
 }
 
-// DetailedState contains containers' status.
-type DetailedState struct {
-	status []appStatus
-}
+// DetailedState contains pods' status.
+type DetailedState []appStatus
 
 // XtraDBCluster contains information related to xtradb cluster.
 type XtraDBCluster struct {
@@ -268,14 +266,14 @@ type K8sClient struct {
 }
 
 func (d *DetailedState) CountReadyPods() (count int32) {
-	for _, status := range d.status {
+	for _, status := range d {
 		count += status.ready
 	}
 	return
 }
 
 func (d *DetailedState) CountAllPods() (count int32) {
-	for _, status := range d.status {
+	for _, status := range d {
 		count += status.size
 	}
 	return

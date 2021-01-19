@@ -18,6 +18,7 @@ package k8sclient
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -73,22 +74,9 @@ func TestK8Client(t *testing.T) {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
 
-		getCluster := func(name string) (cluster XtraDBCluster) {
-			clusters, err := client.ListXtraDBClusters(ctx)
-			if err != nil {
-				t.Error(err)
-				return
-			}
-			for _, c := range clusters {
-				if c.Name == name {
-					cluster = c
-					return
-				}
-			}
-			return
-		}
 		t.Run("All pods are ready", func(t *testing.T) {
-			cluster := getCluster(name)
+			cluster, err := getXtraDBCluster(ctx, t, client, name)
+			require.NoError(t, err)
 			assert.Equal(t, int32(6), cluster.DetailedState.CountReadyPods())
 			assert.Equal(t, int32(6), cluster.DetailedState.CountAllPods())
 		})
@@ -150,25 +138,11 @@ func TestK8Client(t *testing.T) {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
 
-		getCluster := func(name string) (cluster PSMDBCluster) {
-			clusters, err := client.ListPSMDBClusters(ctx)
-			if err != nil {
-				t.Error(err)
-				return
-			}
-			for _, c := range clusters {
-				if c.Name == name {
-					cluster = c
-					return
-				}
-			}
-			return
-		}
-
 		t.Run("All pods are ready", func(t *testing.T) {
-			cluster := getCluster(name)
-			assert.Equal(t, cluster.DetailedState.CountReadyPods(), 6)
-			assert.Equal(t, cluster.DetailedState.CountAllPods(), 6)
+			cluster, err := getPSMDBCluster(ctx, t, client, name)
+			require.NoError(t, err)
+			assert.Equal(t, int32(6), cluster.DetailedState.CountReadyPods())
+			assert.Equal(t, int32(6), cluster.DetailedState.CountAllPods())
 		})
 
 		err = client.RestartPSMDBCluster(ctx, name)
@@ -215,52 +189,87 @@ func TestK8Client(t *testing.T) {
 	})
 }
 
-func assertListXtraDBCluster(t *testing.T, ctx context.Context, client *K8sClient, name string, conditionFunc func(cluster *XtraDBCluster) bool) {
+func getPSMDBCluster(ctx context.Context, t *testing.T, client *K8Client, name string) (*PSMDBCluster, error) {
 	l := logger.Get(ctx)
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	clusters, err := client.ListPSMDBClusters(ctx)
+	if err != nil {
+		return nil, err
+	}
+	l.Debug(clusters)
+	for _, c := range clusters {
+		if c.Name == name {
+			return &c, nil
+		}
+	}
+	return nil, fmt.Errorf("Failed to get cluster '%s'.", name)
+}
+
+func getXtraDBCluster(ctx context.Context, t *testing.T, client *K8Client, name string) (*XtraDBCluster, error) {
+	l := logger.Get(ctx)
+	clusters, err := client.ListXtraDBClusters(ctx)
+	if err != nil {
+		return nil, err
+	}
+	l.Debug(clusters)
+	for _, c := range clusters {
+		if c.Name == name {
+			return &c, nil
+		}
+	}
+	return nil, fmt.Errorf("Failed to get cluster '%s'.", name)
+}
+
+func assertListXtraDBCluster(t *testing.T, ctx context.Context, client *K8Client, name string, conditionFunc func(cluster *XtraDBCluster) bool) {
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 	for {
 		time.Sleep(5 * time.Second)
-		clusters, err := client.ListXtraDBClusters(ctx)
-		require.NoError(t, err)
-
-		l.Debug(clusters)
-
-		var cluster *XtraDBCluster
-		for _, c := range clusters {
-			c := c
-			if c.Name == name {
-				cluster = &c
+		cluster, err := getXtraDBCluster(timeoutCtx, t, name)
+		if err != nil {
+			timedout := false
+			select {
+			case <-ctx.Done():
+				t.Error("Timed out")
+				timedout = true
+			default:
+			}
+			if timedout {
 				break
 			}
+			t.Error(err)
+			continue
 		}
+
 		if conditionFunc(cluster) {
 			break
 		}
 	}
 }
 
-func assertListPSMDBCluster(t *testing.T, ctx context.Context, client *K8sClient, name string, conditionFunc func(cluster *PSMDBCluster) bool) {
-	l := logger.Get(ctx)
+func assertListPSMDBCluster(t *testing.T, ctx context.Context, client *K8Client, name string, conditionFunc func(cluster *PSMDBCluster) bool) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 	for {
-		time.Sleep(1 * time.Second)
-		clusters, err := client.ListPSMDBClusters(timeoutCtx)
-		require.NoErrorf(t, err, "timeout for waiting condition: %v", clusters)
-
-		l.Debug(clusters)
-
-		var cluster *PSMDBCluster
-		for _, c := range clusters {
-			c := c
-			if c.Name == name {
-				cluster = &c
+		time.Sleep(5 * time.Second)
+		cluster, err := getPSMDBCluster(timeoutCtx, t, name)
+		if err != nil {
+			timedout := false
+			select {
+			case <-ctx.Done():
+				t.Error("Timed out")
+				timedout = true
+			default:
+			}
+			if timedout {
 				break
 			}
+			t.Error(err)
+			continue
 		}
+
 		if conditionFunc(cluster) {
 			break
 		}
+
 	}
 }
