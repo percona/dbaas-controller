@@ -117,7 +117,7 @@ func TestK8Client(t *testing.T) {
 	})
 
 	t.Run("PSMDB", func(t *testing.T) {
-		name := "newsuccss"
+		name := "test-cluster-psmdb"
 		_ = client.DeletePSMDBCluster(ctx, name)
 
 		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
