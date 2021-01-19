@@ -134,6 +134,8 @@ func TestK8Client(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		l.Info("PSMDB Cluster is created")
+
 		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
