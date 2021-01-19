@@ -228,7 +228,7 @@ func assertListXtraDBCluster(ctx context.Context, t *testing.T, client *K8Client
 	for {
 		time.Sleep(5 * time.Second)
 		cluster, err := getXtraDBCluster(timeoutCtx, client, name)
-		if errors.Is(err, ErrNoSuchCluster) {
+		if !errors.Is(err, ErrNoSuchCluster) {
 			require.NoError(t, err)
 		}
 
@@ -244,7 +244,7 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8Client,
 	for {
 		time.Sleep(5 * time.Second)
 		cluster, err := getPSMDBCluster(timeoutCtx, client, name)
-		if errors.Is(err, ErrNoSuchCluster) {
+		if !errors.Is(err, ErrNoSuchCluster) {
 			require.NoError(t, err)
 		}
 
