@@ -115,7 +115,9 @@ const expected = `
         },
         "pmm": {}
     },
-    "status": {}
+    "status": {
+    	"mongos": {}
+    }
 }
 `
 
