@@ -265,6 +265,8 @@ type K8sClient struct {
 	l       logger.Logger
 }
 
+// CountReadyPods returns number of pods that are ready and belong to the
+// database cluster.
 func (d DetailedState) CountReadyPods() (count int32) {
 	for _, status := range d {
 		count += status.ready
@@ -272,6 +274,7 @@ func (d DetailedState) CountReadyPods() (count int32) {
 	return
 }
 
+// CountAllPods returns number of all pods belonging to the database cluster.
 func (d DetailedState) CountAllPods() (count int32) {
 	for _, status := range d {
 		count += status.size
@@ -616,10 +619,10 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 			},
 			Pause: cluster.Spec.Pause,
 			DetailedState: []appStatus{
-				appStatus{cluster.Status.PMM.Ready, cluster.Status.PMM.Size},
-				appStatus{cluster.Status.HAProxy.Ready, cluster.Status.HAProxy.Size},
-				appStatus{cluster.Status.ProxySQL.Ready, cluster.Status.ProxySQL.Size},
-				appStatus{cluster.Status.PXC.Ready, cluster.Status.PXC.Size},
+				{cluster.Status.PMM.Ready, cluster.Status.PMM.Size},
+				{cluster.Status.HAProxy.Ready, cluster.Status.HAProxy.Size},
+				{cluster.Status.ProxySQL.Ready, cluster.Status.ProxySQL.Size},
+				{cluster.Status.PXC.Ready, cluster.Status.PXC.Size},
 			},
 		}
 
