@@ -77,8 +77,8 @@ func TestK8Client(t *testing.T) {
 		t.Run("All pods are ready", func(t *testing.T) {
 			cluster, err := getXtraDBCluster(ctx, client, name)
 			require.NoError(t, err)
-			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
-			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
+			assert.Equal(t, cluster.DetailedState.CountAllPods(), cluster.DetailedState.CountReadyPods())
+			assert.Greater(t, cluster.DetailedState.CountAllPods(), int32(0))
 		})
 
 		err = client.RestartXtraDBCluster(ctx, name)
@@ -141,8 +141,8 @@ func TestK8Client(t *testing.T) {
 		t.Run("All pods are ready", func(t *testing.T) {
 			cluster, err := getPSMDBCluster(ctx, client, name)
 			require.NoError(t, err)
-			assert.Equal(t, int32(9), cluster.DetailedState.CountReadyPods())
-			assert.Equal(t, int32(9), cluster.DetailedState.CountAllPods())
+			assert.Equal(t, cluster.DetailedState.CountAllPods(), cluster.DetailedState.CountReadyPods())
+			assert.Greater(t, cluster.DetailedState.CountAllPods(), int32(0))
 		})
 
 		err = client.RestartPSMDBCluster(ctx, name)
