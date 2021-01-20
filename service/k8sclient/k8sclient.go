@@ -356,7 +356,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	var secret common.Secret
-	err := c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPXCSecretName, &secret)
+	err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPXCSecretName, &secret)
 	if err != nil {
 		return errors.Wrap(err, "cannot get default PXC secrets")
 	}
@@ -730,7 +730,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 
 	var secret common.Secret
-	err := c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPSMDBSecretName, &secret)
+	err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPSMDBSecretName, &secret)
 	if err != nil {
 		return errors.Wrap(err, "cannot get default PSMDB secrets")
 	}
