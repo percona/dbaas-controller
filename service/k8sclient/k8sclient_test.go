@@ -192,7 +192,7 @@ func TestK8sClient(t *testing.T) {
 }
 
 // ErrNoSuchCluster indicates that no cluster with given name was found.
-var ErrNoSuchCluster = errors.New("no cluster found with given name")
+var ErrNoSuchCluster error = errors.New("no cluster found with given name")
 
 func getPSMDBCluster(ctx context.Context, client *K8sClient, name string) (*PSMDBCluster, error) {
 	l := logger.Get(ctx)
