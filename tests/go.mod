@@ -3,7 +3,7 @@ module github.com/percona-platform/dbaas-controller/tests
 go 1.15
 
 // Use for local development, but do not commit:
-// replace github.com/percona-platform/dbaas-api => ../dbaas-api
+// replace github.com/percona-platform/dbaas-api => ../../dbaas-api
 
 // Update with:
 // go get -v github.com/percona-platform/dbaas-api@main
