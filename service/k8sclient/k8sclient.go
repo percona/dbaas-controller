@@ -283,7 +283,7 @@ func (d DetailedState) CountAllPods() (count int32) {
 }
 
 // New returns new K8Client object.
-func New(ctx context.Context, kubeconfig string) (*K8Client, error) {
+func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "K8sClient")
 	kubeCtl, err := kubectl.NewKubeCtl(ctx, kubeconfig)
