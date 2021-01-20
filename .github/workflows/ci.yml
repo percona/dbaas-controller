@@ -239,8 +239,9 @@ jobs:
           # run it like that until some of those issues/PRs are resolved:
           # * https://github.com/quasilyte/go-consistent/issues/33
           # * https://github.com/golangci/golangci-lint/issues/288
-          # * https://github.com/reviewdog/errorformat/pull/47 (once it is atually used by reviewdog)
-          bin/go-consistent -pedantic ./...
+          # * https://github.com/reviewdog/errorformat/pull/47 (once it is actually used by reviewdog)
+          bin/go-consistent -pedantic -exclude "tests" ./...
+          cd tests && ../bin/go-consistent -pedantic ./...
 
       - name: Check that there are no source code changes
         run: |
