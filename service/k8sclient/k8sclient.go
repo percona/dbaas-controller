@@ -651,7 +651,7 @@ func (c *K8sClient) getDeletingClusters(ctx context.Context, managedBy string, r
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
 
-	res := make([]Cluster, 0)
+	res := []Cluster{}
 	for _, pod := range list.Items {
 		clusterName := pod.Labels["app.kubernetes.io/instance"]
 		if _, ok := runningClusters[clusterName]; ok {
