@@ -30,7 +30,7 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
-func TestK8Client(t *testing.T) {
+func TestK8sClient(t *testing.T) {
 	ctx := app.Context()
 
 	kubeCtl, err := kubectl.NewKubeCtl(ctx, "")
@@ -194,7 +194,7 @@ func TestK8Client(t *testing.T) {
 // ErrNoSuchCluster indicates that no cluster with given name was found.
 var ErrNoSuchCluster = errors.New("no cluster found with given name")
 
-func getPSMDBCluster(ctx context.Context, client *K8Client, name string) (*PSMDBCluster, error) {
+func getPSMDBCluster(ctx context.Context, client *K8sClient, name string) (*PSMDBCluster, error) {
 	l := logger.Get(ctx)
 	clusters, err := client.ListPSMDBClusters(ctx)
 	if err != nil {
@@ -209,7 +209,7 @@ func getPSMDBCluster(ctx context.Context, client *K8Client, name string) (*PSMDB
 	return nil, ErrNoSuchCluster
 }
 
-func getXtraDBCluster(ctx context.Context, client *K8Client, name string) (*XtraDBCluster, error) {
+func getXtraDBCluster(ctx context.Context, client *K8sClient, name string) (*XtraDBCluster, error) {
 	l := logger.Get(ctx)
 	clusters, err := client.ListXtraDBClusters(ctx)
 	if err != nil {
@@ -224,7 +224,7 @@ func getXtraDBCluster(ctx context.Context, client *K8Client, name string) (*Xtra
 	return nil, ErrNoSuchCluster
 }
 
-func assertListXtraDBCluster(ctx context.Context, t *testing.T, client *K8Client, name string, conditionFunc func(cluster *XtraDBCluster) bool) {
+func assertListXtraDBCluster(ctx context.Context, t *testing.T, client *K8sClient, name string, conditionFunc func(cluster *XtraDBCluster) bool) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 	for {
@@ -240,7 +240,7 @@ func assertListXtraDBCluster(ctx context.Context, t *testing.T, client *K8Client
 	}
 }
 
-func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8Client, name string, conditionFunc func(cluster *PSMDBCluster) bool) {
+func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient, name string, conditionFunc func(cluster *PSMDBCluster) bool) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 	for {
