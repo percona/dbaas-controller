@@ -9,7 +9,7 @@ help:                             ## Display this help message
 	@echo " Steps:"
 	@echo " - Install AWS CLI https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html"
 	@echo " - Use `aws configure` and add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` with your credentials."
-	@echo " - Create a cluster with the following command  :"
+	@echo " - Create a cluster with the following command:"
 	@echo " - eksctl create cluster --write-kubeconfig —name=your-cluster-name —zones=us-west-2a,us-west-2b --kubeconfig <PATH_TO_KUBECONFIG>"
 	@echo " - Add your ACCESS and SECRET key from stage 3 to env section of your kube config file"
 	@echo " "
@@ -160,7 +160,7 @@ eks-install-operators:            ## Install Kubernetes operators in EKS.
 	cat ./deploy/psmdb-operator.yaml | ${KUBECTL_CMD} apply -f -
 	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*$/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*=$/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | ${KUBECTL_CMD} apply -f -
 
-eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage. 
+eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage.
 	# Delete the PXC operator
 	cat ./deploy/pxc-operator.yaml | ${KUBECTL_CMD} delete -f -
 	cat ./deploy/pxc-secrets.yaml | sed "s/pmmserver:.*=/pmmserver: ${PMM_PASS}/g" | ${KUBECTL_CMD} delete -f -
