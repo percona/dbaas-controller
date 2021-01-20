@@ -17,8 +17,12 @@
 package psmdbcluster
 
 import (
+	"context"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/stretchr/testify/assert"
@@ -49,21 +53,27 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	}
 	require.Falsef(t, clusterFound, "There should not be cluster with name %s", name)
 
+	clusterSize := int32(3)
+	cpum := int32(1024)
+	memory := int64(1024 * 1024 * 1024)
+	diskSize := int64(1024 * 1024 * 1024)
+
 	createPSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.CreatePSMDBCluster(tests.Context, &controllerv1beta1.CreatePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
 		Params: &controllerv1beta1.PSMDBClusterParams{
-			ClusterSize: 3,
+			ClusterSize: clusterSize,
 			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
 				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        1000,
-					MemoryBytes: 1024 * 1024 * 1024,
+					CpuM:        cpum,
+					MemoryBytes: memory,
 				},
-				DiskSize: 1024 * 1024 * 1024,
+				DiskSize: diskSize,
 			},
 		},
+		PmmPublicAddress: tests.PMMServerAddress,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createPSMDBClusterResponse)
@@ -77,9 +87,77 @@ func TestPSMDBClusterAPI(t *testing.T) {
 
 	for _, cluster := range clusters.Clusters {
 		if cluster.Name == name {
-			assert.Equal(t, int32(3), cluster.Params.ClusterSize)
-			assert.Equal(t, int64(1024*1024*1024), cluster.Params.Replicaset.ComputeResources.MemoryBytes)
-			assert.Equal(t, int32(1000), cluster.Params.Replicaset.ComputeResources.CpuM)
+			assert.Equal(t, clusterSize, cluster.Params.ClusterSize)
+			assert.Equal(t, memory, cluster.Params.Replicaset.ComputeResources.MemoryBytes)
+			assert.Equal(t, cpum, cluster.Params.Replicaset.ComputeResources.CpuM)
+			assert.Equal(t, diskSize, cluster.Params.Replicaset.DiskSize)
+			clusterFound = true
+		}
+	}
+	assert.True(t, clusterFound)
+
+	t.Log("Waiting for cluster to be ready")
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
+	assert.NoError(t, err)
+
+	// There is no Ingress in minikube
+	if os.Getenv("IN_EKS") != "" {
+		cluster, err := tests.PSMDBClusterAPIClient.GetPSMDBCluster(tests.Context, &controllerv1beta1.GetPSMDBClusterRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: kubeconfig,
+			},
+			Name: name,
+		})
+		assert.NoError(t, err)
+		assert.NotEmpty(t, cluster.Credentials.Host)
+		assert.True(t, strings.Contains(cluster.Credentials.Host, "amazon"))
+	}
+
+	updateMemory := 2 * memory
+	updateReq := &controllerv1beta1.UpdatePSMDBClusterRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+		Name: name,
+		Params: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
+			ClusterSize: clusterSize,
+			Replicaset: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
+				ComputeResources: &controllerv1beta1.ComputeResources{
+					CpuM:        cpum,
+					MemoryBytes: updateMemory,
+				},
+			},
+		},
+	}
+
+	t.Log("First update")
+	upresp, err := tests.PSMDBClusterAPIClient.UpdatePSMDBCluster(tests.Context, updateReq)
+	assert.NoError(t, err)
+	assert.NotNil(t, upresp)
+
+	// Second update should fail because running an update while the status is changing (there is a previous update running)
+	// is not allowed.
+	t.Log("Second update")
+	upresp, err = tests.PSMDBClusterAPIClient.UpdatePSMDBCluster(tests.Context, updateReq)
+	assert.Error(t, err)
+	assert.Nil(t, upresp)
+
+	t.Log("Wating for cluster to be ready after update")
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
+	require.NoError(t, err)
+
+	clusterFound = false
+	clusters, err = tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+	})
+	assert.NoError(t, err)
+	for _, cluster := range clusters.Clusters {
+		if cluster.Name == name {
+			assert.Equal(t, clusterSize, cluster.Params.ClusterSize)
+			assert.Equal(t, updateMemory, cluster.Params.Replicaset.ComputeResources.MemoryBytes)
+			assert.Equal(t, cpum, cluster.Params.Replicaset.ComputeResources.CpuM)
 			clusterFound = true
 		}
 	}
@@ -94,6 +172,44 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, restartPSMDBClusterResponse)
 
+	// Suspend  cluster
+	suspendReq := &controllerv1beta1.UpdatePSMDBClusterRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+		Name: name,
+		Params: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
+			Suspend: true,
+		},
+	}
+	t.Log("Suspend cluster")
+	suspendResp, err := tests.PSMDBClusterAPIClient.UpdatePSMDBCluster(tests.Context, suspendReq)
+	assert.NoError(t, err)
+	assert.NotNil(t, suspendResp)
+
+	t.Log("Waiting for cluster to be suspended")
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED)
+	require.NoError(t, err)
+
+	// Resume cluster
+	resumeReq := &controllerv1beta1.UpdatePSMDBClusterRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: kubeconfig,
+		},
+		Name: name,
+		Params: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
+			Resume: true,
+		},
+	}
+	t.Log("Resume cluster")
+	resumeResp, err := tests.PSMDBClusterAPIClient.UpdatePSMDBCluster(tests.Context, resumeReq)
+	assert.NoError(t, err)
+	assert.NotNil(t, resumeResp)
+
+	t.Log("Waiting for cluster to be resumend")
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
+	require.NoError(t, err)
+
 	deletePSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.DeletePSMDBCluster(tests.Context, &controllerv1beta1.DeletePSMDBClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
@@ -102,4 +218,31 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, deletePSMDBClusterResponse)
+}
+
+func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.PSMDBClusterState) error {
+	for {
+		clusters, err := tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: kubeconfig,
+			},
+		})
+		if err != nil {
+			time.Sleep(time.Second)
+			continue
+		}
+
+		for _, cluster := range clusters.Clusters {
+			if cluster.Name == name && cluster.State == state {
+				return nil
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for the cluster to be ready")
+		case <-time.After(1000 * time.Millisecond):
+			continue
+		}
+	}
 }

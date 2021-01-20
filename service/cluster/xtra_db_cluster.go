@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
+	"github.com/percona-platform/dbaas-controller/utils/convertors"
 )
 
 //nolint:gochecknoglobals
@@ -68,29 +69,36 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 		params := &controllerv1beta1.XtraDBClusterParams{
 			ClusterSize: cluster.Size,
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
-				DiskSize: cluster.PXC.DiskSize,
+				DiskSize: convertors.StrToBytes(cluster.PXC.DiskSize),
 			},
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				DiskSize: cluster.ProxySQL.DiskSize,
+				DiskSize: convertors.StrToBytes(cluster.ProxySQL.DiskSize),
 			},
 		}
 		if cluster.PXC.ComputeResources != nil {
 			params.Pxc.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        cluster.PXC.ComputeResources.CPUM,
-				MemoryBytes: cluster.PXC.ComputeResources.MemoryBytes,
+				CpuM:        convertors.StrToMilliCPU(cluster.PXC.ComputeResources.CPUM),
+				MemoryBytes: convertors.StrToBytes(cluster.PXC.ComputeResources.MemoryBytes),
 			}
 		}
 		if cluster.ProxySQL.ComputeResources != nil {
 			params.Proxysql.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        cluster.ProxySQL.ComputeResources.CPUM,
-				MemoryBytes: cluster.ProxySQL.ComputeResources.MemoryBytes,
+				CpuM:        convertors.StrToMilliCPU(cluster.ProxySQL.ComputeResources.CPUM),
+				MemoryBytes: convertors.StrToBytes(cluster.ProxySQL.ComputeResources.MemoryBytes),
 			}
 		}
+
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{
-			Name:      cluster.Name,
-			State:     pxcStatesMap[cluster.State],
-			Operation: nil,
-			Params:    params,
+			Name:  cluster.Name,
+			State: pxcStatesMap[cluster.State],
+			Operation: &controllerv1beta1.RunningOperation{
+				Message: cluster.Message,
+			},
+			Params: params,
+		}
+
+		if cluster.State == k8sclient.ClusterStateReady && cluster.Pause {
+			res.Clusters[i].State = controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED
 		}
 	}
 
@@ -109,14 +117,15 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 		Name: req.Name,
 		Size: req.Params.ClusterSize,
 		PXC: &k8sclient.PXC{
-			DiskSize: req.Params.Pxc.DiskSize,
+			ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
+			DiskSize:         convertors.BytesToStr(req.Params.Pxc.DiskSize),
 		},
 		ProxySQL: &k8sclient.ProxySQL{
-			DiskSize: req.Params.Proxysql.DiskSize,
+			ComputeResources: computeResources(req.Params.Proxysql.ComputeResources),
+			DiskSize:         convertors.BytesToStr(req.Params.Proxysql.DiskSize),
 		},
+		PMMPublicAddress: req.PmmPublicAddress,
 	}
-	params.PXC.ComputeResources = computeResources(req.Params.Pxc.ComputeResources)
-	params.ProxySQL.ComputeResources = computeResources(req.Params.Proxysql.ComputeResources)
 
 	err = client.CreateXtraDBCluster(ctx, params)
 	if err != nil {
@@ -130,14 +139,52 @@ func computeResources(pxcRes *controllerv1beta1.ComputeResources) *k8sclient.Com
 		return nil
 	}
 	return &k8sclient.ComputeResources{
-		CPUM:        pxcRes.CpuM,
-		MemoryBytes: pxcRes.MemoryBytes,
+		CPUM:        convertors.MilliCPUToStr(pxcRes.CpuM),
+		MemoryBytes: convertors.BytesToStr(pxcRes.MemoryBytes),
 	}
 }
 
 // UpdateXtraDBCluster updates existing XtraDB cluster.
 func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *controllerv1beta1.UpdateXtraDBClusterRequest) (*controllerv1beta1.UpdateXtraDBClusterResponse, error) {
-	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("This method is not implemented yet."))
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	if req.Params.Suspend && req.Params.Resume {
+		return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
+	}
+
+	params := &k8sclient.XtraDBParams{
+		Name:    req.Name,
+		Size:    req.Params.ClusterSize,
+		Suspend: req.Params.Suspend,
+		Resume:  req.Params.Resume,
+	}
+
+	if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
+		if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
+			params.PXC = &k8sclient.PXC{
+				ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
+			}
+		}
+	}
+
+	if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
+		if req.Params.Proxysql.ComputeResources.CpuM > 0 || req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
+			params.ProxySQL = &k8sclient.ProxySQL{
+				ComputeResources: computeResources(req.Params.Proxysql.ComputeResources),
+			}
+		}
+	}
+
+	err = client.UpdateXtraDBCluster(ctx, params)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return new(controllerv1beta1.UpdateXtraDBClusterResponse), nil
 }
 
 // DeleteXtraDBCluster deletes XtraDB cluster.
@@ -168,6 +215,31 @@ func (s *XtraDBClusterService) RestartXtraDBCluster(ctx context.Context, req *co
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return new(controllerv1beta1.RestartXtraDBClusterResponse), nil
+}
+
+// GetXtraDBCluster returns an XtraDB cluster connection credentials.
+func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *controllerv1beta1.GetXtraDBClusterRequest) (*controllerv1beta1.GetXtraDBClusterResponse, error) {
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	cluster, err := client.GetXtraDBCluster(ctx, req.Name)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	resp := &controllerv1beta1.GetXtraDBClusterResponse{
+		Credentials: &controllerv1beta1.XtraDBCredentials{
+			Username: cluster.Username,
+			Password: cluster.Password,
+			Host:     cluster.Host,
+			Port:     cluster.Port,
+		},
+	}
+
+	return resp, nil
 }
 
 // Check interface.

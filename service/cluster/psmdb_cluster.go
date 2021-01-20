@@ -25,16 +25,21 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
+	"github.com/percona-platform/dbaas-controller/utils/convertors"
 )
 
-// psmdbStatesMap matches psmdb app states to cluster states.
-var psmdbStatesMap = map[k8sclient.ClusterState]controllerv1beta1.PSMDBClusterState{
-	k8sclient.ClusterStateInvalid:  controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
-	k8sclient.ClusterStateChanging: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
-	k8sclient.ClusterStateReady:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
-	k8sclient.ClusterStateFailed:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
-	k8sclient.ClusterStateDeleting: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
-}
+//nolint:gochecknoglobals
+var (
+	// psmdbStatesMap matches psmdb app states to cluster states.
+	psmdbStatesMap = map[k8sclient.ClusterState]controllerv1beta1.PSMDBClusterState{
+		k8sclient.ClusterStateInvalid:  controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
+		k8sclient.ClusterStateChanging: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
+		k8sclient.ClusterStateReady:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
+		k8sclient.ClusterStateFailed:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
+		k8sclient.ClusterStateDeleting: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
+		k8sclient.ClusterStatePaused:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
+	}
+)
 
 // PSMDBClusterService implements methods of gRPC server and other business logic related to PSMDB clusters.
 type PSMDBClusterService struct {
@@ -66,20 +71,26 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 		params := &controllerv1beta1.PSMDBClusterParams{
 			ClusterSize: cluster.Size,
 			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
-				DiskSize: cluster.Replicaset.DiskSize,
+				DiskSize: convertors.StrToBytes(cluster.Replicaset.DiskSize),
 			},
 		}
 		if cluster.Replicaset.ComputeResources != nil {
 			params.Replicaset.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        cluster.Replicaset.ComputeResources.CPUM,
-				MemoryBytes: cluster.Replicaset.ComputeResources.MemoryBytes,
+				CpuM:        convertors.StrToMilliCPU(cluster.Replicaset.ComputeResources.CPUM),
+				MemoryBytes: convertors.StrToBytes(cluster.Replicaset.ComputeResources.MemoryBytes),
 			}
 		}
 		res.Clusters[i] = &controllerv1beta1.ListPSMDBClustersResponse_Cluster{
-			Name:      cluster.Name,
-			State:     psmdbStatesMap[cluster.State],
-			Operation: nil,
-			Params:    params,
+			Name:  cluster.Name,
+			State: psmdbStatesMap[cluster.State],
+			Operation: &controllerv1beta1.RunningOperation{
+				Message: cluster.Message,
+			},
+			Params: params,
+		}
+
+		if cluster.State == k8sclient.ClusterStateReady && cluster.Pause {
+			res.Clusters[i].State = controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED
 		}
 	}
 
@@ -98,25 +109,60 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 		Name: req.Name,
 		Size: req.Params.ClusterSize,
 		Replicaset: &k8sclient.Replicaset{
-			DiskSize: req.Params.Replicaset.DiskSize,
+			DiskSize: convertors.BytesToStr(req.Params.Replicaset.DiskSize),
 		},
+		PMMPublicAddress: req.PmmPublicAddress,
 	}
+
 	if req.Params.Replicaset.ComputeResources != nil {
-		params.Replicaset.ComputeResources = &k8sclient.ComputeResources{
-			CPUM:        req.Params.Replicaset.ComputeResources.CpuM,
-			MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
-		}
+		params.Replicaset.ComputeResources = computeResources(req.Params.Replicaset.ComputeResources)
 	}
+
 	err = client.CreatePSMDBCluster(ctx, params)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
 	return new(controllerv1beta1.CreatePSMDBClusterResponse), nil
 }
 
 // UpdatePSMDBCluster updates existing PSMDB cluster.
 func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *controllerv1beta1.UpdatePSMDBClusterRequest) (*controllerv1beta1.UpdatePSMDBClusterResponse, error) {
-	return nil, status.Error(codes.Unimplemented, s.p.Sprintf("This method is not implemented yet."))
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	params := &k8sclient.PSMDBParams{
+		Name: req.Name,
+	}
+
+	if req.Params != nil {
+		if req.Params.Suspend && req.Params.Resume {
+			return nil, status.Error(codes.InvalidArgument, "field suspend and resume cannot be true simultaneously")
+		}
+
+		params.Suspend = req.Params.Suspend
+		params.Resume = req.Params.Resume
+		params.Size = req.Params.ClusterSize
+
+		if req.Params.Replicaset != nil {
+			params.Replicaset = new(k8sclient.Replicaset)
+			if req.Params.Replicaset.ComputeResources != nil {
+				if req.Params.Replicaset.ComputeResources.CpuM > 0 || req.Params.Replicaset.ComputeResources.MemoryBytes > 0 {
+					params.Replicaset.ComputeResources = computeResources(req.Params.Replicaset.ComputeResources)
+				}
+			}
+		}
+	}
+
+	err = client.UpdatePSMDBCluster(ctx, params)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return new(controllerv1beta1.UpdatePSMDBClusterResponse), nil
 }
 
 // DeletePSMDBCluster deletes PSMDB cluster.
@@ -147,6 +193,31 @@ func (s *PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *cont
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return new(controllerv1beta1.RestartPSMDBClusterResponse), nil
+}
+
+// GetPSMDBCluster returns a PSMDB cluster connection credentials.
+func (s *PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *controllerv1beta1.GetPSMDBClusterRequest) (*controllerv1beta1.GetPSMDBClusterResponse, error) {
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	cluster, err := client.GetPSMDBCluster(ctx, req.Name)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	resp := &controllerv1beta1.GetPSMDBClusterResponse{
+		Credentials: &controllerv1beta1.PSMDBCredentials{
+			Username: cluster.Username,
+			Password: cluster.Password,
+			Host:     cluster.Host,
+			Port:     cluster.Port,
+		},
+	}
+
+	return resp, nil
 }
 
 // Check interface.

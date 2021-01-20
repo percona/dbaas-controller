@@ -17,21 +17,16 @@
 // Package common contains common API Schema definitions for the pxc and psmdb API groups
 package common
 
-import (
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-)
-
 // VolumeSpec backup storage volume specs.
 type VolumeSpec struct {
 	// EmptyDir to use as data volume for mysql. EmptyDir represents a temporary
 	// directory that shares a pod's lifetime.
-	EmptyDir *corev1.EmptyDirVolumeSource `json:"emptyDir,omitempty"`
+	EmptyDir *EmptyDirVolumeSource `json:"emptyDir,omitempty"`
 
 	// HostPath to use as data volume for mysql. HostPath represents a
 	// pre-existing file or directory on the host machine that is directly
 	// exposed to the container.
-	HostPath *corev1.HostPathVolumeSource `json:"hostPath,omitempty"`
+	HostPath *HostPathVolumeSource `json:"hostPath,omitempty"`
 
 	// PersistentVolumeClaim to specify PVC spec for the volume for mysql data.
 	// It has the highest level of precedence, followed by HostPath and
@@ -80,7 +75,7 @@ const (
 )
 
 // ResourceList is a set of (resource name, quantity) pairs.
-type ResourceList map[ResourceName]resource.Quantity
+type ResourceList map[ResourceName]string
 
 // ResourcesList POD's resources list.
 type ResourcesList struct {
@@ -94,3 +89,51 @@ type PodResources struct {
 	Requests *ResourcesList `json:"requests,omitempty"`
 	Limits   *ResourcesList `json:"limits,omitempty"`
 }
+
+// PullPolicy describes a policy for if/when to pull a container image.
+type PullPolicy string
+
+const (
+	// PullAlways means that kubelet always attempts to pull the latest image. Container will fail If the pull fails.
+	PullAlways PullPolicy = "Always"
+	// PullNever means that kubelet never pulls an image, but only uses a local image. Container will fail if the image isn't present.
+	PullNever PullPolicy = "Never"
+	// PullIfNotPresent means that kubelet pulls if the image isn't present on disk. Container will fail if the image isn't present and the pull fails.
+	PullIfNotPresent PullPolicy = "IfNotPresent"
+)
+
+// PodList holds a list of pods objects.
+type PodList struct {
+	TypeMeta // anonymous for embedding
+
+	Items []Pod `json:"items"`
+}
+
+// PodDisruptionBudgetSpec POD disruption budget specs.
+type PodDisruptionBudgetSpec struct {
+	MinAvailable   *int `json:"minAvailable,omitempty"`
+	MaxUnavailable *int `json:"maxUnavailable,omitempty"`
+}
+
+// ServiceType represents the expose type to open the cluster to the world.
+type ServiceType string
+
+const (
+	// ServiceTypeClusterIP means a service will only be accessible inside the
+	// cluster, via the cluster IP.
+	ServiceTypeClusterIP ServiceType = "ClusterIP"
+
+	// ServiceTypeNodePort means a service will be exposed on one port of
+	// every node, in addition to 'ClusterIP' type.
+	ServiceTypeNodePort ServiceType = "NodePort"
+
+	// ServiceTypeLoadBalancer means a service will be exposed via an
+	// external load balancer (if the cloud provider supports it), in addition
+	// to 'NodePort' type.
+	ServiceTypeLoadBalancer ServiceType = "LoadBalancer"
+
+	// ServiceTypeExternalName means a service consists of only a reference to
+	// an external name that kubedns or equivalent will return as a CNAME
+	// record, with no exposing or proxying of any pods involved.
+	ServiceTypeExternalName ServiceType = "ExternalName"
+)
