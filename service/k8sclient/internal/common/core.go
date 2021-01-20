@@ -62,3 +62,27 @@ type Pod struct {
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	Spec PodSpec `json:"spec,omitempty"`
 }
+
+// Secret holds secret data of a certain type. The total bytes of the values in
+// the Data field must be less than 1024 * 1024 bytes.
+type Secret struct {
+	TypeMeta
+	// Standard object's metadata.
+	ObjectMeta `json:"metadata,omitempty"`
+
+	// Data contains the secret data. Each key must consist of alphanumeric
+	// characters, '-', '_' or '.'. The serialized form of the secret data is a
+	// base64 encoded string, representing the arbitrary (possibly non-string)
+	// data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
+	Data map[string][]byte `json:"data,omitempty"`
+
+	// Used to facilitate programmatic handling of secret data.
+	Type SecretType `json:"type,omitempty"`
+}
+
+type SecretType string
+
+const (
+	// SecretTypeOpaque is the default. Arbitrary user-defined data.
+	SecretTypeOpaque SecretType = "Opaque"
+)

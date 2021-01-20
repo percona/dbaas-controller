@@ -1,6 +1,6 @@
 module github.com/percona-platform/dbaas-controller/tools
 
-go 1.14
+go 1.15
 
 require (
 	github.com/golangci/golangci-lint v1.32.1
