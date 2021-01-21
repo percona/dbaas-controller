@@ -25,8 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
@@ -77,25 +75,10 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("All pods are ready", func(t *testing.T) {
-			var xtradbCluster pxc.PerconaXtraDBCluster
-			err := client.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), name, &xtradbCluster)
-			require.NoError(t, err)
-
-			expectedReady := xtradbCluster.Status.HAProxy.Ready
-			expectedTotal := xtradbCluster.Status.HAProxy.Size
-			expectedReady += xtradbCluster.Status.PMM.Ready
-			expectedTotal += xtradbCluster.Status.PMM.Size
-			expectedReady += xtradbCluster.Status.ProxySQL.Ready
-			expectedTotal += xtradbCluster.Status.ProxySQL.Size
-			expectedReady += xtradbCluster.Status.PXC.Ready
-			expectedTotal += xtradbCluster.Status.PXC.Size
-
 			cluster, err := getXtraDBCluster(ctx, client, name)
 			require.NoError(t, err)
-			assert.Equal(t, expectedReady, cluster.DetailedState.CountReadyPods())
-			assert.Equal(t, expectedTotal, cluster.DetailedState.CountAllPods())
-			assert.Greater(t, cluster.DetailedState.CountAllPods(), int32(0))
-			assert.Greater(t, cluster.DetailedState.CountReadyPods(), int32(0))
+			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
+			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
 		})
 
 		err = client.RestartXtraDBCluster(ctx, name)
@@ -158,23 +141,10 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("All pods are ready", func(t *testing.T) {
-			var psmdbCluster psmdb.PerconaServerMongoDB
-			err := client.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), name, &psmdbCluster)
-			require.NoError(t, err)
-
-			expectedReady := psmdbCluster.Status.Mongos.Ready
-			expectedTotal := psmdbCluster.Status.Mongos.Size
-			for _, rs := range psmdbCluster.Status.Replsets {
-				expectedReady += rs.Ready
-				expectedTotal += rs.Size
-			}
-
 			cluster, err := getPSMDBCluster(ctx, client, name)
 			require.NoError(t, err)
-			assert.Equal(t, expectedReady, cluster.DetailedState.CountReadyPods())
-			assert.Equal(t, expectedTotal, cluster.DetailedState.CountAllPods())
-			assert.Greater(t, cluster.DetailedState.CountAllPods(), int32(0))
-			assert.Greater(t, cluster.DetailedState.CountReadyPods(), int32(0))
+			assert.Equal(t, int32(9), cluster.DetailedState.CountReadyPods())
+			assert.Equal(t, int32(9), cluster.DetailedState.CountAllPods())
 		})
 
 		err = client.RestartPSMDBCluster(ctx, name)
