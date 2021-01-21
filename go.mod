@@ -1,6 +1,6 @@
 module github.com/percona-platform/dbaas-controller
 
-go 1.14
+go 1.15
 
 // Use for local development, but do not commit:
 // replace github.com/percona/pmm => ../pmm
@@ -19,7 +19,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/percona-platform/dbaas-api v0.0.0-20201224144309-3f82faf45bf2
 	github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871
-	github.com/percona/pmm v2.12.0+incompatible
+	github.com/percona/pmm v2.13.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.9.0
 	github.com/sirupsen/logrus v1.7.0

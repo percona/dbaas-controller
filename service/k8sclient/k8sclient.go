@@ -699,6 +699,26 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
 
+	affinity := &psmdb.PodAffinity{}
+	var expose psmdb.Expose
+	if isMinikube, err := c.isMinikube(ctx); err == nil && !isMinikube {
+		affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
+
+		// This enables ingress for the cluster and exposes the cluster to the world.
+		// The cluster will have an internal IP and a world accessible hostname.
+		// This feature cannot be tested with minikube. Please use EKS for testing.
+		expose = psmdb.Expose{
+			Enabled:    true,
+			ExposeType: common.ServiceTypeLoadBalancer,
+		}
+	} else {
+		// https://www.percona.com/doc/kubernetes-operator-for-psmongodb/minikube.html
+		// > Install Percona Server for MongoDB on Minikube
+		// > ...
+		// > set affinity.antiAffinityTopologyKey key to "none"
+		// > (the Operator will be unable to spread the cluster on several nodes)
+		affinity.TopologyKey = pointer.ToString(psmdb.AffinityOff)
+	}
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
 			APIVersion: psmdbAPIVersion,
@@ -751,9 +771,30 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 				ConfigsvrReplSet: &psmdb.ReplsetSpec{
 					Size:       3,
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
+					Arbiter: psmdb.Arbiter{
+						Enabled: false,
+						Size:    1,
+						MultiAZ: psmdb.MultiAZ{
+							Affinity: affinity,
+						},
+					},
+					MultiAZ: psmdb.MultiAZ{
+						Affinity: affinity,
+					},
 				},
 				Mongos: &psmdb.ReplsetSpec{
+					Arbiter: psmdb.Arbiter{
+						Enabled: false,
+						Size:    1,
+						MultiAZ: psmdb.MultiAZ{
+							Affinity: affinity,
+						},
+					},
 					Size: params.Size,
+					MultiAZ: psmdb.MultiAZ{
+						Affinity: affinity,
+					},
+					Expose: expose,
 				},
 				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
 					Mode: psmdb.OperationProfilingModeSlowOp,
@@ -768,9 +809,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 						Enabled: false,
 						Size:    1,
 						MultiAZ: psmdb.MultiAZ{
-							Affinity: &psmdb.PodAffinity{
-								TopologyKey: pointer.ToString("kubernetes.io/hostname"),
-							},
+							Affinity: affinity,
 						},
 					},
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
@@ -778,9 +817,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 						MaxUnavailable: pointer.ToInt(1),
 					},
 					MultiAZ: psmdb.MultiAZ{
-						Affinity: &psmdb.PodAffinity{
-							TopologyKey: pointer.ToString(psmdb.AffinityOff),
-						},
+						Affinity: affinity,
 					},
 				},
 			},
@@ -807,23 +844,6 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	if params.Replicaset != nil {
 		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
-	}
-
-	if isMinikube, err := c.isMinikube(ctx); err == nil && !isMinikube {
-		// This enables ingress for the cluster and exposes the cluster to the world.
-		// The cluster will have an internal IP and a world accessible hostname.
-		// This feature cannot be tested with minikube. Please use EKS for testing.
-		res.Spec.Sharding.Mongos.Expose = psmdb.Expose{
-			Enabled:    true,
-			ExposeType: common.ServiceTypeLoadBalancer,
-		}
-	} else {
-		// https://www.percona.com/doc/kubernetes-operator-for-psmongodb/minikube.html
-		// > Install Percona Server for MongoDB on Minikube
-		// > ...
-		// > set affinity.antiAffinityTopologyKey key to "none"
-		// > (the Operator will be unable to spread the cluster on several nodes)
-		res.Spec.Replsets[0].Arbiter.Affinity.TopologyKey = pointer.ToString("none")
 	}
 
 	return c.kubeCtl.Apply(ctx, res)
