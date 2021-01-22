@@ -18,6 +18,7 @@ package k8sclient
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -69,6 +70,18 @@ func TestK8sClient(t *testing.T) {
 		require.NoError(t, err)
 
 		l.Info("XtraDB Cluster is created")
+
+		t.Run("Create cluster with the same name", func(t *testing.T) {
+			err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
+				Name:             name,
+				Size:             1,
+				PXC:              &PXC{DiskSize: "1000000000"},
+				ProxySQL:         &ProxySQL{DiskSize: "1000000000"},
+				PMMPublicAddress: pmmPublicAddress,
+			})
+			require.Error(t, err)
+			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
+		})
 
 		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
@@ -135,6 +148,17 @@ func TestK8sClient(t *testing.T) {
 		require.NoError(t, err)
 
 		l.Info("PSMDB Cluster is created")
+
+		t.Run("Create cluster with the same name", func(t *testing.T) {
+			err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
+				Name:             name,
+				Size:             1,
+				Replicaset:       &Replicaset{DiskSize: "1000000000"},
+				PMMPublicAddress: pmmPublicAddress,
+			})
+			require.Error(t, err)
+			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
+		})
 
 		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
