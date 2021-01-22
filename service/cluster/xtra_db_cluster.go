@@ -87,12 +87,13 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 				MemoryBytes: convertors.StrToBytes(cluster.ProxySQL.ComputeResources.MemoryBytes),
 			}
 		}
-
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{
 			Name:  cluster.Name,
 			State: pxcStatesMap[cluster.State],
 			Operation: &controllerv1beta1.RunningOperation{
-				Message: cluster.Message,
+				FinishedSteps: cluster.DetailedState.CountReadyPods(),
+				TotalSteps:    cluster.DetailedState.CountAllPods(),
+				Message:       cluster.Message,
 			},
 			Params: params,
 		}

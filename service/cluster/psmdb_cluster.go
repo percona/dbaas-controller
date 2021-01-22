@@ -84,7 +84,9 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 			Name:  cluster.Name,
 			State: psmdbStatesMap[cluster.State],
 			Operation: &controllerv1beta1.RunningOperation{
-				Message: cluster.Message,
+				FinishedSteps: cluster.DetailedState.CountReadyPods(),
+				TotalSteps:    cluster.DetailedState.CountAllPods(),
+				Message:       cluster.Message,
 			},
 			Params: params,
 		}

@@ -85,6 +85,12 @@ type replsetMemberStatus struct {
 	Version string `json:"version,omitempty"`
 }
 
+type appStatus struct {
+	Size   int32    `json:"size,omitempty"`
+	Ready  int32    `json:"ready,omitempty"`
+	Status AppState `json:"status,omitempty"`
+}
+
 type replsetStatus struct {
 	Members     []*replsetMemberStatus `json:"members,omitempty"`
 	ClusterRole clusterRole            `json:"clusterRole,omitempty"`
@@ -117,6 +123,7 @@ type perconaServerMongoDBStatus struct {
 	Status             AppState                  `json:"state,omitempty"`
 	Message            string                    `json:"message,omitempty"`
 	Conditions         []clusterCondition        `json:"conditions,omitempty"`
+	Mongos             appStatus                 `json:"mongos,omitempty"`
 	Replsets           map[string]*replsetStatus `json:"replsets,omitempty"`
 	ObservedGeneration int64                     `json:"observedGeneration,omitempty"`
 	Host               string                    `json:"host,omitempty"`
