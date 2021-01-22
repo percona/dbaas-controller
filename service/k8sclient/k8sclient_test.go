@@ -225,6 +225,7 @@ func getXtraDBCluster(ctx context.Context, client *K8sClient, name string) (*Xtr
 }
 
 func assertListXtraDBCluster(ctx context.Context, t *testing.T, client *K8sClient, name string, conditionFunc func(cluster *XtraDBCluster) bool) {
+	t.Helper()
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 	for {
@@ -241,6 +242,7 @@ func assertListXtraDBCluster(ctx context.Context, t *testing.T, client *K8sClien
 }
 
 func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient, name string, conditionFunc func(cluster *PSMDBCluster) bool) {
+	t.Helper()
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 	for {
