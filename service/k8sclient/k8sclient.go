@@ -626,10 +626,10 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 			},
 			Pause: cluster.Spec.Pause,
 			DetailedState: []appStatus{
-				{cluster.Status.PMM.Ready, cluster.Status.PMM.Size},
-				{cluster.Status.HAProxy.Ready, cluster.Status.HAProxy.Size},
-				{cluster.Status.ProxySQL.Ready, cluster.Status.ProxySQL.Size},
-				{cluster.Status.PXC.Ready, cluster.Status.PXC.Size},
+				{size: cluster.Status.PMM.Size, ready: cluster.Status.PMM.Ready},
+				{size: cluster.Status.HAProxy.Size, ready: cluster.Status.HAProxy.Ready},
+				{size: cluster.Status.ProxySQL.Size, ready: cluster.Status.ProxySQL.Ready},
+				{size: cluster.Status.PXC.Size, ready: cluster.Status.PXC.Ready},
 			},
 		}
 
@@ -1021,7 +1021,10 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 		for _, rs := range cluster.Status.Replsets {
 			status = append(status, appStatus{rs.Size, rs.Ready})
 		}
-		status = append(status, appStatus{cluster.Status.Mongos.Size, cluster.Status.Mongos.Ready})
+		status = append(status, appStatus{
+			size:  cluster.Status.Mongos.Size,
+			ready: cluster.Status.Mongos.Ready,
+		})
 
 		val := PSMDBCluster{
 			Name:    cluster.Name,
