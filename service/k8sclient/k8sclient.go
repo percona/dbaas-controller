@@ -529,6 +529,9 @@ func (c *K8sClient) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBC
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get XtraDb cluster")
 	}
+	if cluster.Status.Status != pxc.AppStateReady {
+		return nil, errors.Wrap(ErrXtraDBClusterNotReady, "cannot get XtraDb cluster")
+	}
 
 	password := ""
 	var secret common.Secret
@@ -975,6 +978,9 @@ func (c *K8sClient) GetPSMDBCluster(ctx context.Context, name string) (*PSMDBCre
 	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), name, &cluster)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get PSMDB cluster")
+	}
+	if cluster.Status.Status != psmdb.AppStateReady {
+		return nil, errors.Wrap(ErrPSMDBClusterNotReady, "cannot get PSMDB cluster")
 	}
 
 	password := ""
