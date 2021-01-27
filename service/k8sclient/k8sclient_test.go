@@ -51,10 +51,10 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("Get non-existing clusters", func(t *testing.T) {
 		t.Parallel()
-		if _, err := client.GetPSMDBCluster(ctx, "d0ca1166b638c-psmdb"); !errors.Is(err, kubectl.ErrNotFound) {
+		if _, err := client.GetPSMDBCluster(ctx, "d0ca1166b638c-psmdb"); !errors.Is(err, ErrNotFound) {
 			t.Errorf("Expected ErrNotFound, got: %s", err.Error())
 		}
-		if _, err := client.GetXtraDBCluster(ctx, "871f766d43f8e-xtradb"); !errors.Is(err, kubectl.ErrNotFound) {
+		if _, err := client.GetXtraDBCluster(ctx, "871f766d43f8e-xtradb"); !errors.Is(err, ErrNotFound) {
 			t.Errorf("Expected ErrNotFound, got: %s", err.Error())
 		}
 	})

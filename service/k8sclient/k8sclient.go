@@ -522,11 +522,18 @@ func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error 
 	return nil
 }
 
+// ErrNotFound should be returned when referenced resource does not exist
+// inside Kubernetes cluster.
+var ErrNotFound error = errors.New("resource was not found in Kubernetes cluster")
+
 // GetXtraDBCluster returns an XtraDB cluster credentials.
 func (c *K8sClient) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBCredentials, error) {
 	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), name, &cluster)
 	if err != nil {
+		if errors.Is(err, kubectl.ErrNotFound) {
+			return nil, errors.Wrap(ErrNotFound, "cannot get XtraDb cluster")
+		}
 		return nil, errors.Wrap(err, "cannot get XtraDb cluster")
 	}
 	if cluster.Status.Status != pxc.AppStateReady {
@@ -977,6 +984,9 @@ func (c *K8sClient) GetPSMDBCluster(ctx context.Context, name string) (*PSMDBCre
 	var cluster psmdb.PerconaServerMongoDB
 	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), name, &cluster)
 	if err != nil {
+		if errors.Is(err, kubectl.ErrNotFound) {
+			return nil, errors.Wrap(ErrNotFound, "cannot get XtraDb cluster")
+		}
 		return nil, errors.Wrap(err, "cannot get PSMDB cluster")
 	}
 	if cluster.Status.Status != psmdb.AppStateReady {
