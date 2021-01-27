@@ -20,11 +20,13 @@ import (
 	"context"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"github.com/pkg/errors"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/convertors"
 )
 
@@ -207,6 +209,9 @@ func (s *PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *controll
 
 	cluster, err := client.GetPSMDBCluster(ctx, req.Name)
 	if err != nil {
+		if errors.Is(err, kubectl.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
