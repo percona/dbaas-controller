@@ -28,9 +28,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
