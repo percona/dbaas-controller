@@ -61,7 +61,7 @@ func TestK8sClient(t *testing.T) {
 
 	pmmPublicAddress := ""
 	t.Run("XtraDB", func(t *testing.T) {
-		name := "wellbeing-xtradb"
+		name := "test-cluster-xtradb"
 		_ = client.DeleteXtraDBCluster(ctx, name)
 
 		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
@@ -149,7 +149,7 @@ func TestK8sClient(t *testing.T) {
 	})
 
 	t.Run("PSMDB", func(t *testing.T) {
-		name := "here-and-now"
+		name := "test-cluster-psmdb"
 		_ = client.DeletePSMDBCluster(ctx, name)
 
 		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
