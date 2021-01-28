@@ -526,8 +526,8 @@ func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error 
 // inside Kubernetes cluster.
 var ErrNotFound error = errors.New("resource was not found in Kubernetes cluster")
 
-// GetXtraDBCluster returns an XtraDB cluster credentials.
-func (c *K8sClient) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBCredentials, error) {
+// GetXtraDBClusterCredentials returns an XtraDB cluster credentials.
+func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string) (*XtraDBCredentials, error) {
 	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), name, &cluster)
 	if err != nil {
@@ -561,7 +561,7 @@ func (c *K8sClient) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBC
 	return credentials, nil
 }
 
-// GetXtraDBCluster returns an XtraDB cluster credentials.
+// GetXtraDBClusterCredentials returns an XtraDB cluster credentials.
 func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) {
 	var storageClass *StorageClass
 
@@ -979,8 +979,8 @@ func (c *K8sClient) RestartPSMDBCluster(ctx context.Context, name string) error 
 	return err
 }
 
-// GetPSMDBCluster returns a PSMDB cluster.
-func (c *K8sClient) GetPSMDBCluster(ctx context.Context, name string) (*PSMDBCredentials, error) {
+// GetPSMDBClusterCredentials returns a PSMDB cluster.
+func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string) (*PSMDBCredentials, error) {
 	var cluster psmdb.PerconaServerMongoDB
 	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), name, &cluster)
 	if err != nil {

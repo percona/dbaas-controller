@@ -51,10 +51,10 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("Get non-existing clusters", func(t *testing.T) {
 		t.Parallel()
-		if _, err := client.GetPSMDBCluster(ctx, "d0ca1166b638c-psmdb"); !errors.Is(err, ErrNotFound) {
+		if _, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdb"); !errors.Is(err, ErrNotFound) {
 			t.Errorf("Expected ErrNotFound, got: %s", err.Error())
 		}
-		if _, err := client.GetXtraDBCluster(ctx, "871f766d43f8e-xtradb"); !errors.Is(err, ErrNotFound) {
+		if _, err := client.GetXtraDBClusterCredentials(ctx, "871f766d43f8e-xtradb"); !errors.Is(err, ErrNotFound) {
 			t.Errorf("Expected ErrNotFound, got: %s", err.Error())
 		}
 	})
@@ -85,7 +85,7 @@ func TestK8sClient(t *testing.T) {
 			return cluster != nil
 		})
 		t.Run("Get cluster that is not Ready", func(t *testing.T) {
-			if _, err := client.GetXtraDBCluster(ctx, name); !errors.Is(err, ErrXtraDBClusterNotReady) {
+			if _, err := client.GetXtraDBClusterCredentials(ctx, name); !errors.Is(err, ErrXtraDBClusterNotReady) {
 				t.Errorf("Expected ErrXtraDBClusterNotReady, got: %s", err.Error())
 			}
 		})
@@ -173,7 +173,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("Get cluster that is not Ready", func(t *testing.T) {
-			if _, err := client.GetPSMDBCluster(ctx, name); !errors.Is(err, ErrPSMDBClusterNotReady) {
+			if _, err := client.GetPSMDBClusterCredentials(ctx, name); !errors.Is(err, ErrPSMDBClusterNotReady) {
 				t.Errorf("Expected ErrPSMDBClusterNotReady, got: %s", err.Error())
 			}
 		})
