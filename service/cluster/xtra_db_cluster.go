@@ -229,7 +229,9 @@ func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *control
 
 	cluster, err := client.GetXtraDBCluster(ctx, req.Name)
 	if err != nil {
-		if errors.Is(err, k8sclient.ErrNotFound) || errors.Is(err, k8sclient.ErrXtraDBClusterNotReady) {
+		if errors.Is(err, k8sclient.ErrXtraDBClusterNotReady) {
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		} else if errors.Is(err, k8sclient.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())

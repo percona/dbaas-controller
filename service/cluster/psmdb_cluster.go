@@ -208,7 +208,9 @@ func (s *PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *controll
 
 	cluster, err := client.GetPSMDBCluster(ctx, req.Name)
 	if err != nil {
-		if errors.Is(err, k8sclient.ErrNotFound) || errors.Is(err, k8sclient.ErrPSMDBClusterNotReady) {
+		if errors.Is(err, k8sclient.ErrPSMDBClusterNotReady) {
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		} else if errors.Is(err, k8sclient.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())
