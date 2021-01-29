@@ -262,6 +262,9 @@ var (
 	ErrXtraDBClusterNotReady = errors.New("XtraDB cluster is not ready")
 	// ErrPSMDBClusterNotReady The PSMDB cluster is not ready.
 	ErrPSMDBClusterNotReady = errors.New("PSMDB cluster is not ready")
+	// ErrNotFound should be returned when referenced resource does not exist
+	// inside Kubernetes cluster.
+	ErrNotFound error = errors.New("resource was not found in Kubernetes cluster")
 )
 
 // K8sClient is a client for Kubernetes.
