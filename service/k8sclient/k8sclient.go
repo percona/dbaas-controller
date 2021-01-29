@@ -96,7 +96,10 @@ const (
 	OperatorStatusNotInstalled OperatorStatus = 3
 )
 
-const clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
+const (
+	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
+	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
+)
 
 // Operators contains statuses of operators.
 type Operators struct {
@@ -522,22 +525,19 @@ func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error 
 	return nil
 }
 
-// ErrNotFound should be returned when referenced resource does not exist
-// inside Kubernetes cluster.
-var ErrNotFound error = errors.New("resource was not found in Kubernetes cluster")
-
 // GetXtraDBClusterCredentials returns an XtraDB cluster credentials.
 func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string) (*XtraDBCredentials, error) {
 	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), name, &cluster)
 	if err != nil {
 		if errors.Is(err, kubectl.ErrNotFound) {
-			return nil, errors.Wrap(ErrNotFound, "cannot get XtraDb cluster")
+			return nil, errors.Wrap(ErrNotFound, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
 		}
-		return nil, errors.Wrap(err, "cannot get XtraDb cluster")
+		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
 	}
 	if cluster.Status.Status != pxc.AppStateReady {
-		return nil, errors.Wrap(ErrXtraDBClusterNotReady, "cannot get XtraDb cluster")
+		return nil, errors.Wrap(ErrXtraDBClusterNotReady,
+			fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
 	}
 
 	password := ""
@@ -985,12 +985,12 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), name, &cluster)
 	if err != nil {
 		if errors.Is(err, kubectl.ErrNotFound) {
-			return nil, errors.Wrap(ErrNotFound, "cannot get XtraDb cluster")
+			return nil, errors.Wrap(ErrNotFound, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 		}
-		return nil, errors.Wrap(err, "cannot get PSMDB cluster")
+		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
 	if cluster.Status.Status != psmdb.AppStateReady {
-		return nil, errors.Wrap(ErrPSMDBClusterNotReady, "cannot get PSMDB cluster")
+		return nil, errors.Wrap(ErrPSMDBClusterNotReady, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
 
 	password := ""
