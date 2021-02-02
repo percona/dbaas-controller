@@ -86,6 +86,8 @@ jobs:
       - name: Configure minikube
         run: |
           sudo apt install -y conntrack
+          sudo curl -Lo /tmp/minikube https://github.com/kubernetes/minikube/releases/download/v1.16.0/minikube-linux-amd64
+          sudo mv /tmp/minikube $(which minikube)
           sudo -E minikube config set driver none
           sudo -E minikube config set cpus 2
           sudo -E minikube config set memory 4096
