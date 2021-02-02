@@ -19,6 +19,7 @@ package k8sclient
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -235,6 +236,12 @@ type StorageClass struct {
 		ResourceVersion string `json:"resourceVersion"`
 		SelfLink        string `json:"selfLink"`
 	} `json:"metadata"`
+}
+
+type Logs struct {
+	Container string
+	Pod       string
+	Logs      []string
 }
 
 // pxcStatesMap matches pxc app states to cluster states.
@@ -1194,4 +1201,31 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 		return OperatorStatusUnsupported
 	}
 	return OperatorStatusNotInstalled
+}
+
+func (c *K8sClient) GetLogs(ctx context.Context, clusterName string) (map[string](map[string][]string), error) {
+	var list common.PodList
+	out, err := c.kubeCtl.Run(ctx, []string{"get", "pods", "-lapp.kubernetes.io/instance=" + clusterName, "-ojson"}, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
+	}
+	err = json.Unmarshal(out, &list)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
+	}
+
+	logs := map[string](map[string][]string){}
+	for _, pod := range list.Items {
+		for _, container := range pod.Spec.Containers {
+			stdout, err := c.kubeCtl.Run(ctx, []string{"logs", pod.Name, container.Name}, nil)
+			if err != nil {
+				return nil, errors.Wrap(err, "couldn't get logs")
+			}
+			if _, ok := logs[pod.Name]; !ok {
+				logs[pod.Name] = make(map[string][]string)
+			}
+			logs[pod.Name][container.Name] = strings.Split(string(stdout), "\n")
+		}
+	}
+	return logs, nil
 }

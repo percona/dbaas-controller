@@ -94,6 +94,38 @@ func TestK8sClient(t *testing.T) {
 			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
 		})
 
+		t.Run("Get logs", func(t *testing.T) {
+			logs, err := client.GetLogs(ctx, name)
+			require.NoError(t, err)
+			assert.Equal(t, 3, len(logs))
+			type pod struct {
+				name       string
+				containers []string
+			}
+			expectedPods := []pod{
+				pod{
+					name:       name + "-proxysql-0",
+					containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
+				},
+				pod{
+					name:       name + "-pxc-0",
+					containers: []string{"pxc", "pmm-client"},
+				},
+			}
+			for _, pod := range expectedPods {
+				if _, ok := logs[pod.name]; !ok {
+					t.Errorf("Expected pod name %s was found.", pod.name)
+					continue
+				}
+				for _, container := range pod.containers {
+					if _, ok := logs[pod.name][container]; !ok {
+						t.Errorf("Expected container name %s was found.", container)
+						continue
+					}
+				}
+			}
+		})
+
 		err = client.RestartXtraDBCluster(ctx, name)
 		require.NoError(t, err)
 		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
