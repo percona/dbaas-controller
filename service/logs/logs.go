@@ -30,10 +30,51 @@ import (
 )
 
 type LogsService struct {
-	p *message.Printer
+	p                *message.Printer
+	defaultLogSource LogsSource
+	logSources       []LogsSource
+}
+
+type LogsSource interface {
+	GetLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error)
+}
+
+type AllLogsSource struct{}
+
+func (a *AllLogsSource) GetLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error) {
+	pods, err := client.GetClusterPods(ctx, clusterName)
+	if err != nil {
+		return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get pods").Error())
+	}
+
+	response := make([]*controllerv1beta1.Logs, 0, len(logs))
+	// Get all logs from all pod's containers.
+	for _, pod := range pods.Items {
+		for _, container := range pod.Spec.Containers {
+			logs, err := client.GetLogs(pod.Name, container.Name)
+			if err != nil {
+				return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get logs").Error())
+			}
+			response = append(response, &controllerv1beta1.Logs{
+				Pod:       pod.Name,
+				Container: container.Name,
+				Logs:      logs,
+			})
+		}
+	}
+
+	// TODO Get all events from all pods.
+	return response, nil
 }
 
 func NewService(p *message.Printer) *LogsService {
+
+	s := &LogsService{
+		p:                p,
+		defaultLogSource: AllLogsSource{},
+		logSources:       []LogsSource{},
+	}
+
 	return &LogsService{
 		p: p,
 	}
@@ -46,20 +87,23 @@ func (s *LogsService) GetLogs(ctx context.Context, req *controllerv1beta1.GetLog
 	if !ok {
 		return nil, status.Error(codes.Internal, "failed to get k8s client")
 	}
-	logs, err := client.GetLogs(ctx, req.ClusterName)
-	if err != nil {
-		return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get logs").Error())
-	}
-	response := make([]*controllerv1beta1.Logs, 0, len(logs))
-	for pod, containers := range logs {
-		for container, clogs := range containers {
-			response = append(response, &controllerv1beta1.Logs{
-				Pod:       pod,
-				Container: container,
-				Logs:      clogs,
-			})
+
+	response := []*controllerv1beta1.Logs{}
+	for _, logSource := range s.logSources {
+		logs, err := logSource.GetLogs(ctx, client, req.ClusterName)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to get logs")
 		}
+		response = append(response, logs...)
 	}
+	if len(response) == 0 {
+		logs, err := s.defaultLogSource.GetLogs(ctx, client, req.ClusterName)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to get logs")
+		}
+		response = append(response, logs...)
+	}
+
 	return &controllerv1beta1.GetLogsResponse{
 		Logs: response,
 	}, nil

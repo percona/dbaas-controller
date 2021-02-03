@@ -1203,8 +1203,8 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 	return OperatorStatusNotInstalled
 }
 
-func (c *K8sClient) GetLogs(ctx context.Context, clusterName string) (map[string](map[string][]string), error) {
-	var list common.PodList
+func (c *K8sClient) GetClusterPods(ctx context.Context, clusterName string) (*common.PodList, error) {
+	list := new(common.PodList)
 	out, err := c.kubeCtl.Run(ctx, []string{"get", "pods", "-lapp.kubernetes.io/instance=" + clusterName, "-ojson"}, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
@@ -1213,19 +1213,13 @@ func (c *K8sClient) GetLogs(ctx context.Context, clusterName string) (map[string
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
+	return list, nil
+}
 
-	logs := map[string](map[string][]string){}
-	for _, pod := range list.Items {
-		for _, container := range pod.Spec.Containers {
-			stdout, err := c.kubeCtl.Run(ctx, []string{"logs", pod.Name, container.Name}, nil)
-			if err != nil {
-				return nil, errors.Wrap(err, "couldn't get logs")
-			}
-			if _, ok := logs[pod.Name]; !ok {
-				logs[pod.Name] = make(map[string][]string)
-			}
-			logs[pod.Name][container.Name] = strings.Split(string(stdout), "\n")
-		}
+func (c *K8sClient) GetLogs(ctx context.Context, pod, container string) ([]string, error) {
+	stdout, err := c.kubeCtl.Run(ctx, []string{"logs", pod, container}, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get logs")
 	}
-	return logs, nil
+	return strings.Split(stdout, "\n"), nil
 }
