@@ -41,17 +41,17 @@ type LogsSource interface {
 
 type AllLogsSource struct{}
 
-func (a *AllLogsSource) GetLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error) {
+func (a AllLogsSource) GetLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error) {
 	pods, err := client.GetClusterPods(ctx, clusterName)
 	if err != nil {
 		return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get pods").Error())
 	}
-
-	response := make([]*controllerv1beta1.Logs, 0, len(logs))
+	// Every pod has at least one contaier, set cap to that value.
+	response := make([]*controllerv1beta1.Logs, 0, len(pods.Items))
 	// Get all logs from all pod's containers.
 	for _, pod := range pods.Items {
 		for _, container := range pod.Spec.Containers {
-			logs, err := client.GetLogs(pod.Name, container.Name)
+			logs, err := client.GetLogs(ctx, pod.Name, container.Name)
 			if err != nil {
 				return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get logs").Error())
 			}
@@ -68,15 +68,10 @@ func (a *AllLogsSource) GetLogs(ctx context.Context, client *k8sclient.K8sClient
 }
 
 func NewService(p *message.Printer) *LogsService {
-
-	s := &LogsService{
+	return &LogsService{
 		p:                p,
 		defaultLogSource: AllLogsSource{},
 		logSources:       []LogsSource{},
-	}
-
-	return &LogsService{
-		p: p,
 	}
 }
 

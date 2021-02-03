@@ -19,6 +19,7 @@ package k8sclient
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -30,6 +31,13 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
+
+// pod is struct just for testing purposes. It contains expected pod and
+// container names.
+type pod struct {
+	name       string
+	containers []string
+}
 
 func TestK8sClient(t *testing.T) {
 	ctx := app.Context()
@@ -95,13 +103,9 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("Get logs", func(t *testing.T) {
-			logs, err := client.GetLogs(ctx, name)
+			pods, err := client.GetClusterPods(ctx, name)
 			require.NoError(t, err)
-			assert.Equal(t, 3, len(logs))
-			type pod struct {
-				name       string
-				containers []string
-			}
+
 			expectedPods := []pod{
 				pod{
 					name:       name + "-proxysql-0",
@@ -112,15 +116,31 @@ func TestK8sClient(t *testing.T) {
 					containers: []string{"pxc", "pmm-client"},
 				},
 			}
-			for _, pod := range expectedPods {
-				if _, ok := logs[pod.name]; !ok {
-					t.Errorf("Expected pod name %s was found.", pod.name)
-					continue
+			for _, ppod := range pods.Items {
+				var foundPod pod
+				var found bool
+				for _, expectedPod := range expectedPods {
+					if ppod.Name == expectedPod.name {
+						foundPod = expectedPod
+						found = true
+						break
+					}
 				}
-				for _, container := range pod.containers {
-					if _, ok := logs[pod.name][container]; !ok {
-						t.Errorf("Expected container name %s was found.", container)
-						continue
+				require.Truef(t, found, "pod name '%s' was not expected", ppod.Name)
+				for _, container := range ppod.Spec.Containers {
+					found = false
+					for _, expectedContainerName := range foundPod.containers {
+						if expectedContainerName == container.Name {
+							found = true
+							break
+						}
+					}
+					require.Truef(t, found, "container name '%s' was not expected", container.Name)
+					logs, err := client.GetLogs(ctx, ppod.Name, container.Name)
+					require.NoError(t, err, "failed to get logs")
+					assert.Greater(t, len(logs), 0)
+					for _, l := range logs {
+						assert.False(t, strings.Contains(l, "\n"), "new lines should have been removed")
 					}
 				}
 			}

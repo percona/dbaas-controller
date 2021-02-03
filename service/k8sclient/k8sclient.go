@@ -1221,5 +1221,5 @@ func (c *K8sClient) GetLogs(ctx context.Context, pod, container string) ([]strin
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get logs")
 	}
-	return strings.Split(stdout, "\n"), nil
+	return strings.Split(string(stdout), "\n"), nil
 }
