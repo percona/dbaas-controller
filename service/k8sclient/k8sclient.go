@@ -238,12 +238,6 @@ type StorageClass struct {
 	} `json:"metadata"`
 }
 
-type Logs struct {
-	Container string
-	Pod       string
-	Logs      []string
-}
-
 // pxcStatesMap matches pxc app states to cluster states.
 var pxcStatesMap = map[pxc.AppState]ClusterState{ //nolint:gochecknoglobals
 	pxc.AppStateUnknown: ClusterStateInvalid,
