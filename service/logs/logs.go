@@ -22,11 +22,12 @@ import (
 	"context"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 	"github.com/pkg/errors"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
 type LogsService struct {
