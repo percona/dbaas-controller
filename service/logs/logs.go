@@ -30,19 +30,25 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
-type LogsService struct {
-	p                *message.Printer
-	defaultLogSource LogsSource
-	logSources       []LogsSource
+// Service provides API for getting logs. By logs is meant containers' logs
+// and pod's events.
+type Service struct {
+	p             *message.Printer
+	defaultSource source
+	sources       []source
 }
 
-type LogsSource interface {
+// Thanks to source interface we can get logs from different sources.
+type source interface {
 	GetLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error)
 }
 
-type AllLogsSource struct{}
+// allLogsSource implements source interface, it gets all logs from all
+// cluster's containers. TODO: get also all events.
+type allLogsSource struct{}
 
-func (a AllLogsSource) GetLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error) {
+// GetLogs gets all logs from all cluster's containers.
+func (a allLogsSource) GetLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error) {
 	pods, err := client.GetClusterPods(ctx, clusterName)
 	if err != nil {
 		return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get pods").Error())
@@ -68,32 +74,34 @@ func (a AllLogsSource) GetLogs(ctx context.Context, client *k8sclient.K8sClient,
 	return response, nil
 }
 
-func NewService(p *message.Printer) *LogsService {
-	return &LogsService{
-		p:                p,
-		defaultLogSource: AllLogsSource{},
-		logSources:       []LogsSource{},
+// NewService creates a new instance of Service.
+func NewService(p *message.Printer) *Service {
+	return &Service{
+		p:             p,
+		defaultSource: allLogsSource{},
+		sources:       []source{},
 	}
 }
 
 // GetLogs first tries to get logs and events only from failing pods/containers.
-// If no such logs/events are found, it returns all logs and events.
-func (s *LogsService) GetLogs(ctx context.Context, req *controllerv1beta1.GetLogsRequest) (*controllerv1beta1.GetLogsResponse, error) {
+// If no such logs/events are found, it returns logs from the defaultSource.
+// That currently means all logs from all cluster's containers. TODO: events.
+func (s *Service) GetLogs(ctx context.Context, req *controllerv1beta1.GetLogsRequest) (*controllerv1beta1.GetLogsResponse, error) {
 	client, ok := ctx.Value("k8sclient").(*k8sclient.K8sClient)
 	if !ok {
 		return nil, status.Error(codes.Internal, "failed to get k8s client")
 	}
 
 	response := []*controllerv1beta1.Logs{}
-	for _, logSource := range s.logSources {
-		logs, err := logSource.GetLogs(ctx, client, req.ClusterName)
+	for _, source := range s.sources {
+		logs, err := source.GetLogs(ctx, client, req.ClusterName)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to get logs")
 		}
 		response = append(response, logs...)
 	}
 	if len(response) == 0 {
-		logs, err := s.defaultLogSource.GetLogs(ctx, client, req.ClusterName)
+		logs, err := s.defaultSource.GetLogs(ctx, client, req.ClusterName)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to get logs")
 		}
