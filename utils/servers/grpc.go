@@ -19,7 +19,14 @@ package servers
 import (
 	"context"
 	"net"
+	"reflect"
+
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
@@ -86,6 +93,7 @@ func NewGRPCServer(ctx context.Context, opts *NewGRPCServerOpts) GRPCServer {
 			unaryLoggingInterceptor(opts.WarnDuration),
 			grpc_prometheus.UnaryServerInterceptor,
 			grpc_validator.UnaryServerInterceptor(),
+			injectK8sClient,
 		)),
 
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
@@ -144,4 +152,33 @@ func (s *grpcServer) Run(ctx context.Context) {
 	s.l.Infof("Listener closed: %v.", listener.Close())
 
 	<-stopped
+}
+
+// injectK8sClient tries to store k8sclient into context. It inspects request's
+// field KubeAuth. If it contains filed Kubeconfig, k8sclient is injected.
+func injectK8sClient(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	v := reflect.ValueOf(req)
+	v = reflect.Indirect(v)
+	if v.Type().Kind() == reflect.Struct {
+		_, hasKubeAuth := v.Type().FieldByNameFunc(func(name string) bool {
+			if name == "KubeAuth" {
+				_, hasKubeconfig := v.FieldByName("KubeAuth").Type().FieldByNameFunc(
+					func(name string) bool {
+						return name == "Kubeconfig"
+					})
+				return hasKubeconfig
+			}
+			return false
+		})
+		if hasKubeAuth {
+			kubeconfig := v.FieldByName("KubeAuth").FieldByName("Kubeconfig").String()
+			client, err := k8sclient.New(ctx, kubeconfig)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			defer client.Cleanup()
+			ctx = context.WithValue(ctx, "k8sclient", client)
+		}
+	}
+	return handler(ctx, req)
 }

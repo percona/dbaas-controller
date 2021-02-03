@@ -19,6 +19,8 @@ package main
 import (
 	"log"
 
+	"github.com/percona-platform/dbaas-controller/service/logs"
+
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/percona/pmm/version"
 	"golang.org/x/text/language"
