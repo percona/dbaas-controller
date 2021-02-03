@@ -540,7 +540,8 @@ func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string
 	}
 	if cluster.Status.Status != pxc.AppStateReady {
 		return nil, errors.Wrap(ErrXtraDBClusterNotReady,
-			fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
+			fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
+		)
 	}
 
 	password := ""
@@ -564,7 +565,6 @@ func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string
 	return credentials, nil
 }
 
-// GetXtraDBClusterCredentials returns an XtraDB cluster credentials.
 func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) {
 	var storageClass *StorageClass
 
