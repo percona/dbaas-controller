@@ -1221,3 +1221,22 @@ func (c *K8sClient) GetLogs(ctx context.Context, pod, container string) ([]strin
 	}
 	return strings.Split(string(stdout), "\n"), nil
 }
+
+// GetEvents returns pod's events as a slice of strings.
+func (c *K8sClient) GetEvents(ctx context.Context, pod string) ([]string, error) {
+	stdout, err := c.kubeCtl.Run(ctx, []string{"describe", pod}, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't describe pod")
+	}
+	lines := strings.Split(string(stdout), "\n")
+	var line string
+	var i int
+	for i, line = range lines {
+		if strings.Contains(line, "Events") {
+			break
+		}
+	}
+	// Add name of the pod to the Events line so it's clear what pod events we got.
+	lines[i] = pod + " " + lines[i]
+	return lines[i:], nil
+}
