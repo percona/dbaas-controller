@@ -43,7 +43,7 @@ type testResp struct{}
 var errNotInjected error = errors.New("k8sclient was not injected")
 
 func handler(ctx context.Context, r interface{}) (interface{}, error) {
-	if _, ok := ctx.Value("k8sclient").(*k8sclient.K8sClient); !ok {
+	if _, ok := ctx.Value(K8sClientKey).(*k8sclient.K8sClient); !ok {
 		return nil, errNotInjected
 	}
 	return testResp{}, nil
