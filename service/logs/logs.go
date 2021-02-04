@@ -21,8 +21,6 @@ package logs
 import (
 	"context"
 
-	"github.com/percona-platform/dbaas-controller/utils/servers"
-
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
 	"golang.org/x/text/message"
@@ -30,6 +28,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
+	"github.com/percona-platform/dbaas-controller/utils/servers"
 )
 
 // Service provides API for getting logs. By logs is meant containers' logs
