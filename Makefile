@@ -8,7 +8,7 @@ help:                             ## Display this help message
 	@echo ""
 	@echo " Steps:"
 	@echo " - Install AWS CLI https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html"
-	@echo " - Use `aws configure` and add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` with your credentials."
+	@echo " - Use \`aws configure\` and add \`AWS_ACCESS_KEY_ID\` and \`AWS_SECRET_ACCESS_KEY\` with your credentials."
 	@echo " - Create a cluster with the following command:"
 	@echo " - eksctl create cluster --write-kubeconfig —name=your-cluster-name —zones=us-west-2a,us-west-2b --kubeconfig <PATH_TO_KUBECONFIG>"
 	@echo " - Add your ACCESS and SECRET key from stage 3 to env section of your kube config file"
