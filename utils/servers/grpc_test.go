@@ -32,15 +32,13 @@ type kubeAuth struct {
 	Kubeconfig string
 }
 
-type nonAuthReq struct {
-}
+type nonAuthReq struct{}
 
 type testReq struct {
 	KubeAuth kubeAuth
 }
 
-type testResp struct {
-}
+type testResp struct{}
 
 var errNotInjected = errors.New("k8sclient was not injected")
 
@@ -75,5 +73,4 @@ func TestInjectK8sClient(t *testing.T) {
 		_, ok := resp.(testResp)
 		assert.False(t, ok)
 	})
-
 }
