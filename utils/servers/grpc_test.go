@@ -50,7 +50,9 @@ func handler(ctx context.Context, r interface{}) (interface{}, error) {
 }
 
 func TestInjectK8sClient(t *testing.T) {
+	t.Parallel()
 	t.Run("Request with KubeAuth.Kubeconfig", func(t *testing.T) {
+		t.Parallel()
 		r := testReq{
 			KubeAuth: kubeAuth{
 				Kubeconfig: "",
@@ -65,6 +67,7 @@ func TestInjectK8sClient(t *testing.T) {
 	})
 
 	t.Run("Request without KubeAuth.Kubeconfig", func(t *testing.T) {
+		t.Parallel()
 		r := nonAuthReq{}
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
