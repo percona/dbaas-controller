@@ -747,7 +747,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
 
-	affinity := new(psmdb.PodAffinity)
+	affinity := &psmdb.PodAffinity{}
 	var expose psmdb.Expose
 	if isMinikube, err := c.isMinikube(ctx); err == nil && !isMinikube {
 		affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
