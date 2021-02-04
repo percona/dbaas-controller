@@ -44,10 +44,10 @@ type source interface {
 }
 
 // allLogsSource implements source interface, it gets all logs from all
-// cluster's containers. TODO: get also all events.
+// cluster's containers. It also gets events out of all cluster's pods.
 type allLogsSource struct{}
 
-// GetLogs gets all logs from all cluster's containers.
+// GetLogs gets all logs from all cluster's containers and events from all pods.
 func (a allLogsSource) GetLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error) {
 	pods, err := client.GetClusterPods(ctx, clusterName)
 	if err != nil {
@@ -94,7 +94,6 @@ func NewService(p *message.Printer) *Service {
 
 // GetLogs first tries to get logs and events only from failing pods/containers.
 // If no such logs/events are found, it returns logs from the defaultSource.
-// That currently means all logs from all cluster's containers. TODO: events.
 func (s *Service) GetLogs(ctx context.Context, req *controllerv1beta1.GetLogsRequest) (*controllerv1beta1.GetLogsResponse, error) {
 	client, ok := ctx.Value("k8sclient").(*k8sclient.K8sClient)
 	if !ok {
