@@ -19,8 +19,6 @@ package main
 import (
 	"log"
 
-	"github.com/percona-platform/dbaas-controller/service/logs"
-
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/percona/pmm/version"
 	"golang.org/x/text/language"
@@ -28,8 +26,10 @@ import (
 	"google.golang.org/grpc/grpclog"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	_ "github.com/percona-platform/dbaas-controller/catalog" // load messages.
+	// load messages.
+	_ "github.com/percona-platform/dbaas-controller/catalog"
 	"github.com/percona-platform/dbaas-controller/service/cluster"
+	"github.com/percona-platform/dbaas-controller/service/logs"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 	"github.com/percona-platform/dbaas-controller/utils/servers"

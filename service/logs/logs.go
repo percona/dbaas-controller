@@ -40,15 +40,15 @@ type Service struct {
 
 // Thanks to source interface we can get logs from different sources.
 type source interface {
-	GetLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error)
+	getLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error)
 }
 
 // allLogsSource implements source interface, it gets all logs from all
 // cluster's containers. It also gets events out of all cluster's pods.
 type allLogsSource struct{}
 
-// GetLogs gets all logs from all cluster's containers and events from all pods.
-func (a allLogsSource) GetLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error) {
+// getLogs gets all logs from all cluster's containers and events from all pods.
+func (a allLogsSource) getLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error) {
 	pods, err := client.GetClusterPods(ctx, clusterName)
 	if err != nil {
 		return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get pods").Error())
@@ -102,14 +102,14 @@ func (s *Service) GetLogs(ctx context.Context, req *controllerv1beta1.GetLogsReq
 
 	response := []*controllerv1beta1.Logs{}
 	for _, source := range s.sources {
-		logs, err := source.GetLogs(ctx, client, req.ClusterName)
+		logs, err := source.getLogs(ctx, client, req.ClusterName)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to get logs")
 		}
 		response = append(response, logs...)
 	}
 	if len(response) == 0 {
-		logs, err := s.defaultSource.GetLogs(ctx, client, req.ClusterName)
+		logs, err := s.defaultSource.getLogs(ctx, client, req.ClusterName)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to get logs")
 		}

@@ -35,6 +35,7 @@ type HostPathVolumeSource struct {
 // https://pkg.go.dev/k8s.io/api/core/v1#EmptyDirVolumeSource
 type EmptyDirVolumeSource struct{}
 
+// ContainerSpec represents a container definition.
 type ContainerSpec struct {
 	Name string `json:"name,omitempty"`
 }

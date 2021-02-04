@@ -26,11 +26,10 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc"
-
 	dbaasClient "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+	"google.golang.org/grpc"
 )
 
 //nolint:gochecknoglobals

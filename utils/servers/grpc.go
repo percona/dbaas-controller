@@ -20,20 +20,17 @@ import (
 	"context"
 	"net"
 	"reflect"
-
 	"time"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"google.golang.org/grpc"
 	channelz "google.golang.org/grpc/channelz/service"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
+	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
@@ -176,7 +173,7 @@ func injectK8sClient(ctx context.Context, req interface{}, info *grpc.UnaryServe
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
-			defer client.Cleanup()
+			defer client.Cleanup() //nolint:errcheck
 			ctx = context.WithValue(ctx, "k8sclient", client)
 		}
 	}

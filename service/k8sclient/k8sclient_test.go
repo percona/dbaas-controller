@@ -107,11 +107,11 @@ func TestK8sClient(t *testing.T) {
 			require.NoError(t, err)
 
 			expectedPods := []pod{
-				pod{
+				{
 					name:       name + "-proxysql-0",
 					containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
 				},
-				pod{
+				{
 					name:       name + "-pxc-0",
 					containers: []string{"pxc", "pmm-client"},
 				},

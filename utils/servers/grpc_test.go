@@ -18,14 +18,14 @@ package servers
 
 import (
 	"context"
-
 	"testing"
 	"time"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
 type kubeAuth struct {
