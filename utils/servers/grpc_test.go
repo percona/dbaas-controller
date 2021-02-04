@@ -40,7 +40,7 @@ type testReq struct {
 
 type testResp struct{}
 
-var errNotInjected = errors.New("k8sclient was not injected")
+var errNotInjected error = errors.New("k8sclient was not injected")
 
 func handler(ctx context.Context, r interface{}) (interface{}, error) {
 	if _, ok := ctx.Value("k8sclient").(*k8sclient.K8sClient); !ok {
@@ -53,6 +53,7 @@ func TestInjectK8sClient(t *testing.T) {
 	t.Parallel()
 	t.Run("Request with KubeAuth.Kubeconfig", func(t *testing.T) {
 		t.Parallel()
+
 		r := testReq{
 			KubeAuth: kubeAuth{
 				Kubeconfig: "",
