@@ -34,7 +34,13 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
-const K8sClientKey = "k8sclient"
+// CtxKey is used to store values under - ctx.WithContext(key, value).
+type CtxKey int
+
+const (
+	// K8sClientKey is used to retrieve K8sClient from the context.
+	K8sClientKey CtxKey = iota
+)
 
 // GRPCServer is an interface wrapper for gRPC Server.
 type GRPCServer interface {
