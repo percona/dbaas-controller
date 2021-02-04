@@ -21,6 +21,8 @@ package logs
 import (
 	"context"
 
+	"github.com/percona-platform/dbaas-controller/utils/servers"
+
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
 	"golang.org/x/text/message"
@@ -95,7 +97,7 @@ func NewService(p *message.Printer) *Service {
 // GetLogs first tries to get logs and events only from failing pods/containers.
 // If no such logs/events are found, it returns logs from the defaultSource.
 func (s *Service) GetLogs(ctx context.Context, req *controllerv1beta1.GetLogsRequest) (*controllerv1beta1.GetLogsResponse, error) {
-	client, ok := ctx.Value("k8sclient").(*k8sclient.K8sClient)
+	client, ok := ctx.Value(servers.K8sClientKey).(*k8sclient.K8sClient)
 	if !ok {
 		return nil, status.Error(codes.Internal, "failed to get k8s client")
 	}

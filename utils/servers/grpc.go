@@ -34,6 +34,8 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
+const K8sClientKey = "k8sclient"
+
 // GRPCServer is an interface wrapper for gRPC Server.
 type GRPCServer interface {
 	// Run runs the server until ctx is canceled.
@@ -174,7 +176,7 @@ func injectK8sClient(ctx context.Context, req interface{}, info *grpc.UnaryServe
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 			defer client.Cleanup() //nolint:errcheck
-			ctx = context.WithValue(ctx, "k8sclient", client)
+			ctx = context.WithValue(ctx, K8sClientKey, client)
 		}
 	}
 	return handler(ctx, req)
