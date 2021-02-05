@@ -226,6 +226,8 @@ github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FI
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/percona-platform/dbaas-api v0.0.0-20210201072625-17b682bef4be h1:ieY40A7Jiv4Wu5x9qVaOD8dFMDrVAdQY53NR30iBF6M=
 github.com/percona-platform/dbaas-api v0.0.0-20210201072625-17b682bef4be/go.mod h1:hgThsQ+HzKsEXeolr3u0i8oWTVgCKsN+RkNXgAY2vvM=
+github.com/percona-platform/dbaas-api v0.0.0-20210202072632-370e085e6f54 h1:a3F9o7WOXjApWDlXpCyMd62/nKd36En45WOaDQsQGPs=
+github.com/percona-platform/dbaas-api v0.0.0-20210202072632-370e085e6f54/go.mod h1:hgThsQ+HzKsEXeolr3u0i8oWTVgCKsN+RkNXgAY2vvM=
 github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871 h1:ZZ0kr0qHypQwWUdxkZU+FNcbxr3XEoeONGOTNAxHvkg=
 github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871/go.mod h1:FrPTFbFWkDaTwvfjRCsaqC5UYgBar+BUOJUzbQl1q5c=
 github.com/percona/pmm v2.14.0+incompatible h1:10eF3WarmePq6K57JpiS2l28yhlgVV+36H1mTW+8b28=
