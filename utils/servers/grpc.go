@@ -167,11 +167,13 @@ func injectK8sClient(ctx context.Context, req interface{}, info *grpc.UnaryServe
 	if v.Type().Kind() == reflect.Struct {
 		_, hasKubeAuth := v.Type().FieldByNameFunc(func(name string) bool {
 			if name == "KubeAuth" {
-				_, hasKubeconfig := v.FieldByName("KubeAuth").Type().FieldByNameFunc(
-					func(name string) bool {
-						return name == "Kubeconfig"
-					})
-				return hasKubeconfig
+				if v.FieldByName("KubeAuth").Kind() == reflect.Struct {
+					_, hasKubeconfig := v.FieldByName("KubeAuth").Type().FieldByNameFunc(
+						func(name string) bool {
+							return name == "Kubeconfig"
+						})
+					return hasKubeconfig
+				}
 			}
 			return false
 		})

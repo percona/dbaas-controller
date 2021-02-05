@@ -38,6 +38,10 @@ type testReq struct {
 	KubeAuth kubeAuth
 }
 
+type trapReq struct {
+	KubeAuth string
+}
+
 type testResp struct{}
 
 var errNotInjected error = errors.New("k8sclient was not injected")
@@ -70,6 +74,17 @@ func TestInjectK8sClient(t *testing.T) {
 	t.Run("Request without KubeAuth.Kubeconfig", func(t *testing.T) {
 		t.Parallel()
 		r := nonAuthReq{}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		resp, err := injectK8sClient(ctx, r, nil, handler)
+		assert.ErrorIs(t, err, errNotInjected)
+		_, ok := resp.(testResp)
+		assert.False(t, ok)
+	})
+
+	t.Run("Request with KubeAuth but without Kubeconfig", func(t *testing.T) {
+		t.Parallel()
+		r := trapReq{}
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		resp, err := injectK8sClient(ctx, r, nil, handler)
