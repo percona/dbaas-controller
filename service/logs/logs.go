@@ -105,14 +105,14 @@ func (s *Service) GetLogs(ctx context.Context, req *controllerv1beta1.GetLogsReq
 	for _, source := range s.sources {
 		logs, err := source.getLogs(ctx, client, req.ClusterName)
 		if err != nil {
-			return nil, status.Error(codes.Internal, "failed to get logs")
+			return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get logs").Error())
 		}
 		response = append(response, logs...)
 	}
 	if len(response) == 0 {
 		logs, err := s.defaultSource.getLogs(ctx, client, req.ClusterName)
 		if err != nil {
-			return nil, status.Error(codes.Internal, "failed to get logs")
+			return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get logs").Error())
 		}
 		response = append(response, logs...)
 	}
