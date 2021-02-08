@@ -16,7 +16,7 @@ import (
 type allLogsSource struct{}
 
 // getLogs gets all logs from all cluster's containers and events from all pods.
-func (a allLogsSource) getLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error) {
+func (a *allLogsSource) getLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error) {
 	pods, err := client.GetClusterPods(ctx, clusterName)
 	if err != nil {
 		return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get pods").Error())

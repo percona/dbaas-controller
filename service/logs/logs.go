@@ -48,7 +48,7 @@ type source interface {
 func NewService(p *message.Printer) *Service {
 	return &Service{
 		p:             p,
-		defaultSource: allLogsSource{},
+		defaultSource: source(&allLogsSource{}),
 		sources:       []source{},
 	}
 }
