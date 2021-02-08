@@ -167,8 +167,9 @@ func injectK8sClient(ctx context.Context, req interface{}, info *grpc.UnaryServe
 	if v.Type().Kind() == reflect.Struct {
 		_, hasKubeAuth := v.Type().FieldByNameFunc(func(name string) bool {
 			if name == "KubeAuth" {
-				if v.FieldByName("KubeAuth").Kind() == reflect.Struct {
-					_, hasKubeconfig := v.FieldByName("KubeAuth").Type().FieldByNameFunc(
+				v = reflect.Indirect(v.FieldByName("KubeAuth"))
+				if v.Kind() == reflect.Struct {
+					_, hasKubeconfig := v.Type().FieldByNameFunc(
 						func(name string) bool {
 							return name == "Kubeconfig"
 						})
@@ -178,7 +179,7 @@ func injectK8sClient(ctx context.Context, req interface{}, info *grpc.UnaryServe
 			return false
 		})
 		if hasKubeAuth {
-			kubeconfig := v.FieldByName("KubeAuth").FieldByName("Kubeconfig").String()
+			kubeconfig := v.FieldByName("Kubeconfig").String()
 			client, err := k8sclient.New(ctx, kubeconfig)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())

@@ -44,6 +44,10 @@ type trapReq struct {
 
 type testResp struct{}
 
+type pointerReq struct {
+	KubeAuth *kubeAuth
+}
+
 var errNotInjected error = errors.New("k8sclient was not injected")
 
 func handler(ctx context.Context, r interface{}) (interface{}, error) {
@@ -92,4 +96,20 @@ func TestInjectK8sClient(t *testing.T) {
 		_, ok := resp.(testResp)
 		assert.False(t, ok)
 	})
+	t.Run("Request with pointers", func(t *testing.T) {
+		t.Parallel()
+
+		r := &pointerReq{
+			KubeAuth: &kubeAuth{
+				Kubeconfig: "",
+			},
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		resp, err := injectK8sClient(ctx, r, nil, handler)
+		require.NoError(t, err)
+		_, ok := resp.(testResp)
+		assert.True(t, ok)
+	})
+
 }
