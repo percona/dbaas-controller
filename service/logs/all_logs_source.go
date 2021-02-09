@@ -87,12 +87,12 @@ func sum(counts []int) int {
 // all log lines is equal to given limit.
 func limitLines(logs []*controllerv1beta1.Logs, limit int) {
 	counts := make([]int, len(logs))
-	last_sum := -1
-	for sum(counts) < limit && sum(counts) > last_sum {
-		last_sum = sum(counts)
+	lastSum := -1
+	for sum(counts) < limit && sum(counts) > lastSum {
+		lastSum = sum(counts)
 		for i, item := range logs {
 			if counts[i] < len(item.Logs) {
-				counts[i] += 1
+				counts[i]++
 				if sum(counts) == limit {
 					break
 				}
