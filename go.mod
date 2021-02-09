@@ -14,9 +14,12 @@ go 1.15
 
 require (
 	github.com/AlekSi/pointer v1.1.0
+	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/google/uuid v1.1.5
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
+	github.com/kr/text v0.2.0 // indirect
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/percona-platform/dbaas-api v0.0.0-20210202072632-370e085e6f54
 	github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871
 	github.com/percona/pmm v2.14.0+incompatible
@@ -25,8 +28,12 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.16.0
+	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
 	golang.org/x/sys v0.0.0-20201214210602-f9fddec55a1e
 	golang.org/x/text v0.3.5
 	google.golang.org/grpc v1.35.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
+	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
