@@ -29,7 +29,7 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
-// overallLinesLimit defines how many lines of logs we should return upon
+// overallLinesLimit defines how many last lines of logs we should return upon
 // upon calling allLogsSource's method getLogs.
 const overallLinesLimit = 1000
 
