@@ -28,7 +28,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
-	"github.com/percona-platform/dbaas-controller/utils/servers"
 )
 
 // Service provides API for getting logs. By logs is meant containers' logs
@@ -56,10 +55,11 @@ func NewService(p *message.Printer) *Service {
 // GetLogs first tries to get logs and events only from failing pods/containers.
 // If no such logs/events are found, it returns logs from the defaultSource.
 func (s *Service) GetLogs(ctx context.Context, req *controllerv1beta1.GetLogsRequest) (*controllerv1beta1.GetLogsResponse, error) {
-	client, ok := ctx.Value(servers.K8sClientKey).(*k8sclient.K8sClient)
-	if !ok {
-		return nil, status.Error(codes.Internal, "failed to get k8s client")
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, s.p.Sprintf("Cannot initialize K8s client: %s", err))
 	}
+	defer client.Cleanup() //nolint:errcheck
 
 	response := []*controllerv1beta1.Logs{}
 	for _, source := range s.sources {

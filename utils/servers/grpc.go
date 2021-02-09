@@ -19,7 +19,6 @@ package servers
 import (
 	"context"
 	"net"
-	"reflect"
 	"time"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -27,19 +26,8 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"google.golang.org/grpc"
 	channelz "google.golang.org/grpc/channelz/service"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
-)
-
-// CtxKey is used to store values under - ctx.WithContext(key, value).
-type CtxKey int
-
-const (
-	// K8sClientKey is used to retrieve K8sClient from the context.
-	K8sClientKey CtxKey = iota
 )
 
 // GRPCServer is an interface wrapper for gRPC Server.
@@ -98,7 +86,6 @@ func NewGRPCServer(ctx context.Context, opts *NewGRPCServerOpts) GRPCServer {
 			unaryLoggingInterceptor(opts.WarnDuration),
 			grpc_prometheus.UnaryServerInterceptor,
 			grpc_validator.UnaryServerInterceptor(),
-			injectK8sClient,
 		)),
 
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
@@ -157,36 +144,4 @@ func (s *grpcServer) Run(ctx context.Context) {
 	s.l.Infof("Listener closed: %v.", listener.Close())
 
 	<-stopped
-}
-
-// injectK8sClient tries to store k8sclient into context. It inspects request's
-// field KubeAuth. If it contains filed Kubeconfig, k8sclient is injected.
-func injectK8sClient(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	v := reflect.ValueOf(req)
-	v = reflect.Indirect(v)
-	if v.Type().Kind() == reflect.Struct {
-		_, hasKubeAuth := v.Type().FieldByNameFunc(func(name string) bool {
-			if name == "KubeAuth" {
-				v = reflect.Indirect(v.FieldByName("KubeAuth"))
-				if v.Kind() == reflect.Struct {
-					_, hasKubeconfig := v.Type().FieldByNameFunc(
-						func(name string) bool {
-							return name == "Kubeconfig"
-						})
-					return hasKubeconfig
-				}
-			}
-			return false
-		})
-		if hasKubeAuth {
-			kubeconfig := v.FieldByName("Kubeconfig").String()
-			client, err := k8sclient.New(ctx, kubeconfig)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			defer client.Cleanup() //nolint:errcheck
-			ctx = context.WithValue(ctx, K8sClientKey, client)
-		}
-	}
-	return handler(ctx, req)
 }
