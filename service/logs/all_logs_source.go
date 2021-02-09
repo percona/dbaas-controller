@@ -30,7 +30,7 @@ import (
 )
 
 // overallLinesLimit defines how many last lines of logs we should return upon
-// upon calling allLogsSource's method getLogs.
+// calling allLogsSource's method getLogs.
 const overallLinesLimit = 1000
 
 // allLogsSource implements source interface, it gets all logs from all
