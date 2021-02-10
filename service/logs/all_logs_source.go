@@ -75,25 +75,19 @@ func (a *allLogsSource) getLogs(ctx context.Context, client *k8sclient.K8sClient
 	return response, nil
 }
 
-func sum(counts []int) int {
-	sum := 0
-	for _, count := range counts {
-		sum += count
-	}
-	return sum
-}
-
 // limitLines limits each entry's logs lines count in the way the overall sum of
 // all log lines is equal to given limit.
 func limitLines(logs []*controllerv1beta1.Logs, limit int) {
 	counts := make([]int, len(logs))
 	lastSum := -1
-	for sum(counts) < limit && sum(counts) > lastSum {
-		lastSum = sum(counts)
+	var newSum int
+	for newSum < limit && newSum > lastSum {
+		lastSum = newSum
 		for i, item := range logs {
 			if counts[i] < len(item.Logs) {
 				counts[i]++
-				if sum(counts) == limit {
+				newSum++
+				if newSum == limit {
 					break
 				}
 			}
