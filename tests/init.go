@@ -51,6 +51,9 @@ var (
 
 	// KubernetesClusterAPIClient contains client for dbaas-controller API related to Kubernetes clusters.
 	KubernetesClusterAPIClient dbaasClient.KubernetesClusterAPIClient
+
+	// LogsAPIClient contails client for dbaas-controller API related to database cluster's logs
+	LogsAPIClient dbaasClient.LogsAPIClient
 )
 
 //nolint:gochecknoinits
@@ -119,4 +122,5 @@ func init() {
 	XtraDBClusterAPIClient = dbaasClient.NewXtraDBClusterAPIClient(cc)
 	PSMDBClusterAPIClient = dbaasClient.NewPSMDBClusterAPIClient(cc)
 	KubernetesClusterAPIClient = dbaasClient.NewKubernetesClusterAPIClient(cc)
+	LogsAPIClient = dbaasClient.NewLogsAPIClient(cc)
 }
