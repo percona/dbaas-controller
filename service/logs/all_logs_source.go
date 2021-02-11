@@ -46,8 +46,8 @@ func (a *allLogsSource) getLogs(ctx context.Context, client *k8sclient.K8sClient
 	// Every pod has at least one contaier, set cap to that value.
 	response := make([]*controllerv1beta1.Logs, 0, len(pods.Items))
 	for _, pod := range pods.Items {
-		// Get all logs from all pod's containers.
-		for _, container := range pod.Spec.Containers {
+		// Get all logs from all pod's containers and init containers.
+		for _, container := range append(pod.Spec.Containers, pod.Spec.InitContainers...) {
 			logs, err := client.GetLogs(ctx, pod.Name, container.Name)
 			if err != nil {
 				return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get logs").Error())

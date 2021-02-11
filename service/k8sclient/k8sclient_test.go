@@ -113,7 +113,7 @@ func TestK8sClient(t *testing.T) {
 				},
 				{
 					name:       name + "-pxc-0",
-					containers: []string{"pxc", "pmm-client"},
+					containers: []string{"pxc", "pmm-client", "pxc-init"},
 				},
 			}
 			for _, ppod := range pods.Items {

@@ -53,6 +53,9 @@ type PodSpec struct {
 
 	// List of containers.
 	Containers []ContainerSpec `json:"containers,omitempty"`
+
+	// List of init containers.
+	InitContainers []ContainerSpec `json:"initContainers,omitempty"`
 }
 
 // Pod is a collection of containers that can run on a host. This resource is created
