@@ -19,7 +19,6 @@
 package logs
 
 import (
-	"log"
 	"reflect"
 	"testing"
 
@@ -127,8 +126,7 @@ func equal(a, b []*controllerv1beta1.Logs) bool {
 		return false
 	}
 	for i := range a {
-		if !reflect.DeepEqual((*a[i]).Logs, (*b[i]).Logs) {
-			log.Println((*a[i]).Logs, "!=", (*b[i]).Logs)
+		if !reflect.DeepEqual(a[i].Logs, b[i].Logs) {
 			return false
 		}
 	}
