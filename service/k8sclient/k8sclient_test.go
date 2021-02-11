@@ -49,6 +49,14 @@ func TestK8sClient(t *testing.T) {
 
 	l := logger.Get(ctx)
 
+	t.Run("Get non-existing clusters", func(t *testing.T) {
+		t.Parallel()
+		_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdb")
+		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
+		_, err = client.GetXtraDBClusterCredentials(ctx, "871f766d43f8e-xtradb")
+		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
+	})
+
 	pmmPublicAddress := ""
 	t.Run("XtraDB", func(t *testing.T) {
 		name := "test-cluster-xtradb"
@@ -70,6 +78,14 @@ func TestK8sClient(t *testing.T) {
 		require.NoError(t, err)
 
 		l.Info("XtraDB Cluster is created")
+
+		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+			return cluster != nil
+		})
+		t.Run("Get credentials of cluster that is not Ready", func(t *testing.T) {
+			_, err := client.GetXtraDBClusterCredentials(ctx, name)
+			assert.EqualError(t, errors.Cause(err), ErrXtraDBClusterNotReady.Error())
+		})
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
 			err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
@@ -148,6 +164,15 @@ func TestK8sClient(t *testing.T) {
 		require.NoError(t, err)
 
 		l.Info("PSMDB Cluster is created")
+
+		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil
+		})
+
+		t.Run("Get credentials of cluster that is not Ready", func(t *testing.T) {
+			_, err := client.GetPSMDBClusterCredentials(ctx, name)
+			assert.EqualError(t, errors.Cause(err), ErrPSMDBClusterNotReady.Error())
+		})
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
 			err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
