@@ -18,13 +18,10 @@ package xtradbcluster
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
