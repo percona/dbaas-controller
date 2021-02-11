@@ -23,9 +23,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLimitLines(t *testing.T) {
@@ -35,83 +34,83 @@ func TestLimitLines(t *testing.T) {
 		expected []*controllerv1beta1.Logs
 	}
 	testCases := []testCase{
-		testCase{
+		{
 			limit: 10,
 			input: []*controllerv1beta1.Logs{
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"a", "b", "c", "d"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{},
 				},
 			},
 			expected: []*controllerv1beta1.Logs{
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"a", "b", "c", "d"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{},
 				},
 			},
 		},
-		testCase{
+		{
 			limit: 10,
 			input: []*controllerv1beta1.Logs{
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"a", "b", "c", "d", "e", "f", "g"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"h", "i", "j"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"l", "m", "o", "p", "q", "r", "s"},
 				},
 			},
 			expected: []*controllerv1beta1.Logs{
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"d", "e", "f", "g"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"h", "i", "j"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"q", "r", "s"},
 				},
 			},
 		},
-		testCase{
+		{
 			limit: 10,
 			input: []*controllerv1beta1.Logs{
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"a", "b", "c", "d", "e", "f", "g", "l", "m", "o", "p", "q", "r", "s"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"h"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"i"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"j"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"k"},
 				},
 			},
 			expected: []*controllerv1beta1.Logs{
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"m", "o", "p", "q", "r", "s"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"h"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"i"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"j"},
 				},
-				&controllerv1beta1.Logs{
+				{
 					Logs: []string{"k"},
 				},
 			},
