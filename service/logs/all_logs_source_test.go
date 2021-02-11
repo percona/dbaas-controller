@@ -27,6 +27,7 @@ import (
 )
 
 func TestLimitLines(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		limit    int
 		input    []*controllerv1beta1.Logs
