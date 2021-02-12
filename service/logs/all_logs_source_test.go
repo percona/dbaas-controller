@@ -19,7 +19,6 @@
 package logs
 
 import (
-	"reflect"
 	"testing"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
@@ -116,20 +115,9 @@ func TestLimitLines(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tc := range testCases {
 		limitLines(tc.input, tc.limit)
-		assert.Truef(t, equal(tc.input, tc.expected), "expected %v\ngot %v", tc.expected, tc.input)
+		assert.Equal(t, tc.expected, tc.input)
 	}
-}
-
-func equal(a, b []*controllerv1beta1.Logs) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if !reflect.DeepEqual(a[i].Logs, b[i].Logs) {
-			return false
-		}
-	}
-	return true
 }
