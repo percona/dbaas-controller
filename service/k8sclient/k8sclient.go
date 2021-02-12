@@ -1205,7 +1205,7 @@ func (c *K8sClient) GetClusterPods(ctx context.Context, clusterName string) (*co
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
-	err = json.Unmarshal(out, &list)
+	err = json.Unmarshal(out, list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
