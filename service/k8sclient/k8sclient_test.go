@@ -118,34 +118,31 @@ func TestK8sClient(t *testing.T) {
 			}
 			for _, ppod := range pods.Items {
 				var foundPod pod
-				var found bool
-				for _, expectedPod := range expectedPods {
-					if ppod.Name == expectedPod.name {
-						foundPod = expectedPod
-						found = true
-						break
+				assert.Conditionf(t, func() bool {
+					for _, expectedPod := range expectedPods {
+						if ppod.Name == expectedPod.name {
+							foundPod = expectedPod
+							return true
+						}
 					}
-				}
-				require.Truef(t, found, "pod name '%s' was not expected", ppod.Name)
+					return false
+				}, "pod name '%s' was not expected", ppod.Name)
+
 				for _, container := range ppod.Spec.Containers {
-					if container.Name != "" {
-						found = false
+					assert.Conditionf(t, func() bool {
 						for _, expectedContainerName := range foundPod.containers {
 							if expectedContainerName == container.Name {
-								found = true
-								break
+								return true
 							}
 						}
-						require.Truef(t, found, "container name '%s' was not expected", container.Name)
-					}
+						return false
+					}, "container name '%s' was not expected", container.Name)
+
 					logs, err := client.GetLogs(ctx, ppod.Name, container.Name)
 					require.NoError(t, err, "failed to get logs")
 					assert.Greater(t, len(logs), 0)
 					for _, l := range logs {
 						assert.False(t, strings.Contains(l, "\n"), "new lines should have been removed")
-					}
-					if container.Name == "" {
-						assert.Truef(t, strings.Contains(logs[0], "Events"), "container name is not set but we didn't get events")
 					}
 				}
 			}
