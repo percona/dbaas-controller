@@ -18,7 +18,13 @@ package kubectl
 
 import (
 	"fmt"
+
+	"github.com/pkg/errors"
 )
+
+// ErrNotFound should be returned when referenced resource does not exist
+// inside Kubernetes cluster.
+var ErrNotFound error = errors.New("resource was not found in Kubernetes cluster")
 
 type kubeCtlError struct {
 	err    error
