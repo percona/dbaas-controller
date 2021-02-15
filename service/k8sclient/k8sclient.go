@@ -29,9 +29,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
@@ -97,7 +97,10 @@ const (
 	OperatorStatusNotInstalled OperatorStatus = 3
 )
 
-const clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
+const (
+	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
+	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
+)
 
 // Operators contains statuses of operators.
 type Operators struct {
@@ -260,6 +263,9 @@ var (
 	ErrXtraDBClusterNotReady = errors.New("XtraDB cluster is not ready")
 	// ErrPSMDBClusterNotReady The PSMDB cluster is not ready.
 	ErrPSMDBClusterNotReady = errors.New("PSMDB cluster is not ready")
+	// ErrNotFound should be returned when referenced resource does not exist
+	// inside Kubernetes cluster.
+	ErrNotFound error = errors.New("resource was not found in Kubernetes cluster")
 )
 
 // K8sClient is a client for Kubernetes.
@@ -523,12 +529,20 @@ func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error 
 	return nil
 }
 
-// GetXtraDBCluster returns an XtraDB cluster credentials.
-func (c *K8sClient) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBCredentials, error) {
+// GetXtraDBClusterCredentials returns an XtraDB cluster credentials.
+func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string) (*XtraDBCredentials, error) {
 	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), name, &cluster)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot get XtraDb cluster")
+		if errors.Is(err, kubectl.ErrNotFound) {
+			return nil, errors.Wrap(ErrNotFound, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
+		}
+		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
+	}
+	if cluster.Status.Status != pxc.AppStateReady {
+		return nil, errors.Wrap(ErrXtraDBClusterNotReady,
+			fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
+		)
 	}
 
 	password := ""
@@ -552,7 +566,6 @@ func (c *K8sClient) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBC
 	return credentials, nil
 }
 
-// GetXtraDBCluster returns an XtraDB cluster credentials.
 func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) {
 	var storageClass *StorageClass
 
@@ -747,7 +760,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
 
-	affinity := &psmdb.PodAffinity{}
+	affinity := new(psmdb.PodAffinity)
 	var expose psmdb.Expose
 	if isMinikube, err := c.isMinikube(ctx); err == nil && !isMinikube {
 		affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
@@ -970,12 +983,18 @@ func (c *K8sClient) RestartPSMDBCluster(ctx context.Context, name string) error 
 	return err
 }
 
-// GetPSMDBCluster returns a PSMDB cluster.
-func (c *K8sClient) GetPSMDBCluster(ctx context.Context, name string) (*PSMDBCredentials, error) {
+// GetPSMDBClusterCredentials returns a PSMDB cluster.
+func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string) (*PSMDBCredentials, error) {
 	var cluster psmdb.PerconaServerMongoDB
 	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), name, &cluster)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot get PSMDB cluster")
+		if errors.Is(err, kubectl.ErrNotFound) {
+			return nil, errors.Wrap(ErrNotFound, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
+		}
+		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
+	}
+	if cluster.Status.Status != psmdb.AppStateReady {
+		return nil, errors.Wrap(ErrPSMDBClusterNotReady, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
 
 	password := ""
