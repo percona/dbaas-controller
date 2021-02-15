@@ -20,6 +20,7 @@ import (
 	"context"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"github.com/pkg/errors"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -84,7 +85,9 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 			Name:  cluster.Name,
 			State: psmdbStatesMap[cluster.State],
 			Operation: &controllerv1beta1.RunningOperation{
-				Message: cluster.Message,
+				FinishedSteps: cluster.DetailedState.CountReadyPods(),
+				TotalSteps:    cluster.DetailedState.CountAllPods(),
+				Message:       cluster.Message,
 			},
 			Params: params,
 		}
@@ -195,20 +198,25 @@ func (s *PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *cont
 	return new(controllerv1beta1.RestartPSMDBClusterResponse), nil
 }
 
-// GetPSMDBCluster returns a PSMDB cluster connection credentials.
-func (s *PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *controllerv1beta1.GetPSMDBClusterRequest) (*controllerv1beta1.GetPSMDBClusterResponse, error) {
+// GetPSMDBClusterCredentials returns a PSMDB cluster connection credentials.
+func (s *PSMDBClusterService) GetPSMDBClusterCredentials(ctx context.Context, req *controllerv1beta1.GetPSMDBClusterCredentialsRequest) (*controllerv1beta1.GetPSMDBClusterCredentialsResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	cluster, err := client.GetPSMDBCluster(ctx, req.Name)
+	cluster, err := client.GetPSMDBClusterCredentials(ctx, req.Name)
 	if err != nil {
+		if errors.Is(err, k8sclient.ErrPSMDBClusterNotReady) {
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		} else if errors.Is(err, k8sclient.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	resp := &controllerv1beta1.GetPSMDBClusterResponse{
+	resp := &controllerv1beta1.GetPSMDBClusterCredentialsResponse{
 		Credentials: &controllerv1beta1.PSMDBCredentials{
 			Username: cluster.Username,
 			Password: cluster.Password,

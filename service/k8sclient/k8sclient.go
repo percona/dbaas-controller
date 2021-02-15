@@ -28,9 +28,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
@@ -96,6 +96,11 @@ const (
 	OperatorStatusNotInstalled OperatorStatus = 3
 )
 
+const (
+	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
+	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
+)
+
 // Operators contains statuses of operators.
 type Operators struct {
 	Xtradb OperatorStatus
@@ -152,25 +157,35 @@ type PSMDBParams struct {
 	Replicaset       *Replicaset
 }
 
+type appStatus struct {
+	size  int32
+	ready int32
+}
+
+// DetailedState contains pods' status.
+type DetailedState []appStatus
+
 // XtraDBCluster contains information related to xtradb cluster.
 type XtraDBCluster struct {
-	Name     string
-	Size     int32
-	State    ClusterState
-	Message  string
-	PXC      *PXC
-	ProxySQL *ProxySQL
-	Pause    bool
+	Name          string
+	Size          int32
+	State         ClusterState
+	Message       string
+	PXC           *PXC
+	ProxySQL      *ProxySQL
+	Pause         bool
+	DetailedState DetailedState
 }
 
 // PSMDBCluster contains information related to psmdb cluster.
 type PSMDBCluster struct {
-	Name       string
-	Pause      bool
-	Size       int32
-	State      ClusterState
-	Message    string
-	Replicaset *Replicaset
+	Name          string
+	Pause         bool
+	Size          int32
+	State         ClusterState
+	Message       string
+	Replicaset    *Replicaset
+	DetailedState DetailedState
 }
 
 // PSMDBCredentials represents PSMDB connection credentials.
@@ -247,6 +262,9 @@ var (
 	ErrXtraDBClusterNotReady = errors.New("XtraDB cluster is not ready")
 	// ErrPSMDBClusterNotReady The PSMDB cluster is not ready.
 	ErrPSMDBClusterNotReady = errors.New("PSMDB cluster is not ready")
+	// ErrNotFound should be returned when referenced resource does not exist
+	// inside Kubernetes cluster.
+	ErrNotFound error = errors.New("resource was not found in Kubernetes cluster")
 )
 
 // K8sClient is a client for Kubernetes.
@@ -255,7 +273,24 @@ type K8sClient struct {
 	l       logger.Logger
 }
 
-// New returns new K8sClient object.
+// CountReadyPods returns number of pods that are ready and belong to the
+// database cluster.
+func (d DetailedState) CountReadyPods() (count int32) {
+	for _, status := range d {
+		count += status.ready
+	}
+	return
+}
+
+// CountAllPods returns number of all pods belonging to the database cluster.
+func (d DetailedState) CountAllPods() (count int32) {
+	for _, status := range d {
+		count += status.size
+	}
+	return
+}
+
+// New returns new K8Client object.
 func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "K8sClient")
@@ -320,8 +355,14 @@ func randSeq(n int) string {
 
 // CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
 func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
+	var cluster pxc.PerconaXtraDBCluster
+	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
+	if err == nil {
+		return fmt.Errorf(clusterWithSameNameExistsErrTemplate, params.Name)
+	}
+
 	var secret common.Secret
-	err := c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPXCSecretName, &secret)
+	err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPXCSecretName, &secret)
 	if err != nil {
 		return errors.Wrap(err, "cannot get default PXC secrets")
 	}
@@ -337,7 +378,6 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	if err != nil {
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
-
 	storageName := fmt.Sprintf(pxcBackupStorageName, params.Name)
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
@@ -488,12 +528,20 @@ func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error 
 	return nil
 }
 
-// GetXtraDBCluster returns an XtraDB cluster credentials.
-func (c *K8sClient) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBCredentials, error) {
+// GetXtraDBClusterCredentials returns an XtraDB cluster credentials.
+func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string) (*XtraDBCredentials, error) {
 	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), name, &cluster)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot get XtraDb cluster")
+		if errors.Is(err, kubectl.ErrNotFound) {
+			return nil, errors.Wrap(ErrNotFound, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
+		}
+		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
+	}
+	if cluster.Status.Status != pxc.AppStateReady {
+		return nil, errors.Wrap(ErrXtraDBClusterNotReady,
+			fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
+		)
 	}
 
 	password := ""
@@ -517,7 +565,6 @@ func (c *K8sClient) GetXtraDBCluster(ctx context.Context, name string) (*XtraDBC
 	return credentials, nil
 }
 
-// GetXtraDBCluster returns an XtraDB cluster credentials.
 func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) {
 	var storageClass *StorageClass
 
@@ -591,6 +638,12 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
 			},
 			Pause: cluster.Spec.Pause,
+			DetailedState: []appStatus{
+				{size: cluster.Status.PMM.Size, ready: cluster.Status.PMM.Ready},
+				{size: cluster.Status.HAProxy.Size, ready: cluster.Status.HAProxy.Ready},
+				{size: cluster.Status.ProxySQL.Size, ready: cluster.Status.ProxySQL.Ready},
+				{size: cluster.Status.PXC.Size, ready: cluster.Status.PXC.Ready},
+			},
 		}
 
 		res[i] = val
@@ -618,7 +671,7 @@ func (c *K8sClient) getDeletingClusters(ctx context.Context, managedBy string, r
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
 
-	res := make([]Cluster, 0)
+	res := []Cluster{}
 	for _, pod := range list.Items {
 		clusterName := pod.Labels["app.kubernetes.io/instance"]
 		if _, ok := runningClusters[clusterName]; ok {
@@ -654,11 +707,12 @@ func (c *K8sClient) getDeletingXtraDBClusters(ctx context.Context, clusters []Xt
 	xtradbClusters := make([]XtraDBCluster, len(deletingClusters))
 	for i, cluster := range deletingClusters {
 		xtradbClusters[i] = XtraDBCluster{
-			Name:     cluster.Name,
-			Size:     0,
-			State:    ClusterStateDeleting,
-			PXC:      new(PXC),
-			ProxySQL: new(ProxySQL),
+			Name:          cluster.Name,
+			Size:          0,
+			State:         ClusterStateDeleting,
+			PXC:           new(PXC),
+			ProxySQL:      new(ProxySQL),
+			DetailedState: []appStatus{},
 		}
 	}
 	return xtradbClusters, nil
@@ -682,8 +736,14 @@ func (c *K8sClient) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, erro
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
+	var cluster psmdb.PerconaServerMongoDB
+	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), params.Name, &cluster)
+	if err == nil {
+		return fmt.Errorf(clusterWithSameNameExistsErrTemplate, params.Name)
+	}
+
 	var secret common.Secret
-	err := c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPSMDBSecretName, &secret)
+	err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPSMDBSecretName, &secret)
 	if err != nil {
 		return errors.Wrap(err, "cannot get default PSMDB secrets")
 	}
@@ -699,6 +759,26 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
 
+	affinity := new(psmdb.PodAffinity)
+	var expose psmdb.Expose
+	if isMinikube, err := c.isMinikube(ctx); err == nil && !isMinikube {
+		affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
+
+		// This enables ingress for the cluster and exposes the cluster to the world.
+		// The cluster will have an internal IP and a world accessible hostname.
+		// This feature cannot be tested with minikube. Please use EKS for testing.
+		expose = psmdb.Expose{
+			Enabled:    true,
+			ExposeType: common.ServiceTypeLoadBalancer,
+		}
+	} else {
+		// https://www.percona.com/doc/kubernetes-operator-for-psmongodb/minikube.html
+		// > Install Percona Server for MongoDB on Minikube
+		// > ...
+		// > set affinity.antiAffinityTopologyKey key to "none"
+		// > (the Operator will be unable to spread the cluster on several nodes)
+		affinity.TopologyKey = pointer.ToString(psmdb.AffinityOff)
+	}
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
 			APIVersion: psmdbAPIVersion,
@@ -751,9 +831,30 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 				ConfigsvrReplSet: &psmdb.ReplsetSpec{
 					Size:       3,
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
+					Arbiter: psmdb.Arbiter{
+						Enabled: false,
+						Size:    1,
+						MultiAZ: psmdb.MultiAZ{
+							Affinity: affinity,
+						},
+					},
+					MultiAZ: psmdb.MultiAZ{
+						Affinity: affinity,
+					},
 				},
 				Mongos: &psmdb.ReplsetSpec{
+					Arbiter: psmdb.Arbiter{
+						Enabled: false,
+						Size:    1,
+						MultiAZ: psmdb.MultiAZ{
+							Affinity: affinity,
+						},
+					},
 					Size: params.Size,
+					MultiAZ: psmdb.MultiAZ{
+						Affinity: affinity,
+					},
+					Expose: expose,
 				},
 				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
 					Mode: psmdb.OperationProfilingModeSlowOp,
@@ -768,9 +869,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 						Enabled: false,
 						Size:    1,
 						MultiAZ: psmdb.MultiAZ{
-							Affinity: &psmdb.PodAffinity{
-								TopologyKey: pointer.ToString("kubernetes.io/hostname"),
-							},
+							Affinity: affinity,
 						},
 					},
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
@@ -778,9 +877,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 						MaxUnavailable: pointer.ToInt(1),
 					},
 					MultiAZ: psmdb.MultiAZ{
-						Affinity: &psmdb.PodAffinity{
-							TopologyKey: pointer.ToString(psmdb.AffinityOff),
-						},
+						Affinity: affinity,
 					},
 				},
 			},
@@ -807,23 +904,6 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	if params.Replicaset != nil {
 		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
-	}
-
-	if isMinikube, err := c.isMinikube(ctx); err == nil && !isMinikube {
-		// This enables ingress for the cluster and exposes the cluster to the world.
-		// The cluster will have an internal IP and a world accessible hostname.
-		// This feature cannot be tested with minikube. Please use EKS for testing.
-		res.Spec.Sharding.Mongos.Expose = psmdb.Expose{
-			Enabled:    true,
-			ExposeType: common.ServiceTypeLoadBalancer,
-		}
-	} else {
-		// https://www.percona.com/doc/kubernetes-operator-for-psmongodb/minikube.html
-		// > Install Percona Server for MongoDB on Minikube
-		// > ...
-		// > set affinity.antiAffinityTopologyKey key to "none"
-		// > (the Operator will be unable to spread the cluster on several nodes)
-		res.Spec.Replsets[0].Arbiter.Affinity.TopologyKey = pointer.ToString("none")
 	}
 
 	return c.kubeCtl.Apply(ctx, res)
@@ -902,12 +982,18 @@ func (c *K8sClient) RestartPSMDBCluster(ctx context.Context, name string) error 
 	return err
 }
 
-// GetPSMDBCluster returns a PSMDB cluster.
-func (c *K8sClient) GetPSMDBCluster(ctx context.Context, name string) (*PSMDBCredentials, error) {
+// GetPSMDBClusterCredentials returns a PSMDB cluster.
+func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string) (*PSMDBCredentials, error) {
 	var cluster psmdb.PerconaServerMongoDB
 	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), name, &cluster)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot get PSMDB cluster")
+		if errors.Is(err, kubectl.ErrNotFound) {
+			return nil, errors.Wrap(ErrNotFound, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
+		}
+		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
+	}
+	if cluster.Status.Status != psmdb.AppStateReady {
+		return nil, errors.Wrap(ErrPSMDBClusterNotReady, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
 
 	password := ""
@@ -949,6 +1035,16 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 		if message == "" && len(conditions) > 0 {
 			message = conditions[len(conditions)-1].Message
 		}
+
+		status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
+		for _, rs := range cluster.Status.Replsets {
+			status = append(status, appStatus{rs.Size, rs.Ready})
+		}
+		status = append(status, appStatus{
+			size:  cluster.Status.Mongos.Size,
+			ready: cluster.Status.Mongos.Ready,
+		})
+
 		val := PSMDBCluster{
 			Name:    cluster.Name,
 			Size:    cluster.Spec.Replsets[0].Size,
@@ -959,6 +1055,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
+			DetailedState: status,
 		}
 
 		res[i] = val
@@ -1012,10 +1109,11 @@ func (c *K8sClient) getDeletingPSMDBClusters(ctx context.Context, clusters []PSM
 	xtradbClusters := make([]PSMDBCluster, len(deletingClusters))
 	for i, cluster := range deletingClusters {
 		xtradbClusters[i] = PSMDBCluster{
-			Name:       cluster.Name,
-			Size:       0,
-			State:      ClusterStateDeleting,
-			Replicaset: new(Replicaset),
+			Name:          cluster.Name,
+			Size:          0,
+			State:         ClusterStateDeleting,
+			Replicaset:    new(Replicaset),
+			DetailedState: []appStatus{},
 		}
 	}
 	return xtradbClusters, nil

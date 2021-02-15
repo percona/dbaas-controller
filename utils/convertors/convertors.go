@@ -24,8 +24,13 @@ import (
 
 // StrToBytes converts string of bytes to integer.
 func StrToBytes(s string) int64 {
+	multiplier := int64(1)
+	if strings.HasSuffix(s, "G") {
+		multiplier = 1000 * 1000 * 1000
+		s = strings.TrimSuffix(s, "G")
+	}
 	if b, err := strconv.ParseInt(s, 10, 64); err == nil {
-		return b
+		return b * multiplier
 	}
 	return 0
 }
