@@ -14,11 +14,9 @@ go 1.15
 
 require (
 	github.com/AlekSi/pointer v1.1.0
-	github.com/google/go-cmp v0.5.2 // indirect
-	github.com/google/uuid v1.1.5
+	github.com/google/uuid v1.2.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/kr/text v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/percona-platform/dbaas-api v0.0.0-20210202072632-370e085e6f54
 	github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871
