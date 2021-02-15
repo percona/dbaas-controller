@@ -21,7 +21,6 @@ import (
 	"context"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/pkg/errors"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -219,25 +218,20 @@ func (s *XtraDBClusterService) RestartXtraDBCluster(ctx context.Context, req *co
 	return new(controllerv1beta1.RestartXtraDBClusterResponse), nil
 }
 
-// GetXtraDBClusterCredentials returns an XtraDB cluster connection credentials.
-func (s XtraDBClusterService) GetXtraDBClusterCredentials(ctx context.Context, req *controllerv1beta1.GetXtraDBClusterCredentialsRequest) (*controllerv1beta1.GetXtraDBClusterCredentialsResponse, error) {
+// GetXtraDBCluster returns an XtraDB cluster connection credentials.
+func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *controllerv1beta1.GetXtraDBClusterRequest) (*controllerv1beta1.GetXtraDBClusterResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	cluster, err := client.GetXtraDBClusterCredentials(ctx, req.Name)
+	cluster, err := client.GetXtraDBCluster(ctx, req.Name)
 	if err != nil {
-		if errors.Is(err, k8sclient.ErrXtraDBClusterNotReady) {
-			return nil, status.Error(codes.FailedPrecondition, err.Error())
-		} else if errors.Is(err, k8sclient.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	resp := &controllerv1beta1.GetXtraDBClusterCredentialsResponse{
+	resp := &controllerv1beta1.GetXtraDBClusterResponse{
 		Credentials: &controllerv1beta1.XtraDBCredentials{
 			Username: cluster.Username,
 			Password: cluster.Password,

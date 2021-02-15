@@ -35,6 +35,14 @@ func TestImports(t *testing.T) {
 
 	constraints := make(map[string]constraint)
 
+	// kubectl should not import Operator-specific APIs
+	constraints["github.com/percona-platform/dbaas-controller/service/k8sclient/kubectl"] = constraint{
+		blacklistPrefixes: []string{
+			"github.com/percona/percona-server-mongodb-operator/pkg/apis",
+			"github.com/percona/percona-xtradb-cluster-operator/pkg/apis",
+		},
+	}
+
 	// client should not import cluster
 	constraints["github.com/percona-platform/dbaas-controller/service/k8sclient"] = constraint{
 		blacklistPrefixes: []string{
@@ -42,8 +50,12 @@ func TestImports(t *testing.T) {
 		},
 	}
 
-	// just to add to packages.dot
-	constraints["github.com/percona-platform/dbaas-controller/service/cluster"] = constraint{}
+	// cluster should not import kubectl
+	constraints["github.com/percona-platform/dbaas-controller/service/cluster"] = constraint{
+		blacklistPrefixes: []string{
+			"github.com/percona-platform/dbaas-controller/service/kubectl",
+		},
+	}
 
 	allImports := make(map[string]map[string]struct{})
 	for path, c := range constraints {
