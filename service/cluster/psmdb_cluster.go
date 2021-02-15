@@ -20,7 +20,6 @@ import (
 	"context"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/pkg/errors"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -198,25 +197,20 @@ func (s *PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *cont
 	return new(controllerv1beta1.RestartPSMDBClusterResponse), nil
 }
 
-// GetPSMDBClusterCredentials returns a PSMDB cluster connection credentials.
-func (s *PSMDBClusterService) GetPSMDBClusterCredentials(ctx context.Context, req *controllerv1beta1.GetPSMDBClusterCredentialsRequest) (*controllerv1beta1.GetPSMDBClusterCredentialsResponse, error) {
+// GetPSMDBCluster returns a PSMDB cluster connection credentials.
+func (s *PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *controllerv1beta1.GetPSMDBClusterRequest) (*controllerv1beta1.GetPSMDBClusterResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	cluster, err := client.GetPSMDBClusterCredentials(ctx, req.Name)
+	cluster, err := client.GetPSMDBCluster(ctx, req.Name)
 	if err != nil {
-		if errors.Is(err, k8sclient.ErrPSMDBClusterNotReady) {
-			return nil, status.Error(codes.FailedPrecondition, err.Error())
-		} else if errors.Is(err, k8sclient.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	resp := &controllerv1beta1.GetPSMDBClusterCredentialsResponse{
+	resp := &controllerv1beta1.GetPSMDBClusterResponse{
 		Credentials: &controllerv1beta1.PSMDBCredentials{
 			Username: cluster.Username,
 			Password: cluster.Password,

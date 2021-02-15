@@ -17,8 +17,6 @@ linters-settings:
       - k8s.io/apimachinery/pkg/apis/runtime
       - k8s.io/apimachinery/pkg/apis/types
       - k8s.io/apimachinery/pkg/apis/util/intstr
-      - github.com/percona/percona-server-mongodb-operator
-      - github.com/percona/percona-xtradb-cluster-operator
 
   goimports:
     local-prefixes: github.com/percona-platform/dbaas-controller
