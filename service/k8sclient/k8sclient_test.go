@@ -136,7 +136,7 @@ func TestK8sClient(t *testing.T) {
 			for _, ppod := range pods.Items {
 				var foundPod pod
 				assert.Conditionf(t,
-					func(pod common.Pod) assert.Comparison {
+					func(ppod common.Pod) assert.Comparison {
 						return func() bool {
 							for _, expectedPod := range expectedPods {
 								if ppod.Name == expectedPod.name {
@@ -154,7 +154,7 @@ func TestK8sClient(t *testing.T) {
 				for _, container := range ppod.Spec.Containers {
 					assert.Conditionf(
 						t,
-						func(common.ContainerSpec) assert.Comparison {
+						func(container common.ContainerSpec) assert.Comparison {
 							return func() bool {
 								for _, expectedContainerName := range foundPod.containers {
 									if expectedContainerName == container.Name {
