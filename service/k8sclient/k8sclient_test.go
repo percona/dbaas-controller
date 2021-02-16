@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
@@ -134,25 +135,38 @@ func TestK8sClient(t *testing.T) {
 			}
 			for _, ppod := range pods.Items {
 				var foundPod pod
-				assert.Conditionf(t, func() bool {
-					for _, expectedPod := range expectedPods {
-						if ppod.Name == expectedPod.name {
-							foundPod = expectedPod
-							return true
+				assert.Conditionf(t,
+					func(pod common.Pod) assert.Comparison {
+						return func() bool {
+							for _, expectedPod := range expectedPods {
+								if ppod.Name == expectedPod.name {
+									foundPod = expectedPod
+									return true
+								}
+							}
+							return false
 						}
-					}
-					return false
-				}, "pod name '%s' was not expected", ppod.Name)
+					}(ppod),
+					"pod name '%s' was not expected",
+					ppod.Name,
+				)
 
 				for _, container := range ppod.Spec.Containers {
-					assert.Conditionf(t, func() bool {
-						for _, expectedContainerName := range foundPod.containers {
-							if expectedContainerName == container.Name {
-								return true
+					assert.Conditionf(
+						t,
+						func(common.ContainerSpec) assert.Comparison {
+							return func() bool {
+								for _, expectedContainerName := range foundPod.containers {
+									if expectedContainerName == container.Name {
+										return true
+									}
+								}
+								return false
 							}
-						}
-						return false
-					}, "container name '%s' was not expected", container.Name)
+						}(container),
+						"container name '%s' was not expected",
+						container.Name,
+					)
 
 					logs, err := client.GetLogs(ctx, ppod.Name, container.Name)
 					require.NoError(t, err, "failed to get logs")
