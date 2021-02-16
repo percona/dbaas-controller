@@ -45,6 +45,7 @@ jobs:
       # `git diff --exit-code` step below still checks what we need
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
       KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
+      PATH_TO_KUBECONFIG: "${{ env.HOME }}"/.kube/config
 
     steps:
       - name: Set up Go release
@@ -116,8 +117,7 @@ jobs:
 
       - name: Setup environment for tests to run
         run: |
-          export PATH_TO_KUBECONFIG="${HOME}/.kube/config"
-          echo "::set-env name=PATH_TO_KUBECONFIG::$PATH_TO_KUBECONFIG"
+          echo "kubeconfig: ${PATH_TO_KUBECONFIG}"
           #echo ${{secrets.kubeconfig}} > "${PATH_TO_KUBECONFIG}"
           echo "CONFIG TBD" > "${PATH_TO_KUBECONFIG}"
           export RANDOM_HEX=$(hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random)
