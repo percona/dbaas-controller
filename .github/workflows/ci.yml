@@ -276,7 +276,7 @@ jobs:
       - name: Setup environment for tests to run
         run: |
           echo "kubeconfig: ${PATH_TO_KUBECONFIG}"
-          echo ${{secrets.kubeconfig}} > "${PATH_TO_KUBECONFIG}"
+          echo ${{secrets.KUBECONFIG}} > "${PATH_TO_KUBECONFIG}"
           export RANDOM_HEX=$(hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random)
           export NAMESPACE="dbaas-controller-test-${RANDOM_HEX}"
           make set-test-namespace NAMESPACE="$NAMESPACE"
