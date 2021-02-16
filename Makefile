@@ -96,6 +96,9 @@ check:                            ## Run checks/linters for the whole project
 install:                          ## Install binaries
 	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
+set-test-namespace:
+	${KUBECTL_CMD} config set-context --current --namespace="${NAMESPACE}"
+
 test:                             ## Run tests
 	go test -race -timeout=30m ./...
 
@@ -159,6 +162,8 @@ eks-install-operators:            ## Install Kubernetes operators in EKS.
 	# Install the PSMDB operator
 	cat ./deploy/psmdb-operator.yaml | ${KUBECTL_CMD} apply -f -
 	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*$/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*=$/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | ${KUBECTL_CMD} apply -f -
+	${KUBECTL_CMD} wait --for=condition=Available deployment percona-xtradb-cluster-operator
+	${KUBECTL_CMD} wait --for=condition=Available deployment percona-server-mongodb-operator
 
 eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage.
 	# Delete the PXC operator
