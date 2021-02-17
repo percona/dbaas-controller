@@ -285,7 +285,7 @@ jobs:
 
       - name: Setup environment for tests to run 3a
         run: |
-           export RANDOM_STRING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
+           export RANDOM_STRING=$(head -500 /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
 
       - name: Setup environment for tests to run 3b
         run: |
