@@ -273,15 +273,26 @@ jobs:
       - name: Check that API tests can be built
         run: make test-api-build
 
-      - name: Setup environment for tests to run
+      - name: Setup environment for tests to run 1
         run: |
            mkdir -p "${PATH_TO_KUBECONFIG%/*}"
+
+      - name: Setup environment for tests to run 2
+        run: |
            echo "${KUBECONFIG}" > "${PATH_TO_KUBECONFIG}"
-           export RANDOM_STRING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
-           export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
-           make set-test-namespace NAMESPACE="$NAMESPACE"
         env:
            KUBECONFIG: ${{secrets.KUBECONFIG}}
+
+      - name: Setup environment for tests to run 3
+        run: |
+           export RANDOM_STRING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
+           export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
+
+      - name: Setup environment for tests to run 4
+        run: |
+           make set-test-namespace NAMESPACE="$NAMESPACE"
+        env:
+           NAMESPACE: "ASDF"
 
       - name: Deploy operators to the test namespace
         run: make eks-install-operators
