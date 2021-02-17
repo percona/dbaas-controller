@@ -285,7 +285,7 @@ jobs:
            echo "${BASE64_KUBECONFIG}" > "${PATH_TO_KUBECONFIG}"
            export RANDOM_STRING=$(head -500 /dev/urandom | tr -dc 'a-z0-9' | fold -w 16 | tail -n +1 | head -n 1)
            export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
-           make eks-setup-test-namespace NAMESPACE="$NAMESPACE"
+           make eks-setup-test-namespace NAMESPACE="${NAMESPACE}"
         env:
            BASE64_KUBECONFIG: ${{secrets.BASE64_KUBECONFIG}}
 

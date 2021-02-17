@@ -175,6 +175,6 @@ eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run t
 
 eks-delete-current-namespace: eks-delete-operators
 	NAMESPACE="$(kubectl config get-contexts $(kubectl config current-context) | awk '{print $4}' | tail -1)"
-	if ["$NAMESPACE" != "default"]; then
+	if [ "${NAMESPACE}" != "default" ]; then
 		kubectl delete ns "$NAMESPACE"
 	fi
