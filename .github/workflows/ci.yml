@@ -259,7 +259,11 @@ jobs:
         run: go mod download
 
       - name: Install tools
-        run: make init
+        run: |
+          make init
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin
 
       - name: Initialize CI environment
         run: make ci-init
