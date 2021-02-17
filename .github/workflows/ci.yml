@@ -275,10 +275,12 @@ jobs:
 
       - name: Setup environment for tests to run
         run: |
-           echo "${{secrets.KUBECONFIG}}" > "${PATH_TO_KUBECONFIG}"
-#          export RANDOM_STRING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
- #         export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
-  #        make set-test-namespace NAMESPACE="$NAMESPACE"
+           echo "${KUBECONFIG}" > "${PATH_TO_KUBECONFIG}"
+           export RANDOM_STRING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
+           export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
+           make set-test-namespace NAMESPACE="$NAMESPACE"
+        env:
+           KUBECONFIG: ${{secrets.KUBECONFIG}}
 
       - name: Deploy operators to the test namespace
         run: make eks-install-operators
