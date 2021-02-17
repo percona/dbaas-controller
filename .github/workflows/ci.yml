@@ -203,7 +203,7 @@ jobs:
       # no `-mod=readonly` to test PRs made by @dependabot;
       # `git diff --exit-code` step below still checks what we need
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
-      PATH_TO_KUBECONFIG: "${{ env.HOME }}"/.kube/config
+      PATH_TO_KUBECONFIG: /tmp/.kube/config
 
     steps:
       - name: Set up Go release
