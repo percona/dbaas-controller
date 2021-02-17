@@ -277,8 +277,8 @@ jobs:
         run: |
           echo "kubeconfig: ${PATH_TO_KUBECONFIG}"
           echo ${{secrets.KUBECONFIG}} > "${PATH_TO_KUBECONFIG}"
-          export RANDOM_HEX=$(hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random)
-          export NAMESPACE="dbaas-controller-test-${RANDOM_HEX}"
+          export RANDOM_STRING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
+          export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
           make set-test-namespace NAMESPACE="$NAMESPACE"
 
       - name: Deploy operators to the test namespace
