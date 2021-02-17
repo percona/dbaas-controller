@@ -97,6 +97,7 @@ install:                          ## Install binaries
 	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
 set-test-namespace:
+	ls /tmp/.kube
 	${KUBECTL_CMD} config set-context --current --namespace="${NAMESPACE}"
 
 test:                             ## Run tests
