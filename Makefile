@@ -46,8 +46,7 @@ PMM_RELEASE_BRANCH ?= $(shell git describe --always --contains --all)
 PMM_USER ?= $(shell echo -n 'admin' | base64)
 PMM_PASS ?= $(shell echo -n 'admin_password' | base64)
 PATH_TO_KUBECONFIG ?= ${HOME}/.kube/config
-KUBECTL_CMD = "kubectl --kubeconfig ${PATH_TO_KUBECONFIG}"
-
+KUBECTL_ARGS = --kubeconfig ${PATH_TO_KUBECONFIG}
 PMM_LD_FLAGS = -ldflags " \
 			-X 'github.com/percona/pmm/version.ProjectName=dbaas-controller' \
 			-X 'github.com/percona/pmm/version.Version=$(COMPONENT_VERSION)' \
@@ -96,9 +95,9 @@ check:                            ## Run checks/linters for the whole project
 install:                          ## Install binaries
 	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
-set-test-namespace:
-	ls /tmp/.kube
-	${KUBECTL_CMD} config set-context --current --namespace="${NAMESPACE}"
+eks-setup-test-namespace:
+	kubectl ${KUBECTL_ARGS} create ns "${NAMESPACE}"
+	kubectl ${KUBECTL_ARGS} config set-context --current --namespace="${NAMESPACE}"
 
 test:                             ## Run tests
 	go test -race -timeout=30m ./...
@@ -158,18 +157,24 @@ collect-debugdata:                ## Collect debugdata
 
 eks-install-operators:            ## Install Kubernetes operators in EKS.
 	# Install the PXC operator
-	cat ./deploy/pxc-operator.yaml | ${KUBECTL_CMD} apply -f -
-	cat ./deploy/pxc-secrets.yaml | sed "s/pmmserver:.*=/pmmserver: ${PMM_PASS}/g" | ${KUBECTL_CMD} apply -f -
+	cat ./deploy/pxc-operator.yaml | kubectl ${KUBECTL_ARGS} apply -f -
+	cat ./deploy/pxc-secrets.yaml | sed "s/pmmserver:.*=/pmmserver: ${PMM_PASS}/g" | kubectl ${KUBECTL_ARGS} apply -f -
 	# Install the PSMDB operator
-	cat ./deploy/psmdb-operator.yaml | ${KUBECTL_CMD} apply -f -
-	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*$/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*=$/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | ${KUBECTL_CMD} apply -f -
-	${KUBECTL_CMD} wait --for=condition=Available deployment percona-xtradb-cluster-operator
-	${KUBECTL_CMD} wait --for=condition=Available deployment percona-server-mongodb-operator
+	cat ./deploy/psmdb-operator.yaml | kubectl ${KUBECTL_ARGS} apply -f -
+	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*$/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*=$/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | kubectl ${KUBECTL_ARGS} apply -f -
+	kubectl ${KUBECTL_ARGS} wait --for=condition=Available deployment percona-xtradb-cluster-operator
+	kubectl ${KUBECTL_ARGS} wait --for=condition=Available deployment percona-server-mongodb-operator
 
 eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage.
 	# Delete the PXC operator
-	cat ./deploy/pxc-operator.yaml | ${KUBECTL_CMD} delete -f -
-	cat ./deploy/pxc-secrets.yaml | sed "s/pmmserver:.*=/pmmserver: ${PMM_PASS}/g" | ${KUBECTL_CMD} delete -f -
+	cat ./deploy/pxc-operator.yaml | kubectl ${KUBECTL_ARGS} delete -f -
+	cat ./deploy/pxc-secrets.yaml | sed "s/pmmserver:.*=/pmmserver: ${PMM_PASS}/g" | kubectl ${KUBECTL_ARGS} delete -f -
 	# Delete the PSMDB operator
-	cat ./deploy/psmdb-operator.yaml | ${KUBECTL_CMD} delete -f -
-	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*$/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*=$/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | ${KUBECTL_CMD} delete -f -
+	cat ./deploy/psmdb-operator.yaml | kubectl ${KUBECTL_ARGS} delete -f -
+	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*$/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*=$/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | kubectl ${KUBECTL_ARGS} delete -f -
+
+eks-delete-current-namespace: eks-delete-operators
+	NAMESPACE="$(kubectl config get-contexts $(kubectl config current-context) | awk '{print $4}' | tail -1)"
+	if ["$NAMESPACE" != "default"]; then
+		kubectl delete ns "$NAMESPACE"
+	fi

@@ -280,7 +280,7 @@ jobs:
            echo "${KUBECONFIG}" > "${PATH_TO_KUBECONFIG}"
            export RANDOM_STRING=$(head -500 /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | tail -n +1 | head -n 1)
            export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
-           make set-test-namespace NAMESPACE="$NAMESPACE"
+           make eks-setup-test-namespace NAMESPACE="$NAMESPACE"
         env:
            KUBECONFIG: ${{secrets.KUBECONFIG}}
 
@@ -300,11 +300,10 @@ jobs:
           env_vars: GO_VERSION,KUBERNETES_VERSION
           fail_ci_if_error: false
       
-#      - name: Clean up the test namespace
-#        run: |
-#          export NAMESPACE="$(kubectl config get-contexts $(kubectl config current-context) | awk '{print $4}' | tail -1)"
-#	  make clean-up-namespace NAMESPACE="$NAMESPACE"
-#          make delete-namespace NAMESPACE="$NAMESPACE"
+      - name: Delete the test namespace
+        if: ${{ always() }}
+        run: |
+          make eks-delete-current-namespace
 
       - name: Collect debugdata
         if: ${{ always() }}
