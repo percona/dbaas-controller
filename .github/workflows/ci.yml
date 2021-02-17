@@ -283,10 +283,15 @@ jobs:
         env:
            KUBECONFIG: ${{secrets.KUBECONFIG}}
 
-      - name: Setup environment for tests to run 3
+      - name: Setup environment for tests to run 3a
         run: |
            export RANDOM_STRING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 16 | head -n 1)
+
+      - name: Setup environment for tests to run 3b
+        run: |
            export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
+        env:
+           RANDOM_STRING: "ASDFFFEWWQ"
 
       - name: Setup environment for tests to run 4
         run: |
