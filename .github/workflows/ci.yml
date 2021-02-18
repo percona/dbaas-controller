@@ -261,7 +261,7 @@ jobs:
       - name: Install tools
         run: |
           make init
-          mkdir -p "$HOME/.local/bin"
+          mkdir -p "${DBAAS_TOOLS_PATH}"
           echo "${DBAAS_TOOLS_PATH}" >> $GITHUB_PATH          
           curl -o aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.19.6/2021-01-05/bin/linux/amd64/aws-iam-authenticator
           chmod +x ./aws-iam-authenticator
