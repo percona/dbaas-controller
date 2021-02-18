@@ -74,16 +74,6 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 		return nil, err
 	}
 
-	{
-		all, err := ioutil.ReadFile(kubeconfigPath)
-		if err != nil {
-			return nil, err
-		}
-		if string(all) != kubeconfig {
-			return nil, errors.New("stored and passed kubeconfig differ")
-		}
-	}
-
 	l.Infof("kubectl config: %q", kubeconfigPath)
 
 	// Handle kubectl versions
