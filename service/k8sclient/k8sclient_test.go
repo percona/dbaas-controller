@@ -19,7 +19,6 @@ package k8sclient
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -35,7 +34,7 @@ import (
 func TestK8sClient(t *testing.T) {
 	ctx := app.Context()
 
-	kubeCtl, err := kubectl.NewKubeCtl(ctx, os.Getenv("PATH_TO_KUBECONFIG"))
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, "")
 	require.NoError(t, err)
 
 	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
