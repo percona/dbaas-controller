@@ -28,7 +28,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	// "github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
@@ -36,23 +35,11 @@ import (
 func TestK8sClient(t *testing.T) {
 	ctx := app.Context()
 
-	// kubeCtl, err := kubectl.NewKubeCtl(ctx, "")
-	// require.NoError(t, err)
-
-	file, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
 	require.NoError(t, err)
 
-	// validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
-	// require.NoError(t, err)
-
-	// client, err := New(ctx, string(validKubeconfig))
-	client, err := New(ctx, string(file))
+	client, err := New(ctx, string(kubeconfig))
 	require.NoError(t, err)
-
-	version, err := client.kubeCtl.Run(ctx, []string{"version", "-o", "json"}, nil)
-	require.NoError(t, err)
-
-	logger.Get(ctx).Info("got version with read kubeconfig", string(version))
 
 	t.Cleanup(func() {
 		err := client.Cleanup()
