@@ -30,18 +30,13 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/app"
 )
 
-var kubeconfigPath string
-
-func init() {
-	kubeconfigPath = os.Getenv("PATH_TO_KUBECONFIG")
-}
-
 func TestNewKubeCtl(t *testing.T) {
 	ctx := app.Context()
 
 	defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
 	require.NoError(t, err)
 
+	kubeconfigPath := os.Getenv("PATH_TO_KUBECONFIG")
 	cmd, err := getKubectlCmd(ctx, defaultKubectl, kubeconfigPath)
 	require.NoError(t, err)
 
@@ -126,6 +121,7 @@ func TestGetKubectlCmd(t *testing.T) {
 		ctx := context.TODO()
 		defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
 		require.NoError(t, err)
+		kubeconfigPath := os.Getenv("PATH_TO_KUBECONFIG")
 		got, err := getKubectlCmd(ctx, defaultKubectl, kubeconfigPath)
 		require.NoError(t, err)
 		// `/usr/local/bin/minikube kubectl --` - for dev env
