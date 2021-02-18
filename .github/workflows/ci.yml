@@ -133,7 +133,6 @@ jobs:
 
       - name: Run tests
         run: |
-          kubectl --kubeconfig ${HOME}/.kube/config version -o json
           go clean -testcache
           make test-crosscover
 
@@ -301,6 +300,7 @@ jobs:
 
       - name: Run tests
         run: |
+          kubectl --kubeconfig ${HOME}/.kube/config version -o json
           go clean -testcache
           make test-crosscover
 
