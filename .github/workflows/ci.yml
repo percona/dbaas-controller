@@ -262,10 +262,14 @@ jobs:
         run: |
           make init
           mkdir -p "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+	  echo "${DBAAS_TOOLS_PATH}" >> $GITHUB_PATH          
           curl -o aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.19.6/2021-01-05/bin/linux/amd64/aws-iam-authenticator
           chmod +x ./aws-iam-authenticator
-          mv aws-iam-authenticator "$HOME/.local/bin/"
+          mv aws-iam-authenticator "${DBAAS_TOOL_PATH}"
+          # dbaas-controller tries to search for kubectl at certain path
+          cp $(which kubectl) "${DBAAS_TOOLS_KUBECTL_PATH}/kubectl-1.16"
+        env:
+          DBAAS_TOOLS_PATH: "/opt/dbaas-tools/bin"
 
       - name: Initialize CI environment
         run: make ci-init
