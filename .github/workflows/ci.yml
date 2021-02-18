@@ -296,7 +296,7 @@ jobs:
       - name: Deploy operators to the test namespace
         run: |
           ls "${HOME}/.kube/config"
-          kubectl config get-contexts $(kubectl config current-context) | awk '{print $4}' | tail -1
+          kubectl config get-contexts $(kubectl config current-context)
           make eks-install-operators
 
       - name: Run tests
