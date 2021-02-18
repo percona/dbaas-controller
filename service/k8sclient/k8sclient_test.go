@@ -19,6 +19,8 @@ package k8sclient
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -37,10 +39,14 @@ func TestK8sClient(t *testing.T) {
 	kubeCtl, err := kubectl.NewKubeCtl(ctx, "")
 	require.NoError(t, err)
 
-	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
+	file, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
 	require.NoError(t, err)
 
-	client, err := New(ctx, string(validKubeconfig))
+	// validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
+	// require.NoError(t, err)
+
+	// client, err := New(ctx, string(validKubeconfig))
+	client, err := New(ctx, string(file))
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		err := client.Cleanup()
