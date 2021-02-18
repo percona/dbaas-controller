@@ -203,7 +203,6 @@ jobs:
       # no `-mod=readonly` to test PRs made by @dependabot;
       # `git diff --exit-code` step below still checks what we need
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
-      PATH_TO_KUBECONFIG: /tmp/.kube/config
 
     steps:
       - name: Set up Go release
@@ -285,6 +284,7 @@ jobs:
 
       - name: Setup environment for tests to run
         run: |
+           export PATH_TO_KUBECONFIG="${HOME}/.kube/config"
            mkdir -p "${PATH_TO_KUBECONFIG%/*}"
            echo "${BASE64_KUBECONFIG}" > "${PATH_TO_KUBECONFIG}"
            export RANDOM_STRING=$(head -500 /dev/urandom | tr -dc 'a-z0-9' | fold -w 16 | tail -n +1 | head -n 1)
