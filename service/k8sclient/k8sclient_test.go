@@ -39,7 +39,11 @@ func TestK8sClient(t *testing.T) {
 
 	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
 	require.NoError(t, err)
-
+	{
+		all, err := kubeCtl.Run(ctx, []string{"version", "-o", "json"}, nil)
+		require.NoError(t, err)
+		logger.Get(ctx).Info("Running version using only kubectl pkg:", string(all))
+	}
 	client, err := New(ctx, string(validKubeconfig))
 	require.NoError(t, err)
 	t.Cleanup(func() {
