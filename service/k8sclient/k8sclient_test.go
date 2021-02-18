@@ -50,7 +50,9 @@ func TestK8sClient(t *testing.T) {
 		kubeconfigPath := os.Getenv("HOME") + ".kube/config"
 		all, err := ioutil.ReadFile(kubeconfigPath)
 		require.NoError(t, err)
-		assert.Equal(t, string(all), validKubeconfig)
+		if string(all) != validKubeconfig {
+			t.Error("read and stored kubeconfig differ")
+		}
 	}
 	client, err := New(ctx, string(validKubeconfig))
 	require.NoError(t, err)
