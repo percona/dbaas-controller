@@ -45,13 +45,17 @@ func TestK8sClient(t *testing.T) {
 		all, err := ioutil.ReadFile(defaultKubeconfigPath)
 		require.NoError(t, err)
 		validKubeconfig = string(all)
+		logger.Get(ctx).Info("read default kubeconfig path")
 	} else if os.Getenv("KUBECONFIG") != "" {
 		all, err := ioutil.ReadFile(os.Getenv("KUBECONFIG"))
 		require.NoError(t, err)
 		validKubeconfig = string(all)
+		logger.Get(ctx).Info("read KUBECONFIG var")
 	} else {
 		validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
+
 		require.NoError(t, err)
+		logger.Get(ctx).Info("read using kubectl.Run")
 	}
 
 	client, err := New(ctx, string(validKubeconfig))
