@@ -39,21 +39,21 @@ func TestK8sClient(t *testing.T) {
 	kubeCtl, err := kubectl.NewKubeCtl(ctx, "")
 	require.NoError(t, err)
 
-	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
-	require.NoError(t, err)
-	{
-		all, err := kubeCtl.Run(ctx, []string{"version", "-o", "json"}, nil)
+	var validKubeconfig string
+	defaultKubeconfigPath := os.Getenv("HOME") + "/.kube/config"
+	if _, err := os.Stat(defaultKubeconfigPath); os.IsNotExist(err) {
+		all, err := ioutil.ReadFile(defaultKubeconfigPath)
 		require.NoError(t, err)
-		logger.Get(ctx).Info("Running version using only kubectl pkg:", string(all))
-	}
-	{
-		kubeconfigPath := os.Getenv("HOME") + ".kube/config"
-		all, err := ioutil.ReadFile(kubeconfigPath)
+		validKubeconfig = string(all)
+	} else if os.Getenv("KUBECONFIG") != "" {
+		all, err := ioutil.ReadFile(os.Getenv("KUBECONFIG"))
 		require.NoError(t, err)
-		if all != validKubeconfig {
-			t.Error("read and stored kubeconfig differ")
-		}
+		validKubeconfig = string(all)
+	} else {
+		validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
+		require.NoError(t, err)
 	}
+
 	client, err := New(ctx, string(validKubeconfig))
 	require.NoError(t, err)
 	t.Cleanup(func() {
