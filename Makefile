@@ -98,6 +98,7 @@ install:                          ## Install binaries
 eks-setup-test-namespace:
 	kubectl ${KUBECTL_ARGS} create ns "${NAMESPACE}"
 	kubectl ${KUBECTL_ARGS} config set-context --current --namespace="${NAMESPACE}"
+	echo "namespace setup, current namespace is $(kubectl config get-contexts $(kubectl config current-context) | awk '{print $5}' | tail -1)"
 
 test:                             ## Run tests
 	go test -race -timeout=30m ./...
