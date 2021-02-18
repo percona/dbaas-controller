@@ -294,7 +294,9 @@ jobs:
            BASE64_KUBECONFIG: ${{secrets.BASE64_KUBECONFIG}}
 
       - name: Deploy operators to the test namespace
-        run: make eks-install-operators
+        run: |
+          ls "${HOME}/.kube/config"
+          make eks-install-operators
 
       - name: Run tests
         run: |
