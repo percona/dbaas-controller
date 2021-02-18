@@ -19,8 +19,6 @@ package k8sclient
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"testing"
 	"time"
 
@@ -39,29 +37,8 @@ func TestK8sClient(t *testing.T) {
 	kubeCtl, err := kubectl.NewKubeCtl(ctx, "")
 	require.NoError(t, err)
 
-	{
-		out, err := kubeCtl.Run(ctx, []string{"version", "-o", "json"}, nil)
-		require.NoError(t, err)
-		logger.Get(ctx).Info("version read using kubectl:", string(out))
-	}
-
-	var validKubeconfig []byte
-	defaultKubeconfigPath := os.Getenv("HOME") + "/.kube/config"
-	if _, err := os.Stat(defaultKubeconfigPath); os.IsNotExist(err) {
-		all, err := ioutil.ReadFile(defaultKubeconfigPath)
-		require.NoError(t, err)
-		validKubeconfig = all
-		logger.Get(ctx).Info("read default kubeconfig path")
-	} else if os.Getenv("KUBECONFIG") != "" {
-		all, err := ioutil.ReadFile(os.Getenv("KUBECONFIG"))
-		require.NoError(t, err)
-		validKubeconfig = all
-		logger.Get(ctx).Info("read KUBECONFIG var")
-	} else {
-		validKubeconfig, err = kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
-		require.NoError(t, err)
-		logger.Get(ctx).Info("read using kubectl.Run")
-	}
+	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
+	require.NoError(t, err)
 
 	client, err := New(ctx, string(validKubeconfig))
 	require.NoError(t, err)
