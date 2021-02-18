@@ -48,6 +48,12 @@ func TestK8sClient(t *testing.T) {
 	// client, err := New(ctx, string(validKubeconfig))
 	client, err := New(ctx, string(file))
 	require.NoError(t, err)
+
+	version, err := client.kubeCtl.Run(ctx, []string{"version", "-o", "json"}, nil)
+	require.NoError(t, err)
+
+	logger.Get(ctx).Info("got version with read kubeconfig", string(version))
+
 	t.Cleanup(func() {
 		err := client.Cleanup()
 		require.NoError(t, err)
