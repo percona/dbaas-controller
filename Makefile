@@ -174,7 +174,7 @@ eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run t
 	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | kubectl ${KUBECTL_ARGS} delete -f -
 
 eks-delete-current-namespace: eks-delete-operators
-	export NAMESPACE="$(kubectl config get-contexts $(kubectl config current-context) | awk '{print $4}' | tail -1)"
+	export NAMESPACE="$(kubectl config get-contexts $(kubectl config current-context) | awk '{print $5}' | tail -1)"
 	if [ "${NAMESPACE}" != "default" ]; then
 		kubectl delete ns "${NAMESPACE}"
 	fi
