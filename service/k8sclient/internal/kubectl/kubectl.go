@@ -161,7 +161,6 @@ func getVersions(ctx context.Context, kubectlCmd []string, kubeconfigPath string
 // > 	kube-apiserver is at 1.18
 // > 	kubectl is supported at 1.19, 1.18, and 1.17.
 func selectCorrectKubectlVersions(versionsJSON []byte) ([]string, error) {
-	logger.NewLogger().Info(versionsJSON)
 	var kubectlCmdNames []string
 	ver := struct {
 		ServerVersion struct {
