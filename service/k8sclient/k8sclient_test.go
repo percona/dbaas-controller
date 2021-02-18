@@ -19,6 +19,8 @@ package k8sclient
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -43,6 +45,12 @@ func TestK8sClient(t *testing.T) {
 		all, err := kubeCtl.Run(ctx, []string{"version", "-o", "json"}, nil)
 		require.NoError(t, err)
 		logger.Get(ctx).Info("Running version using only kubectl pkg:", string(all))
+	}
+	{
+		kubeconfigPath := os.Getenv("HOME") + ".kube/config"
+		all, err := ioutil.ReadFile(kubeconfigPath)
+		require.NoError(t, err)
+		assert.Equal(t, string(all), validKubeconfig)
 	}
 	client, err := New(ctx, string(validKubeconfig))
 	require.NoError(t, err)
