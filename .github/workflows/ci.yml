@@ -316,6 +316,7 @@ jobs:
       - name: Delete the test namespace
         if: ${{ always() }}
         run: |
+          kubectl ${KUBECTL_ARGS} config get-contexts $(kubectl ${KUBECTL_ARGS} config current-context
           make eks-delete-current-namespace
 
       - name: Collect debugdata
