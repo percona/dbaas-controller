@@ -319,21 +319,6 @@ jobs:
           kubectl config get-contexts $(kubectl config current-context)
           make eks-delete-current-namespace
 
-      - name: Collect debugdata
-        if: ${{ always() }}
-        run: make collect-debugdata
-
-      - name: Upload debugdata
-        if: ${{ always() }}
-        uses: percona-platform/upload-artifact@v2
-        with:
-          name: debugdata
-          path: ./debugdata
-
-      # - name: Setup tmate session on failure
-      #   if: ${{ failure() }}
-      #   uses: percona-platform/action-tmate@v2
-
       - name: Check that there are no source code changes
         run: |
           # Break job if any files were changed during its run (code generation, etc), except go.sum.

@@ -33,7 +33,6 @@ import (
 )
 
 func TestK8sClient(t *testing.T) {
-	return
 	ctx := app.Context()
 
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
