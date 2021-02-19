@@ -177,6 +177,4 @@ eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run t
 eks-delete-current-namespace:
 	export NAMESPACE=$(kubectl ${KUBECTL_ARGS} config get-contexts $(kubectl ${KUBECTL_ARGS} config current-context) | sed 's/.*\(dbaas-controller-test-[0-9a-z]*\).*/\1/' | tail -1)
 	kubectl ${KUBECTL_ARGS} config get-contexts $(kubectl ${KUBECTL_ARGS} config current-context) | sed 's/.*\(dbaas-controller-test-[0-9a-z]*\).*/\1/' | tail -1
-	if [ "${NAMESPACE}" != "default" ]; then
-		kubectl delete ns "${NAMESPACE}"
-	fi
+	if [ "${NAMESPACE}" != "default" ]; then kubectl delete ns "${NAMESPACE}"; fi
