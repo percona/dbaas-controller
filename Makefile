@@ -95,11 +95,6 @@ check:                            ## Run checks/linters for the whole project
 install:                          ## Install binaries
 	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
-eks-setup-test-namespace:
-	kubectl ${KUBECTL_ARGS} create ns "${NAMESPACE}"
-	kubectl ${KUBECTL_ARGS} config set-context --current --namespace="${NAMESPACE}"
-	kubectl ${KUBECTL_ARGS} config get-contexts $(kubectl ${KUBECTL_ARGS} config current-context) | sed 's/.*\(dbaas-controller-test-[0-9a-z]*\).*/\1/' | tail -1
-
 test:                             ## Run tests
 	go test -race -timeout=30m ./...
 
@@ -156,6 +151,12 @@ collect-debugdata:                ## Collect debugdata
 	minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator' > ./debugdata/psmdb-operators.txt
 	minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb' > ./debugdata/psmdb-clusters.txt
 
+eks-setup-test-namespace:
+	kubectl ${KUBECTL_ARGS} create ns "${NAMESPACE}"
+	kubectl ${KUBECTL_ARGS} config set-context --current --namespace="${NAMESPACE}"
+	kubectl ${KUBECTL_ARGS} config get-contexts $(kubectl ${KUBECTL_ARGS} config current-context) | sed 's/.*\(dbaas-controller-test-[0-9a-z]*\).*/\1/' | tail -1
+
+
 eks-install-operators:            ## Install Kubernetes operators in EKS.
 	# Install the PXC operator
 	cat ./deploy/pxc-operator.yaml | kubectl ${KUBECTL_ARGS} apply -f -
@@ -175,6 +176,8 @@ eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run t
 	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | kubectl ${KUBECTL_ARGS} delete -f -
 
 eks-delete-current-namespace:
-	export NAMESPACE=$(kubectl ${KUBECTL_ARGS} config get-contexts $(kubectl ${KUBECTL_ARGS} config current-context) | sed 's/.*\(dbaas-controller-test-[0-9a-z]*\).*/\1/' | tail -1)
-	kubectl ${KUBECTL_ARGS} config get-contexts $(kubectl ${KUBECTL_ARGS} config current-context) | sed 's/.*\(dbaas-controller-test-[0-9a-z]*\).*/\1/' | tail -1
+	NAMESPACE=$(kubectl ${KUBECTL_ARGS} config get-contexts $(kubectl ${KUBECTL_ARGS} config current-context) | sed 's/.*\(dbaas-controller-test-[0-9a-z]*\).*/\1/' | tail -1); \
 	if [ "${NAMESPACE}" != "default" ]; then kubectl delete ns "${NAMESPACE}"; fi
+
+#eks-collect-debugdata:
+#	kubectl ${KUBECTL_ARGS} logs --all-pods
