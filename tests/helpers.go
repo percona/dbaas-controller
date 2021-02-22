@@ -17,8 +17,13 @@
 package tests
 
 import (
+	"context"
+	"fmt"
 	"testing"
+	"time"
 
+	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -35,4 +40,28 @@ func AssertGRPCErrorRE(tb testing.TB, expectedCode codes.Code, expectedMessageRE
 	}
 	assert.Equal(tb, int(expectedCode), int(s.Code()), "gRPC status codes are not equal") // int() to log in decimal, not hex
 	assert.Regexp(tb, expectedMessageRE, s.Message(), "gRPC status message does not match")
+}
+
+func WaitForClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.XtraDBClusterState) error {
+	for {
+		clusters, err := XtraDBClusterAPIClient.ListXtraDBClusters(Context, &controllerv1beta1.ListXtraDBClustersRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: kubeconfig,
+			},
+		})
+		if err != nil {
+			return errors.Wrap(err, "cannot get clusters list")
+		}
+
+		if len(clusters.Clusters) > 0 && clusters.Clusters[0].State == state && clusters.Clusters[0].Name == name {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for the cluster to be ready")
+		case <-time.After(100 * time.Millisecond):
+			continue
+		}
+	}
 }

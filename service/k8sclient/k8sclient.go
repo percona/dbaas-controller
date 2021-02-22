@@ -19,6 +19,7 @@ package k8sclient
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -1213,4 +1214,48 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 		return OperatorStatusUnsupported
 	}
 	return OperatorStatusNotInstalled
+}
+
+// GetClusterPods returns list of cluster's pods. It finds them by given cluster
+// name.
+func (c *K8sClient) GetClusterPods(ctx context.Context, clusterName string) (*common.PodList, error) {
+	list := new(common.PodList)
+	out, err := c.kubeCtl.Run(ctx, []string{"get", "pods", "-lapp.kubernetes.io/instance=" + clusterName, "-ojson"}, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
+	}
+	err = json.Unmarshal(out, list)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
+	}
+	return list, nil
+}
+
+// GetLogs returns logs as slice of log lines - strings - for given pod's
+// container.
+func (c *K8sClient) GetLogs(ctx context.Context, pod, container string) ([]string, error) {
+	stdout, err := c.kubeCtl.Run(ctx, []string{"logs", pod, container}, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get logs")
+	}
+	return strings.Split(string(stdout), "\n"), nil
+}
+
+// GetEvents returns pod's events as a slice of strings.
+func (c *K8sClient) GetEvents(ctx context.Context, pod string) ([]string, error) {
+	stdout, err := c.kubeCtl.Run(ctx, []string{"describe", "pod", pod}, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't describe pod")
+	}
+	lines := strings.Split(string(stdout), "\n")
+	var line string
+	var i int
+	for i, line = range lines {
+		if strings.Contains(line, "Events") {
+			break
+		}
+	}
+	// Add name of the pod to the Events line so it's clear what pod events we got.
+	lines[i] = pod + " " + lines[i]
+	return lines[i:], nil
 }

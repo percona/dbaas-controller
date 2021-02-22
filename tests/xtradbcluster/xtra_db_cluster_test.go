@@ -18,13 +18,10 @@ package xtradbcluster
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -106,7 +103,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		}
 	}
 
-	err = waitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
+	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
 	assert.NoError(t, err)
 
 	clusters, err = tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
@@ -168,7 +165,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	assert.NotNil(t, updateXtraDBClusterResponse)
 
 	t.Log("Waiting for cluster into changing state")
-	err = waitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
+	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
 	assert.NoError(t, err)
 
 	t.Log("Before second update")
@@ -178,7 +175,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, updateXtraDBClusterResponse)
 
-	err = waitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
+	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
 	require.NoError(t, err)
 
 	clusters, err = tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
@@ -207,7 +204,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, suspendXtraDBClusterResponse)
 
-	err = waitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED)
+	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED)
 	require.NoError(t, err)
 
 	resumeClusterReq := &controllerv1beta1.UpdateXtraDBClusterRequest{
@@ -225,7 +222,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, resumeXtraDBClusterResponse)
 
-	err = waitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
+	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
 	require.NoError(t, err)
 
 	restartXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.RestartXtraDBCluster(tests.Context, &controllerv1beta1.RestartXtraDBClusterRequest{
@@ -245,28 +242,4 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, deleteXtraDBClusterResponse)
-}
-
-func waitForClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.XtraDBClusterState) error {
-	for {
-		clusters, err := tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
-			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: kubeconfig,
-			},
-		})
-		if err != nil {
-			return errors.Wrap(err, "cannot get clusters list")
-		}
-
-		if len(clusters.Clusters) > 0 && clusters.Clusters[0].State == state && clusters.Clusters[0].Name == name {
-			return nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("timeout waiting for the cluster to be ready")
-		case <-time.After(100 * time.Millisecond):
-			continue
-		}
-	}
 }
