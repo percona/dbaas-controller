@@ -35,6 +35,12 @@ type HostPathVolumeSource struct {
 // https://pkg.go.dev/k8s.io/api/core/v1#EmptyDirVolumeSource
 type EmptyDirVolumeSource struct{}
 
+// ContainerStatus contains container's status.
+type ContainerStatus struct {
+	Name  string                 `json:"name,omitempty"`
+	State map[string]interface{} `json:"state,omitempty"`
+}
+
 // ContainerSpec represents a container definition.
 type ContainerSpec struct {
 	Name string `json:"name,omitempty"`
@@ -58,6 +64,23 @@ type PodSpec struct {
 	InitContainers []ContainerSpec `json:"initContainers,omitempty"`
 }
 
+type PodConditions struct {
+	// Type is the type of the condition.
+	Type string `json:"type,omitempty"`
+	// Status is the status of the condition. Can be True, False, Unknown.
+	Status string `json:"status,omitempty"`
+}
+
+// PodStatus holds pod status.
+type PodStatus struct {
+	// ContainerStatuses holds container statuses.
+	ContainerStatuses []ContainerStatus `json:"containerStatuses,omitempty"`
+
+	// Conditions holds Current service state of pod.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+	Conditions []PodConditions `json:"conditions,omitempty"`
+}
+
 // Pod is a collection of containers that can run on a host. This resource is created
 // by clients and scheduled onto hosts.
 //
@@ -72,6 +95,9 @@ type Pod struct {
 	// Specification of the desired behavior of the pod.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	Spec PodSpec `json:"spec,omitempty"`
+
+	// PodStatus contains status of the pod.
+	Status PodStatus `json:"status,omitempty"`
 }
 
 // Secret holds secret data of a certain type. The total bytes of the values in

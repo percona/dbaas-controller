@@ -18,6 +18,7 @@ package k8sclient
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -38,6 +39,86 @@ import (
 type pod struct {
 	name       string
 	containers []string
+}
+
+const containerPhaseTestInput string = `
+{
+ "containerStatuses": [
+     {
+         "containerID": "docker://dac1c01c439e8fa873679b13e22bc75baa59129e2c4e3282e36bf950b5c7bc53",
+         "image": "perconalab/pmm-client:dev-latest",
+         "imageID": "docker-pullable://perconalab/pmm-client@sha256:1697b99e10e50ce62637c6073f6ff70ab96cfbc287e487c554ce1bb72a5126fe",
+         "lastState": {
+             "terminated": {
+                 "containerID": "docker://dac1c01c439e8fa873679b13e22bc75baa59129e2c4e3282e36bf950b5c7bc53",
+                 "exitCode": 1,
+                 "finishedAt": "2021-02-19T15:19:57Z",
+                 "reason": "Error",
+                 "startedAt": "2021-02-19T15:19:57Z"
+             }
+         },
+         "name": "pmm-client",
+         "ready": false,
+         "restartCount": 3,
+         "started": false,
+         "state": {
+             "waiting": {
+                 "message": "back-off 40s restarting failed container=pmm-client pod=newclusterinsane-proxysql-0_default(efda5403-ff22-46e7-9930-4366d7eec910)",
+                 "reason": "CrashLoopBackOff"
+             }
+         }
+     }
+  ]        
+}
+`
+
+const podConditionTestInput string = `
+{
+  "conditions": [
+      {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2021-02-19T17:00:09Z",
+          "reason": "PodCompleted",
+          "status": "True",
+          "type": "Initialized"
+      },
+      {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2021-02-19T17:00:53Z",
+          "reason": "PodCompleted",
+          "status": "False",
+          "type": "Ready"
+      },
+      {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2021-02-19T17:00:53Z",
+          "reason": "PodCompleted",
+          "status": "False",
+          "type": "ContainersReady"
+      },
+      {
+          "lastProbeTime": null,
+          "lastTransitionTime": "2021-02-19T17:00:09Z",
+          "status": "True",
+          "type": "PodScheduled"
+      }
+  ]
+}
+
+`
+
+func TestIsContainerInPhase(t *testing.T) {
+	ps := new(common.PodStatus)
+	require.NoError(t, json.Unmarshal([]byte(containerPhaseTestInput), ps))
+	assert.True(t, IsContainerInPhase(ps, ContainerPhaseWaiting, "pmm-client"), "pmm-client is waiting but reported otherwise")
+	assert.False(t, IsContainerInPhase(ps, ContainerPhase("fakephase"), "pmm-client"), "check for non-existing phase should return false")
+}
+
+func TestHasPodCondition(t *testing.T) {
+	ps := new(common.PodStatus)
+	require.NoError(t, json.Unmarshal([]byte(podConditionTestInput), ps))
+	assert.True(t, HasPodCondition(ps, PodConditionInitialized), "pod has the condition Initialized, reported otherwise")
+	assert.False(t, HasPodCondition(ps, PodCondition("fakecondition")), "check for non-existing condition should return false")
 }
 
 func TestK8sClient(t *testing.T) {

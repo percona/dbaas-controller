@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"strings"
 	"time"
@@ -83,6 +84,20 @@ const (
 	psmdbAPIVersion        = "psmdb.percona.com/v1-6-0"
 	psmdbSecretNameTmpl    = "dbaas-%s-psmdb-secrets"
 	defaultPSMDBSecretName = "my-cluster-name-secrets"
+)
+
+type ContainerPhase string
+
+type PodCondition string
+
+const (
+	// ContainerPhaseWaiting represents a phase when container requires some
+	// operations being done in order to complete start up.
+	ContainerPhaseWaiting ContainerPhase = "waiting"
+
+	// PodConditionInitialized is a type of pod conditions that tells if pod
+	// was/is being initialized.
+	PodConditionInitialized PodCondition = "Initialized"
 )
 
 // OperatorStatus represents status of operator.
@@ -1258,4 +1273,29 @@ func (c *K8sClient) GetEvents(ctx context.Context, pod string) ([]string, error)
 	// Add name of the pod to the Events line so it's clear what pod events we got.
 	lines[i] = pod + " " + lines[i]
 	return lines[i:], nil
+}
+
+// IsContainerInPhase returns true if container is in give phase, otherwise false.
+func IsContainerInPhase(ps *common.PodStatus, phase ContainerPhase, containerName string) bool {
+	for _, status := range ps.ContainerStatuses {
+		if status.Name == containerName {
+			if _, ok := status.State[string(phase)]; ok {
+				resp, ok := status.State[string(phase)]
+				log.Println(string(phase), resp, ok)
+				return true
+			}
+		}
+
+	}
+	return false
+}
+
+// HasPodCondition returns true if container has condition of given type, otherwise false.
+func HasPodCondition(ps *common.PodStatus, ttype PodCondition) bool {
+	for _, condition := range ps.Conditions {
+		if condition.Type == string(ttype) {
+			return true
+		}
+	}
+	return false
 }
