@@ -35,6 +35,11 @@ type HostPathVolumeSource struct {
 // https://pkg.go.dev/k8s.io/api/core/v1#EmptyDirVolumeSource
 type EmptyDirVolumeSource struct{}
 
+// ContainerSpec represents a container definition.
+type ContainerSpec struct {
+	Name string `json:"name,omitempty"`
+}
+
 // PodSpec is a description of a pod.
 type PodSpec struct {
 	// NodeName is a request to schedule this pod onto a specific node. If it is non-empty,
@@ -45,6 +50,12 @@ type PodSpec struct {
 	// Specifies the hostname of the Pod
 	// If not specified, the pod's hostname will be set to a system-defined value.
 	Hostname string `json:"hostname,omitempty"`
+
+	// List of containers.
+	Containers []ContainerSpec `json:"containers,omitempty"`
+
+	// List of init containers.
+	InitContainers []ContainerSpec `json:"initContainers,omitempty"`
 }
 
 // Pod is a collection of containers that can run on a host. This resource is created

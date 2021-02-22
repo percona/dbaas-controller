@@ -19,6 +19,7 @@ package k8sclient
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,10 +27,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
+
+// pod is struct just for testing purposes. It contains expected pod and
+// container names.
+type pod struct {
+	name       string
+	containers []string
+}
 
 func TestK8sClient(t *testing.T) {
 	ctx := app.Context()
@@ -108,6 +117,65 @@ func TestK8sClient(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
 			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
+		})
+
+		t.Run("Get logs", func(t *testing.T) {
+			pods, err := client.GetClusterPods(ctx, name)
+			require.NoError(t, err)
+
+			expectedPods := []pod{
+				{
+					name:       name + "-proxysql-0",
+					containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
+				},
+				{
+					name:       name + "-pxc-0",
+					containers: []string{"pxc", "pmm-client", "pxc-init"},
+				},
+			}
+			for _, ppod := range pods.Items {
+				var foundPod pod
+				assert.Conditionf(t,
+					func(ppod common.Pod) assert.Comparison {
+						return func() bool {
+							for _, expectedPod := range expectedPods {
+								if ppod.Name == expectedPod.name {
+									foundPod = expectedPod
+									return true
+								}
+							}
+							return false
+						}
+					}(ppod),
+					"pod name '%s' was not expected",
+					ppod.Name,
+				)
+
+				for _, container := range ppod.Spec.Containers {
+					assert.Conditionf(
+						t,
+						func(container common.ContainerSpec) assert.Comparison {
+							return func() bool {
+								for _, expectedContainerName := range foundPod.containers {
+									if expectedContainerName == container.Name {
+										return true
+									}
+								}
+								return false
+							}
+						}(container),
+						"container name '%s' was not expected",
+						container.Name,
+					)
+
+					logs, err := client.GetLogs(ctx, ppod.Name, container.Name)
+					require.NoError(t, err, "failed to get logs")
+					assert.Greater(t, len(logs), 0)
+					for _, l := range logs {
+						assert.False(t, strings.Contains(l, "\n"), "new lines should have been removed")
+					}
+				}
+			}
 		})
 
 		err = client.RestartXtraDBCluster(ctx, name)
