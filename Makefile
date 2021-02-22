@@ -162,8 +162,8 @@ eks-install-operators:            ## Install Kubernetes operators in EKS.
 	# Install the PSMDB operator
 	cat ./deploy/psmdb-operator.yaml | kubectl ${KUBECTL_ARGS} apply -f -
 	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | kubectl ${KUBECTL_ARGS} apply -f -
-	kubectl ${KUBECTL_ARGS} wait --for=condition=Available deployment percona-xtradb-cluster-operator
-	kubectl ${KUBECTL_ARGS} wait --for=condition=Available deployment percona-server-mongodb-operator
+	kubectl ${KUBECTL_ARGS} wait --timeout=60s --for=condition=Available deployment percona-xtradb-cluster-operator
+	kubectl ${KUBECTL_ARGS} wait --timeout=60s --for=condition=Available deployment percona-server-mongodb-operator
 
 eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage.
 	# Delete the PXC operator
