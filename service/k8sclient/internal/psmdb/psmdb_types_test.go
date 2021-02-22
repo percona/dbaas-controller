@@ -21,8 +21,9 @@ import (
 	"testing"
 
 	"github.com/AlekSi/pointer"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/stretchr/testify/require"
+
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
 const expected = `

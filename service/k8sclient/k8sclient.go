@@ -88,16 +88,10 @@ const (
 
 type ContainerPhase string
 
-type PodCondition string
-
 const (
 	// ContainerPhaseWaiting represents a phase when container requires some
 	// operations being done in order to complete start up.
 	ContainerPhaseWaiting ContainerPhase = "waiting"
-
-	// PodConditionInitialized is a type of pod conditions that tells if pod
-	// was/is being initialized.
-	PodConditionInitialized PodCondition = "Initialized"
 )
 
 // OperatorStatus represents status of operator.

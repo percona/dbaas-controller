@@ -82,7 +82,7 @@ func TestGetLogs(t *testing.T) {
 		ClusterName: name,
 	}
 
-	// Get logs of initializing cluster, wait 5 seconds to pods to be scheduled.
+	// Get logs of initializing cluster, wait 5 seconds for pods to be scheduled.
 	err = tests.WaitForClusterState(tests.Context, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
 	require.NoError(t, err)
 	time.Sleep(time.Second * 5)

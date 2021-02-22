@@ -28,7 +28,6 @@ import (
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
-	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 // overallLinesLimit defines how many last lines of logs we should return upon
