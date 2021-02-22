@@ -153,7 +153,6 @@ collect-debugdata:                ## Collect debugdata
 
 eks-setup-test-namespace:
 	kubectl ${KUBECTL_ARGS} create ns "${NAMESPACE}"
-	kubectl ${KUBECTL_ARGS} config set-context --current --namespace="${NAMESPACE}"
 	kubectl ${KUBECTL_ARGS} config get-contexts $(kubectl ${KUBECTL_ARGS} config current-context) | sed 's/.*\(dbaas-controller-test-[0-9a-z]*\).*/\1/' | tail -1
 
 

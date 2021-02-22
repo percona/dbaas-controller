@@ -295,13 +295,10 @@ jobs:
 
       - name: Deploy operators to the test namespace
         run: |
-          ls "${HOME}/.kube/config"
-          kubectl config get-contexts $(kubectl config current-context)
           make eks-install-operators
 
       - name: Run tests
         run: |
-          kubectl --kubeconfig ${HOME}/.kube/config version -o json
           go clean -testcache
           make test-crosscover
 
@@ -316,7 +313,6 @@ jobs:
       - name: Delete the test namespace
         if: ${{ always() }}
         run: |
-          kubectl config get-contexts $(kubectl config current-context)
           make eks-delete-current-namespace
 
       - name: Check that there are no source code changes
