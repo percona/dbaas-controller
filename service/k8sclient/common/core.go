@@ -64,21 +64,13 @@ type PodSpec struct {
 	InitContainers []ContainerSpec `json:"initContainers,omitempty"`
 }
 
-type PodConditions struct {
-	// Type is the type of the condition.
-	Type string `json:"type,omitempty"`
-	// Status is the status of the condition. Can be True, False, Unknown.
-	Status string `json:"status,omitempty"`
-}
-
 // PodStatus holds pod status.
 type PodStatus struct {
 	// ContainerStatuses holds container statuses.
 	ContainerStatuses []ContainerStatus `json:"containerStatuses,omitempty"`
 
-	// Conditions holds Current service state of pod.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	Conditions []PodConditions `json:"conditions,omitempty"`
+	// ContainerStatuses holds container statuses.
+	InitContainerStatuses []ContainerStatus `json:"initContainerStatuses,omitempty"`
 }
 
 // Pod is a collection of containers that can run on a host. This resource is created

@@ -29,7 +29,7 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
@@ -1248,7 +1248,15 @@ func (c *K8sClient) GetClusterPods(ctx context.Context, clusterName string) (*co
 
 // GetLogs returns logs as slice of log lines - strings - for given pod's
 // container.
-func (c *K8sClient) GetLogs(ctx context.Context, pod, container string) ([]string, error) {
+func (c *K8sClient) GetLogs(
+	ctx context.Context,
+	containerStatuses []common.ContainerStatus,
+	pod,
+	container string,
+) ([]string, error) {
+	if isContainerInPhase(containerStatuses, ContainerPhaseWaiting, container) {
+		return []string{}, nil
+	}
 	stdout, err := c.kubeCtl.Run(ctx, []string{"logs", pod, container}, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get logs")
@@ -1275,26 +1283,20 @@ func (c *K8sClient) GetEvents(ctx context.Context, pod string) ([]string, error)
 	return lines[i:], nil
 }
 
-// IsContainerInPhase returns true if container is in give phase, otherwise false.
-func IsContainerInPhase(ps *common.PodStatus, phase ContainerPhase, containerName string) bool {
-	for _, status := range ps.ContainerStatuses {
+// isContainerInPhase returns true if container is in give phase, otherwise
+// false.
+func isContainerInPhase(
+	containerStatuses []common.ContainerStatus,
+	phase ContainerPhase,
+	containerName string,
+) bool {
+	for _, status := range containerStatuses {
 		if status.Name == containerName {
 			if _, ok := status.State[string(phase)]; ok {
 				resp, ok := status.State[string(phase)]
 				log.Println(string(phase), resp, ok)
 				return true
 			}
-		}
-
-	}
-	return false
-}
-
-// HasPodCondition returns true if container has condition of given type, otherwise false.
-func HasPodCondition(ps *common.PodStatus, ttype PodCondition) bool {
-	for _, condition := range ps.Conditions {
-		if condition.Type == string(ttype) {
-			return true
 		}
 	}
 	return false

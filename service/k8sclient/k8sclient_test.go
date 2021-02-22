@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
@@ -72,53 +72,11 @@ const containerPhaseTestInput string = `
 }
 `
 
-const podConditionTestInput string = `
-{
-  "conditions": [
-      {
-          "lastProbeTime": null,
-          "lastTransitionTime": "2021-02-19T17:00:09Z",
-          "reason": "PodCompleted",
-          "status": "True",
-          "type": "Initialized"
-      },
-      {
-          "lastProbeTime": null,
-          "lastTransitionTime": "2021-02-19T17:00:53Z",
-          "reason": "PodCompleted",
-          "status": "False",
-          "type": "Ready"
-      },
-      {
-          "lastProbeTime": null,
-          "lastTransitionTime": "2021-02-19T17:00:53Z",
-          "reason": "PodCompleted",
-          "status": "False",
-          "type": "ContainersReady"
-      },
-      {
-          "lastProbeTime": null,
-          "lastTransitionTime": "2021-02-19T17:00:09Z",
-          "status": "True",
-          "type": "PodScheduled"
-      }
-  ]
-}
-
-`
-
 func TestIsContainerInPhase(t *testing.T) {
 	ps := new(common.PodStatus)
 	require.NoError(t, json.Unmarshal([]byte(containerPhaseTestInput), ps))
-	assert.True(t, IsContainerInPhase(ps, ContainerPhaseWaiting, "pmm-client"), "pmm-client is waiting but reported otherwise")
-	assert.False(t, IsContainerInPhase(ps, ContainerPhase("fakephase"), "pmm-client"), "check for non-existing phase should return false")
-}
-
-func TestHasPodCondition(t *testing.T) {
-	ps := new(common.PodStatus)
-	require.NoError(t, json.Unmarshal([]byte(podConditionTestInput), ps))
-	assert.True(t, HasPodCondition(ps, PodConditionInitialized), "pod has the condition Initialized, reported otherwise")
-	assert.False(t, HasPodCondition(ps, PodCondition("fakecondition")), "check for non-existing condition should return false")
+	assert.True(t, isContainerInPhase(ps.ContainerStatuses, ContainerPhaseWaiting, "pmm-client"), "pmm-client is waiting but reported otherwise")
+	assert.False(t, isContainerInPhase(ps.ContainerStatuses, ContainerPhase("fakephase"), "pmm-client"), "check for non-existing phase should return false")
 }
 
 func TestK8sClient(t *testing.T) {
