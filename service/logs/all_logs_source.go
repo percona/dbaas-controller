@@ -70,10 +70,10 @@ func (a *allLogsSource) getLogs(
 			},
 		}
 		// Get all logs from all regular containers and all init containers.
-		for _, tt := range tuples {
-			for _, container := range tt.containers {
+		for _, t := range tuples {
+			for _, container := range t.containers {
 				logs, err := client.GetLogs(
-					ctx, tt.statuses, pod.Name, container.Name)
+					ctx, t.statuses, pod.Name, container.Name)
 				if err != nil {
 					return nil, status.Error(
 						codes.Internal,
