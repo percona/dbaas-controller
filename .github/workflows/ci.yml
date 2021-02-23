@@ -287,7 +287,7 @@ jobs:
            export PATH_TO_KUBECONFIG="${HOME}/.kube/config"
            mkdir -p "${PATH_TO_KUBECONFIG%/*}"
            echo "${BASE64_KUBECONFIG}" > "${PATH_TO_KUBECONFIG}"
-           export RANDOM_STRING=$(head -500 /dev/urandom | tr -dc 'a-z0-9' | fold -w 16 | tail -n +1 | head -n 1)
+           export RANDOM_STRING=$(cat /proc/sys/kernel/random/uuid)
            export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
            make eks-setup-test-namespace NAMESPACE="${NAMESPACE}"
         env:
