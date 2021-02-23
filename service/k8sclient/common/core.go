@@ -66,10 +66,10 @@ type PodSpec struct {
 
 // PodStatus holds pod status.
 type PodStatus struct {
-	// ContainerStatuses holds container statuses.
+	// ContainerStatuses holds statuses of regular containers.
 	ContainerStatuses []ContainerStatus `json:"containerStatuses,omitempty"`
 
-	// ContainerStatuses holds container statuses.
+	// InitContainerStatuses holds statuses of init containers.
 	InitContainerStatuses []ContainerStatus `json:"initContainerStatuses,omitempty"`
 }
 
