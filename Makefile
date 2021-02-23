@@ -167,10 +167,10 @@ eks-install-operators:            ## Install Kubernetes operators in EKS.
 
 eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage.
 	# Delete the PXC operator
-	cat ./deploy/pxc-operator.yaml | kubectl ${KUBECTL_ARGS} delete -f -
+	kubectl ${KUBECTL_ARGS} delete deployment percona-xtradb-cluster-operator
 	cat ./deploy/pxc-secrets.yaml | sed "s/pmmserver:.*/pmmserver: ${PMM_PASS}/g" | kubectl ${KUBECTL_ARGS} delete -f -
 	# Delete the PSMDB operator
-	cat ./deploy/psmdb-operator.yaml | kubectl ${KUBECTL_ARGS} delete -f -
+	kubectl ${KUBECTL_ARGS} delete deployment percona-server-mongodb-operator
 	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | kubectl ${KUBECTL_ARGS} delete -f -
 
 eks-delete-current-namespace:
