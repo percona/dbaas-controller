@@ -207,7 +207,7 @@ func TestK8sClient(t *testing.T) {
 						container.Name,
 					)
 
-					logs, err := client.GetLogs(ctx, ppod.Name, container.Name)
+					logs, err := client.GetLogs(ctx, ppod.Status.ContainerStatuses, ppod.Name, container.Name)
 					require.NoError(t, err, "failed to get logs")
 					assert.Greater(t, len(logs), 0)
 					for _, l := range logs {

@@ -82,12 +82,16 @@ func TestGetLogs(t *testing.T) {
 		ClusterName: name,
 	}
 
-	// Get logs of initializing cluster, wait 5 seconds for pods to be scheduled.
-	err = tests.WaitForClusterState(tests.Context, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
-	require.NoError(t, err)
-	time.Sleep(time.Second * 5)
-	_, err = tests.LogsAPIClient.GetLogs(tests.Context, request)
-	require.NoError(t, err)
+	t.Run("Get logs of initializing cluster", func(t *testing.T) {
+		t.Parallel()
+		err = tests.WaitForClusterState(tests.Context, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
+		require.NoError(t, err)
+		// Wait 5 seconds for pods to be scheduled.
+		time.Sleep(time.Second * 5)
+		response, err := tests.LogsAPIClient.GetLogs(tests.Context, request)
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(response.Logs))
+	})
 
 	err = tests.WaitForClusterState(tests.Context, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
 	require.NoError(t, err)
