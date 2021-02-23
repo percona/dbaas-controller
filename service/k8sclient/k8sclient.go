@@ -1287,7 +1287,6 @@ func isContainerInPhase(
 	for _, status := range containerStatuses {
 		if status.Name == containerName {
 			if _, ok := status.State[string(phase)]; ok {
-				resp, ok := status.State[string(phase)]
 				return true
 			}
 		}
