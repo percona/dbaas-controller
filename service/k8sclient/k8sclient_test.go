@@ -73,6 +73,7 @@ const containerPhaseTestInput string = `
 `
 
 func TestIsContainerInPhase(t *testing.T) {
+	t.Parallel()
 	ps := new(common.PodStatus)
 	require.NoError(t, json.Unmarshal([]byte(containerPhaseTestInput), ps))
 	assert.True(t, isContainerInPhase(ps.ContainerStatuses, ContainerPhaseWaiting, "pmm-client"), "pmm-client is waiting but reported otherwise")

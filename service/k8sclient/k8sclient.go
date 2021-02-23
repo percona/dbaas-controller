@@ -86,6 +86,7 @@ const (
 	defaultPSMDBSecretName = "my-cluster-name-secrets"
 )
 
+// ContainerPhase describes container's phase - waiting, running, terminated.
 type ContainerPhase string
 
 const (
