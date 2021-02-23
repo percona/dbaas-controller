@@ -313,6 +313,7 @@ jobs:
       - name: Delete the test namespace
         if: ${{ always() }}
         run: |
+          make eks-delete-operators
           make eks-delete-current-namespace
 
       - name: Check that there are no source code changes
