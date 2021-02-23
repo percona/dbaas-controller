@@ -1289,7 +1289,6 @@ func isContainerInPhase(
 		if status.Name == containerName {
 			if _, ok := status.State[string(phase)]; ok {
 				resp, ok := status.State[string(phase)]
-				log.Println(string(phase), resp, ok)
 				return true
 			}
 		}
