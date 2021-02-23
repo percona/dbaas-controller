@@ -283,6 +283,7 @@ jobs:
         run: make test-api-build
 
       - name: Setup environment for tests to run
+        id: setupenv
         run: |
            export PATH_TO_KUBECONFIG="${HOME}/.kube/config"
            mkdir -p "${PATH_TO_KUBECONFIG%/*}"
@@ -294,10 +295,12 @@ jobs:
            BASE64_KUBECONFIG: ${{secrets.BASE64_KUBECONFIG}}
 
       - name: Deploy operators to the test namespace
+        if: steps.setupenv.outputs.exit_code == 0
         run: |
           make eks-install-operators
 
       - name: Run tests
+        if: steps.setupenv.outputs.exit_code == 0
         run: |
           go clean -testcache
           make test-crosscover
@@ -310,8 +313,18 @@ jobs:
           env_vars: GO_VERSION,KUBERNETES_VERSION
           fail_ci_if_error: false
       
+      - name: Report Kubernetes resources count and state
+        if: steps.setupenv.outputs.exit_code == 0
+        run: |
+          echo "Kubernetes resources counts:"
+          echo "Namespaces: $(kubectl get ns | tail +2 | wc -l)"
+          echo "Persistent volumes: $(kubectl get pv | tail +2 | wc -l)"
+          echo "Pods: $(kubectl get pod | tail +2 | wc -l)"
+          echo "State of all pods:"
+          kubectl describe pods
+
       - name: Delete the test namespace
-        if: ${{ always() }}
+        if: steps.setupenv.outputs.exit_code == 0
         run: |
           make eks-delete-operators
           make eks-delete-current-namespace
@@ -334,6 +347,7 @@ jobs:
           go env
           pwd
           git status
+          kubectl version
 
   check:
     name: Check
