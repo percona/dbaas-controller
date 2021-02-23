@@ -174,5 +174,5 @@ eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run t
 	cat ./deploy/psmdb-secrets.yaml | sed "s/PMM_SERVER_USER:.*/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" | kubectl ${KUBECTL_ARGS} delete -f -
 
 eks-delete-current-namespace:
-	NAMESPACE=$$(kubectl ${KUBECTL_ARGS} config get-contexts $(kubectl ${KUBECTL_ARGS} config current-context) | sed 's/.*\(dbaas-controller-test-[0-9a-z]*\).*/\1/' | tail -1); \
+	NAMESPACE=$$(kubectl config view --minify --output 'jsonpath={..namespace}'); \
 	if [ "$$NAMESPACE" != "default" ]; then kubectl delete ns "$$NAMESPACE"; fi
