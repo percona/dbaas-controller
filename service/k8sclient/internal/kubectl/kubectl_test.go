@@ -33,17 +33,11 @@ import (
 func TestNewKubeCtl(t *testing.T) {
 	ctx := app.Context()
 
-	defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
-	require.NoError(t, err)
-
-	cmd, err := getKubectlCmd(ctx, defaultKubectl, "")
-	require.NoError(t, err)
-
-	validKubeconfig, err := run(ctx, cmd, []string{"config", "view", "-o", "json"}, nil)
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
 	require.NoError(t, err)
 
 	t.Run("BasicNewKubeCtl", func(t *testing.T) {
-		kubeCtl, err := NewKubeCtl(ctx, string(validKubeconfig))
+		kubeCtl, err := NewKubeCtl(ctx, string(kubeconfig))
 		require.NoError(t, err)
 		// lookup for kubeconfig path
 		var kubeconfigFlag string
@@ -58,7 +52,7 @@ func TestNewKubeCtl(t *testing.T) {
 		kubeconfigFilePath := strings.Split(kubeconfigFlag, "=")[1]
 		kubeconfigActual, err := ioutil.ReadFile(kubeconfigFilePath) //nolint:gosec
 		require.NoError(t, err)
-		assert.Equal(t, validKubeconfig, kubeconfigActual)
+		assert.Equal(t, kubeconfig, kubeconfigActual)
 
 		err = kubeCtl.Cleanup()
 		require.NoError(t, err)
