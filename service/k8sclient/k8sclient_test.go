@@ -19,6 +19,8 @@ package k8sclient
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -28,7 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
@@ -43,14 +44,12 @@ type pod struct {
 func TestK8sClient(t *testing.T) {
 	ctx := app.Context()
 
-	kubeCtl, err := kubectl.NewKubeCtl(ctx, "")
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
 	require.NoError(t, err)
 
-	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
+	client, err := New(ctx, string(kubeconfig))
 	require.NoError(t, err)
 
-	client, err := New(ctx, string(validKubeconfig))
-	require.NoError(t, err)
 	t.Cleanup(func() {
 		err := client.Cleanup()
 		require.NoError(t, err)
