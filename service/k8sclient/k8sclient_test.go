@@ -20,6 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -27,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
@@ -83,14 +86,12 @@ func TestIsContainerInPhase(t *testing.T) {
 func TestK8sClient(t *testing.T) {
 	ctx := app.Context()
 
-	kubeCtl, err := kubectl.NewKubeCtl(ctx, "")
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
 	require.NoError(t, err)
 
-	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
+	client, err := New(ctx, string(kubeconfig))
 	require.NoError(t, err)
 
-	client, err := New(ctx, string(validKubeconfig))
-	require.NoError(t, err)
 	t.Cleanup(func() {
 		err := client.Cleanup()
 		require.NoError(t, err)
