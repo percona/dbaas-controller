@@ -1225,8 +1225,7 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 	return OperatorStatusNotInstalled
 }
 
-// GetClusterPods returns list of cluster's pods. It finds them by given cluster
-// name.
+// GetClusterPods returns list of cluster's pods. It finds them by given cluster name.
 func (c *K8sClient) GetClusterPods(ctx context.Context, clusterName string) (*common.PodList, error) {
 	list := new(common.PodList)
 	out, err := c.kubeCtl.Run(ctx, []string{"get", "pods", "-lapp.kubernetes.io/instance=" + clusterName, "-ojson"}, nil)
@@ -1240,8 +1239,7 @@ func (c *K8sClient) GetClusterPods(ctx context.Context, clusterName string) (*co
 	return list, nil
 }
 
-// GetLogs returns logs as slice of log lines - strings - for given pod's
-// container.
+// GetLogs returns logs as slice of log lines - strings - for given pod's container.
 func (c *K8sClient) GetLogs(
 	ctx context.Context,
 	containerStatuses []common.ContainerStatus,
@@ -1277,8 +1275,7 @@ func (c *K8sClient) GetEvents(ctx context.Context, pod string) ([]string, error)
 	return lines[i:], nil
 }
 
-// isContainerInPhase returns true if container is in give phase, otherwise
-// false.
+// isContainerInPhase returns true if container is in give phase, otherwise false.
 func isContainerInPhase(
 	containerStatuses []common.ContainerStatus,
 	phase ContainerPhase,
