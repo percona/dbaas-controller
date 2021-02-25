@@ -91,10 +91,7 @@ func (a *allLogsSource) getLogs(
 		// Get pod's events.
 		events, err := client.GetEvents(ctx, pod.Name)
 		if err != nil {
-			return nil, status.Error(
-				codes.Internal,
-				errors.Wrap(err, "failed to get events").Error(),
-			)
+			return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get events").Error())
 		}
 		response = append(response, &controllerv1beta1.Logs{
 			Pod:       pod.Name,
