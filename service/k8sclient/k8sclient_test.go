@@ -42,7 +42,7 @@ type pod struct {
 	containers []string
 }
 
-const containerPhaseTestInput string = `
+const containerStateTestInput string = `
 {
  "containerStatuses": [
      {
@@ -73,12 +73,12 @@ const containerPhaseTestInput string = `
 }
 `
 
-func TestIsContainerInPhase(t *testing.T) {
+func TestIsContainerInState(t *testing.T) {
 	t.Parallel()
 	ps := new(common.PodStatus)
-	require.NoError(t, json.Unmarshal([]byte(containerPhaseTestInput), ps))
-	assert.True(t, isContainerInPhase(ps.ContainerStatuses, ContainerPhaseWaiting, "pmm-client"), "pmm-client is waiting but reported otherwise")
-	assert.False(t, isContainerInPhase(ps.ContainerStatuses, ContainerPhase("fakephase"), "pmm-client"), "check for non-existing phase should return false")
+	require.NoError(t, json.Unmarshal([]byte(containerStateTestInput), ps))
+	assert.True(t, isContainerInState(ps.ContainerStatuses, ContainerStateWaiting, "pmm-client"), "pmm-client is waiting but reported otherwise")
+	assert.False(t, isContainerInState(ps.ContainerStatuses, ContainerState("fakestate"), "pmm-client"), "check for non-existing state should return false")
 }
 
 func TestK8sClient(t *testing.T) {

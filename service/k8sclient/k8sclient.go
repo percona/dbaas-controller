@@ -85,13 +85,13 @@ const (
 	defaultPSMDBSecretName = "my-cluster-name-secrets"
 )
 
-// ContainerPhase describes container's phase - waiting, running, terminated.
-type ContainerPhase string
+// ContainerState describes container's state - waiting, running, terminated.
+type ContainerState string
 
 const (
-	// ContainerPhaseWaiting represents a phase when container requires some
+	// ContainerStateWaiting represents a state when container requires some
 	// operations being done in order to complete start up.
-	ContainerPhaseWaiting ContainerPhase = "waiting"
+	ContainerStateWaiting ContainerState = "waiting"
 )
 
 // OperatorStatus represents status of operator.
@@ -1246,7 +1246,7 @@ func (c *K8sClient) GetLogs(
 	pod,
 	container string,
 ) ([]string, error) {
-	if isContainerInPhase(containerStatuses, ContainerPhaseWaiting, container) {
+	if isContainerInState(containerStatuses, ContainerStateWaiting, container) {
 		return []string{}, nil
 	}
 	stdout, err := c.kubeCtl.Run(ctx, []string{"logs", pod, container}, nil)
@@ -1275,15 +1275,15 @@ func (c *K8sClient) GetEvents(ctx context.Context, pod string) ([]string, error)
 	return lines[i:], nil
 }
 
-// isContainerInPhase returns true if container is in give phase, otherwise false.
-func isContainerInPhase(
+// isContainerInState returns true if container is in give state, otherwise false.
+func isContainerInState(
 	containerStatuses []common.ContainerStatus,
-	phase ContainerPhase,
+	state ContainerState,
 	containerName string,
 ) bool {
 	for _, status := range containerStatuses {
 		if status.Name == containerName {
-			if _, ok := status.State[string(phase)]; ok {
+			if _, ok := status.State[string(state)]; ok {
 				return true
 			}
 		}
