@@ -80,9 +80,6 @@ func (a *allLogsSource) getLogs(
 						errors.Wrap(err, "failed to get logs").Error(),
 					)
 				}
-				if len(logs) == 0 {
-					continue
-				}
 				response = append(response, &controllerv1beta1.Logs{
 					Pod:       pod.Name,
 					Container: container.Name,
