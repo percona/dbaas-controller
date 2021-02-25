@@ -1253,7 +1253,7 @@ func (c *K8sClient) GetLogs(
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get logs")
 	}
-	if stdout == "" {
+	if string(stdout) == "" {
 		return []string{}, nil
 	}
 	return strings.Split(string(stdout), "\n"), nil
