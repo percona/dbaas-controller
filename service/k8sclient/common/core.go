@@ -43,7 +43,8 @@ type ContainerStatus struct {
 
 // ContainerSpec represents a container definition.
 type ContainerSpec struct {
-	Name string `json:"name,omitempty"`
+	Name      string               `json:"name,omitempty"`
+	Resources ResourceRequirements `json:"resources,omitempty"`
 }
 
 // PodSpec is a description of a pod.

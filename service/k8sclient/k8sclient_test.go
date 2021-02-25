@@ -35,6 +35,11 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
+const (
+	consumedResourcesTestNamespace        string = "consumed-resources-test"
+	consumedResourcesTestPodsManifestPath string = "../../deploy/test-pods.yaml"
+)
+
 // pod is struct just for testing purposes. It contains expected pod and
 // container names.
 type pod struct {
@@ -159,7 +164,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("Get logs", func(t *testing.T) {
-			pods, err := client.GetClusterPods(ctx, name)
+			pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+name)
 			require.NoError(t, err)
 
 			expectedPods := []pod{
@@ -412,4 +417,71 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 			break
 		}
 	}
+}
+
+func TestConvertToCPUMilis(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		in             string
+		expectedOut    int64
+		errShouldBeNil bool
+	}{
+		{in: "100m", expectedOut: 100, errShouldBeNil: true},
+		{in: "1", expectedOut: 1000, errShouldBeNil: true},
+		{in: "1.252", expectedOut: 1252, errShouldBeNil: true},
+		{in: "0.252", expectedOut: 252, errShouldBeNil: true},
+		{in: "0.0", expectedOut: 0, errShouldBeNil: true},
+		{in: "0.", expectedOut: 0, errShouldBeNil: false},
+		{in: ".0", expectedOut: 0, errShouldBeNil: false},
+		{in: ".", expectedOut: 0, errShouldBeNil: false},
+		{in: "", expectedOut: 0, errShouldBeNil: false},
+		{in: "adf", expectedOut: 0, errShouldBeNil: false},
+	}
+
+	for _, test := range testCases {
+		out, err := convertToCPUMilis(test.in)
+		assert.Equal(t, test.expectedOut, out, "in=%v, out=%v, err=%v", test.in, out, err)
+		assert.Equal(
+			t, test.errShouldBeNil, err == nil,
+			"in=%v, out=%v, errShouldBeNil=%v: actually err == nil is %v\nerr=%v",
+			test.in, out, test.errShouldBeNil, err == nil, err,
+		)
+	}
+}
+
+func TestGetConsumedResources(t *testing.T) {
+	t.Parallel()
+	ctx := app.Context()
+
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+
+	client, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err := client.Cleanup()
+		require.NoError(t, err)
+	})
+
+	client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil)
+	_, err = client.kubeCtl.Run(ctx, []string{"create", "ns", consumedResourcesTestNamespace}, nil)
+	require.NoError(t, err)
+
+	args := []string{
+		"apply", "-f", consumedResourcesTestPodsManifestPath,
+		"-n" + consumedResourcesTestNamespace,
+	}
+	_, err = client.kubeCtl.Run(ctx, args, nil)
+	require.NoError(t, err)
+	args = []string{
+		"wait", "--for=condition=ready", "--timeout=20s",
+		"--all", "pods", "-n" + consumedResourcesTestNamespace,
+	}
+	_, err = client.kubeCtl.Run(ctx, args, nil)
+	require.NoError(t, err)
+
+	cpuMilis, _, _, err := client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
+	require.NoError(t, err)
+	assert.Equal(t, int64(360), cpuMilis)
 }

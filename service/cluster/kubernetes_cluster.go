@@ -19,6 +19,10 @@ package cluster
 import (
 	"context"
 
+	"github.com/percona-platform/dbaas-controller/utils/logger"
+
+	"github.com/pkg/errors"
+
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
@@ -68,4 +72,28 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 	resp.Operators.Psmdb.Status = operatorStatusesMap[operators.Psmdb]
 
 	return resp, nil
+}
+
+// GetResources returns total and available amounts of resources of certain k8s cluster.
+func (k KubernetesClusterService) GetResources(ctx context.Context, req *controllerv1beta1.GetResourcesRequest) (*controllerv1beta1.GetResourcesResponse, error) {
+	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
+	}
+	defer k8sClient.Cleanup() //nolint:errcheck
+
+	// allResources, err := getAllClusterResources(ctx, k8sClient)
+	// if err != nil {
+	// 	return nil, status.Error(codes.Internal, err.Error())
+	// }
+	// logger.Get(ctx).Info("all resources")
+	// logger.Get(ctx).Info(allResources)
+
+	cpu, memory, disk, err := k8sClient.GetConsumedResources(ctx, "")
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	logger.Get(ctx).Info("consumed resources")
+	logger.Get(ctx).Infof("cpu %d, mem %d, disk %d", cpu, memory, disk)
+	return nil, nil
 }

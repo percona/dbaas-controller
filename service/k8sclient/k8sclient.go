@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1225,10 +1226,12 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 	return OperatorStatusNotInstalled
 }
 
-// GetClusterPods returns list of cluster's pods. It finds them by given cluster name.
-func (c *K8sClient) GetClusterPods(ctx context.Context, clusterName string) (*common.PodList, error) {
+func (c *K8sClient) GetPods(ctx context.Context, filters ...string) (*common.PodList, error) {
 	list := new(common.PodList)
-	out, err := c.kubeCtl.Run(ctx, []string{"get", "pods", "-lapp.kubernetes.io/instance=" + clusterName, "-ojson"}, nil)
+	args := []string{"get", "pods"}
+	args = append(args, filters...)
+	args = append(args, "-ojson")
+	out, err := c.kubeCtl.Run(ctx, args, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
@@ -1278,6 +1281,7 @@ func (c *K8sClient) GetEvents(ctx context.Context, pod string) ([]string, error)
 	return lines[i:], nil
 }
 
+<<<<<<< HEAD
 // isContainerInState returns true if container is in give state, otherwise false.
 func isContainerInState(
 	containerStatuses []common.ContainerStatus,
@@ -1292,4 +1296,88 @@ func isContainerInState(
 		}
 	}
 	return false
+=======
+// func getAllClusterResources(ctx context.Context, c *k8sclient.K8sClient) (*controllerv1beta1.Resources, error) {
+// 	var cpuMilis int64
+// 	var memoryBytes int64
+// 	// nodes, err := c.GetNodes(ctx)
+// 	// if err != nil {
+// 	// 	return nil, errors.Wrap(err, "could not get all resources")
+// 	// }
+// 	// for _, node := range nodes {
+// 	// 	cpuMilis += node.Status.Allocatable.CPU * 1000
+// 	// 	memoryBytes += node.Status.Allocatable.Memory
+// 	// }
+// 	return &controllerv1beta1.Resources{
+// 		CpuM:        cpuMilis,
+// 		MemoryBytes: memoryBytes,
+// 	}, nil
+// }
+
+func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) (cpuMilis int64, memoryBytes int64, diskSizeBytes int64, err error) {
+	if namespace == "" {
+		namespace = "--all-namespaces"
+	} else {
+		namespace = "-n" + namespace
+	}
+	pods, err := c.GetPods(ctx, namespace)
+	if err != nil {
+		return 0, 0, 0, errors.Wrap(err, "could not get consumed resources")
+	}
+	for _, pod := range pods.Items {
+		for _, container := range append(pod.Spec.Containers, pod.Spec.InitContainers...) {
+			logger.Get(ctx).Info(container.Resources.Requests)
+			millis, err := convertToCPUMilis(container.Resources.Requests[common.ResourceCPU])
+			if err != nil {
+				return 0, 0, 0, errors.Wrap(err, "failed to convert container's CPU to millicpus")
+			}
+			cpuMilis += millis
+
+			bytes, err := convertToBytes(container.Resources.Requests[common.ResourceMemory])
+			if err != nil {
+				return 0, 0, 0, errors.Wrap(err, "failed to convert container's memory to bytes")
+			}
+			memoryBytes += bytes
+		}
+	}
+	return
+}
+
+func convertToCPUMilis(cpu string) (int64, error) {
+	var milis int64
+	if strings.HasSuffix(cpu, "m") {
+		cpu = cpu[:len(cpu)-1]
+		milis, err := strconv.ParseInt(cpu, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+		return milis, nil
+	}
+	if strings.Contains(cpu, ".") {
+		parts := strings.Split(cpu, ".")
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return 0, errors.Errorf("incorect CPU value '%s', both decimal and integer parts have to be present", cpu)
+		}
+		cpu = string(parts[0])
+		var significance int64 = 100
+		for _, decimal := range parts[1] {
+			decimalInteger, err := strconv.ParseInt(string(decimal), 10, 64)
+			if err != nil {
+				return 0, err
+			}
+			milis += decimalInteger * significance
+			significance /= 10
+		}
+	}
+	wholeCPUs, err := strconv.ParseInt(cpu, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	milis += wholeCPUs * 1000
+	return milis, nil
+}
+
+func convertToBytes(cpu string) (int64, error) {
+	return 0, nil
+>>>>>>> 38b186f... Add GetConsumedResources and its tests
 }
