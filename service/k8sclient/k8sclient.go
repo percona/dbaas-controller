@@ -21,10 +21,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
@@ -110,6 +112,13 @@ const (
 const (
 	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
+)
+
+const (
+	megaByte int64 = 1000 * 1000
+	mibiByte int64 = 1024 * 1024
+	gigaByte int64 = megaByte * 1000
+	gibiByte int64 = mibiByte * 1024
 )
 
 // Operators contains statuses of operators.
@@ -1281,7 +1290,6 @@ func (c *K8sClient) GetEvents(ctx context.Context, pod string) ([]string, error)
 	return lines[i:], nil
 }
 
-<<<<<<< HEAD
 // isContainerInState returns true if container is in give state, otherwise false.
 func isContainerInState(
 	containerStatuses []common.ContainerStatus,
@@ -1296,7 +1304,7 @@ func isContainerInState(
 		}
 	}
 	return false
-=======
+
 // func getAllClusterResources(ctx context.Context, c *k8sclient.K8sClient) (*controllerv1beta1.Resources, error) {
 // 	var cpuMilis int64
 // 	var memoryBytes int64
@@ -1377,7 +1385,37 @@ func convertToCPUMilis(cpu string) (int64, error) {
 	return milis, nil
 }
 
-func convertToBytes(cpu string) (int64, error) {
-	return 0, nil
->>>>>>> 38b186f... Add GetConsumedResources and its tests
+func convertToBytes(memory string) (int64, error) {
+	if len(memory) == 0 {
+		return 0, errors.New("can't convert an empty string to a number")
+	}
+	var i int = len(memory) - 1
+	for i >= 0 && !unicode.IsDigit(rune(memory[i])) {
+		i--
+	}
+	var suffix string
+	if i >= 0 {
+		suffix = memory[i+1:]
+	}
+	var coeficient float64 = 1.0
+	switch suffix {
+	case "M":
+		coeficient = float64(megaByte)
+	case "Mi":
+		coeficient = float64(mibiByte)
+	case "G":
+		coeficient = float64(gigaByte)
+	case "Gi":
+		coeficient = float64(gibiByte)
+	case "m":
+		coeficient = 0.001
+	}
+	if suffix != "" {
+		memory = memory[:i+1]
+	}
+	value, err := strconv.ParseFloat(memory, 64)
+	if err != nil {
+		return 0, errors.Errorf("Given value '%s' is not number", memory)
+	}
+	return int64(math.Ceil(value * coeficient)), nil
 }

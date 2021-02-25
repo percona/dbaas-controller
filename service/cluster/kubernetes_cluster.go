@@ -21,8 +21,6 @@ import (
 
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 
-	"github.com/pkg/errors"
-
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"

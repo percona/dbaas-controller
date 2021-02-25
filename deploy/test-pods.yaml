@@ -4,20 +4,20 @@ metadata:
   name: hello1
 spec:
   containers:
-  - name: sleep20-1
+  - name: sleep10-1
     image: alpine
     command: ['sh', '-c', 'sleep 10']
     resources:
       requests:
          cpu: 100m
          memory: 128M
-  - name: sleep20-2
+  - name: sleep10-2
     image: alpine
     command: ['sh', '-c', 'sleep 10']
     resources:
       requests:
-         cpu: 200m
-         memory: 32M
+         cpu: 0.2
+         memory: 32Mi
   restartPolicy: Never
 ---
 apiVersion: v1
@@ -26,11 +26,18 @@ metadata:
   name: hello2
 spec:
   containers:
-  - name: sleep20-1
+  - name: sleep10-1
     image: alpine
     command: ['sh', '-c', 'sleep 10']
     resources:
       requests:
          cpu: 60m
-         memory: 16M
+         memory: 0.1Gi
+  - name: sleep10-2
+    image: alpine
+    command: ['sh', '-c', 'sleep 10']
+    resources:
+      requests:
+         cpu: 60m
+         memory: 20000000
   restartPolicy: Never

@@ -449,6 +449,36 @@ func TestConvertToCPUMilis(t *testing.T) {
 	}
 }
 
+func TestConvertToBytes(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		in             string
+		expectedOut    int64
+		errShouldBeNil bool
+	}{
+		{in: "100M", expectedOut: 100 * 1000 * 1000, errShouldBeNil: true},
+		{in: "100Mi", expectedOut: 100 * 1024 * 1024, errShouldBeNil: true},
+		{in: "100", expectedOut: 100, errShouldBeNil: true},
+		{in: "1G", expectedOut: 1000 * 1000 * 1000, errShouldBeNil: true},
+		{in: "1Gi", expectedOut: 1024 * 1024 * 1024, errShouldBeNil: true},
+		{in: "0.5Gi", expectedOut: 1024 * 1024 * 1024 / 2, errShouldBeNil: true},
+		{in: "0.3Gi", expectedOut: 322122548, errShouldBeNil: true},
+		{in: "3000m", expectedOut: 3, errShouldBeNil: true},
+		{in: "Gi", expectedOut: 0, errShouldBeNil: false},
+		{in: "", expectedOut: 0, errShouldBeNil: false},
+	}
+
+	for _, test := range testCases {
+		out, err := convertToBytes(test.in)
+		assert.Equal(t, test.expectedOut, out, "in=%v, out=%v, err=%v", test.in, out, err)
+		assert.Equal(
+			t, test.errShouldBeNil, err == nil,
+			"in=%v, out=%v, errShouldBeNil=%v: actually err == nil is %v\nerr=%v",
+			test.in, out, test.errShouldBeNil, err == nil, err,
+		)
+	}
+}
+
 func TestGetConsumedResources(t *testing.T) {
 	t.Parallel()
 	ctx := app.Context()
@@ -481,7 +511,8 @@ func TestGetConsumedResources(t *testing.T) {
 	_, err = client.kubeCtl.Run(ctx, args, nil)
 	require.NoError(t, err)
 
-	cpuMilis, _, _, err := client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
+	cpuMilis, memoryBytes, _, err := client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
 	require.NoError(t, err)
-	assert.Equal(t, int64(360), cpuMilis)
+	assert.Equal(t, int64(420), cpuMilis)
+	assert.Equal(t, int64(288928615), memoryBytes)
 }
