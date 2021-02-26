@@ -102,7 +102,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 
 	// There is no Ingress in minikube
 	if os.Getenv("IN_EKS") != "" {
-		cluster, err := tests.PSMDBClusterAPIClient.GetPSMDBCluster(tests.Context, &controllerv1beta1.GetPSMDBClusterRequest{
+		cluster, err := tests.PSMDBClusterAPIClient.GetPSMDBClusterCredentials(tests.Context, &controllerv1beta1.GetPSMDBClusterCredentialsRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: kubeconfig,
 			},

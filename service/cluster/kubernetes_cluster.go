@@ -19,8 +19,6 @@ package cluster
 import (
 	"context"
 
-	"github.com/percona-platform/dbaas-controller/utils/logger"
-
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
@@ -80,18 +78,24 @@ func (k KubernetesClusterService) GetResources(ctx context.Context, req *control
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
 
-	// allResources, err := getAllClusterResources(ctx, k8sClient)
-	// if err != nil {
-	// 	return nil, status.Error(codes.Internal, err.Error())
-	// }
-	// logger.Get(ctx).Info("all resources")
-	// logger.Get(ctx).Info(allResources)
-
-	cpu, memory, disk, err := k8sClient.GetConsumedResources(ctx, "")
+	allCPUMilis, allMemoryBytes, _, err := k8sClient.GetAllClusterResources(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	logger.Get(ctx).Info("consumed resources")
-	logger.Get(ctx).Infof("cpu %d, mem %d, disk %d", cpu, memory, disk)
-	return nil, nil
+
+	consumedCPUMilis, consumedMemoryBytes, _, err := k8sClient.GetConsumedResources(ctx, "")
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &controllerv1beta1.GetResourcesResponse{
+		All: &controllerv1beta1.Resources{
+			CpuM:        allCPUMilis,
+			MemoryBytes: allMemoryBytes,
+		},
+		Available: &controllerv1beta1.Resources{
+			CpuM:        allCPUMilis - consumedCPUMilis,
+			MemoryBytes: allMemoryBytes - consumedMemoryBytes,
+		},
+	}, nil
 }

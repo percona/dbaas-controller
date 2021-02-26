@@ -137,3 +137,10 @@ const (
 	// record, with no exposing or proxying of any pods involved.
 	ServiceTypeExternalName ServiceType = "ExternalName"
 )
+
+// NodeList holds a list of node objects.
+type NodeList struct {
+	TypeMeta // anonymous for embedding
+
+	Items []Node `json:"items"`
+}

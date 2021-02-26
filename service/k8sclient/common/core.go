@@ -116,3 +116,32 @@ const (
 	// SecretTypeOpaque is the default. Arbitrary user-defined data.
 	SecretTypeOpaque SecretType = "Opaque"
 )
+
+// NodeStatus holds Kubernetes node status.
+type NodeStatus struct {
+	// Allocatable is amount of recources from node's capacity that is available
+	// for allocation by pods. The difference between capacity and allocatable of
+	// the node is reserved for Kubernetes overhead and non-Kubernetes processes.
+	Allocatable ResourceList `json:"allocatable,omitempty"`
+}
+
+// Pods can schedule on Kubernetes node that is tainted only if they have corespoding tolerations.
+// See https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/.
+type Taint struct {
+	Effect string `json:"effect,omitempty"`
+	Key    string `json:"key,omitempty"`
+}
+
+// NodeSpec holds Kubernetes node specification.
+type NodeSpec struct {
+	Taints []Taint `json:"taints,omitempty"`
+}
+
+// Node holds information about Kubernetes node.
+type Node struct {
+	TypeMeta
+	// Specification of the node.
+	Spec NodeSpec `json:"spec,omitemty"`
+	// Status of the node.
+	Status NodeStatus `json:"status,omitempty"`
+}

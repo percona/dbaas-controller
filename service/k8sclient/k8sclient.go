@@ -115,10 +115,14 @@ const (
 )
 
 const (
-	megaByte int64 = 1000 * 1000
-	mibiByte int64 = 1024 * 1024
+	kiloByte int64 = 1000
+	kibiByte int64 = 1024
+	megaByte int64 = kiloByte * 1000
+	mibiByte int64 = kibiByte * 1024
 	gigaByte int64 = megaByte * 1000
 	gibiByte int64 = mibiByte * 1024
+	teraByte int64 = gigaByte * 1000
+	tebiByte int64 = gibiByte * 1024
 )
 
 // Operators contains statuses of operators.
@@ -1322,6 +1326,77 @@ func isContainerInState(
 // 	}, nil
 // }
 
+// getWorkerNodes returns list of cluster workers nodes.
+func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
+	nodes := new(common.NodeList)
+	out, err := c.kubeCtl.Run(ctx, []string{"get", "nodes", "-ojson"}, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get nodes of Kubernetes cluster")
+	}
+	err = json.Unmarshal(out, nodes)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get nodes of Kubernetes cluster")
+	}
+	forbidenTaints := map[string]string{
+		"node.cloudprovider.kubernetes.io/uninitialized": "NoSchedule",
+		"node.kubernetes.io/unschedulable":               "NoSchedule",
+		"node-role.kubernetes.io/master":                 "NoSchedule",
+	}
+	workers := make([]common.Node, 0, len(nodes.Items))
+	for _, node := range nodes.Items {
+		if len(node.Spec.Taints) == 0 {
+			workers = append(workers, node)
+			continue
+		}
+		for _, taint := range node.Spec.Taints {
+			effect, keyFound := forbidenTaints[taint.Key]
+			if !keyFound || effect != taint.Effect {
+				workers = append(workers, node)
+			}
+		}
+	}
+	return workers, nil
+}
+
+// GetAllClusterResources goes through all cluster nodes and sums their allocatable resources.
+func (c *K8sClient) GetAllClusterResources(ctx context.Context) (cpuMilis int64, memoryBytes int64, diskSizeBytes int64, err error) {
+	nodes, err := c.getWorkerNodes(ctx)
+	if err != nil {
+		err = errors.Wrap(err, "could not get a list of nodes")
+		return
+	}
+	for _, node := range nodes {
+		cpu, ok := node.Status.Allocatable[common.ResourceCPU]
+		if !ok {
+			return 0, 0, 0, errors.Errorf(
+				"node's allocatable object does not have %s field: could not get all resources",
+				common.ResourceCPU,
+			)
+		}
+		milis, err := convertToCPUMilis(cpu)
+		if err != nil {
+			return 0, 0, 0, errors.Wrap(err, "could not get allocatable CPU of the node")
+		}
+		cpuMilis += milis
+
+		memory, ok := node.Status.Allocatable[common.ResourceMemory]
+		if !ok {
+			return 0, 0, 0, errors.Errorf(
+				"node's allocatable field does not have %s field: could not get all resources",
+				common.ResourceMemory,
+			)
+		}
+		bytes, err := convertToBytes(memory)
+		if err != nil {
+			return 0, 0, 0, errors.Wrap(err, "could not get allocatable memory of the node")
+		}
+		memoryBytes += bytes
+	}
+	return
+}
+
+// GetConsumedResources returns consumed resources in given namespace. If namespace
+// is empty string, it tries to get consumed resouces from all namespaces.
 func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) (cpuMilis int64, memoryBytes int64, diskSizeBytes int64, err error) {
 	if namespace == "" {
 		namespace = "--all-namespaces"
@@ -1335,17 +1410,23 @@ func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) 
 	for _, pod := range pods.Items {
 		for _, container := range append(pod.Spec.Containers, pod.Spec.InitContainers...) {
 			logger.Get(ctx).Info(container.Resources.Requests)
-			millis, err := convertToCPUMilis(container.Resources.Requests[common.ResourceCPU])
-			if err != nil {
-				return 0, 0, 0, errors.Wrap(err, "failed to convert container's CPU to millicpus")
+			cpu, ok := container.Resources.Requests[common.ResourceCPU]
+			if ok {
+				millis, err := convertToCPUMilis(cpu)
+				if err != nil {
+					return 0, 0, 0, errors.Wrap(err, "failed to convert container's CPU to millicpus")
+				}
+				cpuMilis += millis
 			}
-			cpuMilis += millis
 
-			bytes, err := convertToBytes(container.Resources.Requests[common.ResourceMemory])
-			if err != nil {
-				return 0, 0, 0, errors.Wrap(err, "failed to convert container's memory to bytes")
+			memory, ok := container.Resources.Requests[common.ResourceMemory]
+			if ok {
+				bytes, err := convertToBytes(memory)
+				if err != nil {
+					return 0, 0, 0, errors.Wrap(err, "failed to convert container's memory to bytes")
+				}
+				memoryBytes += bytes
 			}
-			memoryBytes += bytes
 		}
 	}
 	return
@@ -1397,8 +1478,14 @@ func convertToBytes(memory string) (int64, error) {
 	if i >= 0 {
 		suffix = memory[i+1:]
 	}
-	var coeficient float64 = 1.0
+	var coeficient float64
 	switch suffix {
+	case "m":
+		coeficient = 0.001
+	case "K":
+		coeficient = float64(kiloByte)
+	case "Ki":
+		coeficient = float64(kibiByte)
 	case "M":
 		coeficient = float64(megaByte)
 	case "Mi":
@@ -1407,15 +1494,22 @@ func convertToBytes(memory string) (int64, error) {
 		coeficient = float64(gigaByte)
 	case "Gi":
 		coeficient = float64(gibiByte)
-	case "m":
-		coeficient = 0.001
+	case "T":
+		coeficient = float64(teraByte)
+	case "Ti":
+		coeficient = float64(tebiByte)
+	case "":
+		coeficient = 1.0
+	default:
+		return 0, errors.Errorf("suffix '%s' not supported", suffix)
 	}
+
 	if suffix != "" {
 		memory = memory[:i+1]
 	}
 	value, err := strconv.ParseFloat(memory, 64)
 	if err != nil {
-		return 0, errors.Errorf("Given value '%s' is not number", memory)
+		return 0, errors.Errorf("given value '%s' is not a number", memory)
 	}
 	return int64(math.Ceil(value * coeficient)), nil
 }

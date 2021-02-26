@@ -466,6 +466,11 @@ func TestConvertToBytes(t *testing.T) {
 		{in: "3000m", expectedOut: 3, errShouldBeNil: true},
 		{in: "Gi", expectedOut: 0, errShouldBeNil: false},
 		{in: "", expectedOut: 0, errShouldBeNil: false},
+		{in: "1Z", expectedOut: 0, errShouldBeNil: false},
+		{in: "1Ki", expectedOut: 1024, errShouldBeNil: true},
+		{in: "1K", expectedOut: 1000, errShouldBeNil: true},
+		{in: "1T", expectedOut: 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
+		{in: "1Ti", expectedOut: 1024 * 1024 * 1024 * 1024, errShouldBeNil: true},
 	}
 
 	for _, test := range testCases {
@@ -515,4 +520,45 @@ func TestGetConsumedResources(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(420), cpuMilis)
 	assert.Equal(t, int64(288928615), memoryBytes)
+}
+
+func TestGetAllClusterResources(t *testing.T) {
+	t.Parallel()
+	ctx := app.Context()
+
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+
+	client, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err := client.Cleanup()
+		require.NoError(t, err)
+	})
+
+	// test getWorkerNodes
+	nodes, err := client.getWorkerNodes(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, nodes)
+	assert.Greater(t, len(nodes), 0)
+	for _, node := range nodes {
+		cpu, ok := node.Status.Allocatable[common.ResourceCPU]
+		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", common.ResourceCPU)
+		assert.NotEmpty(t, cpu)
+		memory, ok := node.Status.Allocatable[common.ResourceMemory]
+		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", common.ResourceMemory)
+		assert.NotEmpty(t, memory)
+	}
+
+	cpuMilis, memoryBytes, _, err := client.GetAllClusterResources(ctx)
+	require.NoError(t, err)
+	// We check 1 CPU because it is hard to imagine somebody runnig cluster with less CPU allocatable.
+	t.Log("nodes is", len(nodes))
+	assert.GreaterOrEqual(t, cpuMilis, int64(len(nodes)*1000),
+		"expected to have at lease 1 CPU per node available to be allocated by pods")
+
+	// The same for memory, hard to imagine having less than 1 GB allocatable per node.
+	assert.GreaterOrEqual(t, memoryBytes, int64(len(nodes))*gigaByte,
+		"expected to have at lease 1GB available to be allocated by pods")
 }
