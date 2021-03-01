@@ -49,7 +49,7 @@ func (a *allLogsSource) getLogs(
 	client *k8sclient.K8sClient,
 	clusterName string,
 ) ([]*controllerv1beta1.Logs, error) {
-	pods, err := client.GetClusterPods(ctx, clusterName)
+	pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+clusterName)
 	if err != nil {
 		return nil, status.Error(
 			codes.Internal,

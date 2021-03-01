@@ -18,7 +18,6 @@ package k8sclient
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -45,45 +44,6 @@ const (
 type pod struct {
 	name       string
 	containers []string
-}
-
-const containerStateTestInput string = `
-{
- "containerStatuses": [
-     {
-         "containerID": "docker://dac1c01c439e8fa873679b13e22bc75baa59129e2c4e3282e36bf950b5c7bc53",
-         "image": "perconalab/pmm-client:dev-latest",
-         "imageID": "docker-pullable://perconalab/pmm-client@sha256:1697b99e10e50ce62637c6073f6ff70ab96cfbc287e487c554ce1bb72a5126fe",
-         "lastState": {
-             "terminated": {
-                 "containerID": "docker://dac1c01c439e8fa873679b13e22bc75baa59129e2c4e3282e36bf950b5c7bc53",
-                 "exitCode": 1,
-                 "finishedAt": "2021-02-19T15:19:57Z",
-                 "reason": "Error",
-                 "startedAt": "2021-02-19T15:19:57Z"
-             }
-         },
-         "name": "pmm-client",
-         "ready": false,
-         "restartCount": 3,
-         "started": false,
-         "state": {
-             "waiting": {
-                 "message": "back-off 40s restarting failed container=pmm-client pod=newclusterinsane-proxysql-0_default(efda5403-ff22-46e7-9930-4366d7eec910)",
-                 "reason": "CrashLoopBackOff"
-             }
-         }
-     }
-  ]        
-}
-`
-
-func TestIsContainerInState(t *testing.T) {
-	t.Parallel()
-	ps := new(common.PodStatus)
-	require.NoError(t, json.Unmarshal([]byte(containerStateTestInput), ps))
-	assert.True(t, isContainerInState(ps.ContainerStatuses, ContainerStateWaiting, "pmm-client"), "pmm-client is waiting but reported otherwise")
-	assert.False(t, isContainerInState(ps.ContainerStatuses, ContainerState("fakestate"), "pmm-client"), "check for non-existing state should return false")
 }
 
 func TestK8sClient(t *testing.T) {
@@ -497,9 +457,10 @@ func TestGetConsumedResources(t *testing.T) {
 	t.Cleanup(func() {
 		err := client.Cleanup()
 		require.NoError(t, err)
+		client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil) //nolint:errcheck
 	})
 
-	client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil)
+	client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil) //nolint:errcheck
 	_, err = client.kubeCtl.Run(ctx, []string{"create", "ns", consumedResourcesTestNamespace}, nil)
 	require.NoError(t, err)
 
@@ -511,7 +472,7 @@ func TestGetConsumedResources(t *testing.T) {
 	require.NoError(t, err)
 	args = []string{
 		"wait", "--for=condition=ready", "--timeout=20s",
-		"--all", "pods", "-n" + consumedResourcesTestNamespace,
+		"pods", "hello1", "hello2", "-n" + consumedResourcesTestNamespace,
 	}
 	_, err = client.kubeCtl.Run(ctx, args, nil)
 	require.NoError(t, err)

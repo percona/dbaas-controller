@@ -43,4 +43,27 @@ spec:
   - name: sleep10-3
     image: alpine
     command: ['sh', '-c', 'sleep 10']
+  initContainers:
+  - name: sleep1-init
+    image: alpine
+    command: ['sh', '-c', 'sleep 1']
+    resources:
+      requests:
+         cpu: 60m
+         memory: 0.1Gi
+  restartPolicy: Never
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello3
+spec:
+  containers:
+  - name: sleep10-1
+    image: alpine
+    command: ['sh', '-c', 'sleep 10']
+    resources:
+      requests:
+         cpu: 600
+         memory: 800Gi
   restartPolicy: Never

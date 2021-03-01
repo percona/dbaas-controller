@@ -65,6 +65,41 @@ type PodSpec struct {
 	InitContainers []ContainerSpec `json:"initContainers,omitempty"`
 }
 
+// Pod can be in five phases - pending, running, succeeded, failed, unknown.
+type PodPhase string
+
+const (
+	// PodPhasePending indicates that the Pod has been accepted by the
+	// Kubernetes cluster, but one or more of the containers has not been set up
+	// and made ready to run. This includes time a Pod spends waiting to be
+	// scheduled as well as the time spent downloading container images over the network.
+	PodPhasePending PodPhase = "Pending"
+)
+
+// ContainerState describes container's state - waiting, running, terminated.
+type ContainerState string
+
+const (
+	// ContainerStateWaiting represents a state when container requires some
+	// operations being done in order to complete start up.
+	ContainerStateWaiting ContainerState = "waiting"
+	// A container in the Terminated state began execution and then either ran
+	// to completion or failed for some reason.
+	ContainerStateTerminated ContainerState = "terminated"
+)
+
+// IsContainerInState returns true if container is in give state, otherwise false.
+func IsContainerInState(containerStatuses []ContainerStatus, state ContainerState, containerName string) bool {
+	for _, status := range containerStatuses {
+		if status.Name == containerName {
+			if _, ok := status.State[string(state)]; ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // PodStatus holds pod status.
 type PodStatus struct {
 	// ContainerStatuses holds statuses of regular containers.
@@ -72,6 +107,9 @@ type PodStatus struct {
 
 	// InitContainerStatuses holds statuses of init containers.
 	InitContainerStatuses []ContainerStatus `json:"initContainerStatuses,omitempty"`
+
+	// Phase holds pod's phase.
+	Phase PodPhase `json:"phase,omitempty"`
 }
 
 // Pod is a collection of containers that can run on a host. This resource is created

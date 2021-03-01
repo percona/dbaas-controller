@@ -88,15 +88,6 @@ const (
 	defaultPSMDBSecretName = "my-cluster-name-secrets"
 )
 
-// ContainerState describes container's state - waiting, running, terminated.
-type ContainerState string
-
-const (
-	// ContainerStateWaiting represents a state when container requires some
-	// operations being done in order to complete start up.
-	ContainerStateWaiting ContainerState = "waiting"
-)
-
 // OperatorStatus represents status of operator.
 type OperatorStatus int32
 
@@ -1262,7 +1253,7 @@ func (c *K8sClient) GetLogs(
 	pod,
 	container string,
 ) ([]string, error) {
-	if isContainerInState(containerStatuses, ContainerStateWaiting, container) {
+	if common.IsContainerInState(containerStatuses, common.ContainerStateWaiting, container) {
 		return []string{}, nil
 	}
 	stdout, err := c.kubeCtl.Run(ctx, []string{"logs", pod, container}, nil)
@@ -1293,38 +1284,6 @@ func (c *K8sClient) GetEvents(ctx context.Context, pod string) ([]string, error)
 	lines[i] = pod + " " + lines[i]
 	return lines[i:], nil
 }
-
-// isContainerInState returns true if container is in give state, otherwise false.
-func isContainerInState(
-	containerStatuses []common.ContainerStatus,
-	state ContainerState,
-	containerName string,
-) bool {
-	for _, status := range containerStatuses {
-		if status.Name == containerName {
-			if _, ok := status.State[string(state)]; ok {
-				return true
-			}
-		}
-	}
-	return false
-
-// func getAllClusterResources(ctx context.Context, c *k8sclient.K8sClient) (*controllerv1beta1.Resources, error) {
-// 	var cpuMilis int64
-// 	var memoryBytes int64
-// 	// nodes, err := c.GetNodes(ctx)
-// 	// if err != nil {
-// 	// 	return nil, errors.Wrap(err, "could not get all resources")
-// 	// }
-// 	// for _, node := range nodes {
-// 	// 	cpuMilis += node.Status.Allocatable.CPU * 1000
-// 	// 	memoryBytes += node.Status.Allocatable.Memory
-// 	// }
-// 	return &controllerv1beta1.Resources{
-// 		CpuM:        cpuMilis,
-// 		MemoryBytes: memoryBytes,
-// 	}, nil
-// }
 
 // getWorkerNodes returns list of cluster workers nodes.
 func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
@@ -1397,18 +1356,31 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (cpuMilis int64,
 
 // GetConsumedResources returns consumed resources in given namespace. If namespace
 // is empty string, it tries to get consumed resouces from all namespaces.
-func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) (cpuMilis int64, memoryBytes int64, diskSizeBytes int64, err error) {
+func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) (
+	cpuMilis int64, memoryBytes int64, diskSizeBytes int64, err error,
+) {
 	if namespace == "" {
 		namespace = "--all-namespaces"
 	} else {
 		namespace = "-n" + namespace
 	}
-	pods, err := c.GetPods(ctx, namespace)
+	pods, err := c.GetPods(ctx, "-n"+namespace)
 	if err != nil {
 		return 0, 0, 0, errors.Wrap(err, "could not get consumed resources")
 	}
-	for _, pod := range pods.Items {
-		for _, container := range append(pod.Spec.Containers, pod.Spec.InitContainers...) {
+	for _, ppod := range pods.Items {
+		if ppod.Status.Phase == common.PodPhasePending {
+			continue
+		}
+		nonTerminatedInitContainers := make([]common.ContainerSpec, 0, len(ppod.Spec.InitContainers))
+		for _, container := range ppod.Spec.InitContainers {
+			if !common.IsContainerInState(
+				ppod.Status.InitContainerStatuses, common.ContainerStateTerminated, container.Name,
+			) {
+				nonTerminatedInitContainers = append(nonTerminatedInitContainers, container)
+			}
+		}
+		for _, container := range append(ppod.Spec.Containers, nonTerminatedInitContainers...) {
 			logger.Get(ctx).Info(container.Resources.Requests)
 			cpu, ok := container.Resources.Requests[common.ResourceCPU]
 			if ok {
