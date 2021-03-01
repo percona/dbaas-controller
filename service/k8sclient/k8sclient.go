@@ -1364,7 +1364,7 @@ func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) 
 	} else {
 		namespace = "-n" + namespace
 	}
-	pods, err := c.GetPods(ctx, "-n"+namespace)
+	pods, err := c.GetPods(ctx, namespace)
 	if err != nil {
 		return 0, 0, 0, errors.Wrap(err, "could not get consumed resources")
 	}
