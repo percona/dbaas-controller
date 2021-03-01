@@ -23,7 +23,7 @@ require (
 	github.com/percona/pmm v2.14.1-0.20210214124250-4559713b8bc0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.9.0
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.16.0
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
