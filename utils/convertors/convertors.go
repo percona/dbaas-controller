@@ -50,29 +50,20 @@ func StrToBytes(memory string) (int64, error) {
 	if i >= 0 {
 		suffix = memory[i+1:]
 	}
-	var coeficient float64
-	switch suffix {
-	case "m":
-		coeficient = 0.001
-	case "K":
-		coeficient = float64(kiloByte)
-	case "Ki":
-		coeficient = float64(kibiByte)
-	case "M":
-		coeficient = float64(megaByte)
-	case "Mi":
-		coeficient = float64(mibiByte)
-	case "G":
-		coeficient = float64(gigaByte)
-	case "Gi":
-		coeficient = float64(gibiByte)
-	case "T":
-		coeficient = float64(teraByte)
-	case "Ti":
-		coeficient = float64(tebiByte)
-	case "":
-		coeficient = 1.0
-	default:
+	suffixMapping := map[string]float64{
+		"m":  0.001,
+		"K":  float64(kiloByte),
+		"Ki": float64(kibiByte),
+		"M":  float64(megaByte),
+		"Mi": float64(mibiByte),
+		"G":  float64(gigaByte),
+		"Gi": float64(gibiByte),
+		"T":  float64(teraByte),
+		"Ti": float64(tebiByte),
+		"":   1.0,
+	}
+	coeficient, ok := suffixMapping[suffix]
+	if !ok {
 		return 0, errors.Errorf("suffix '%s' not supported", suffix)
 	}
 
