@@ -67,25 +67,52 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 	}
 
 	for i, cluster := range xtradbClusters {
+		proxySQLDiskSize, err := convertors.StrToBytes(cluster.ProxySQL.DiskSize)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+
+		}
+		pxcDiskSize, err := convertors.StrToBytes(cluster.PXC.DiskSize)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 		params := &controllerv1beta1.XtraDBClusterParams{
 			ClusterSize: cluster.Size,
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
-				DiskSize: convertors.StrToBytes(cluster.PXC.DiskSize),
+				DiskSize: pxcDiskSize,
 			},
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				DiskSize: convertors.StrToBytes(cluster.ProxySQL.DiskSize),
+				DiskSize: proxySQLDiskSize,
 			},
 		}
 		if cluster.PXC.ComputeResources != nil {
+			cpuMillis, err := convertors.StrToMilliCPU(cluster.PXC.ComputeResources.CPUM)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+
+			}
+			memoryBytes, err := convertors.StrToBytes(cluster.PXC.ComputeResources.MemoryBytes)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
 			params.Pxc.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        convertors.StrToMilliCPU(cluster.PXC.ComputeResources.CPUM),
-				MemoryBytes: convertors.StrToBytes(cluster.PXC.ComputeResources.MemoryBytes),
+				CpuM:        int32(cpuMillis),
+				MemoryBytes: memoryBytes,
 			}
 		}
 		if cluster.ProxySQL.ComputeResources != nil {
+			cpuMillis, err := convertors.StrToMilliCPU(cluster.ProxySQL.ComputeResources.CPUM)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+
+			}
+			memoryBytes, err := convertors.StrToBytes(cluster.ProxySQL.ComputeResources.MemoryBytes)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
 			params.Proxysql.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        convertors.StrToMilliCPU(cluster.ProxySQL.ComputeResources.CPUM),
-				MemoryBytes: convertors.StrToBytes(cluster.ProxySQL.ComputeResources.MemoryBytes),
+				CpuM:        int32(cpuMillis),
+				MemoryBytes: memoryBytes,
 			}
 		}
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{

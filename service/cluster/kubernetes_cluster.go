@@ -78,23 +78,23 @@ func (k KubernetesClusterService) GetResources(ctx context.Context, req *control
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
 
-	allCPUMilis, allMemoryBytes, _, err := k8sClient.GetAllClusterResources(ctx)
+	allCPUMillis, allMemoryBytes, _, err := k8sClient.GetAllClusterResources(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	consumedCPUMilis, consumedMemoryBytes, _, err := k8sClient.GetConsumedResources(ctx, "")
+	consumedCPUMillis, consumedMemoryBytes, _, err := k8sClient.GetConsumedResources(ctx, "")
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &controllerv1beta1.GetResourcesResponse{
 		All: &controllerv1beta1.Resources{
-			CpuM:        allCPUMilis,
+			CpuM:        allCPUMillis,
 			MemoryBytes: allMemoryBytes,
 		},
 		Available: &controllerv1beta1.Resources{
-			CpuM:        allCPUMilis - consumedCPUMilis,
+			CpuM:        allCPUMillis - consumedCPUMillis,
 			MemoryBytes: allMemoryBytes - consumedMemoryBytes,
 		},
 	}, nil

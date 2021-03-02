@@ -21,12 +21,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"math/rand"
-	"strconv"
 	"strings"
 	"time"
-	"unicode"
+
+	"github.com/percona-platform/dbaas-controller/utils/convertors"
 
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
@@ -103,17 +102,6 @@ const (
 const (
 	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
-)
-
-const (
-	kiloByte int64 = 1000
-	kibiByte int64 = 1024
-	megaByte int64 = kiloByte * 1000
-	mibiByte int64 = kibiByte * 1024
-	gigaByte int64 = megaByte * 1000
-	gibiByte int64 = mibiByte * 1024
-	teraByte int64 = gigaByte * 1000
-	tebiByte int64 = gibiByte * 1024
 )
 
 // Operators contains statuses of operators.
@@ -1321,7 +1309,7 @@ func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
 
 // GetAllClusterResources goes through all cluster nodes and sums their allocatable resources.
 func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
-	cpuMilis int64, memoryBytes int64, diskSizeBytes int64, err error,
+	cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error,
 ) {
 	nodes, err := c.getWorkerNodes(ctx)
 	if err != nil {
@@ -1335,11 +1323,11 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 				common.ResourceCPU,
 			)
 		}
-		milis, err := convertToCPUMilis(cpu)
+		millis, err := convertors.StrToMilliCPU(cpu)
 		if err != nil {
 			return 0, 0, 0, errors.Wrap(err, "could not get allocatable CPU of the node")
 		}
-		cpuMilis += milis
+		cpuMillis += millis
 
 		memory, ok := node.Status.Allocatable[common.ResourceMemory]
 		if !ok {
@@ -1348,19 +1336,33 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 				common.ResourceMemory,
 			)
 		}
-		bytes, err := convertToBytes(memory)
+		bytes, err := convertors.StrToBytes(memory)
 		if err != nil {
 			return 0, 0, 0, errors.Wrap(err, "could not get allocatable memory of the node")
 		}
 		memoryBytes += bytes
 	}
-	return cpuMilis, memoryBytes, diskSizeBytes, nil
+	return cpuMillis, memoryBytes, diskSizeBytes, nil
+}
+
+type convertor func(string) (int64, error)
+
+func getRequestsAsInt64(container common.ContainerSpec, resource common.ResourceName, convertFunc convertor) (int64, error) {
+	amount, ok := container.Resources.Requests[resource]
+	if ok {
+		value, err := convertFunc(amount)
+		if err != nil {
+			return 0, errors.Wrapf(err, "failed to convert container's %s to integer", resource)
+		}
+		return value, nil
+	}
+	return 0, errors.Errorf("requested resource '%s' was not found in container's requests", resource)
 }
 
 // GetConsumedResources returns consumed resources in given namespace. If namespace
 // is empty string, it tries to get consumed resouces from all namespaces.
 func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) (
-	cpuMilis int64, memoryBytes int64, diskSizeBytes int64, err error,
+	cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error,
 ) {
 	if namespace == "" {
 		namespace = "--all-namespaces"
@@ -1384,107 +1386,18 @@ func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) 
 			}
 		}
 		for _, container := range append(ppod.Spec.Containers, nonTerminatedInitContainers...) {
-			logger.Get(ctx).Info(container.Resources.Requests)
-			cpu, ok := container.Resources.Requests[common.ResourceCPU]
-			if ok {
-				millis, err := convertToCPUMilis(cpu)
-				if err != nil {
-					return 0, 0, 0, errors.Wrap(err, "failed to convert container's CPU to millicpus")
-				}
-				cpuMilis += millis
-			}
-
-			memory, ok := container.Resources.Requests[common.ResourceMemory]
-			if ok {
-				bytes, err := convertToBytes(memory)
-				if err != nil {
-					return 0, 0, 0, errors.Wrap(err, "failed to convert container's memory to bytes")
-				}
-				memoryBytes += bytes
-			}
-		}
-	}
-	return cpuMilis, memoryBytes, diskSizeBytes, nil
-}
-
-func convertToCPUMilis(cpu string) (int64, error) {
-	var milis int64
-	if strings.HasSuffix(cpu, "m") {
-		cpu = cpu[:len(cpu)-1]
-		milis, err := strconv.ParseInt(cpu, 10, 64)
-		if err != nil {
-			return 0, err
-		}
-		return milis, nil
-	}
-	if strings.Contains(cpu, ".") {
-		parts := strings.Split(cpu, ".")
-		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-			return 0, errors.Errorf("incorrect CPU value '%s', both decimal and integer parts have to be present", cpu)
-		}
-		cpu = parts[0]
-		var significance int64 = 100
-		for _, decimal := range parts[1] {
-			decimalInteger, err := strconv.ParseInt(string(decimal), 10, 64)
+			millis, err := getRequestsAsInt64(container, common.ResourceCPU, convertors.StrToMilliCPU)
 			if err != nil {
-				return 0, err
+				return 0, 0, 0, errors.Wrap(err, "failed to sum all consumed resources")
 			}
-			milis += decimalInteger * significance
-			significance /= 10
+			cpuMillis += millis
+
+			bytes, err := getRequestsAsInt64(container, common.ResourceMemory, convertors.StrToBytes)
+			if err != nil {
+				return 0, 0, 0, errors.Wrap(err, "failed to sum all consumed resources")
+			}
+			memoryBytes += bytes
 		}
 	}
-	wholeCPUs, err := strconv.ParseInt(cpu, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-	milis += wholeCPUs * 1000
-	return milis, nil
-}
-
-func convertToBytes(memory string) (int64, error) {
-	if len(memory) == 0 {
-		return 0, errors.New("can't convert an empty string to a number")
-	}
-	i := len(memory) - 1
-	for i >= 0 && !unicode.IsDigit(rune(memory[i])) {
-		i--
-	}
-	var suffix string
-	if i >= 0 {
-		suffix = memory[i+1:]
-	}
-	var coeficient float64
-	switch suffix {
-	case "m":
-		coeficient = 0.001
-	case "K":
-		coeficient = float64(kiloByte)
-	case "Ki":
-		coeficient = float64(kibiByte)
-	case "M":
-		coeficient = float64(megaByte)
-	case "Mi":
-		coeficient = float64(mibiByte)
-	case "G":
-		coeficient = float64(gigaByte)
-	case "Gi":
-		coeficient = float64(gibiByte)
-	case "T":
-		coeficient = float64(teraByte)
-	case "Ti":
-		coeficient = float64(tebiByte)
-	case "":
-		coeficient = 1.0
-	default:
-		return 0, errors.Errorf("suffix '%s' not supported", suffix)
-	}
-
-	if suffix != "" {
-		memory = memory[:i+1]
-	}
-	value, err := strconv.ParseFloat(memory, 64)
-	if err != nil {
-		return 0, errors.Errorf("given value '%s' is not a number", memory)
-	}
-	return int64(math.Ceil(value * coeficient)), nil
+	return cpuMillis, memoryBytes, diskSizeBytes, nil
 }

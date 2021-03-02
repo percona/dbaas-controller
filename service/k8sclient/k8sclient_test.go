@@ -379,71 +379,6 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 	}
 }
 
-func TestConvertToCPUMilis(t *testing.T) {
-	t.Parallel()
-	testCases := []struct {
-		in             string
-		expectedOut    int64
-		errShouldBeNil bool
-	}{
-		{in: "100m", expectedOut: 100, errShouldBeNil: true},
-		{in: "1", expectedOut: 1000, errShouldBeNil: true},
-		{in: "1.252", expectedOut: 1252, errShouldBeNil: true},
-		{in: "0.252", expectedOut: 252, errShouldBeNil: true},
-		{in: "0.0", expectedOut: 0, errShouldBeNil: true},
-		{in: "0.", expectedOut: 0, errShouldBeNil: false},
-		{in: ".0", expectedOut: 0, errShouldBeNil: false},
-		{in: ".", expectedOut: 0, errShouldBeNil: false},
-		{in: "", expectedOut: 0, errShouldBeNil: false},
-		{in: "adf", expectedOut: 0, errShouldBeNil: false},
-	}
-
-	for _, test := range testCases {
-		out, err := convertToCPUMilis(test.in)
-		assert.Equal(t, test.expectedOut, out, "in=%v, out=%v, err=%v", test.in, out, err)
-		assert.Equal(
-			t, test.errShouldBeNil, err == nil,
-			"in=%v, out=%v, errShouldBeNil=%v: actually err == nil is %v\nerr=%v",
-			test.in, out, test.errShouldBeNil, err == nil, err,
-		)
-	}
-}
-
-func TestConvertToBytes(t *testing.T) {
-	t.Parallel()
-	testCases := []struct {
-		in             string
-		expectedOut    int64
-		errShouldBeNil bool
-	}{
-		{in: "100M", expectedOut: 100 * 1000 * 1000, errShouldBeNil: true},
-		{in: "100Mi", expectedOut: 100 * 1024 * 1024, errShouldBeNil: true},
-		{in: "100", expectedOut: 100, errShouldBeNil: true},
-		{in: "1G", expectedOut: 1000 * 1000 * 1000, errShouldBeNil: true},
-		{in: "1Gi", expectedOut: 1024 * 1024 * 1024, errShouldBeNil: true},
-		{in: "0.5Gi", expectedOut: 1024 * 1024 * 1024 / 2, errShouldBeNil: true},
-		{in: "0.3Gi", expectedOut: 322122548, errShouldBeNil: true},
-		{in: "3000m", expectedOut: 3, errShouldBeNil: true},
-		{in: "Gi", expectedOut: 0, errShouldBeNil: false},
-		{in: "", expectedOut: 0, errShouldBeNil: false},
-		{in: "1Z", expectedOut: 0, errShouldBeNil: false},
-		{in: "1Ki", expectedOut: 1024, errShouldBeNil: true},
-		{in: "1K", expectedOut: 1000, errShouldBeNil: true},
-		{in: "1T", expectedOut: 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
-		{in: "1Ti", expectedOut: 1024 * 1024 * 1024 * 1024, errShouldBeNil: true},
-	}
-
-	for _, test := range testCases {
-		out, err := convertToBytes(test.in)
-		assert.Equal(t, test.expectedOut, out, "in=%v, out=%v, err=%v", test.in, out, err)
-		assert.Equal(
-			t, test.errShouldBeNil, err == nil,
-			"in=%v, out=%v, errShouldBeNil=%v: actually err == nil is %v\nerr=%v",
-			test.in, out, test.errShouldBeNil, err == nil, err,
-		)
-	}
-}
-
 func TestGetConsumedResources(t *testing.T) {
 	t.Parallel()
 	ctx := app.Context()
@@ -477,9 +412,9 @@ func TestGetConsumedResources(t *testing.T) {
 	_, err = client.kubeCtl.Run(ctx, args, nil)
 	require.NoError(t, err)
 
-	cpuMilis, memoryBytes, _, err := client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
+	cpuMillis, memoryBytes, _, err := client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
 	require.NoError(t, err)
-	assert.Equal(t, int64(420), cpuMilis)
+	assert.Equal(t, int64(420), cpuMillis)
 	assert.Equal(t, int64(288928615), memoryBytes)
 }
 
@@ -512,18 +447,18 @@ func TestGetAllClusterResources(t *testing.T) {
 		assert.NotEmpty(t, memory)
 	}
 
-	cpuMilis, memoryBytes, _, err := client.GetAllClusterResources(ctx)
+	cpuMillis, memoryBytes, _, err := client.GetAllClusterResources(ctx)
 	require.NoError(t, err)
 	// We check 1 CPU because it is hard to imagine somebody runnig cluster with less CPU allocatable.
 	t.Log("nodes is", len(nodes))
 	assert.GreaterOrEqual(
-		t, cpuMilis, int64(len(nodes)*1000),
+		t, cpuMillis, int64(len(nodes)*1000),
 		"expected to have at lease 1 CPU per node available to be allocated by pods",
 	)
 
 	// The same for memory, hard to imagine having less than 1 GB allocatable per node.
 	assert.GreaterOrEqual(
-		t, memoryBytes, int64(len(nodes))*gigaByte,
+		t, memoryBytes, int64(len(nodes))*1000*1000*1000,
 		"expected to have at lease 1GB available to be allocated by pods",
 	)
 }

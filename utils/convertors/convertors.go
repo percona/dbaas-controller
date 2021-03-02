@@ -18,33 +18,107 @@
 package convertors
 
 import (
+	"math"
 	"strconv"
 	"strings"
+	"unicode"
+
+	"github.com/pkg/errors"
 )
 
-// StrToBytes converts string of bytes to integer.
-func StrToBytes(s string) int64 {
-	multiplier := int64(1)
-	if strings.HasSuffix(s, "G") {
-		multiplier = 1000 * 1000 * 1000
-		s = strings.TrimSuffix(s, "G")
+const (
+	kiloByte int64 = 1000
+	kibiByte int64 = 1024
+	megaByte int64 = kiloByte * 1000
+	mibiByte int64 = kibiByte * 1024
+	gigaByte int64 = megaByte * 1000
+	gibiByte int64 = mibiByte * 1024
+	teraByte int64 = gigaByte * 1000
+	tebiByte int64 = gibiByte * 1024
+)
+
+// StrToBytes converts string containing memory as string to number of bytes the string represents.
+func StrToBytes(memory string) (int64, error) {
+	if len(memory) == 0 {
+		return 0, errors.New("can't convert an empty string to a number")
 	}
-	if b, err := strconv.ParseInt(s, 10, 64); err == nil {
-		return b * multiplier
+	i := len(memory) - 1
+	for i >= 0 && !unicode.IsDigit(rune(memory[i])) {
+		i--
 	}
-	return 0
+	var suffix string
+	if i >= 0 {
+		suffix = memory[i+1:]
+	}
+	var coeficient float64
+	switch suffix {
+	case "m":
+		coeficient = 0.001
+	case "K":
+		coeficient = float64(kiloByte)
+	case "Ki":
+		coeficient = float64(kibiByte)
+	case "M":
+		coeficient = float64(megaByte)
+	case "Mi":
+		coeficient = float64(mibiByte)
+	case "G":
+		coeficient = float64(gigaByte)
+	case "Gi":
+		coeficient = float64(gibiByte)
+	case "T":
+		coeficient = float64(teraByte)
+	case "Ti":
+		coeficient = float64(tebiByte)
+	case "":
+		coeficient = 1.0
+	default:
+		return 0, errors.Errorf("suffix '%s' not supported", suffix)
+	}
+
+	if suffix != "" {
+		memory = memory[:i+1]
+	}
+	value, err := strconv.ParseFloat(memory, 64)
+	if err != nil {
+		return 0, errors.Errorf("given value '%s' is not a number", memory)
+	}
+	return int64(math.Ceil(value * coeficient)), nil
 }
 
-// StrToMilliCPU converts milli CPU to integer.
-func StrToMilliCPU(s string) int32 {
-	if !strings.HasSuffix(s, "m") {
-		return 0
+// StrToMilliCPU converts CPU as a string representation to millicpus represented as an integer.
+func StrToMilliCPU(cpu string) (int64, error) {
+	var millis int64
+	if strings.HasSuffix(cpu, "m") {
+		cpu = cpu[:len(cpu)-1]
+		millis, err := strconv.ParseInt(cpu, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+		return millis, nil
 	}
-	s = strings.TrimSuffix(s, "m")
-	if b, err := strconv.ParseUint(s, 10, 32); err == nil {
-		return int32(b)
+	if strings.Contains(cpu, ".") {
+		parts := strings.Split(cpu, ".")
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return 0, errors.Errorf("incorrect CPU value '%s', both decimal and integer parts have to be present", cpu)
+		}
+		cpu = parts[0]
+		var significance int64 = 100
+		for _, decimal := range parts[1] {
+			decimalInteger, err := strconv.ParseInt(string(decimal), 10, 64)
+			if err != nil {
+				return 0, err
+			}
+			millis += decimalInteger * significance
+			significance /= 10
+		}
 	}
-	return 0
+	wholeCPUs, err := strconv.ParseInt(cpu, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	millis += wholeCPUs * 1000
+	return millis, nil
 }
 
 // BytesToStr converts integer of bytes to string.
