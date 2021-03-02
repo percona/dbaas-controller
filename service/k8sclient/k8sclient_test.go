@@ -457,10 +457,10 @@ func TestGetConsumedResources(t *testing.T) {
 	t.Cleanup(func() {
 		err := client.Cleanup()
 		require.NoError(t, err)
-		client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil) //nolint:errcheck
+		_, _ = client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil) // ignore err
 	})
 
-	client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil) //nolint:errcheck
+	_, _ = client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil) // ignore err
 	_, err = client.kubeCtl.Run(ctx, []string{"create", "ns", consumedResourcesTestNamespace}, nil)
 	require.NoError(t, err)
 
@@ -516,10 +516,14 @@ func TestGetAllClusterResources(t *testing.T) {
 	require.NoError(t, err)
 	// We check 1 CPU because it is hard to imagine somebody runnig cluster with less CPU allocatable.
 	t.Log("nodes is", len(nodes))
-	assert.GreaterOrEqual(t, cpuMilis, int64(len(nodes)*1000),
-		"expected to have at lease 1 CPU per node available to be allocated by pods")
+	assert.GreaterOrEqual(
+		t, cpuMilis, int64(len(nodes)*1000),
+		"expected to have at lease 1 CPU per node available to be allocated by pods",
+	)
 
 	// The same for memory, hard to imagine having less than 1 GB allocatable per node.
-	assert.GreaterOrEqual(t, memoryBytes, int64(len(nodes))*gigaByte,
-		"expected to have at lease 1GB available to be allocated by pods")
+	assert.GreaterOrEqual(
+		t, memoryBytes, int64(len(nodes))*gigaByte,
+		"expected to have at lease 1GB available to be allocated by pods",
+	)
 }
