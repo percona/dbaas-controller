@@ -25,8 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/percona-platform/dbaas-controller/utils/convertors"
-
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 
@@ -34,6 +32,7 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
+	"github.com/percona-platform/dbaas-controller/utils/convertors"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
