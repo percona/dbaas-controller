@@ -1230,6 +1230,8 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 	return OperatorStatusNotInstalled
 }
 
+// GetPods returns list of pods based on given filters. Filters are args to
+// kubectl command. For example "-lyour-label=value", "-ntest-namespace".
 func (c *K8sClient) GetPods(ctx context.Context, filters ...string) (*common.PodList, error) {
 	list := new(common.PodList)
 	args := []string{"get", "pods"}
@@ -1318,11 +1320,12 @@ func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
 }
 
 // GetAllClusterResources goes through all cluster nodes and sums their allocatable resources.
-func (c *K8sClient) GetAllClusterResources(ctx context.Context) (cpuMilis int64, memoryBytes int64, diskSizeBytes int64, err error) {
+func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
+	cpuMilis int64, memoryBytes int64, diskSizeBytes int64, err error,
+) {
 	nodes, err := c.getWorkerNodes(ctx)
 	if err != nil {
-		err = errors.Wrap(err, "could not get a list of nodes")
-		return
+		return 0, 0, 0, errors.Wrap(err, "could not get a list of nodes")
 	}
 	for _, node := range nodes {
 		cpu, ok := node.Status.Allocatable[common.ResourceCPU]
@@ -1351,7 +1354,7 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (cpuMilis int64,
 		}
 		memoryBytes += bytes
 	}
-	return
+	return cpuMilis, memoryBytes, diskSizeBytes, nil
 }
 
 // GetConsumedResources returns consumed resources in given namespace. If namespace
@@ -1401,7 +1404,7 @@ func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) 
 			}
 		}
 	}
-	return
+	return cpuMilis, memoryBytes, diskSizeBytes, nil
 }
 
 func convertToCPUMilis(cpu string) (int64, error) {
@@ -1417,9 +1420,9 @@ func convertToCPUMilis(cpu string) (int64, error) {
 	if strings.Contains(cpu, ".") {
 		parts := strings.Split(cpu, ".")
 		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-			return 0, errors.Errorf("incorect CPU value '%s', both decimal and integer parts have to be present", cpu)
+			return 0, errors.Errorf("incorrect CPU value '%s', both decimal and integer parts have to be present", cpu)
 		}
-		cpu = string(parts[0])
+		cpu = parts[0]
 		var significance int64 = 100
 		for _, decimal := range parts[1] {
 			decimalInteger, err := strconv.ParseInt(string(decimal), 10, 64)
@@ -1442,7 +1445,7 @@ func convertToBytes(memory string) (int64, error) {
 	if len(memory) == 0 {
 		return 0, errors.New("can't convert an empty string to a number")
 	}
-	var i int = len(memory) - 1
+	i := len(memory) - 1
 	for i >= 0 && !unicode.IsDigit(rune(memory[i])) {
 		i--
 	}

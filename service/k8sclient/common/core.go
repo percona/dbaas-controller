@@ -65,7 +65,9 @@ type PodSpec struct {
 	InitContainers []ContainerSpec `json:"initContainers,omitempty"`
 }
 
-// Pod can be in five phases - pending, running, succeeded, failed, unknown.
+// PodPhase defines Pod's phase.
+// It could be one of these values: Pending, Running, Succeeded, Failed, Unknown.
+// See https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/.
 type PodPhase string
 
 const (
@@ -83,8 +85,8 @@ const (
 	// ContainerStateWaiting represents a state when container requires some
 	// operations being done in order to complete start up.
 	ContainerStateWaiting ContainerState = "waiting"
-	// A container in the Terminated state began execution and then either ran
-	// to completion or failed for some reason.
+	// ContainerStateTerminated indicates that container began execution and
+	// then either ran to completion or failed for some reason.
 	ContainerStateTerminated ContainerState = "terminated"
 )
 
@@ -163,7 +165,7 @@ type NodeStatus struct {
 	Allocatable ResourceList `json:"allocatable,omitempty"`
 }
 
-// Pods can schedule on Kubernetes node that is tainted only if they have corespoding tolerations.
+// Taint reserves node for pods that tolerate the taint.
 // See https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/.
 type Taint struct {
 	Effect string `json:"effect,omitempty"`
@@ -179,7 +181,7 @@ type NodeSpec struct {
 type Node struct {
 	TypeMeta
 	// Specification of the node.
-	Spec NodeSpec `json:"spec,omitemty"`
+	Spec NodeSpec `json:"spec,omitempty"`
 	// Status of the node.
 	Status NodeStatus `json:"status,omitempty"`
 }
