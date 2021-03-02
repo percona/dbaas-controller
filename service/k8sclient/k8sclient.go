@@ -1355,7 +1355,7 @@ func getRequestsAsInt64(container common.ContainerSpec, resource common.Resource
 		}
 		return value, nil
 	}
-	return 0, errors.Errorf("requested resource '%s' was not found in container's requests", resource)
+	return 0, nil
 }
 
 // GetConsumedResources returns consumed resources in given namespace. If namespace
