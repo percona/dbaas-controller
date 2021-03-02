@@ -70,7 +70,6 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 		proxySQLDiskSize, err := convertors.StrToBytes(cluster.ProxySQL.DiskSize)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
-
 		}
 		pxcDiskSize, err := convertors.StrToBytes(cluster.PXC.DiskSize)
 		if err != nil {
@@ -89,7 +88,6 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			cpuMillis, err := convertors.StrToMilliCPU(cluster.PXC.ComputeResources.CPUM)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
-
 			}
 			memoryBytes, err := convertors.StrToBytes(cluster.PXC.ComputeResources.MemoryBytes)
 			if err != nil {
@@ -104,7 +102,6 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			cpuMillis, err := convertors.StrToMilliCPU(cluster.ProxySQL.ComputeResources.CPUM)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
-
 			}
 			memoryBytes, err := convertors.StrToBytes(cluster.ProxySQL.ComputeResources.MemoryBytes)
 			if err != nil {
