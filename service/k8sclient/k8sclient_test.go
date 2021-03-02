@@ -449,7 +449,7 @@ func TestGetAllClusterResources(t *testing.T) {
 
 	cpuMillis, memoryBytes, _, err := client.GetAllClusterResources(ctx)
 	require.NoError(t, err)
-	// We check 1 CPU because it is hard to imagine somebody runnig cluster with less CPU allocatable.
+	// We check 1 CPU because it is hard to imagine somebody running cluster with less CPU allocatable.
 	t.Log("nodes is", len(nodes))
 	assert.GreaterOrEqual(
 		t, cpuMillis, int64(len(nodes)*1000),
