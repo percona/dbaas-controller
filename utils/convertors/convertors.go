@@ -79,7 +79,6 @@ func StrToBytes(memory string) (int64, error) {
 
 // StrToMilliCPU converts CPU as a string representation to millicpus represented as an integer.
 func StrToMilliCPU(cpu string) (int64, error) {
-	var millis int64
 	if strings.HasSuffix(cpu, "m") {
 		cpu = cpu[:len(cpu)-1]
 		millis, err := strconv.ParseInt(cpu, 10, 64)
@@ -88,28 +87,11 @@ func StrToMilliCPU(cpu string) (int64, error) {
 		}
 		return millis, nil
 	}
-	if strings.Contains(cpu, ".") {
-		parts := strings.Split(cpu, ".")
-		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-			return 0, errors.Errorf("incorrect CPU value '%s', both decimal and integer parts have to be present", cpu)
-		}
-		cpu = parts[0]
-		var significance int64 = 100
-		for _, decimal := range parts[1] {
-			decimalInteger, err := strconv.ParseInt(string(decimal), 10, 64)
-			if err != nil {
-				return 0, err
-			}
-			millis += decimalInteger * significance
-			significance /= 10
-		}
-	}
-	wholeCPUs, err := strconv.ParseInt(cpu, 10, 64)
+	floatCPU, err := strconv.ParseFloat(cpu, 64)
 	if err != nil {
 		return 0, err
 	}
-	millis += wholeCPUs * 1000
-	return millis, nil
+	return int64(floatCPU * 1000), nil
 }
 
 // BytesToStr converts integer of bytes to string.
