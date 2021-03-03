@@ -1315,47 +1315,34 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 		return 0, 0, 0, errors.Wrap(err, "could not get a list of nodes")
 	}
 	for _, node := range nodes {
-		cpu, ok := node.Status.Allocatable[common.ResourceCPU]
-		if !ok {
-			return 0, 0, 0, errors.Errorf(
-				"node's allocatable object does not have %s field: could not get all resources",
-				common.ResourceCPU,
-			)
-		}
-		millis, err := convertors.StrToMilliCPU(cpu)
+		cpu, memory, _, err := getResources(node.Status.Allocatable)
 		if err != nil {
-			return 0, 0, 0, errors.Wrap(err, "could not get allocatable CPU of the node")
+			return 0, 0, 0, errors.Wrap(err, "could not get allocatable resources of the node")
 		}
-		cpuMillis += millis
-
-		memory, ok := node.Status.Allocatable[common.ResourceMemory]
-		if !ok {
-			return 0, 0, 0, errors.Errorf(
-				"node's allocatable field does not have %s field: could not get all resources",
-				common.ResourceMemory,
-			)
-		}
-		bytes, err := convertors.StrToBytes(memory)
-		if err != nil {
-			return 0, 0, 0, errors.Wrap(err, "could not get allocatable memory of the node")
-		}
-		memoryBytes += bytes
+		cpuMillis += cpu
+		memoryBytes += memory
 	}
 	return cpuMillis, memoryBytes, diskSizeBytes, nil
 }
 
-type convertor func(string) (int64, error)
-
-func getRequestsAsInt64(container common.ContainerSpec, resource common.ResourceName, convertFunc convertor) (int64, error) {
-	amount, ok := container.Resources.Requests[resource]
+// getResources extracts resources out of common.ResourceList and converts them to int64 values.
+// Millicpus are used for CPU values and bytes for memory.
+func getResources(resources common.ResourceList) (cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error) {
+	cpu, ok := resources[common.ResourceCPU]
 	if ok {
-		value, err := convertFunc(amount)
+		cpuMillis, err = convertors.StrToMilliCPU(cpu)
 		if err != nil {
-			return 0, errors.Wrapf(err, "failed to convert container's %s to integer", resource)
+			return 0, 0, 0, errors.Wrapf(err, "failed to convert '%s' to millicpus", cpu)
 		}
-		return value, nil
 	}
-	return 0, nil
+	memory, ok := resources[common.ResourceMemory]
+	if ok {
+		memoryBytes, err = convertors.StrToBytes(memory)
+		if err != nil {
+			return 0, 0, 0, errors.Wrapf(err, "failed to convert '%s' to bytes", memory)
+		}
+	}
+	return cpuMillis, memoryBytes, diskSizeBytes, nil
 }
 
 // GetConsumedResources returns consumed resources in given namespace. If namespace
@@ -1385,17 +1372,12 @@ func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) 
 			}
 		}
 		for _, container := range append(ppod.Spec.Containers, nonTerminatedInitContainers...) {
-			millis, err := getRequestsAsInt64(container, common.ResourceCPU, convertors.StrToMilliCPU)
+			cpu, memory, _, err := getResources(container.Resources.Requests)
 			if err != nil {
 				return 0, 0, 0, errors.Wrap(err, "failed to sum all consumed resources")
 			}
-			cpuMillis += millis
-
-			bytes, err := getRequestsAsInt64(container, common.ResourceMemory, convertors.StrToBytes)
-			if err != nil {
-				return 0, 0, 0, errors.Wrap(err, "failed to sum all consumed resources")
-			}
-			memoryBytes += bytes
+			cpuMillis += cpu
+			memoryBytes += memory
 		}
 	}
 	return cpuMillis, memoryBytes, diskSizeBytes, nil
