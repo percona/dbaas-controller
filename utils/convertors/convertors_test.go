@@ -38,7 +38,7 @@ func TestConvertToCPUMillis(t *testing.T) {
 		{in: "0.", expectedOut: 0, errShouldBeNil: true},
 		{in: ".0", expectedOut: 0, errShouldBeNil: true},
 		{in: ".", expectedOut: 0, errShouldBeNil: false},
-		{in: "", expectedOut: 0, errShouldBeNil: false},
+		{in: "", expectedOut: 0, errShouldBeNil: true},
 		{in: "adf", expectedOut: 0, errShouldBeNil: false},
 	}
 
@@ -69,7 +69,7 @@ func TestConvertToBytes(t *testing.T) {
 		{in: "0.3Gi", expectedOut: 322122548, errShouldBeNil: true},
 		{in: "3000m", expectedOut: 3, errShouldBeNil: true},
 		{in: "Gi", expectedOut: 0, errShouldBeNil: false},
-		{in: "", expectedOut: 0, errShouldBeNil: false},
+		{in: "", expectedOut: 0, errShouldBeNil: true},
 		{in: "1Z", expectedOut: 0, errShouldBeNil: false},
 		{in: "1Ki", expectedOut: 1024, errShouldBeNil: true},
 		{in: "1K", expectedOut: 1000, errShouldBeNil: true},

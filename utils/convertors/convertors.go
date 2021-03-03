@@ -40,7 +40,7 @@ const (
 // StrToBytes converts string containing memory as string to number of bytes the string represents.
 func StrToBytes(memory string) (int64, error) {
 	if len(memory) == 0 {
-		return 0, errors.New("can't convert an empty string to a number")
+		return 0, nil
 	}
 	i := len(memory) - 1
 	for i >= 0 && !unicode.IsDigit(rune(memory[i])) {
@@ -79,6 +79,9 @@ func StrToBytes(memory string) (int64, error) {
 
 // StrToMilliCPU converts CPU as a string representation to millicpus represented as an integer.
 func StrToMilliCPU(cpu string) (int64, error) {
+	if cpu == "" {
+		return 0, nil
+	}
 	if strings.HasSuffix(cpu, "m") {
 		cpu = cpu[:len(cpu)-1]
 		millis, err := strconv.ParseInt(cpu, 10, 64)
