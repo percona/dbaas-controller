@@ -86,6 +86,15 @@ const (
 	defaultPSMDBSecretName = "my-cluster-name-secrets"
 )
 
+// ContainerState describes container's state - waiting, running, terminated.
+type ContainerState string
+
+const (
+	// ContainerStateWaiting represents a state when container requires some
+	// operations being done in order to complete start up.
+	ContainerStateWaiting ContainerState = "waiting"
+)
+
 // OperatorStatus represents status of operator.
 type OperatorStatus int32
 
