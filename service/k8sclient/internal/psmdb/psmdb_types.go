@@ -18,7 +18,7 @@
 package psmdb
 
 import (
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
 // AffinityOff turn off affinity.

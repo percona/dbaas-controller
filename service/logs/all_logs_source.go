@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
 // overallLinesLimit defines how many last lines of logs we should return upon
@@ -37,27 +38,56 @@ const overallLinesLimit = 1000
 // cluster's containers. It also gets events out of all cluster's pods.
 type allLogsSource struct{}
 
+type tuple struct {
+	statuses   []common.ContainerStatus
+	containers []common.ContainerSpec
+}
+
 // getLogs gets all logs from all cluster's containers and events from all pods.
-func (a *allLogsSource) getLogs(ctx context.Context, client *k8sclient.K8sClient, clusterName string) ([]*controllerv1beta1.Logs, error) {
+func (a *allLogsSource) getLogs(
+	ctx context.Context,
+	client *k8sclient.K8sClient,
+	clusterName string,
+) ([]*controllerv1beta1.Logs, error) {
 	pods, err := client.GetClusterPods(ctx, clusterName)
 	if err != nil {
-		return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get pods").Error())
+		return nil, status.Error(
+			codes.Internal,
+			errors.Wrap(err, "failed to get pods").Error(),
+		)
 	}
 	// Every pod has at least one contaier, set cap to that value.
 	response := make([]*controllerv1beta1.Logs, 0, len(pods.Items))
 	for _, pod := range pods.Items {
-		// Get all logs from all pod's containers and init containers.
-		for _, container := range append(pod.Spec.Containers, pod.Spec.InitContainers...) {
-			logs, err := client.GetLogs(ctx, pod.Name, container.Name)
-			if err != nil {
-				return nil, status.Error(codes.Internal, errors.Wrap(err, "failed to get logs").Error())
-			}
-			response = append(response, &controllerv1beta1.Logs{
-				Pod:       pod.Name,
-				Container: container.Name,
-				Logs:      logs,
-			})
+		tuples := []tuple{
+			{
+				statuses:   pod.Status.ContainerStatuses,
+				containers: pod.Spec.Containers,
+			},
+			{
+				statuses:   pod.Status.InitContainerStatuses,
+				containers: pod.Spec.InitContainers,
+			},
 		}
+		// Get all logs from all regular containers and all init containers.
+		for _, t := range tuples {
+			for _, container := range t.containers {
+				logs, err := client.GetLogs(
+					ctx, t.statuses, pod.Name, container.Name)
+				if err != nil {
+					return nil, status.Error(
+						codes.Internal,
+						errors.Wrap(err, "failed to get logs").Error(),
+					)
+				}
+				response = append(response, &controllerv1beta1.Logs{
+					Pod:       pod.Name,
+					Container: container.Name,
+					Logs:      logs,
+				})
+			}
+		}
+
 		// Get pod's events.
 		events, err := client.GetEvents(ctx, pod.Name)
 		if err != nil {

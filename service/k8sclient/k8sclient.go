@@ -28,7 +28,7 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
@@ -83,6 +83,15 @@ const (
 	psmdbAPIVersion        = "psmdb.percona.com/v1-6-0"
 	psmdbSecretNameTmpl    = "dbaas-%s-psmdb-secrets"
 	defaultPSMDBSecretName = "my-cluster-name-secrets"
+)
+
+// ContainerState describes container's state - waiting, running, terminated.
+type ContainerState string
+
+const (
+	// ContainerStateWaiting represents a state when container requires some
+	// operations being done in order to complete start up.
+	ContainerStateWaiting ContainerState = "waiting"
 )
 
 // OperatorStatus represents status of operator.
@@ -1216,8 +1225,7 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 	return OperatorStatusNotInstalled
 }
 
-// GetClusterPods returns list of cluster's pods. It finds them by given cluster
-// name.
+// GetClusterPods returns list of cluster's pods. It finds them by given cluster name.
 func (c *K8sClient) GetClusterPods(ctx context.Context, clusterName string) (*common.PodList, error) {
 	list := new(common.PodList)
 	out, err := c.kubeCtl.Run(ctx, []string{"get", "pods", "-lapp.kubernetes.io/instance=" + clusterName, "-ojson"}, nil)
@@ -1231,12 +1239,22 @@ func (c *K8sClient) GetClusterPods(ctx context.Context, clusterName string) (*co
 	return list, nil
 }
 
-// GetLogs returns logs as slice of log lines - strings - for given pod's
-// container.
-func (c *K8sClient) GetLogs(ctx context.Context, pod, container string) ([]string, error) {
+// GetLogs returns logs as slice of log lines - strings - for given pod's container.
+func (c *K8sClient) GetLogs(
+	ctx context.Context,
+	containerStatuses []common.ContainerStatus,
+	pod,
+	container string,
+) ([]string, error) {
+	if isContainerInState(containerStatuses, ContainerStateWaiting, container) {
+		return []string{}, nil
+	}
 	stdout, err := c.kubeCtl.Run(ctx, []string{"logs", pod, container}, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get logs")
+	}
+	if string(stdout) == "" {
+		return []string{}, nil
 	}
 	return strings.Split(string(stdout), "\n"), nil
 }
@@ -1258,4 +1276,20 @@ func (c *K8sClient) GetEvents(ctx context.Context, pod string) ([]string, error)
 	// Add name of the pod to the Events line so it's clear what pod events we got.
 	lines[i] = pod + " " + lines[i]
 	return lines[i:], nil
+}
+
+// isContainerInState returns true if container is in give state, otherwise false.
+func isContainerInState(
+	containerStatuses []common.ContainerStatus,
+	state ContainerState,
+	containerName string,
+) bool {
+	for _, status := range containerStatuses {
+		if status.Name == containerName {
+			if _, ok := status.State[string(state)]; ok {
+				return true
+			}
+		}
+	}
+	return false
 }
