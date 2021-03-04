@@ -424,7 +424,6 @@ func TestGetConsumedResources(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), cpuMillis)
 	assert.Equal(t, int64(0), memoryBytes)
-
 }
 
 func TestGetAllClusterResources(t *testing.T) {
