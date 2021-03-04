@@ -18,6 +18,8 @@ package k8sclient
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -35,7 +37,6 @@ import (
 )
 
 const (
-	consumedResourcesTestNamespace        string = "consumed-resources-test"
 	consumedResourcesTestPodsManifestPath string = "../../deploy/test-pods.yaml"
 )
 
@@ -389,13 +390,19 @@ func TestGetConsumedResources(t *testing.T) {
 	client, err := New(ctx, string(kubeconfig))
 	require.NoError(t, err)
 
+	b := make([]byte, 4)
+	n, err := rand.Read(b)
+	require.NoError(t, err)
+	require.Equal(t, 4, n)
+	consumedResourcesTestNamespace := "consumed-resources-test-" + hex.EncodeToString(b)
+
 	t.Cleanup(func() {
-		err := client.Cleanup()
+		_, err := client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil)
 		require.NoError(t, err)
-		_, _ = client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil) // ignore err
+		err = client.Cleanup()
+		require.NoError(t, err)
 	})
 
-	_, _ = client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil) // ignore err
 	_, err = client.kubeCtl.Run(ctx, []string{"create", "ns", consumedResourcesTestNamespace}, nil)
 	require.NoError(t, err)
 
@@ -418,7 +425,34 @@ func TestGetConsumedResources(t *testing.T) {
 	assert.Equal(t, int64(192928615), memoryBytes)
 
 	// Test we dont include succeeded and failed pods into consumed resources.
-	time.Sleep(time.Second * 10) // wait for the end of sleep inside containers
+	// Wait for test pods to be completed:
+	timeout, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+	for {
+		select {
+		case <-timeout.Done():
+			t.Error("Timeout waiting for hello1 and hello2 pods to complete!")
+			return
+		default:
+		}
+		list, err := client.GetPods(ctx, "-n"+consumedResourcesTestNamespace, "hello1", "hello2")
+		require.NoError(t, err)
+		var failed, succeeded bool
+		for _, pod := range list.Items {
+			if pod.Name == "hello1" {
+				succeeded = pod.Status.Phase == common.PodPhaseSucceded
+				continue
+			}
+			if pod.Name == "hello2" {
+				failed = pod.Status.Phase == common.PodPhaseFailed
+			}
+		}
+
+		if failed && succeeded {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
 
 	cpuMillis, memoryBytes, _, err = client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
 	require.NoError(t, err)
