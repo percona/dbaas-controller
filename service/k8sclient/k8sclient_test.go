@@ -429,6 +429,7 @@ func TestGetConsumedResources(t *testing.T) {
 	timeout, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 	for {
+		time.Sleep(3 * time.Second)
 		select {
 		case <-timeout.Done():
 			t.Error("Timeout waiting for hello1 and hello2 pods to complete!")
@@ -451,7 +452,6 @@ func TestGetConsumedResources(t *testing.T) {
 		if failed && succeeded {
 			break
 		}
-		time.Sleep(3 * time.Second)
 	}
 
 	cpuMillis, memoryBytes, _, err = client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
