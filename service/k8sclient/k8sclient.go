@@ -1360,7 +1360,8 @@ func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) 
 		return 0, 0, 0, errors.Wrap(err, "could not get consumed resources")
 	}
 	for _, ppod := range pods.Items {
-		if ppod.Status.Phase == common.PodPhasePending {
+		if ppod.Status.Phase == common.PodPhasePending ||
+			ppod.Status.Phase == common.PodPhaseSucceded || ppod.Status.Phase == common.PodPhaseFailed {
 			continue
 		}
 		nonTerminatedInitContainers := make([]common.ContainerSpec, 0, len(ppod.Spec.InitContainers))

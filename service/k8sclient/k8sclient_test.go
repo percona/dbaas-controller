@@ -414,8 +414,17 @@ func TestGetConsumedResources(t *testing.T) {
 
 	cpuMillis, memoryBytes, _, err := client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
 	require.NoError(t, err)
-	assert.Equal(t, int64(420), cpuMillis)
-	assert.Equal(t, int64(288928615), memoryBytes)
+	assert.Equal(t, int64(40), cpuMillis)
+	assert.Equal(t, int64(192928615), memoryBytes)
+
+	// Test we dont include succeeded and failed pods into consumed resources.
+	time.Sleep(time.Second * 10) // wait for the end of sleep inside containers
+
+	cpuMillis, memoryBytes, _, err = client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), cpuMillis)
+	assert.Equal(t, int64(0), memoryBytes)
+
 }
 
 func TestGetAllClusterResources(t *testing.T) {

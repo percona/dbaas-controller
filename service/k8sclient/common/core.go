@@ -76,6 +76,13 @@ const (
 	// and made ready to run. This includes time a Pod spends waiting to be
 	// scheduled as well as the time spent downloading container images over the network.
 	PodPhasePending PodPhase = "Pending"
+	// PodPhaseSucceded indicates that all containers in the Pod have terminated
+	// in success, and will not be restarted.
+	PodPhaseSucceded PodPhase = "Succeeded"
+	// PodPhaseFailed indicates that all ontainers in the Pod have terminated,
+	// and at least one container has terminated in failure. That is,
+	// the container either exited with non-zero status or was terminated by the system.
+	PodPhaseFailed PodPhase = "Failed"
 )
 
 // ContainerState describes container's state - waiting, running, terminated.

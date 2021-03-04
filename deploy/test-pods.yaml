@@ -9,14 +9,14 @@ spec:
     command: ['sh', '-c', 'sleep 10']
     resources:
       requests:
-         cpu: 100m
-         memory: 128M
+         cpu: 10m
+         memory: 32M
   - name: sleep10-2
     image: alpine
     command: ['sh', '-c', 'sleep 10']
     resources:
       requests:
-         cpu: 0.2
+         cpu: 0.01
          memory: 32Mi
   restartPolicy: Never
 ---
@@ -31,14 +31,14 @@ spec:
     command: ['sh', '-c', 'sleep 10']
     resources:
       requests:
-         cpu: 60m
+         cpu: 10m
          memory: 0.1Gi
   - name: sleep10-2
     image: alpine
-    command: ['sh', '-c', 'sleep 10']
+    command: ['sh', '-c', 'sleep 10 && exit 1']
     resources:
       requests:
-         cpu: 60m
+         cpu: 10m
          memory: 20000000
   - name: sleep10-3
     image: alpine
@@ -49,8 +49,8 @@ spec:
     command: ['sh', '-c', 'sleep 1']
     resources:
       requests:
-         cpu: 60m
-         memory: 0.1Gi
+         cpu: 10m
+         memory: 0.02Gi
   restartPolicy: Never
 ---
 apiVersion: v1
