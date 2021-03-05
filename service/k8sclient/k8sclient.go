@@ -1324,7 +1324,7 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 		return 0, 0, 0, errors.Wrap(err, "could not get a list of nodes")
 	}
 	for _, node := range nodes {
-		cpu, memory, _, err := getResources(node.Status.Allocatable)
+		cpu, memory, err := getResources(node.Status.Allocatable)
 		if err != nil {
 			return 0, 0, 0, errors.Wrap(err, "could not get allocatable resources of the node")
 		}
@@ -1336,22 +1336,22 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 
 // getResources extracts resources out of common.ResourceList and converts them to int64 values.
 // Millicpus are used for CPU values and bytes for memory.
-func getResources(resources common.ResourceList) (cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error) {
+func getResources(resources common.ResourceList) (cpuMillis int64, memoryBytes int64, err error) {
 	cpu, ok := resources[common.ResourceCPU]
 	if ok {
 		cpuMillis, err = convertors.StrToMilliCPU(cpu)
 		if err != nil {
-			return 0, 0, 0, errors.Wrapf(err, "failed to convert '%s' to millicpus", cpu)
+			return 0, 0, errors.Wrapf(err, "failed to convert '%s' to millicpus", cpu)
 		}
 	}
 	memory, ok := resources[common.ResourceMemory]
 	if ok {
 		memoryBytes, err = convertors.StrToBytes(memory)
 		if err != nil {
-			return 0, 0, 0, errors.Wrapf(err, "failed to convert '%s' to bytes", memory)
+			return 0, 0, errors.Wrapf(err, "failed to convert '%s' to bytes", memory)
 		}
 	}
-	return cpuMillis, memoryBytes, diskSizeBytes, nil
+	return cpuMillis, memoryBytes, nil
 }
 
 // GetConsumedResources returns consumed resources in given namespace. If namespace
@@ -1359,6 +1359,28 @@ func getResources(resources common.ResourceList) (cpuMillis int64, memoryBytes i
 func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) (
 	cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error,
 ) {
+	imageSizesByName := make(map[string]int64)
+	if minikube, err := c.isMinikube(ctx); err == nil && minikube {
+		// Build imageSizesByName and add image sizes to consumed disk size.
+		nodes, err := c.getWorkerNodes(ctx)
+		if err != nil {
+			return 0, 0, 0, errors.Wrap(err, "could not get consumed resources")
+		}
+		for _, node := range nodes {
+			for _, image := range node.Status.Images {
+				diskSizeBytes += image.SizeBytes
+				c.l.Infof("GetConsumedResources: image sizes per node	: diskSizeBytes is now %d", diskSizeBytes)
+				for _, name := range image.Names {
+					c.l.Info("building imageSizesByName")
+					imageSizesByName[name] = image.SizeBytes
+				}
+				c.l.Infof("imageSizesbyname: %v", imageSizesByName)
+			}
+		}
+	}
+
+	// Get CPU and Memory Requests of Pods' containers and disk consumed by
+	// contaiers' image. We assume node is running on FS that does not have CoW.
 	if namespace == "" {
 		namespace = "--all-namespaces"
 	} else {
@@ -1382,12 +1404,19 @@ func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) 
 			}
 		}
 		for _, container := range append(ppod.Spec.Containers, nonTerminatedInitContainers...) {
-			cpu, memory, _, err := getResources(container.Resources.Requests)
+			cpu, memory, err := getResources(container.Resources.Requests)
 			if err != nil {
 				return 0, 0, 0, errors.Wrap(err, "failed to sum all consumed resources")
 			}
 			cpuMillis += cpu
 			memoryBytes += memory
+			c.l.Infof("Image is %q", container.Image)
+			bytes, ok := imageSizesByName[container.Image]
+			if !ok {
+				return 0, 0, 0, errors.Errorf("Image %s not found in %v", container.Image, imageSizesByName)
+			}
+			diskSizeBytes += bytes
+			c.l.Infof("GetConsumedResources: image size per container: diskSizeBytes is now %d", diskSizeBytes)
 		}
 	}
 	return cpuMillis, memoryBytes, diskSizeBytes, nil

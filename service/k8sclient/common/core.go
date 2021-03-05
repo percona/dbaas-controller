@@ -44,6 +44,7 @@ type ContainerStatus struct {
 // ContainerSpec represents a container definition.
 type ContainerSpec struct {
 	Name      string               `json:"name,omitempty"`
+	Image     string               `json:"image,omitempty"`
 	Resources ResourceRequirements `json:"resources,omitempty"`
 }
 
@@ -170,6 +171,9 @@ type NodeStatus struct {
 	// for allocation by pods. The difference between capacity and allocatable of
 	// the node is reserved for Kubernetes overhead and non-Kubernetes processes.
 	Allocatable ResourceList `json:"allocatable,omitempty"`
+
+	// Images is a list of container images stored at node.
+	Images []Image `json:"images,omitempty"`
 }
 
 // Taint reserves node for pods that tolerate the taint.
@@ -177,6 +181,12 @@ type NodeStatus struct {
 type Taint struct {
 	Effect string `json:"effect,omitempty"`
 	Key    string `json:"key,omitempty"`
+}
+
+// Image holds continaer image names and image size.
+type Image struct {
+	Names     []string `json:"names,omitempty"`
+	SizeBytes int64    `json:"sizeBytes,omitempty"`
 }
 
 // NodeSpec holds Kubernetes node specification.
