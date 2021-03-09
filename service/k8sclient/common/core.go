@@ -43,7 +43,8 @@ type ContainerStatus struct {
 
 // ContainerSpec represents a container definition.
 type ContainerSpec struct {
-	Name string `json:"name,omitempty"`
+	Name      string               `json:"name,omitempty"`
+	Resources ResourceRequirements `json:"resources,omitempty"`
 }
 
 // PodSpec is a description of a pod.
@@ -64,6 +65,50 @@ type PodSpec struct {
 	InitContainers []ContainerSpec `json:"initContainers,omitempty"`
 }
 
+// PodPhase defines Pod's phase.
+// It could be one of these values: Pending, Running, Succeeded, Failed, Unknown.
+// See https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/.
+type PodPhase string
+
+const (
+	// PodPhasePending indicates that the Pod has been accepted by the
+	// Kubernetes cluster, but one or more of the containers has not been set up
+	// and made ready to run. This includes time a Pod spends waiting to be
+	// scheduled as well as the time spent downloading container images over the network.
+	PodPhasePending PodPhase = "Pending"
+	// PodPhaseSucceded indicates that all containers in the Pod have terminated
+	// in success, and will not be restarted.
+	PodPhaseSucceded PodPhase = "Succeeded"
+	// PodPhaseFailed indicates that all ontainers in the Pod have terminated,
+	// and at least one container has terminated in failure. That is,
+	// the container either exited with non-zero status or was terminated by the system.
+	PodPhaseFailed PodPhase = "Failed"
+)
+
+// ContainerState describes container's state - waiting, running, terminated.
+type ContainerState string
+
+const (
+	// ContainerStateWaiting represents a state when container requires some
+	// operations being done in order to complete start up.
+	ContainerStateWaiting ContainerState = "waiting"
+	// ContainerStateTerminated indicates that container began execution and
+	// then either ran to completion or failed for some reason.
+	ContainerStateTerminated ContainerState = "terminated"
+)
+
+// IsContainerInState returns true if container is in give state, otherwise false.
+func IsContainerInState(containerStatuses []ContainerStatus, state ContainerState, containerName string) bool {
+	for _, status := range containerStatuses {
+		if status.Name == containerName {
+			if _, ok := status.State[string(state)]; ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // PodStatus holds pod status.
 type PodStatus struct {
 	// ContainerStatuses holds statuses of regular containers.
@@ -71,6 +116,9 @@ type PodStatus struct {
 
 	// InitContainerStatuses holds statuses of init containers.
 	InitContainerStatuses []ContainerStatus `json:"initContainerStatuses,omitempty"`
+
+	// Phase holds pod's phase.
+	Phase PodPhase `json:"phase,omitempty"`
 }
 
 // Pod is a collection of containers that can run on a host. This resource is created
@@ -115,3 +163,32 @@ const (
 	// SecretTypeOpaque is the default. Arbitrary user-defined data.
 	SecretTypeOpaque SecretType = "Opaque"
 )
+
+// NodeStatus holds Kubernetes node status.
+type NodeStatus struct {
+	// Allocatable is amount of recources from node's capacity that is available
+	// for allocation by pods. The difference between capacity and allocatable of
+	// the node is reserved for Kubernetes overhead and non-Kubernetes processes.
+	Allocatable ResourceList `json:"allocatable,omitempty"`
+}
+
+// Taint reserves node for pods that tolerate the taint.
+// See https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/.
+type Taint struct {
+	Effect string `json:"effect,omitempty"`
+	Key    string `json:"key,omitempty"`
+}
+
+// NodeSpec holds Kubernetes node specification.
+type NodeSpec struct {
+	Taints []Taint `json:"taints,omitempty"`
+}
+
+// Node holds information about Kubernetes node.
+type Node struct {
+	TypeMeta
+	// Specification of the node.
+	Spec NodeSpec `json:"spec,omitempty"`
+	// Status of the node.
+	Status NodeStatus `json:"status,omitempty"`
+}

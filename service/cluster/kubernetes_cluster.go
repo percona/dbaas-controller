@@ -69,3 +69,33 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 
 	return resp, nil
 }
+
+// GetResources returns total and available amounts of resources of certain k8s cluster.
+func (k KubernetesClusterService) GetResources(ctx context.Context, req *controllerv1beta1.GetResourcesRequest) (*controllerv1beta1.GetResourcesResponse, error) {
+	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
+	}
+	defer k8sClient.Cleanup() //nolint:errcheck
+
+	allCPUMillis, allMemoryBytes, _, err := k8sClient.GetAllClusterResources(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	consumedCPUMillis, consumedMemoryBytes, _, err := k8sClient.GetConsumedResources(ctx, "")
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &controllerv1beta1.GetResourcesResponse{
+		All: &controllerv1beta1.Resources{
+			CpuM:        allCPUMillis,
+			MemoryBytes: allMemoryBytes,
+		},
+		Available: &controllerv1beta1.Resources{
+			CpuM:        allCPUMillis - consumedCPUMillis,
+			MemoryBytes: allMemoryBytes - consumedMemoryBytes,
+		},
+	}, nil
+}

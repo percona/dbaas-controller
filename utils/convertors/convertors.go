@@ -18,33 +18,83 @@
 package convertors
 
 import (
+	"math"
 	"strconv"
 	"strings"
+	"unicode"
+
+	"github.com/pkg/errors"
 )
 
-// StrToBytes converts string of bytes to integer.
-func StrToBytes(s string) int64 {
-	multiplier := int64(1)
-	if strings.HasSuffix(s, "G") {
-		multiplier = 1000 * 1000 * 1000
-		s = strings.TrimSuffix(s, "G")
+const (
+	kiloByte int64 = 1000
+	kibiByte int64 = 1024
+	megaByte int64 = kiloByte * 1000
+	mibiByte int64 = kibiByte * 1024
+	gigaByte int64 = megaByte * 1000
+	gibiByte int64 = mibiByte * 1024
+	teraByte int64 = gigaByte * 1000
+	tebiByte int64 = gibiByte * 1024
+)
+
+// StrToBytes converts string containing memory as string to number of bytes the string represents.
+func StrToBytes(memory string) (int64, error) {
+	if len(memory) == 0 {
+		return 0, nil
 	}
-	if b, err := strconv.ParseInt(s, 10, 64); err == nil {
-		return b * multiplier
+	i := len(memory) - 1
+	for i >= 0 && !unicode.IsDigit(rune(memory[i])) {
+		i--
 	}
-	return 0
+	var suffix string
+	if i >= 0 {
+		suffix = memory[i+1:]
+	}
+	suffixMapping := map[string]float64{
+		"m":  0.001,
+		"K":  float64(kiloByte),
+		"Ki": float64(kibiByte),
+		"M":  float64(megaByte),
+		"Mi": float64(mibiByte),
+		"G":  float64(gigaByte),
+		"Gi": float64(gibiByte),
+		"T":  float64(teraByte),
+		"Ti": float64(tebiByte),
+		"":   1.0,
+	}
+	coeficient, ok := suffixMapping[suffix]
+	if !ok {
+		return 0, errors.Errorf("suffix '%s' not supported", suffix)
+	}
+
+	if suffix != "" {
+		memory = memory[:i+1]
+	}
+	value, err := strconv.ParseFloat(memory, 64)
+	if err != nil {
+		return 0, errors.Errorf("given value '%s' is not a number", memory)
+	}
+	return int64(math.Ceil(value * coeficient)), nil
 }
 
-// StrToMilliCPU converts milli CPU to integer.
-func StrToMilliCPU(s string) int32 {
-	if !strings.HasSuffix(s, "m") {
-		return 0
+// StrToMilliCPU converts CPU as a string representation to millicpus represented as an integer.
+func StrToMilliCPU(cpu string) (int64, error) {
+	if cpu == "" {
+		return 0, nil
 	}
-	s = strings.TrimSuffix(s, "m")
-	if b, err := strconv.ParseUint(s, 10, 32); err == nil {
-		return int32(b)
+	if strings.HasSuffix(cpu, "m") {
+		cpu = cpu[:len(cpu)-1]
+		millis, err := strconv.ParseInt(cpu, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+		return millis, nil
 	}
-	return 0
+	floatCPU, err := strconv.ParseFloat(cpu, 64)
+	if err != nil {
+		return 0, err
+	}
+	return int64(floatCPU * 1000), nil
 }
 
 // BytesToStr converts integer of bytes to string.

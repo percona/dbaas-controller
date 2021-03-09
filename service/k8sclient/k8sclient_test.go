@@ -18,7 +18,8 @@ package k8sclient
 
 import (
 	"context"
-	"encoding/json"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -35,50 +36,15 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
+const (
+	consumedResourcesTestPodsManifestPath string = "../../deploy/test-pods.yaml"
+)
+
 // pod is struct just for testing purposes. It contains expected pod and
 // container names.
 type pod struct {
 	name       string
 	containers []string
-}
-
-const containerStateTestInput string = `
-{
- "containerStatuses": [
-     {
-         "containerID": "docker://dac1c01c439e8fa873679b13e22bc75baa59129e2c4e3282e36bf950b5c7bc53",
-         "image": "perconalab/pmm-client:dev-latest",
-         "imageID": "docker-pullable://perconalab/pmm-client@sha256:1697b99e10e50ce62637c6073f6ff70ab96cfbc287e487c554ce1bb72a5126fe",
-         "lastState": {
-             "terminated": {
-                 "containerID": "docker://dac1c01c439e8fa873679b13e22bc75baa59129e2c4e3282e36bf950b5c7bc53",
-                 "exitCode": 1,
-                 "finishedAt": "2021-02-19T15:19:57Z",
-                 "reason": "Error",
-                 "startedAt": "2021-02-19T15:19:57Z"
-             }
-         },
-         "name": "pmm-client",
-         "ready": false,
-         "restartCount": 3,
-         "started": false,
-         "state": {
-             "waiting": {
-                 "message": "back-off 40s restarting failed container=pmm-client pod=newclusterinsane-proxysql-0_default(efda5403-ff22-46e7-9930-4366d7eec910)",
-                 "reason": "CrashLoopBackOff"
-             }
-         }
-     }
-  ]        
-}
-`
-
-func TestIsContainerInState(t *testing.T) {
-	t.Parallel()
-	ps := new(common.PodStatus)
-	require.NoError(t, json.Unmarshal([]byte(containerStateTestInput), ps))
-	assert.True(t, isContainerInState(ps.ContainerStatuses, ContainerStateWaiting, "pmm-client"), "pmm-client is waiting but reported otherwise")
-	assert.False(t, isContainerInState(ps.ContainerStatuses, ContainerState("fakestate"), "pmm-client"), "check for non-existing state should return false")
 }
 
 func TestK8sClient(t *testing.T) {
@@ -159,7 +125,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("Get logs", func(t *testing.T) {
-			pods, err := client.GetClusterPods(ctx, name)
+			pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+name)
 			require.NoError(t, err)
 
 			expectedPods := []pod{
@@ -412,4 +378,129 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 			break
 		}
 	}
+}
+
+func TestGetConsumedResources(t *testing.T) {
+	t.Parallel()
+	ctx := app.Context()
+
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+
+	client, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
+
+	b := make([]byte, 4)
+	n, err := rand.Read(b)
+	require.NoError(t, err)
+	require.Equal(t, 4, n)
+	consumedResourcesTestNamespace := "consumed-resources-test-" + hex.EncodeToString(b)
+
+	t.Cleanup(func() {
+		_, err := client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil)
+		require.NoError(t, err)
+		err = client.Cleanup()
+		require.NoError(t, err)
+	})
+
+	_, err = client.kubeCtl.Run(ctx, []string{"create", "ns", consumedResourcesTestNamespace}, nil)
+	require.NoError(t, err)
+
+	args := []string{
+		"apply", "-f", consumedResourcesTestPodsManifestPath,
+		"-n" + consumedResourcesTestNamespace,
+	}
+	_, err = client.kubeCtl.Run(ctx, args, nil)
+	require.NoError(t, err)
+	args = []string{
+		"wait", "--for=condition=ready", "--timeout=20s",
+		"pods", "hello1", "hello2", "-n" + consumedResourcesTestNamespace,
+	}
+	_, err = client.kubeCtl.Run(ctx, args, nil)
+	require.NoError(t, err)
+
+	cpuMillis, memoryBytes, _, err := client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
+	require.NoError(t, err)
+	assert.Equal(t, int64(40), cpuMillis)
+	assert.Equal(t, int64(192928615), memoryBytes)
+
+	// Test we dont include succeeded and failed pods into consumed resources.
+	// Wait for test pods to be completed:
+	timeout, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+	for {
+		time.Sleep(3 * time.Second)
+		select {
+		case <-timeout.Done():
+			t.Error("Timeout waiting for hello1 and hello2 pods to complete!")
+			return
+		default:
+		}
+		list, err := client.GetPods(ctx, "-n"+consumedResourcesTestNamespace, "hello1", "hello2")
+		require.NoError(t, err)
+		var failed, succeeded bool
+		for _, pod := range list.Items {
+			if pod.Name == "hello1" {
+				succeeded = pod.Status.Phase == common.PodPhaseSucceded
+				continue
+			}
+			if pod.Name == "hello2" {
+				failed = pod.Status.Phase == common.PodPhaseFailed
+			}
+		}
+
+		if failed && succeeded {
+			break
+		}
+	}
+
+	cpuMillis, memoryBytes, _, err = client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), cpuMillis)
+	assert.Equal(t, int64(0), memoryBytes)
+}
+
+func TestGetAllClusterResources(t *testing.T) {
+	t.Parallel()
+	ctx := app.Context()
+
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+
+	client, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err := client.Cleanup()
+		require.NoError(t, err)
+	})
+
+	// test getWorkerNodes
+	nodes, err := client.getWorkerNodes(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, nodes)
+	assert.Greater(t, len(nodes), 0)
+	for _, node := range nodes {
+		cpu, ok := node.Status.Allocatable[common.ResourceCPU]
+		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", common.ResourceCPU)
+		assert.NotEmpty(t, cpu)
+		memory, ok := node.Status.Allocatable[common.ResourceMemory]
+		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", common.ResourceMemory)
+		assert.NotEmpty(t, memory)
+	}
+
+	cpuMillis, memoryBytes, _, err := client.GetAllClusterResources(ctx)
+	require.NoError(t, err)
+	// We check 1 CPU because it is hard to imagine somebody running cluster with less CPU allocatable.
+	t.Log("nodes is", len(nodes))
+	assert.GreaterOrEqual(
+		t, cpuMillis, int64(len(nodes)*1000),
+		"expected to have at lease 1 CPU per node available to be allocated by pods",
+	)
+
+	// The same for memory, hard to imagine having less than 1 GB allocatable per node.
+	assert.GreaterOrEqual(
+		t, memoryBytes, int64(len(nodes))*1000*1000*1000,
+		"expected to have at lease 1GB available to be allocated by pods",
+	)
 }

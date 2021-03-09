@@ -32,6 +32,7 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
+	"github.com/percona-platform/dbaas-controller/utils/convertors"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
@@ -1225,10 +1226,14 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 	return OperatorStatusNotInstalled
 }
 
-// GetClusterPods returns list of cluster's pods. It finds them by given cluster name.
-func (c *K8sClient) GetClusterPods(ctx context.Context, clusterName string) (*common.PodList, error) {
+// GetPods returns list of pods based on given filters. Filters are args to
+// kubectl command. For example "-lyour-label=value", "-ntest-namespace".
+func (c *K8sClient) GetPods(ctx context.Context, filters ...string) (*common.PodList, error) {
 	list := new(common.PodList)
-	out, err := c.kubeCtl.Run(ctx, []string{"get", "pods", "-lapp.kubernetes.io/instance=" + clusterName, "-ojson"}, nil)
+	args := []string{"get", "pods"}
+	args = append(args, filters...)
+	args = append(args, "-ojson")
+	out, err := c.kubeCtl.Run(ctx, args, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
@@ -1246,7 +1251,7 @@ func (c *K8sClient) GetLogs(
 	pod,
 	container string,
 ) ([]string, error) {
-	if isContainerInState(containerStatuses, ContainerStateWaiting, container) {
+	if common.IsContainerInState(containerStatuses, common.ContainerStateWaiting, container) {
 		return []string{}, nil
 	}
 	stdout, err := c.kubeCtl.Run(ctx, []string{"logs", pod, container}, nil)
@@ -1278,18 +1283,112 @@ func (c *K8sClient) GetEvents(ctx context.Context, pod string) ([]string, error)
 	return lines[i:], nil
 }
 
-// isContainerInState returns true if container is in give state, otherwise false.
-func isContainerInState(
-	containerStatuses []common.ContainerStatus,
-	state ContainerState,
-	containerName string,
-) bool {
-	for _, status := range containerStatuses {
-		if status.Name == containerName {
-			if _, ok := status.State[string(state)]; ok {
-				return true
+// getWorkerNodes returns list of cluster workers nodes.
+func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
+	nodes := new(common.NodeList)
+	out, err := c.kubeCtl.Run(ctx, []string{"get", "nodes", "-ojson"}, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get nodes of Kubernetes cluster")
+	}
+	err = json.Unmarshal(out, nodes)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get nodes of Kubernetes cluster")
+	}
+	forbidenTaints := map[string]string{
+		"node.cloudprovider.kubernetes.io/uninitialized": "NoSchedule",
+		"node.kubernetes.io/unschedulable":               "NoSchedule",
+		"node-role.kubernetes.io/master":                 "NoSchedule",
+	}
+	workers := make([]common.Node, 0, len(nodes.Items))
+	for _, node := range nodes.Items {
+		if len(node.Spec.Taints) == 0 {
+			workers = append(workers, node)
+			continue
+		}
+		for _, taint := range node.Spec.Taints {
+			effect, keyFound := forbidenTaints[taint.Key]
+			if !keyFound || effect != taint.Effect {
+				workers = append(workers, node)
 			}
 		}
 	}
-	return false
+	return workers, nil
+}
+
+// GetAllClusterResources goes through all cluster nodes and sums their allocatable resources.
+func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
+	cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error,
+) {
+	nodes, err := c.getWorkerNodes(ctx)
+	if err != nil {
+		return 0, 0, 0, errors.Wrap(err, "could not get a list of nodes")
+	}
+	for _, node := range nodes {
+		cpu, memory, _, err := getResources(node.Status.Allocatable)
+		if err != nil {
+			return 0, 0, 0, errors.Wrap(err, "could not get allocatable resources of the node")
+		}
+		cpuMillis += cpu
+		memoryBytes += memory
+	}
+	return cpuMillis, memoryBytes, diskSizeBytes, nil
+}
+
+// getResources extracts resources out of common.ResourceList and converts them to int64 values.
+// Millicpus are used for CPU values and bytes for memory.
+func getResources(resources common.ResourceList) (cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error) {
+	cpu, ok := resources[common.ResourceCPU]
+	if ok {
+		cpuMillis, err = convertors.StrToMilliCPU(cpu)
+		if err != nil {
+			return 0, 0, 0, errors.Wrapf(err, "failed to convert '%s' to millicpus", cpu)
+		}
+	}
+	memory, ok := resources[common.ResourceMemory]
+	if ok {
+		memoryBytes, err = convertors.StrToBytes(memory)
+		if err != nil {
+			return 0, 0, 0, errors.Wrapf(err, "failed to convert '%s' to bytes", memory)
+		}
+	}
+	return cpuMillis, memoryBytes, diskSizeBytes, nil
+}
+
+// GetConsumedResources returns consumed resources in given namespace. If namespace
+// is empty string, it tries to get consumed resouces from all namespaces.
+func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) (
+	cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error,
+) {
+	if namespace == "" {
+		namespace = "--all-namespaces"
+	} else {
+		namespace = "-n" + namespace
+	}
+	pods, err := c.GetPods(ctx, namespace)
+	if err != nil {
+		return 0, 0, 0, errors.Wrap(err, "could not get consumed resources")
+	}
+	for _, ppod := range pods.Items {
+		if ppod.Status.Phase == common.PodPhasePending ||
+			ppod.Status.Phase == common.PodPhaseSucceded || ppod.Status.Phase == common.PodPhaseFailed {
+			continue
+		}
+		nonTerminatedInitContainers := make([]common.ContainerSpec, 0, len(ppod.Spec.InitContainers))
+		for _, container := range ppod.Spec.InitContainers {
+			if !common.IsContainerInState(
+				ppod.Status.InitContainerStatuses, common.ContainerStateTerminated, container.Name,
+			) {
+				nonTerminatedInitContainers = append(nonTerminatedInitContainers, container)
+			}
+		}
+		for _, container := range append(ppod.Spec.Containers, nonTerminatedInitContainers...) {
+			cpu, memory, _, err := getResources(container.Resources.Requests)
+			if err != nil {
+				return 0, 0, 0, errors.Wrap(err, "failed to sum all consumed resources")
+			}
+			cpuMillis += cpu
+			memoryBytes += memory
+		}
+	}
+	return cpuMillis, memoryBytes, diskSizeBytes, nil
 }
