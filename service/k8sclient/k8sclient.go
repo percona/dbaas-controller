@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
@@ -1226,6 +1228,21 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 	return OperatorStatusNotInstalled
 }
 
+// GetPersistentVolumes returns list of persistent volumes.
+func (c *K8sClient) GetPersistentVolumes(ctx context.Context) (*common.PersistentVolumeList, error) {
+	list := new(common.PersistentVolumeList)
+	args := []string{"get", "pv", "-ojson"}
+	out, err := c.kubeCtl.Run(ctx, args, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get persistent volumes")
+	}
+	err = json.Unmarshal(out, list)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get persistent volumes")
+	}
+	return list, nil
+}
+
 // GetPods returns list of pods based on given filters. Filters are args to
 // kubectl command. For example "-lyour-label=value", "-ntest-namespace".
 func (c *K8sClient) GetPods(ctx context.Context, filters ...string) (*common.PodList, error) {
@@ -1319,6 +1336,11 @@ func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
 func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 	cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error,
 ) {
+	minikube, err := c.isMinikube(ctx)
+	if err != nil {
+		return 0, 0, 0, errors.Wrap(err, "could not decide strategy of getting all resources")
+	}
+
 	nodes, err := c.getWorkerNodes(ctx)
 	if err != nil {
 		return 0, 0, 0, errors.Wrap(err, "could not get a list of nodes")
@@ -1330,6 +1352,17 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 		}
 		cpuMillis += cpu
 		memoryBytes += memory
+		if minikube {
+			storage, ok := node.Status.Allocatable[common.ResourceEphemeralStorage]
+			if !ok {
+				return 0, 0, 0, errors.Errorf("could not get storage size of the node")
+			}
+			bytes, err := convertors.StrToBytes(storage)
+			if err != nil {
+				return 0, 0, 0, errors.Wrapf(err, "could not convert storage size '%s' to bytes", storage)
+			}
+			diskSizeBytes += bytes
+		}
 	}
 	return cpuMillis, memoryBytes, diskSizeBytes, nil
 }
@@ -1357,28 +1390,8 @@ func getResources(resources common.ResourceList) (cpuMillis int64, memoryBytes i
 // GetConsumedResources returns consumed resources in given namespace. If namespace
 // is empty string, it tries to get consumed resouces from all namespaces.
 func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) (
-	cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error,
+	cpuMillis int64, memoryBytes int64, err error,
 ) {
-	imageSizesByName := make(map[string]int64)
-	if minikube, err := c.isMinikube(ctx); err == nil && minikube {
-		// Build imageSizesByName and add image sizes to consumed disk size.
-		nodes, err := c.getWorkerNodes(ctx)
-		if err != nil {
-			return 0, 0, 0, errors.Wrap(err, "could not get consumed resources")
-		}
-		for _, node := range nodes {
-			for _, image := range node.Status.Images {
-				diskSizeBytes += image.SizeBytes
-				c.l.Infof("GetConsumedResources: image sizes per node	: diskSizeBytes is now %d", diskSizeBytes)
-				for _, name := range image.Names {
-					c.l.Info("building imageSizesByName")
-					imageSizesByName[name] = image.SizeBytes
-				}
-				c.l.Infof("imageSizesbyname: %v", imageSizesByName)
-			}
-		}
-	}
-
 	// Get CPU and Memory Requests of Pods' containers and disk consumed by
 	// contaiers' image. We assume node is running on FS that does not have CoW.
 	if namespace == "" {
@@ -1388,7 +1401,7 @@ func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) 
 	}
 	pods, err := c.GetPods(ctx, namespace)
 	if err != nil {
-		return 0, 0, 0, errors.Wrap(err, "could not get consumed resources")
+		return 0, 0, errors.Wrap(err, "could not get consumed resources")
 	}
 	for _, ppod := range pods.Items {
 		if ppod.Status.Phase == common.PodPhasePending ||
@@ -1406,18 +1419,72 @@ func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) 
 		for _, container := range append(ppod.Spec.Containers, nonTerminatedInitContainers...) {
 			cpu, memory, err := getResources(container.Resources.Requests)
 			if err != nil {
-				return 0, 0, 0, errors.Wrap(err, "failed to sum all consumed resources")
+				return 0, 0, errors.Wrap(err, "failed to sum all consumed resources")
 			}
 			cpuMillis += cpu
 			memoryBytes += memory
-			c.l.Infof("Image is %q", container.Image)
-			bytes, ok := imageSizesByName[container.Image]
-			if !ok {
-				return 0, 0, 0, errors.Errorf("Image %s not found in %v", container.Image, imageSizesByName)
-			}
-			diskSizeBytes += bytes
-			c.l.Infof("GetConsumedResources: image size per container: diskSizeBytes is now %d", diskSizeBytes)
 		}
 	}
-	return cpuMillis, memoryBytes, diskSizeBytes, nil
+	return cpuMillis, memoryBytes, nil
+}
+
+func (c *K8sClient) GetAvailableDiskBytes(ctx context.Context) (availableBytes int64, err error) {
+	nodes, err := c.getWorkerNodes(ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "can't compute available disk size: failed to get worker nodes")
+	}
+
+	for _, node := range nodes {
+		method := "GET"
+		endpoint := fmt.Sprintf("/v1/nodes/%s/proxy/stats/summary", node.Name)
+		summary := new(common.NodeSummary)
+		err = c.doAPIRequest(ctx, method, endpoint, &summary)
+		if err != nil {
+			return 0, errors.Wrap(err, "can't compute available disk size: failed to get worker nodes summary")
+		}
+		c.l.Info("GetAvailableDiskBytes -------------- I am here ---------------------------")
+		availableBytes += summary.Node.FileSystem.AvailableBytes
+		c.l.Infof("availableBytes is now %d", availableBytes)
+	}
+	return availableBytes, nil
+}
+
+// startKubectlProxy starts proxy on given port
+func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, out interface{}) error {
+	if reflect.ValueOf(out).Kind() != reflect.Ptr {
+		return errors.New("output expected to be pointer")
+	}
+	port := "8089"
+	// This call blocks when another deamon is already running.
+	go func() {
+		err := c.kubeCtl.RunDaemon(ctx, "proxy", "--port="+port)
+		if err != nil {
+			c.l.Error(errors.Wrap(err, "fialed to run daemon"))
+		}
+	}()
+	defer func() {
+		err := c.kubeCtl.StopDaemon()
+		if err != nil {
+			c.l.Error(err)
+		}
+	}()
+
+	client := http.Client{
+		Timeout: time.Second * 5,
+		Transport: &http.Transport{
+			MaxIdleConns:    1,
+			IdleConnTimeout: 10 * time.Second,
+		},
+	}
+	time.Sleep(time.Second * 2)
+	req, err := http.NewRequest(method, "http://localhost:"+port+"/api"+endpoint, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return json.NewDecoder(resp.Body).Decode(out)
 }

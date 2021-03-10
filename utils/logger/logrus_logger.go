@@ -20,6 +20,7 @@ package logger
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 
@@ -60,7 +61,16 @@ func (l *logrusGrpcLoggerV2) V(level int) bool {
 
 // NewLogger returns new LogrusLogger.
 func NewLogger() Logger {
-	l := logrus.NewEntry(logrus.New())
+	// l := logrus.NewEntry(logrus.New())
+	l := logrus.NewEntry(&logrus.Logger{
+		Out:          os.Stderr,
+		Formatter:    new(logrus.TextFormatter),
+		Hooks:        make(logrus.LevelHooks),
+		Level:        logrus.DebugLevel,
+		ExitFunc:     os.Exit,
+		ReportCaller: false,
+	})
+
 	return &LogrusLogger{
 		l: l,
 	}

@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/pkg/errors"
@@ -46,6 +47,8 @@ type KubeCtl struct {
 	l              logger.Logger
 	cmd            []string
 	kubeconfigPath string
+	daemonMutex    *sync.Mutex
+	daemonCmd      *exec.Cmd
 }
 
 // NewKubeCtl creates a new KubeCtl object with a given logger.
@@ -63,8 +66,9 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 	// Cannot identify k8s server version on non local env without kubeconfig (w/o address of k8s server).
 	if kubeconfig == "" {
 		return &KubeCtl{
-			l:   l,
-			cmd: defaultKubectl,
+			l:           l,
+			cmd:         defaultKubectl,
+			daemonMutex: new(sync.Mutex),
 		}, nil
 	}
 
@@ -90,6 +94,7 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 		l:              l,
 		cmd:            cmd,
 		kubeconfigPath: kubeconfigPath,
+		daemonMutex:    new(sync.Mutex),
 	}, nil
 }
 
@@ -282,4 +287,51 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 	l.Debug(outBuf.String())
 	l.Debug(errBuf.String())
 	return outBuf.Bytes(), err
+}
+
+func (k *KubeCtl) RunDaemon(ctx context.Context, args ...string) error {
+	k.daemonMutex.Lock()
+	defer k.daemonMutex.Unlock()
+	var outBuf bytes.Buffer
+	var errBuf bytes.Buffer
+	args = append(k.cmd, args...)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...) //nolint:gosec
+	pdeathsig.Set(cmd, unix.SIGKILL)
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
+	envs := os.Environ()
+	for _, env := range envs {
+		if strings.HasPrefix(env, "PATH=") {
+			env = fmt.Sprintf("PATH=%s:%s", dbaasToolPath, os.Getenv("PATH"))
+		}
+		cmd.Env = append(cmd.Env, env)
+	}
+	k.daemonCmd = cmd
+	err := cmd.Run()
+	if err != nil {
+		if strings.Contains(errBuf.String(), "NotFound") {
+			return ErrNotFound
+		}
+		return &kubeCtlError{
+			err:    errors.WithStack(err),
+			cmd:    strings.Join(args, " "),
+			stderr: errBuf.String(),
+		}
+	}
+
+	if cmd.ProcessState.Exited() {
+		return &kubeCtlError{
+			err:    errors.WithStack(err),
+			cmd:    strings.Join(args, " "),
+			stderr: errBuf.String(),
+		}
+	}
+	return nil
+}
+
+func (k *KubeCtl) StopDaemon() error {
+	if err := k.daemonCmd.Process.Kill(); err != nil {
+		return err
+	}
+	return nil
 }

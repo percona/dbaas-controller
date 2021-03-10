@@ -197,8 +197,22 @@ type NodeSpec struct {
 // Node holds information about Kubernetes node.
 type Node struct {
 	TypeMeta
+	ObjectMeta `json:"metadata,omitempty"`
 	// Specification of the node.
 	Spec NodeSpec `json:"spec,omitempty"`
 	// Status of the node.
 	Status NodeStatus `json:"status,omitempty"`
+}
+
+type PersistentVolumeCapacity struct {
+	Storage string `json:"storage,omitempty"`
+}
+
+type PersistentVolumeSpec struct {
+	Capacity PersistentVolumeCapacity `json:"capacity,omitempty"`
+}
+
+type PersistentVolume struct {
+	TypeMeta
+	Spec PersistentVolumeSpec `json:"spec,omitempty"`
 }
