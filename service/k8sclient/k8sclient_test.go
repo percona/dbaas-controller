@@ -419,7 +419,7 @@ func TestGetConsumedResources(t *testing.T) {
 	_, err = client.kubeCtl.Run(ctx, args, nil)
 	require.NoError(t, err)
 
-	cpuMillis, memoryBytes, _, err := client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
+	cpuMillis, memoryBytes, err := client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
 	require.NoError(t, err)
 	assert.Equal(t, int64(40), cpuMillis)
 	assert.Equal(t, int64(192928615), memoryBytes)
@@ -454,7 +454,7 @@ func TestGetConsumedResources(t *testing.T) {
 		}
 	}
 
-	cpuMillis, memoryBytes, _, err = client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
+	cpuMillis, memoryBytes, err = client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), cpuMillis)
 	assert.Equal(t, int64(0), memoryBytes)
