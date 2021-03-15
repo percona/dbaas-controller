@@ -28,10 +28,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
+
+	"github.com/patrickmn/go-cache"
 
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
@@ -49,6 +52,7 @@ type KubeCtl struct {
 	kubeconfigPath string
 	daemonMutex    *sync.Mutex
 	daemonCmd      *exec.Cmd
+	cache          *cache.Cache
 }
 
 // NewKubeCtl creates a new KubeCtl object with a given logger.
@@ -63,12 +67,16 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 		return nil, err
 	}
 
+	// Setup cache
+	cache := cache.New(time.Second*5, time.Second*10)
+
 	// Cannot identify k8s server version on non local env without kubeconfig (w/o address of k8s server).
 	if kubeconfig == "" {
 		return &KubeCtl{
 			l:           l,
 			cmd:         defaultKubectl,
 			daemonMutex: new(sync.Mutex),
+			cache:       cache,
 		}, nil
 	}
 
@@ -95,6 +103,7 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 		cmd:            cmd,
 		kubeconfigPath: kubeconfigPath,
 		daemonMutex:    new(sync.Mutex),
+		cache:          cache,
 	}, nil
 }
 
@@ -208,7 +217,7 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 		args = append(args, name)
 	}
 
-	stdout, err := run(ctx, k.cmd, args, nil)
+	stdout, err := k.Run(ctx, args, nil)
 	if err != nil {
 		return err
 	}
@@ -230,9 +239,21 @@ func (k *KubeCtl) Delete(ctx context.Context, res interface{}) error {
 
 // Run wraps func run.
 func (k *KubeCtl) Run(ctx context.Context, args []string, stdin interface{}) ([]byte, error) {
+	var argsString string
+	if len(args) > 0 && strings.ToLower(args[0]) == "get" || strings.ToLower(args[0]) == "describe" {
+		argsString = strings.Join(args, " ")
+		if bytes, found := k.cache.Get(argsString); found {
+			k.l.Infof("Returning cached response for '%s'", argsString)
+			return bytes.([]byte), nil
+		}
+	}
+
 	out, err := run(ctx, k.cmd, args, stdin)
 	if err != nil {
 		return nil, err
+	}
+	if argsString != "" {
+		k.cache.Set(argsString, out, cache.DefaultExpiration)
 	}
 	return out, nil
 }

@@ -83,16 +83,31 @@ func (k KubernetesClusterService) GetResources(ctx context.Context, req *control
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	consumedCPUMillis, consumedMemoryBytes, err := k8sClient.GetConsumedResources(ctx, "")
+	consumedCPUMillis, consumedMemoryBytes, err := k8sClient.GetConsumedCPUAndMemory(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	availableDiskBytes, err := k8sClient.GetAvailableDiskBytes(ctx)
+	consumedDiskBytes, err := k8sClient.GetConsumedDiskBytes(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	availableCPUMillis := allCPUMillis - consumedCPUMillis
+	// handle underflow
+	if availableCPUMillis > allCPUMillis {
+		availableCPUMillis = 0
+	}
+	availableMemoryBytes := allMemoryBytes - consumedMemoryBytes
+	// handle underflow
+	if availableMemoryBytes > allMemoryBytes {
+		availableMemoryBytes = 0
+	}
+	availableDiskBytes := allDiskBytes - consumedDiskBytes
+	// handle underflow
+	if availableDiskBytes > allDiskBytes {
+		availableDiskBytes = 0
+	}
 	return &controllerv1beta1.GetResourcesResponse{
 		All: &controllerv1beta1.Resources{
 			CpuM:        allCPUMillis,
@@ -100,8 +115,8 @@ func (k KubernetesClusterService) GetResources(ctx context.Context, req *control
 			DiskSize:    allDiskBytes,
 		},
 		Available: &controllerv1beta1.Resources{
-			CpuM:        allCPUMillis - consumedCPUMillis,
-			MemoryBytes: allMemoryBytes - consumedMemoryBytes,
+			CpuM:        availableCPUMillis,
+			MemoryBytes: availableMemoryBytes,
 			DiskSize:    availableDiskBytes,
 		},
 	}, nil

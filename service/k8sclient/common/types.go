@@ -142,24 +142,24 @@ const (
 type NodeList struct {
 	TypeMeta // anonymous for embedding
 
-	Items []Node `json:"items"`
+	Items []Node `json:"items,omitempty"`
 }
 
 // PersistentVolumeList holds a list of persistent volume objects.
 type PersistentVolumeList struct {
 	TypeMeta // anonymous for embedding
 
-	Items []PersistentVolume `json:"items"`
+	Items []PersistentVolume `json:"items,omitempty"`
 }
 
 type NodeFileSystemSummary struct {
-	AvailableBytes int64 `json:"availableBytes"`
+	UsedBytes uint64 `json:"usedBytes,omitempty"`
 }
 
 type NodeSummaryNode struct {
-	FileSystem NodeFileSystemSummary `json:"fs"`
+	FileSystem NodeFileSystemSummary `json:"fs,omitempty"`
 }
 
 type NodeSummary struct {
-	Node NodeSummaryNode `json:"node"`
+	Node NodeSummaryNode `json:"node,omitempty"`
 }

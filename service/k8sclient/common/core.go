@@ -48,6 +48,14 @@ type ContainerSpec struct {
 	Resources ResourceRequirements `json:"resources,omitempty"`
 }
 
+//  PodVolumePersistentVolumeClaim represents PVC of volume mounted to a pod.
+type PodVolumePersistentVolumeClaim struct{}
+
+// PodVolume holds info about volume attached to pod.
+type PodVolume struct {
+	PersistentVolumeClaim *PodVolumePersistentVolumeClaim `json:"persistentVolumeClaim,omitempty"`
+}
+
 // PodSpec is a description of a pod.
 type PodSpec struct {
 	// NodeName is a request to schedule this pod onto a specific node. If it is non-empty,
@@ -64,6 +72,9 @@ type PodSpec struct {
 
 	// List of init containers.
 	InitContainers []ContainerSpec `json:"initContainers,omitempty"`
+
+	// Volumes stores list of volumes used by pod.
+	Volumes []PodVolume `json:"volumes,omitempty"`
 }
 
 // PodPhase defines Pod's phase.
@@ -165,6 +176,30 @@ const (
 	SecretTypeOpaque SecretType = "Opaque"
 )
 
+type NodeConditionType string
+type NodeConditionStatus string
+
+const (
+	NodeConditionStatusTrue   NodeConditionStatus = "True"
+	NodeConditionDiskPressure NodeConditionType   = "DiskPressure"
+)
+
+type NodeCondition struct {
+	// Type of condition.
+	Type NodeConditionType `json:"type,omitempty"`
+	// Status of the condition could be "True", "False" or "Unknown".
+	Status NodeConditionStatus `json:"status,omitempty"`
+}
+
+func IsNodeInCondition(node Node, conditionType NodeConditionType) bool {
+	for _, condition := range node.Status.Conditions {
+		if condition.Status == NodeConditionStatusTrue && condition.Type == conditionType {
+			return true
+		}
+	}
+	return false
+}
+
 // NodeStatus holds Kubernetes node status.
 type NodeStatus struct {
 	// Allocatable is amount of recources from node's capacity that is available
@@ -174,6 +209,9 @@ type NodeStatus struct {
 
 	// Images is a list of container images stored at node.
 	Images []Image `json:"images,omitempty"`
+
+	// Conditions stores node's conditions.
+	Conditions []NodeCondition `json:"conditions,omitempty"`
 }
 
 // Taint reserves node for pods that tolerate the taint.
