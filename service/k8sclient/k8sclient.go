@@ -1550,6 +1550,7 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context) (consumedBytes uin
 	if aws {
 		c.l.Info("GetConsumedDiskBytes, before GetPersistentVolumes")
 		volumes, err := c.GetPersistentVolumes(ctx)
+		c.l.Infof("GetConsumedDiskBytes, got volumes count %d", len(volumes))
 		if err != nil {
 			return 0, errors.Wrap(err, "failed to get persistent volumes")
 		}
