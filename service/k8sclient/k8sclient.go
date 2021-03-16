@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"reflect"
 	"strings"
@@ -1569,7 +1570,8 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context) (consumedBytes uin
 	return 0, nil
 }
 
-// startKubectlProxy starts proxy on given port
+// doAPIRequest starts kubectl proxy, does the request described using given endpoint and method,
+// unmarshals the result into the variable out and stops kubectl proxy.
 func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, out interface{}) error {
 	if reflect.ValueOf(out).Kind() != reflect.Ptr {
 		return errors.New("output expected to be pointer")
@@ -1578,7 +1580,7 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 	// This call blocks when another deamon is already running.
 	go func() {
 		err := c.kubeCtl.RunDaemon(ctx, "proxy", "--port="+port)
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "killed") {
 			c.l.Error(errors.Wrap(err, "fialed to run daemon"))
 		}
 	}()
@@ -1588,6 +1590,20 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 			c.l.Error(err)
 		}
 	}()
+	var err error
+	// Wait for proxy to become alive, try at most 10 times.
+	for i := 0; i < 10; i++ {
+		var conn net.Conn
+		conn, err = net.DialTimeout("tcp", net.JoinHostPort("localhost", port), time.Second)
+		if conn != nil {
+			conn.Close()
+			break
+		}
+		time.Sleep(time.Millisecond * 50)
+	}
+	if err != nil {
+		return errors.Wrap(err, "failed to reach Kubernetes API")
+	}
 
 	client := http.Client{
 		Timeout: time.Second * 5,
@@ -1596,7 +1612,6 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 			IdleConnTimeout: 10 * time.Second,
 		},
 	}
-	time.Sleep(time.Second * 2)
 	req, err := http.NewRequestWithContext(ctx, method, "http://localhost:"+port+"/api"+endpoint, nil)
 	if err != nil {
 		return err
@@ -1605,6 +1620,6 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	return json.NewDecoder(resp.Body).Decode(out)
 }

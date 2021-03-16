@@ -18,7 +18,6 @@ package cluster
 
 import (
 	"context"
-	"time"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"golang.org/x/text/message"
@@ -78,24 +77,21 @@ func (k KubernetesClusterService) GetResources(ctx context.Context, req *control
 		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
-	k.p.Printf("GetResources, before GetAllClusterResources, time is %v\n", time.Now().Format(time.RFC3339))
+
 	allCPUMillis, allMemoryBytes, allDiskBytes, err := k8sClient.GetAllClusterResources(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	k.p.Printf("GetResources, after GetAllClusterResources, time is %v\n", time.Now().Format(time.RFC3339))
 
 	consumedCPUMillis, consumedMemoryBytes, err := k8sClient.GetConsumedCPUAndMemory(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	k.p.Printf("GetResources, after GetConsumedCPUAndMemory, time is %v\n", time.Now().Format(time.RFC3339))
 
 	consumedDiskBytes, err := k8sClient.GetConsumedDiskBytes(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	k.p.Printf("GetResources, after GetConsumedDiskByBytes, time is %v\n", time.Now().Format(time.RFC3339))
 
 	availableCPUMillis := allCPUMillis - consumedCPUMillis
 	// handle underflow
@@ -112,6 +108,7 @@ func (k KubernetesClusterService) GetResources(ctx context.Context, req *control
 	if availableDiskBytes > allDiskBytes {
 		availableDiskBytes = 0
 	}
+
 	return &controllerv1beta1.GetResourcesResponse{
 		All: &controllerv1beta1.Resources{
 			CpuM:        allCPUMillis,
