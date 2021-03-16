@@ -1368,7 +1368,6 @@ func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
 func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 	cpuMillis uint64, memoryBytes uint64, diskSizeBytes uint64, err error,
 ) {
-
 	minikube, err := c.storageClassContains(ctx, "minikube")
 	if err != nil {
 		return 0, 0, 0, errors.Wrap(err, "can't tell if given Kubernetes cluster is a minikube cluster")
@@ -1593,7 +1592,7 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 		},
 	}
 	time.Sleep(time.Second * 2)
-	req, err := http.NewRequest(method, "http://localhost:"+port+"/api"+endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, method, "http://localhost:"+port+"/api"+endpoint, nil)
 	if err != nil {
 		return err
 	}

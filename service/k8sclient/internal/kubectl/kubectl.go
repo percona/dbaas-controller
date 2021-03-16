@@ -56,6 +56,7 @@ type KubeCtl struct {
 	cmd            []string
 	kubeconfigPath string
 	daemonMutex    *sync.Mutex
+	daemonCmdMutex *sync.Mutex
 	daemonCmd      *exec.Cmd
 	cache          *gocache.Cache
 }
@@ -81,10 +82,11 @@ func NewKubeCtl(ctx context.Context, kubeconfig string, options ...Option) (*Kub
 	// Cannot identify k8s server version on non local env without kubeconfig (w/o address of k8s server).
 	if kubeconfig == "" {
 		return &KubeCtl{
-			l:           l,
-			cmd:         defaultKubectl,
-			daemonMutex: new(sync.Mutex),
-			cache:       cache,
+			l:              l,
+			cmd:            defaultKubectl,
+			daemonMutex:    new(sync.Mutex),
+			daemonCmdMutex: new(sync.Mutex),
+			cache:          cache,
 		}, nil
 	}
 
@@ -111,6 +113,7 @@ func NewKubeCtl(ctx context.Context, kubeconfig string, options ...Option) (*Kub
 		cmd:            cmd,
 		kubeconfigPath: kubeconfigPath,
 		daemonMutex:    new(sync.Mutex),
+		daemonCmdMutex: new(sync.Mutex),
 		cache:          cache,
 	}, nil
 }
@@ -322,6 +325,7 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 }
 
 func (k *KubeCtl) RunDaemon(ctx context.Context, args ...string) error {
+	// don't start another daemon until current stops.
 	k.daemonMutex.Lock()
 	defer k.daemonMutex.Unlock()
 	var outBuf bytes.Buffer
@@ -338,7 +342,9 @@ func (k *KubeCtl) RunDaemon(ctx context.Context, args ...string) error {
 		}
 		cmd.Env = append(cmd.Env, env)
 	}
+	k.daemonCmdMutex.Lock()
 	k.daemonCmd = cmd
+	k.daemonCmdMutex.Unlock()
 	err := cmd.Run()
 	if err != nil {
 		if strings.Contains(errBuf.String(), "NotFound") {
@@ -350,18 +356,12 @@ func (k *KubeCtl) RunDaemon(ctx context.Context, args ...string) error {
 			stderr: errBuf.String(),
 		}
 	}
-
-	if cmd.ProcessState.Exited() {
-		return &kubeCtlError{
-			err:    errors.WithStack(err),
-			cmd:    strings.Join(args, " "),
-			stderr: errBuf.String(),
-		}
-	}
 	return nil
 }
 
 func (k *KubeCtl) StopDaemon() error {
+	k.daemonCmdMutex.Lock()
+	defer k.daemonCmdMutex.Unlock()
 	if err := k.daemonCmd.Process.Kill(); err != nil {
 		return err
 	}
