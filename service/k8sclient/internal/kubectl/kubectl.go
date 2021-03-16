@@ -20,6 +20,7 @@ package kubectl
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,8 +29,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"encoding/json"
 
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/pkg/errors"

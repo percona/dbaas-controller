@@ -19,14 +19,13 @@ package k8sclient
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
-
-	"encoding/json"
 
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"

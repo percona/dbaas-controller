@@ -176,8 +176,10 @@ const (
 	SecretTypeOpaque SecretType = "Opaque"
 )
 
-type NodeConditionType string
-type NodeConditionStatus string
+type (
+	NodeConditionType   string
+	NodeConditionStatus string
+)
 
 const (
 	NodeConditionStatusTrue   NodeConditionStatus = "True"
