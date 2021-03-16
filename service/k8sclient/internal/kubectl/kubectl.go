@@ -20,7 +20,6 @@ package kubectl
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -30,19 +29,25 @@ import (
 	"sync"
 	"time"
 
+	"encoding/json"
+
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 
-	"github.com/patrickmn/go-cache"
+	gocache "github.com/patrickmn/go-cache"
 
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
+type Option uint64
+
 const (
-	dbaasToolPath           = "/opt/dbaas-tools/bin"
-	defaultPmmServerKubectl = dbaasToolPath + "/kubectl-1.16"
-	defaultDevEnvKubectl    = "minikube kubectl --"
+	dbaasToolPath                  = "/opt/dbaas-tools/bin"
+	defaultPmmServerKubectl        = dbaasToolPath + "/kubectl-1.16"
+	defaultDevEnvKubectl           = "minikube kubectl --"
+	expirationTime                 = time.Second * 10
+	UseCacheOption          Option = 1
 )
 
 // KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
@@ -52,11 +57,11 @@ type KubeCtl struct {
 	kubeconfigPath string
 	daemonMutex    *sync.Mutex
 	daemonCmd      *exec.Cmd
-	cache          *cache.Cache
+	cache          *gocache.Cache
 }
 
 // NewKubeCtl creates a new KubeCtl object with a given logger.
-func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
+func NewKubeCtl(ctx context.Context, kubeconfig string, options ...Option) (*KubeCtl, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "kubectl")
 
@@ -67,8 +72,11 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 		return nil, err
 	}
 
-	// Setup cache
-	cache := cache.New(time.Second*5, time.Second*10)
+	var cache *gocache.Cache
+	if len(options) == 1 && options[0]&UseCacheOption != 0 {
+		// Setup cache
+		cache = gocache.New(expirationTime, expirationTime*2)
+	}
 
 	// Cannot identify k8s server version on non local env without kubeconfig (w/o address of k8s server).
 	if kubeconfig == "" {
@@ -240,21 +248,25 @@ func (k *KubeCtl) Delete(ctx context.Context, res interface{}) error {
 // Run wraps func run.
 func (k *KubeCtl) Run(ctx context.Context, args []string, stdin interface{}) ([]byte, error) {
 	var argsString string
-	if len(args) > 0 && strings.ToLower(args[0]) == "get" || strings.ToLower(args[0]) == "describe" {
-		argsString = strings.Join(args, " ")
-		if bytes, found := k.cache.Get(argsString); found {
-			k.l.Infof("Returning cached response for '%s'", argsString)
-			return bytes.([]byte), nil
+	if k.cache != nil {
+		if len(args) > 0 && strings.ToLower(args[0]) == "get" || strings.ToLower(args[0]) == "describe" {
+			argsString = strings.Join(args, " ")
+			if bytes, found := k.cache.Get(argsString); found {
+				k.l.Infof("Returning cached response for '%s'", argsString)
+				return bytes.([]byte), nil
+			}
 		}
 	}
-
+	k.l.Info("kubectl.Run after cache check")
 	out, err := run(ctx, k.cmd, args, stdin)
 	if err != nil {
 		return nil, err
 	}
+	k.l.Info("kubectl.Run after internal run")
 	if argsString != "" {
-		k.cache.Set(argsString, out, cache.DefaultExpiration)
+		k.cache.Set(argsString, out, gocache.DefaultExpiration)
 	}
+	k.l.Info("kubectl.Run after cache set")
 	return out, nil
 }
 
@@ -269,7 +281,6 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 	var inBuf bytes.Buffer
 	if stdin != nil {
 		e := json.NewEncoder(&inBuf)
-		e.SetIndent("", "  ")
 		if err := e.Encode(stdin); err != nil {
 			return nil, err
 		}

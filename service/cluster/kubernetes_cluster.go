@@ -18,6 +18,7 @@ package cluster
 
 import (
 	"context"
+	"time"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"golang.org/x/text/message"
@@ -72,26 +73,29 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 
 // GetResources returns total and available amounts of resources of certain k8s cluster.
 func (k KubernetesClusterService) GetResources(ctx context.Context, req *controllerv1beta1.GetResourcesRequest) (*controllerv1beta1.GetResourcesResponse, error) {
-	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig, k8sclient.UseCacheOption)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
-
+	k.p.Printf("GetResources, before GetAllClusterResources, time is %v\n", time.Now().Format(time.RFC3339))
 	allCPUMillis, allMemoryBytes, allDiskBytes, err := k8sClient.GetAllClusterResources(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	k.p.Printf("GetResources, after GetAllClusterResources, time is %v\n", time.Now().Format(time.RFC3339))
 
 	consumedCPUMillis, consumedMemoryBytes, err := k8sClient.GetConsumedCPUAndMemory(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	k.p.Printf("GetResources, after GetConsumedCPUAndMemory, time is %v\n", time.Now().Format(time.RFC3339))
 
 	consumedDiskBytes, err := k8sClient.GetConsumedDiskBytes(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	k.p.Printf("GetResources, after GetConsumedDiskByBytes, time is %v\n", time.Now().Format(time.RFC3339))
 
 	availableCPUMillis := allCPUMillis - consumedCPUMillis
 	// handle underflow

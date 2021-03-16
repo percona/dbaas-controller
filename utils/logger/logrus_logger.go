@@ -66,7 +66,7 @@ func NewLogger() Logger {
 		Out:          os.Stderr,
 		Formatter:    new(logrus.TextFormatter),
 		Hooks:        make(logrus.LevelHooks),
-		Level:        logrus.DebugLevel,
+		Level:        logrus.InfoLevel,
 		ExitFunc:     os.Exit,
 		ReportCaller: false,
 	})

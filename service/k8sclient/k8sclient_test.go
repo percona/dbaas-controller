@@ -380,7 +380,7 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 	}
 }
 
-func TestGetConsumedResources(t *testing.T) {
+func TestGetConsumedCPUAndMemory(t *testing.T) {
 	t.Parallel()
 	ctx := app.Context()
 
@@ -419,10 +419,10 @@ func TestGetConsumedResources(t *testing.T) {
 	_, err = client.kubeCtl.Run(ctx, args, nil)
 	require.NoError(t, err)
 
-	cpuMillis, memoryBytes, err := client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
+	cpuMillis, memoryBytes, err := client.GetConsumedCPUAndMemory(ctx, consumedResourcesTestNamespace)
 	require.NoError(t, err)
-	assert.Equal(t, int64(40), cpuMillis)
-	assert.Equal(t, int64(192928615), memoryBytes)
+	assert.Equal(t, uint64(40), cpuMillis)
+	assert.Equal(t, uint64(192928615), memoryBytes)
 
 	// Test we dont include succeeded and failed pods into consumed resources.
 	// Wait for test pods to be completed:
@@ -454,10 +454,10 @@ func TestGetConsumedResources(t *testing.T) {
 		}
 	}
 
-	cpuMillis, memoryBytes, err = client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
+	cpuMillis, memoryBytes, err = client.GetConsumedCPUAndMemory(ctx, consumedResourcesTestNamespace)
 	require.NoError(t, err)
-	assert.Equal(t, int64(0), cpuMillis)
-	assert.Equal(t, int64(0), memoryBytes)
+	assert.Equal(t, uint64(0), cpuMillis)
+	assert.Equal(t, uint64(0), memoryBytes)
 }
 
 func TestGetAllClusterResources(t *testing.T) {
@@ -494,13 +494,13 @@ func TestGetAllClusterResources(t *testing.T) {
 	// We check 1 CPU because it is hard to imagine somebody running cluster with less CPU allocatable.
 	t.Log("nodes is", len(nodes))
 	assert.GreaterOrEqual(
-		t, cpuMillis, int64(len(nodes)*1000),
+		t, cpuMillis, uint64(len(nodes)*1000),
 		"expected to have at lease 1 CPU per node available to be allocated by pods",
 	)
 
 	// The same for memory, hard to imagine having less than 1 GB allocatable per node.
 	assert.GreaterOrEqual(
-		t, memoryBytes, int64(len(nodes))*1000*1000*1000,
+		t, memoryBytes, uint64(len(nodes))*1000*1000*1000,
 		"expected to have at lease 1GB available to be allocated by pods",
 	)
 }

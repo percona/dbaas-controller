@@ -37,8 +37,8 @@ type EmptyDirVolumeSource struct{}
 
 // ContainerStatus contains container's status.
 type ContainerStatus struct {
-	Name  string                 `json:"name,omitempty"`
-	State map[string]interface{} `json:"state,omitempty"`
+	Name  string              `json:"name,omitempty"`
+	State map[string]struct{} `json:"state,omitempty"`
 }
 
 // ContainerSpec represents a container definition.

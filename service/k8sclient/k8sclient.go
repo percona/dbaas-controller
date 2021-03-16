@@ -19,13 +19,14 @@ package k8sclient
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"encoding/json"
 
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
@@ -115,6 +116,13 @@ const (
 const (
 	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
+)
+
+type Option uint64
+
+const (
+	// UseCacheOption togles use of cache.
+	UseCacheOption = 1
 )
 
 // Operators contains statuses of operators.
@@ -307,10 +315,14 @@ func (d DetailedState) CountAllPods() (count int32) {
 }
 
 // New returns new K8Client object.
-func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
+func New(ctx context.Context, kubeconfig string, options ...Option) (*K8sClient, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "K8sClient")
-	kubeCtl, err := kubectl.NewKubeCtl(ctx, kubeconfig)
+	kubectlOptions := make([]kubectl.Option, 0, len(options))
+	for _, option := range options {
+		kubectlOptions = append(kubectlOptions, kubectl.Option(option))
+	}
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, kubeconfig, kubectlOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -1267,14 +1279,17 @@ func (c *K8sClient) GetPods(ctx context.Context, filters ...string) (*common.Pod
 	args := []string{"get", "pods"}
 	args = append(args, filters...)
 	args = append(args, "-ojson")
+	c.l.Info("GetPods before kubectl.Run")
 	out, err := c.kubeCtl.Run(ctx, args, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
+	c.l.Infof("Pods after kubectl.Run")
 	err = json.Unmarshal(out, list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
+	c.l.Info("GetPods after unmarshaling")
 	return list, nil
 }
 
@@ -1470,10 +1485,12 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 			namespaces[i] = "-n" + namespaces[i]
 		}
 	}
+	c.l.Info("GetConsumedCPUAndMemory before GetPods")
 	pods, err := c.GetPods(ctx, namespaces...)
 	if err != nil {
 		return 0, 0, errors.Wrap(err, "failed to get consumed resources")
 	}
+	c.l.Info("GetConsumedCPUAndMemory after GetPods")
 	for _, ppod := range pods.Items {
 		if ppod.Status.Phase == common.PodPhasePending ||
 			ppod.Status.Phase == common.PodPhaseSucceded || ppod.Status.Phase == common.PodPhaseFailed {
@@ -1496,6 +1513,7 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 			memoryBytes += memory
 		}
 	}
+	c.l.Info("GetConsumedCPUAndMemory after for")
 	return cpuMillis, memoryBytes, nil
 }
 
@@ -1524,19 +1542,24 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context) (consumedBytes uin
 		}
 		return consumedBytes, nil
 	}
+	c.l.Info("GetConsumedDiskBytes, before storageClassContains")
 	aws, err := c.storageClassContains(ctx, "aws")
 	if err != nil {
 		return 0, errors.Wrap(err, "can't tell if given Kubernetes cluster is a EKS cluster")
 	}
+	c.l.Info("GetConsumedDiskBytes, after storageClassContains")
 	if aws {
+		c.l.Info("GetConsumedDiskBytes, before GetPersistentVolumes")
 		volumes, err := c.GetPersistentVolumes(ctx)
 		if err != nil {
 			return 0, errors.Wrap(err, "failed to get persistent volumes")
 		}
+		c.l.Info("GetConsumedDiskBytes, after GetPersistentVolumes")
 		consumedBytes, err := sumVolumesSize(volumes)
 		if err != nil {
 			return 0, errors.Wrap(err, "failed to sum persistent volumes storage sizes")
 		}
+		c.l.Info("return from GetConsumedDiskBytes")
 		return consumedBytes, nil
 	}
 	return 0, nil
