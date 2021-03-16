@@ -38,7 +38,6 @@ func logGRPCRequest(l logger.Logger, prefix string, warnD time.Duration, f func(
 
 	defer func() {
 		dur := time.Since(start)
-		// TODO: WE SHOULD NOT IGNORE PANIC, THERE SHOULD BE ATLEAST INFO TO TELL US TO TURN ON DEBUG MODE.
 		if p := recover(); p != nil {
 			// Always log with %+v - there can be inner stacktraces
 			// produced by panic(errors.WithStack(err)).

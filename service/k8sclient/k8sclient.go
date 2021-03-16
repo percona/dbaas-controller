@@ -126,6 +126,7 @@ const (
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
 )
 
+// Option is meant to be bitmask to specify k8sClient's options.
 type Option uint64
 
 const (
@@ -1519,6 +1520,7 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 	return cpuMillis, memoryBytes, nil
 }
 
+// GetConsumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
 func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context) (consumedBytes uint64, err error) {
 	clusterType, err := c.getKubernetesClusterType(ctx)
 	if err != nil {

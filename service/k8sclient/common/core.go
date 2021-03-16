@@ -48,7 +48,7 @@ type ContainerSpec struct {
 	Resources ResourceRequirements `json:"resources,omitempty"`
 }
 
-//  PodVolumePersistentVolumeClaim represents PVC of volume mounted to a pod.
+// PodVolumePersistentVolumeClaim represents PVC of volume mounted to a pod.
 type PodVolumePersistentVolumeClaim struct{}
 
 // PodVolume holds info about volume attached to pod.
@@ -177,15 +177,23 @@ const (
 )
 
 type (
-	NodeConditionType   string
+	// NodeConditionType represents type of condition Node can get into.
+	NodeConditionType string
+	// NodeConditionStatus represents status of Node's condition.
 	NodeConditionStatus string
 )
 
 const (
-	NodeConditionStatusTrue   NodeConditionStatus = "True"
-	NodeConditionDiskPressure NodeConditionType   = "DiskPressure"
+	// NodeConditionStatusTrue represents status when a Node's condition is true.
+	NodeConditionStatusTrue NodeConditionStatus = "True"
+	// NodeConditionDiskPressure indicates if Node has enough free disk space.
+	// If this condition is True, it means Node has less free space then defined.
+	// The Node then tries to free space by deleting unused images first. If more
+	// disk space is needed after that, it starts evicting pods.
+	NodeConditionDiskPressure NodeConditionType = "DiskPressure"
 )
 
+// NodeCondition holds Node's condition.
 type NodeCondition struct {
 	// Type of condition.
 	Type NodeConditionType `json:"type,omitempty"`
@@ -193,6 +201,8 @@ type NodeCondition struct {
 	Status NodeConditionStatus `json:"status,omitempty"`
 }
 
+// IsNodeInCondition returns true if node's condition given as an argument has
+// status "True". Otherwise it returns false.
 func IsNodeInCondition(node Node, conditionType NodeConditionType) bool {
 	for _, condition := range node.Status.Conditions {
 		if condition.Status == NodeConditionStatusTrue && condition.Type == conditionType {
@@ -244,15 +254,21 @@ type Node struct {
 	Status NodeStatus `json:"status,omitempty"`
 }
 
+// PersistentVolumeCapacity holds string representation of storage size.
 type PersistentVolumeCapacity struct {
+	// Storage size as string.
 	Storage string `json:"storage,omitempty"`
 }
 
+// PersistentVolumeSpec holds PV specs.
 type PersistentVolumeSpec struct {
+	// Capacity of the volume.
 	Capacity PersistentVolumeCapacity `json:"capacity,omitempty"`
 }
 
+// PersistentVolume holds information about PV.
 type PersistentVolume struct {
 	TypeMeta
+	// Specification of the volume.
 	Spec PersistentVolumeSpec `json:"spec,omitempty"`
 }

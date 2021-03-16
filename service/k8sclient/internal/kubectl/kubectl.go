@@ -39,14 +39,16 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
+// Option represents kubectl option, it's meant to be set of bitmasks.
 type Option uint64
 
 const (
-	dbaasToolPath                  = "/opt/dbaas-tools/bin"
-	defaultPmmServerKubectl        = dbaasToolPath + "/kubectl-1.16"
-	defaultDevEnvKubectl           = "minikube kubectl --"
-	expirationTime                 = time.Second * 10
-	UseCacheOption          Option = 1
+	dbaasToolPath           = "/opt/dbaas-tools/bin"
+	defaultPmmServerKubectl = dbaasToolPath + "/kubectl-1.16"
+	defaultDevEnvKubectl    = "minikube kubectl --"
+	expirationTime          = time.Second * 10
+	// UseCacheOption is an option that turns on cache of kubectl commands.
+	UseCacheOption Option = 1
 )
 
 // KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
@@ -321,6 +323,10 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 	return outBuf.Bytes(), err
 }
 
+// RunDaemon runs kubectl command with args and assigns the process to daemonCmd
+// so we can later kill it. This call blocks. StopDaemon has to be run when daemon
+// is no longer needed. Concurrent calls to this method blocks until the current
+// daemon is stopped.
 func (k *KubeCtl) RunDaemon(ctx context.Context, args ...string) error {
 	// don't start another daemon until current stops.
 	k.daemonMutex.Lock()
@@ -353,14 +359,18 @@ func (k *KubeCtl) RunDaemon(ctx context.Context, args ...string) error {
 			stderr: errBuf.String(),
 		}
 	}
+	k.daemonCmdMutex.Lock()
+	k.daemonCmd = nil
+	k.daemonCmdMutex.Unlock()
 	return nil
 }
 
+// StopDaemon stops current daemon if there is any running.
 func (k *KubeCtl) StopDaemon() error {
 	k.daemonCmdMutex.Lock()
 	defer k.daemonCmdMutex.Unlock()
-	if err := k.daemonCmd.Process.Kill(); err != nil {
-		return err
+	if k.daemonCmd == nil {
+		return nil
 	}
-	return nil
+	return k.daemonCmd.Process.Kill()
 }
