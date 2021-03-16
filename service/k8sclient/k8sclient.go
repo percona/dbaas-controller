@@ -1420,7 +1420,7 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 			}
 			// ... however, if the node type is one of M5, C5, R5, T3, Z1D it's 25.
 			limitedVolumesSet := map[string]struct{}{
-				"m5": struct{}{}, "c5": struct{}{}, "r5": struct{}{}, "t3": struct{}{}, "t1d": struct{}{},
+				"m5": {}, "c5": {}, "r5": {}, "t3": {}, "t1d": {},
 			}
 			if _, ok := limitedVolumesSet[typeAndSize[0]]; ok {
 				volumeLimitPerNode = 25
@@ -1437,7 +1437,7 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 
 		volumeCountEKSBackup := volumeCountEKS
 		volumeCountEKS -= uint64(len(volumes.Items))
-		if volumeCountEKSBackup > volumeCountEKS {
+		if volumeCountEKS > volumeCountEKSBackup {
 			// handle uint underflow
 			volumeCountEKS = 0
 		}
