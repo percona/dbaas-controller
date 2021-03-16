@@ -1290,17 +1290,15 @@ func (c *K8sClient) GetPods(ctx context.Context, filters ...string) (*common.Pod
 	args := []string{"get", "pods"}
 	args = append(args, filters...)
 	args = append(args, "-ojson")
-	c.l.Info("GetPods before kubectl.Run")
 	out, err := c.kubeCtl.Run(ctx, args, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
-	c.l.Infof("Pods after kubectl.Run")
+
 	err = json.Unmarshal(out, list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
-	c.l.Info("GetPods after unmarshaling")
 	return list, nil
 }
 
@@ -1383,7 +1381,6 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 	if err != nil {
 		return 0, 0, 0, errors.Wrap(err, "can't tell type of Kubernetes cluster to decide strategy of estimating total disk size")
 	}
-	c.l.Infof("Minikube: %v, AWS EKS: %v, Cluster type: %v", minikube, amazonEKS, clusterType)
 
 	nodes, err := c.getWorkerNodes(ctx)
 	if err != nil {
@@ -1412,7 +1409,6 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 		case amazonEKS:
 			// See https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/#scheduler.
 			if common.IsNodeInCondition(node, common.NodeConditionDiskPressure) {
-				c.l.Infof("node '%s' is under disk pressure, skipping", node.Name)
 				continue
 			}
 
@@ -1434,7 +1430,6 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 			if _, ok := limitedVolumesSet[typeAndSize[0]]; ok {
 				volumeLimitPerNode = 25
 			}
-			c.l.Infof("volumeLimitPerNode is %d for node %s of type %s", volumeLimitPerNode, node.Name, typeAndSize[0])
 			volumeCountEKS += volumeLimitPerNode
 		}
 	}
@@ -1443,14 +1438,14 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 		if err != nil {
 			return 0, 0, 0, errors.Wrap(err, "failed to get persistent volumes")
 		}
-		c.l.Infof("GetAllClusterResources, volumeCountEKS is %v", volumeCountEKS)
+
 		volumeCountEKSBackup := volumeCountEKS
 		volumeCountEKS -= uint64(len(volumes.Items))
 		if volumeCountEKS > volumeCountEKSBackup {
 			// handle uint underflow
 			volumeCountEKS = 0
 		}
-		c.l.Infof("GetAllClusterResources, volumeCountEKS is %v after uint underflow", volumeCountEKS)
+
 		consumedBytes, err := sumVolumesSize(volumes)
 		if err != nil {
 			return 0, 0, 0, errors.Wrap(err, "failed to sum persistent volumes storage sizes")
@@ -1493,12 +1488,11 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 			namespaces[i] = "-n" + namespaces[i]
 		}
 	}
-	c.l.Info("GetConsumedCPUAndMemory before GetPods")
+
 	pods, err := c.GetPods(ctx, namespaces...)
 	if err != nil {
 		return 0, 0, errors.Wrap(err, "failed to get consumed resources")
 	}
-	c.l.Info("GetConsumedCPUAndMemory after GetPods")
 	for _, ppod := range pods.Items {
 		if ppod.Status.Phase == common.PodPhasePending ||
 			ppod.Status.Phase == common.PodPhaseSucceded || ppod.Status.Phase == common.PodPhaseFailed {
@@ -1521,7 +1515,7 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 			memoryBytes += memory
 		}
 	}
-	c.l.Info("GetConsumedCPUAndMemory after for")
+
 	return cpuMillis, memoryBytes, nil
 }
 
@@ -1537,33 +1531,26 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context) (consumedBytes uin
 		if err != nil {
 			return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes")
 		}
-
 		for _, node := range nodes {
 			method := "GET"
 			endpoint := fmt.Sprintf("/v1/nodes/%s/proxy/stats/summary", node.Name)
 			summary := new(common.NodeSummary)
 			err = c.doAPIRequest(ctx, method, endpoint, &summary)
 			if err != nil {
-				c.l.Infof("getting summary of '%s' got error doAPIRequest %#v", node.Name, err)
 				return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes summary")
 			}
 			consumedBytes += summary.Node.FileSystem.UsedBytes
-			c.l.Infof("consumedBytes is now %d", consumedBytes)
 		}
 		return consumedBytes, nil
 	case amazonEKS:
-		c.l.Info("GetConsumedDiskBytes, before GetPersistentVolumes")
 		volumes, err := c.GetPersistentVolumes(ctx)
-		c.l.Infof("GetConsumedDiskBytes, got volumes count %d", len(volumes.Items))
 		if err != nil {
 			return 0, errors.Wrap(err, "failed to get persistent volumes")
 		}
-		c.l.Info("GetConsumedDiskBytes, after GetPersistentVolumes")
 		consumedBytes, err := sumVolumesSize(volumes)
 		if err != nil {
 			return 0, errors.Wrap(err, "failed to sum persistent volumes storage sizes")
 		}
-		c.l.Infof("return from GetConsumedDiskBytes, consumed bytes is %d", consumedBytes)
 		return consumedBytes, nil
 	}
 

@@ -74,6 +74,7 @@ func NewKubeCtl(ctx context.Context, kubeconfig string, options ...Option) (*Kub
 
 	var cache *gocache.Cache
 	if len(options) == 1 && options[0]&UseCacheOption != 0 {
+		l.Info("kubectl cache is turned on")
 		// Setup cache
 		cache = gocache.New(expirationTime, expirationTime*2)
 	}
@@ -254,21 +255,18 @@ func (k *KubeCtl) Run(ctx context.Context, args []string, stdin interface{}) ([]
 		if len(args) > 0 && strings.ToLower(args[0]) == "get" || strings.ToLower(args[0]) == "describe" {
 			argsString = strings.Join(args, " ")
 			if bytes, found := k.cache.Get(argsString); found {
-				k.l.Infof("Returning cached response for '%s'", argsString)
+				k.l.Debugf("Returning cached response for '%s'", argsString)
 				return bytes.([]byte), nil
 			}
 		}
 	}
-	k.l.Info("kubectl.Run after cache check")
 	out, err := run(ctx, k.cmd, args, stdin)
 	if err != nil {
 		return nil, err
 	}
-	k.l.Info("kubectl.Run after internal run")
 	if argsString != "" {
 		k.cache.Set(argsString, out, gocache.DefaultExpiration)
 	}
-	k.l.Info("kubectl.Run after cache set")
 	return out, nil
 }
 
