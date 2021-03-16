@@ -91,6 +91,14 @@ const (
 	maxVolumeSizeEBS uint64 = convertors.TebiByte * 16
 )
 
+type KubernetesClusterType uint8
+
+const (
+	clusterTypeUnknown KubernetesClusterType = iota
+	amazonEKS
+	minikube
+)
+
 // ContainerState describes container's state - waiting, running, terminated.
 type ContainerState string
 
@@ -478,7 +486,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	// This enables ingress for the cluster and exposes the cluster to the world.
 	// The cluster will have an internal IP and a world accessible hostname.
 	// This feature cannot be tested with minikube. Please use EKS for testing.
-	if isMinikube, err := c.storageClassContains(ctx, "minikube"); err == nil && !isMinikube {
+	if clusterType, err := c.getKubernetesClusterType(ctx); err == nil && clusterType != minikube {
 		res.Spec.ProxySQL.ServiceType = common.ServiceTypeLoadBalancer
 	}
 
@@ -603,23 +611,26 @@ func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) 
 	return storageClass, nil
 }
 
-func (c *K8sClient) storageClassContains(ctx context.Context, text string) (bool, error) {
+func (c *K8sClient) getKubernetesClusterType(ctx context.Context) (KubernetesClusterType, error) {
 	sc, err := c.getStorageClass(ctx)
 	if err != nil {
-		return false, err
+		return clusterTypeUnknown, err
 	}
 
 	if len(sc.Items) == 0 {
-		return false, fmt.Errorf("cannot get storage class. empty items list")
+		return clusterTypeUnknown, nil
 	}
 
 	for _, class := range sc.Items {
-		if strings.Contains(class.Provisioner, text) {
-			return true, nil
+		if strings.Contains(class.Provisioner, "aws") {
+			return amazonEKS, nil
+		}
+		if strings.Contains(class.Provisioner, "minikube") {
+			return minikube, nil
 		}
 	}
 
-	return false, nil
+	return clusterTypeUnknown, nil
 }
 
 func (c *K8sClient) restartDBClusterCmd(name, kind string) []string {
@@ -790,7 +801,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 	affinity := new(psmdb.PodAffinity)
 	var expose psmdb.Expose
-	if isMinikube, err := c.storageClassContains(ctx, "minikube"); err == nil && !isMinikube {
+	if clusterType, err := c.getKubernetesClusterType(ctx); err == nil && clusterType != minikube {
 		affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
 
 		// This enables ingress for the cluster and exposes the cluster to the world.
@@ -1367,15 +1378,11 @@ func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
 func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 	cpuMillis uint64, memoryBytes uint64, diskSizeBytes uint64, err error,
 ) {
-	minikube, err := c.storageClassContains(ctx, "minikube")
+	clusterType, err := c.getKubernetesClusterType(ctx)
 	if err != nil {
-		return 0, 0, 0, errors.Wrap(err, "can't tell if given Kubernetes cluster is a minikube cluster")
+		return 0, 0, 0, errors.Wrap(err, "can't tell type of Kubernetes cluster to decide strategy of estimating total disk size")
 	}
-	aws, err := c.storageClassContains(ctx, "aws")
-	if err != nil {
-		return 0, 0, 0, errors.Wrap(err, "can't tell if given Kubernetes cluster is a EKS cluster")
-	}
-	c.l.Infof("Cluster type: minikube -> %t, aws -> %t", minikube, aws)
+	c.l.Infof("Minikube: %v, AWS EKS: %v, Cluster type: %v", minikube, amazonEKS, clusterType)
 
 	nodes, err := c.getWorkerNodes(ctx)
 	if err != nil {
@@ -1389,7 +1396,9 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 		}
 		cpuMillis += cpu
 		memoryBytes += memory
-		if minikube {
+
+		switch clusterType {
+		case minikube:
 			storage, ok := node.Status.Allocatable[common.ResourceEphemeralStorage]
 			if !ok {
 				return 0, 0, 0, errors.Errorf("could not get storage size of the node")
@@ -1399,7 +1408,7 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 				return 0, 0, 0, errors.Wrapf(err, "could not convert storage size '%s' to bytes", storage)
 			}
 			diskSizeBytes += bytes
-		} else if aws {
+		case amazonEKS:
 			// See https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/#scheduler.
 			if common.IsNodeInCondition(node, common.NodeConditionDiskPressure) {
 				c.l.Infof("node '%s' is under disk pressure, skipping", node.Name)
@@ -1428,19 +1437,19 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 			volumeCountEKS += volumeLimitPerNode
 		}
 	}
-	if aws {
+	if clusterType == amazonEKS {
 		volumes, err := c.GetPersistentVolumes(ctx)
 		if err != nil {
 			return 0, 0, 0, errors.Wrap(err, "failed to get persistent volumes")
 		}
-
+		c.l.Infof("GetAllClusterResources, volumeCountEKS is %v", volumeCountEKS)
 		volumeCountEKSBackup := volumeCountEKS
 		volumeCountEKS -= uint64(len(volumes.Items))
 		if volumeCountEKS > volumeCountEKSBackup {
 			// handle uint underflow
 			volumeCountEKS = 0
 		}
-
+		c.l.Infof("GetAllClusterResources, volumeCountEKS is %v after uint underflow", volumeCountEKS)
 		consumedBytes, err := sumVolumesSize(volumes)
 		if err != nil {
 			return 0, 0, 0, errors.Wrap(err, "failed to sum persistent volumes storage sizes")
@@ -1516,11 +1525,13 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 }
 
 func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context) (consumedBytes uint64, err error) {
-	minikube, err := c.storageClassContains(ctx, "minikube")
+	clusterType, err := c.getKubernetesClusterType(ctx)
 	if err != nil {
-		return 0, errors.Wrap(err, "can't tell if given Kubernetes cluster is a minikube cluster")
+		return 0, errors.Wrap(err, "can't tell type of Kubernetes cluster to decide strategy of estimating consumed disk size")
 	}
-	if minikube {
+
+	switch clusterType {
+	case minikube:
 		nodes, err := c.getWorkerNodes(ctx)
 		if err != nil {
 			return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes")
@@ -1539,14 +1550,7 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context) (consumedBytes uin
 			c.l.Infof("consumedBytes is now %d", consumedBytes)
 		}
 		return consumedBytes, nil
-	}
-	c.l.Info("GetConsumedDiskBytes, before storageClassContains")
-	aws, err := c.storageClassContains(ctx, "aws")
-	if err != nil {
-		return 0, errors.Wrap(err, "can't tell if given Kubernetes cluster is a EKS cluster")
-	}
-	c.l.Info("GetConsumedDiskBytes, after storageClassContains")
-	if aws {
+	case amazonEKS:
 		c.l.Info("GetConsumedDiskBytes, before GetPersistentVolumes")
 		volumes, err := c.GetPersistentVolumes(ctx)
 		c.l.Infof("GetConsumedDiskBytes, got volumes count %d", len(volumes.Items))
@@ -1558,9 +1562,10 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context) (consumedBytes uin
 		if err != nil {
 			return 0, errors.Wrap(err, "failed to sum persistent volumes storage sizes")
 		}
-		c.l.Info("return from GetConsumedDiskBytes")
+		c.l.Infof("return from GetConsumedDiskBytes, consumed bytes is %d", consumedBytes)
 		return consumedBytes, nil
 	}
+
 	return 0, nil
 }
 
