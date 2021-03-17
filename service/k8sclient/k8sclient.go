@@ -355,7 +355,7 @@ func (c *K8sClient) CreateSecret(ctx context.Context, secretName string, data ma
 func randSeq(n int) string {
 	rand.Seed(time.Now().UnixNano())
 	// PSMDB do not support all special characters in password https://jira.percona.com/browse/K8SPSMDB-364
-	symbols := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~=+%^*/(){}!$|")
+	symbols := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~=+%^*(){}!$|")
 	symbolsLen := len(symbols)
 	b := make([]rune, n)
 	for i := range b {
