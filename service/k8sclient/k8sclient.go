@@ -1584,7 +1584,7 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 		var conn net.Conn
 		conn, err = net.DialTimeout("tcp", net.JoinHostPort("localhost", port), time.Second)
 		if conn != nil {
-			conn.Close() //nolint:errcheck
+			conn.Close() //nolint:errcheck,gosec
 			break
 		}
 		time.Sleep(time.Millisecond * 50)
