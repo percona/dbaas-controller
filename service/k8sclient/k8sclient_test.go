@@ -489,7 +489,7 @@ func TestGetAllClusterResources(t *testing.T) {
 		assert.NotEmpty(t, memory)
 	}
 
-	cpuMillis, memoryBytes, _, err := client.GetAllClusterResources(ctx)
+	cpuMillis, memoryBytes, storageBytes, err := client.GetAllClusterResources(ctx)
 	require.NoError(t, err)
 	// We check 1 CPU because it is hard to imagine somebody running cluster with less CPU allocatable.
 	t.Log("nodes is", len(nodes))
@@ -501,6 +501,12 @@ func TestGetAllClusterResources(t *testing.T) {
 	// The same for memory, hard to imagine having less than 1 GB allocatable per node.
 	assert.GreaterOrEqual(
 		t, memoryBytes, uint64(len(nodes))*1000*1000*1000,
-		"expected to have at lease 1GB available to be allocated by pods",
+		"expected to have at lease 1GB of memory per node available to be allocated by pods",
+	)
+
+	// The same for storage, hard to imagine having less than 4GB of storage per node.
+	assert.GreaterOrEqual(
+		t, storageBytes, uint64(len(nodes))*1000*1000*1000*4,
+		"expected to have at lease 4GB of storage per node.",
 	)
 }
