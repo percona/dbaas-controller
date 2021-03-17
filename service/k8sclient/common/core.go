@@ -95,6 +95,10 @@ const (
 	// and at least one container has terminated in failure. That is,
 	// the container either exited with non-zero status or was terminated by the system.
 	PodPhaseFailed PodPhase = "Failed"
+	// PodPhaseRunning indicates that the Pod has been bound to a node, and all
+	// of the containers have been created. At least one container is still running,
+	// or is in the process of starting or restarting.
+	PodPhaseRunning PodPhase = "Running"
 )
 
 // ContainerState describes container's state - waiting, running, terminated.

@@ -92,10 +92,10 @@ const (
 	maxVolumeSizeEBS uint64 = convertors.TebiByte * 16
 )
 
-type KubernetesClusterType uint8
+type kubernetesClusterType uint8
 
 const (
-	clusterTypeUnknown KubernetesClusterType = iota
+	clusterTypeUnknown kubernetesClusterType = iota
 	amazonEKS
 	minikube
 )
@@ -131,7 +131,7 @@ type Option uint64
 
 const (
 	// UseCacheOption togles use of cache.
-	UseCacheOption = 1
+	UseCacheOption Option = Option(kubectl.UseCacheOption)
 )
 
 // Operators contains statuses of operators.
@@ -613,7 +613,7 @@ func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) 
 	return storageClass, nil
 }
 
-func (c *K8sClient) getKubernetesClusterType(ctx context.Context) (KubernetesClusterType, error) {
+func (c *K8sClient) getKubernetesClusterType(ctx context.Context) (kubernetesClusterType, error) {
 	sc, err := c.getStorageClass(ctx)
 	if err != nil {
 		return clusterTypeUnknown, err
@@ -1495,8 +1495,7 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 		return 0, 0, errors.Wrap(err, "failed to get consumed resources")
 	}
 	for _, ppod := range pods.Items {
-		if ppod.Status.Phase == common.PodPhasePending ||
-			ppod.Status.Phase == common.PodPhaseSucceded || ppod.Status.Phase == common.PodPhaseFailed {
+		if ppod.Status.Phase != common.PodPhaseRunning {
 			continue
 		}
 		nonTerminatedInitContainers := make([]common.ContainerSpec, 0, len(ppod.Spec.InitContainers))
@@ -1585,7 +1584,7 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 		var conn net.Conn
 		conn, err = net.DialTimeout("tcp", net.JoinHostPort("localhost", port), time.Second)
 		if conn != nil {
-			conn.Close()
+			conn.Close() //nolint:errcheck
 			break
 		}
 		time.Sleep(time.Millisecond * 50)
