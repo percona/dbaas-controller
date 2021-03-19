@@ -86,7 +86,10 @@ func NewKubeCtl(ctx context.Context, kubeconfig string, options ...Option) (*Kub
 	var cache *gocache.Cache
 	if len(options) == 1 && options[0]&UseCacheOption != 0 {
 		l.Info("kubectl cache is turned on")
-		// Setup cache
+		// Setup cache to speed up long lasting requests.
+		// In some rpc methods of dbaas-controller, we call the same kubectl
+		// commands again but in different contexts. This is, I believe, most
+		// sane variant to share the data that were already requested. @jprukner
 		cache = gocache.New(expirationTime, expirationTime*2)
 	}
 

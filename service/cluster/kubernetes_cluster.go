@@ -72,6 +72,10 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 
 // GetResources returns total and available amounts of resources of certain k8s cluster.
 func (k KubernetesClusterService) GetResources(ctx context.Context, req *controllerv1beta1.GetResourcesRequest) (*controllerv1beta1.GetResourcesResponse, error) {
+	// Turn on cache for kubectl because we get persistent volumes both in
+	// GetAllClusterResources and GetConsumedDiskBytes methods. We also get
+	// storage classes in both of them.  This RPC takes 10s with cache and 18s
+	// without it for EKS cluster living in a datacenter far away.
 	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig, k8sclient.UseCacheOption)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
