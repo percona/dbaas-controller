@@ -488,7 +488,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	// This enables ingress for the cluster and exposes the cluster to the world.
 	// The cluster will have an internal IP and a world accessible hostname.
 	// This feature cannot be tested with minikube. Please use EKS for testing.
-	if clusterType, err := c.getKubernetesClusterType(ctx); err == nil && clusterType != minikube {
+	if clusterType := c.getKubernetesClusterType(ctx); clusterType != minikube {
 		res.Spec.ProxySQL.ServiceType = common.ServiceTypeLoadBalancer
 	}
 
@@ -613,26 +613,27 @@ func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) 
 	return storageClass, nil
 }
 
-func (c *K8sClient) getKubernetesClusterType(ctx context.Context) (kubernetesClusterType, error) {
+func (c *K8sClient) getKubernetesClusterType(ctx context.Context) kubernetesClusterType {
 	sc, err := c.getStorageClass(ctx)
 	if err != nil {
-		return clusterTypeUnknown, err
+		c.l.Error(errors.Wrap(err, "failed to get k8s cluster type"))
+		return clusterTypeUnknown
 	}
 
 	if len(sc.Items) == 0 {
-		return clusterTypeUnknown, nil
+		return clusterTypeUnknown
 	}
 
 	for _, class := range sc.Items {
 		if strings.Contains(class.Provisioner, "aws") {
-			return amazonEKS, nil
+			return amazonEKS
 		}
 		if strings.Contains(class.Provisioner, "minikube") {
-			return minikube, nil
+			return minikube
 		}
 	}
 
-	return clusterTypeUnknown, nil
+	return clusterTypeUnknown
 }
 
 func (c *K8sClient) restartDBClusterCmd(name, kind string) []string {
@@ -803,7 +804,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 	affinity := new(psmdb.PodAffinity)
 	var expose psmdb.Expose
-	if clusterType, err := c.getKubernetesClusterType(ctx); err == nil && clusterType != minikube {
+	if clusterType := c.getKubernetesClusterType(ctx); clusterType != minikube {
 		affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
 
 		// This enables ingress for the cluster and exposes the cluster to the world.
@@ -1378,10 +1379,7 @@ func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
 func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 	cpuMillis uint64, memoryBytes uint64, diskSizeBytes uint64, err error,
 ) {
-	clusterType, err := c.getKubernetesClusterType(ctx)
-	if err != nil {
-		return 0, 0, 0, errors.Wrap(err, "can't tell type of Kubernetes cluster to decide strategy of estimating total disk size")
-	}
+	clusterType := c.getKubernetesClusterType(ctx)
 
 	nodes, err := c.getWorkerNodes(ctx)
 	if err != nil {
@@ -1521,10 +1519,7 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 
 // GetConsumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
 func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context) (consumedBytes uint64, err error) {
-	clusterType, err := c.getKubernetesClusterType(ctx)
-	if err != nil {
-		return 0, errors.Wrap(err, "can't tell type of Kubernetes cluster to decide strategy of estimating consumed disk size")
-	}
+	clusterType := c.getKubernetesClusterType(ctx)
 
 	switch clusterType {
 	case minikube:
