@@ -18,7 +18,11 @@ package k8sclient
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -27,10 +31,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/common"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
+)
+
+const (
+	consumedResourcesTestPodsManifestPath string = "../../deploy/test-pods.yaml"
 )
 
 // pod is struct just for testing purposes. It contains expected pod and
@@ -43,14 +50,12 @@ type pod struct {
 func TestK8sClient(t *testing.T) {
 	ctx := app.Context()
 
-	kubeCtl, err := kubectl.NewKubeCtl(ctx, "")
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
 	require.NoError(t, err)
 
-	validKubeconfig, err := kubeCtl.Run(ctx, []string{"config", "view", "-o", "json"}, nil)
+	client, err := New(ctx, string(kubeconfig))
 	require.NoError(t, err)
 
-	client, err := New(ctx, string(validKubeconfig))
-	require.NoError(t, err)
 	t.Cleanup(func() {
 		err := client.Cleanup()
 		require.NoError(t, err)
@@ -120,7 +125,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("Get logs", func(t *testing.T) {
-			pods, err := client.GetClusterPods(ctx, name)
+			pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+name)
 			require.NoError(t, err)
 
 			expectedPods := []pod{
@@ -168,7 +173,7 @@ func TestK8sClient(t *testing.T) {
 						container.Name,
 					)
 
-					logs, err := client.GetLogs(ctx, ppod.Name, container.Name)
+					logs, err := client.GetLogs(ctx, ppod.Status.ContainerStatuses, ppod.Name, container.Name)
 					require.NoError(t, err, "failed to get logs")
 					assert.Greater(t, len(logs), 0)
 					for _, l := range logs {
@@ -373,4 +378,129 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 			break
 		}
 	}
+}
+
+func TestGetConsumedResources(t *testing.T) {
+	t.Parallel()
+	ctx := app.Context()
+
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+
+	client, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
+
+	b := make([]byte, 4)
+	n, err := rand.Read(b)
+	require.NoError(t, err)
+	require.Equal(t, 4, n)
+	consumedResourcesTestNamespace := "consumed-resources-test-" + hex.EncodeToString(b)
+
+	t.Cleanup(func() {
+		_, err := client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil)
+		require.NoError(t, err)
+		err = client.Cleanup()
+		require.NoError(t, err)
+	})
+
+	_, err = client.kubeCtl.Run(ctx, []string{"create", "ns", consumedResourcesTestNamespace}, nil)
+	require.NoError(t, err)
+
+	args := []string{
+		"apply", "-f", consumedResourcesTestPodsManifestPath,
+		"-n" + consumedResourcesTestNamespace,
+	}
+	_, err = client.kubeCtl.Run(ctx, args, nil)
+	require.NoError(t, err)
+	args = []string{
+		"wait", "--for=condition=ready", "--timeout=20s",
+		"pods", "hello1", "hello2", "-n" + consumedResourcesTestNamespace,
+	}
+	_, err = client.kubeCtl.Run(ctx, args, nil)
+	require.NoError(t, err)
+
+	cpuMillis, memoryBytes, _, err := client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
+	require.NoError(t, err)
+	assert.Equal(t, int64(40), cpuMillis)
+	assert.Equal(t, int64(192928615), memoryBytes)
+
+	// Test we dont include succeeded and failed pods into consumed resources.
+	// Wait for test pods to be completed:
+	timeout, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+	for {
+		time.Sleep(3 * time.Second)
+		select {
+		case <-timeout.Done():
+			t.Error("Timeout waiting for hello1 and hello2 pods to complete!")
+			return
+		default:
+		}
+		list, err := client.GetPods(ctx, "-n"+consumedResourcesTestNamespace, "hello1", "hello2")
+		require.NoError(t, err)
+		var failed, succeeded bool
+		for _, pod := range list.Items {
+			if pod.Name == "hello1" {
+				succeeded = pod.Status.Phase == common.PodPhaseSucceded
+				continue
+			}
+			if pod.Name == "hello2" {
+				failed = pod.Status.Phase == common.PodPhaseFailed
+			}
+		}
+
+		if failed && succeeded {
+			break
+		}
+	}
+
+	cpuMillis, memoryBytes, _, err = client.GetConsumedResources(ctx, consumedResourcesTestNamespace)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), cpuMillis)
+	assert.Equal(t, int64(0), memoryBytes)
+}
+
+func TestGetAllClusterResources(t *testing.T) {
+	t.Parallel()
+	ctx := app.Context()
+
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+
+	client, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err := client.Cleanup()
+		require.NoError(t, err)
+	})
+
+	// test getWorkerNodes
+	nodes, err := client.getWorkerNodes(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, nodes)
+	assert.Greater(t, len(nodes), 0)
+	for _, node := range nodes {
+		cpu, ok := node.Status.Allocatable[common.ResourceCPU]
+		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", common.ResourceCPU)
+		assert.NotEmpty(t, cpu)
+		memory, ok := node.Status.Allocatable[common.ResourceMemory]
+		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", common.ResourceMemory)
+		assert.NotEmpty(t, memory)
+	}
+
+	cpuMillis, memoryBytes, _, err := client.GetAllClusterResources(ctx)
+	require.NoError(t, err)
+	// We check 1 CPU because it is hard to imagine somebody running cluster with less CPU allocatable.
+	t.Log("nodes is", len(nodes))
+	assert.GreaterOrEqual(
+		t, cpuMillis, int64(len(nodes)*1000),
+		"expected to have at lease 1 CPU per node available to be allocated by pods",
+	)
+
+	// The same for memory, hard to imagine having less than 1 GB allocatable per node.
+	assert.GreaterOrEqual(
+		t, memoryBytes, int64(len(nodes))*1000*1000*1000,
+		"expected to have at lease 1GB available to be allocated by pods",
+	)
 }

@@ -69,16 +69,28 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 	}
 
 	for i, cluster := range PSMDBClusters {
+		diskSizeBytes, err := convertors.StrToBytes(cluster.Replicaset.DiskSize)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 		params := &controllerv1beta1.PSMDBClusterParams{
 			ClusterSize: cluster.Size,
 			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
-				DiskSize: convertors.StrToBytes(cluster.Replicaset.DiskSize),
+				DiskSize: diskSizeBytes,
 			},
 		}
 		if cluster.Replicaset.ComputeResources != nil {
+			cpuMillis, err := convertors.StrToMilliCPU(cluster.Replicaset.ComputeResources.CPUM)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			memoryBytes, err := convertors.StrToBytes(cluster.Replicaset.ComputeResources.MemoryBytes)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
 			params.Replicaset.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        convertors.StrToMilliCPU(cluster.Replicaset.ComputeResources.CPUM),
-				MemoryBytes: convertors.StrToBytes(cluster.Replicaset.ComputeResources.MemoryBytes),
+				CpuM:        int32(cpuMillis),
+				MemoryBytes: memoryBytes,
 			}
 		}
 		res.Clusters[i] = &controllerv1beta1.ListPSMDBClustersResponse_Cluster{

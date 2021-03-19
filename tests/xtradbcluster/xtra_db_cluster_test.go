@@ -125,7 +125,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 
 	// There is no Ingress in minikube
 	if os.Getenv("IN_EKS") != "" {
-		cluster, err := tests.XtraDBClusterAPIClient.GetXtraDBCluster(tests.Context, &controllerv1beta1.GetXtraDBClusterRequest{
+		cluster, err := tests.XtraDBClusterAPIClient.GetXtraDBClusterCredentials(tests.Context, &controllerv1beta1.GetXtraDBClusterCredentialsRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: kubeconfig,
 			},

@@ -19,6 +19,7 @@ package logs
 import (
 	"os"
 	"testing"
+	"time"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/stretchr/testify/assert"
@@ -74,15 +75,27 @@ func TestGetLogs(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, createXtraDBClusterResponse)
 
-	err = tests.WaitForClusterState(tests.Context, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
-	require.NoError(t, err)
-
 	request := &controllerv1beta1.GetLogsRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		ClusterName: name,
 	}
+
+	t.Run("Get logs of initializing cluster", func(t *testing.T) {
+		t.Parallel()
+		err = tests.WaitForClusterState(tests.Context, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
+		require.NoError(t, err)
+		// Wait 5 seconds for pods to be scheduled.
+		time.Sleep(time.Second * 5)
+		response, err := tests.LogsAPIClient.GetLogs(tests.Context, request)
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(response.Logs))
+	})
+
+	err = tests.WaitForClusterState(tests.Context, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
+	require.NoError(t, err)
+
 	response, err := tests.LogsAPIClient.GetLogs(tests.Context, request)
 	require.NoError(t, err)
 
