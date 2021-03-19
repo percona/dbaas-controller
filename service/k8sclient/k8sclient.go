@@ -88,8 +88,8 @@ const (
 	psmdbSecretNameTmpl    = "dbaas-%s-psmdb-secrets"
 	defaultPSMDBSecretName = "my-cluster-name-secrets"
 
-	// Max size of volume for AWS Elastic Block Storage service.
-	maxVolumeSizeEBS uint64 = convertors.TebiByte * 16
+	// Max size of volume for AWS Elastic Block Storage service is 16TiB
+	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
 )
 
 type kubernetesClusterType uint8

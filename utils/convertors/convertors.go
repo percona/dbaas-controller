@@ -27,14 +27,14 @@ import (
 )
 
 const (
-	KiloByte uint64 = 1000
-	KibiByte uint64 = 1024
-	MegaByte uint64 = KiloByte * 1000
-	MibiByte uint64 = KibiByte * 1024
-	GigaByte uint64 = MegaByte * 1000
-	GibiByte uint64 = MibiByte * 1024
-	TeraByte uint64 = GigaByte * 1000
-	TebiByte uint64 = GibiByte * 1024
+	kiloByte uint64 = 1000
+	kibiByte uint64 = 1024
+	megaByte uint64 = kiloByte * 1000
+	mibiByte uint64 = kibiByte * 1024
+	gigaByte uint64 = megaByte * 1000
+	gibiByte uint64 = mibiByte * 1024
+	teraByte uint64 = gigaByte * 1000
+	tebiByte uint64 = gibiByte * 1024
 )
 
 // StrToBytes converts string containing memory as string to number of bytes the string represents.
@@ -52,14 +52,14 @@ func StrToBytes(memory string) (uint64, error) {
 	}
 	suffixMapping := map[string]float64{
 		"m":  0.001,
-		"K":  float64(KiloByte),
-		"Ki": float64(KibiByte),
-		"M":  float64(MegaByte),
-		"Mi": float64(MibiByte),
-		"G":  float64(GigaByte),
-		"Gi": float64(GibiByte),
-		"T":  float64(TeraByte),
-		"Ti": float64(TebiByte),
+		"K":  float64(kiloByte),
+		"Ki": float64(kibiByte),
+		"M":  float64(megaByte),
+		"Mi": float64(mibiByte),
+		"G":  float64(gigaByte),
+		"Gi": float64(gibiByte),
+		"T":  float64(teraByte),
+		"Ti": float64(tebiByte),
 		"":   1.0,
 	}
 	coeficient, ok := suffixMapping[suffix]
