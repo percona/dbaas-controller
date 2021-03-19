@@ -22,13 +22,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"net"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/AlekSi/pointer"
+	"github.com/avast/retry-go"
 	"github.com/pkg/errors"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
@@ -1564,34 +1564,17 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 	if reflect.ValueOf(out).Kind() != reflect.Ptr {
 		return errors.New("output expected to be pointer")
 	}
-	port := "8089"
-	// This call blocks when another deamon is already running.
-	go func() {
-		err := c.kubeCtl.RunDaemon(ctx, "proxy", "--port="+port)
-		if err != nil && !strings.Contains(err.Error(), "killed") {
-			c.l.Error(errors.Wrap(err, "fialed to run daemon"))
-		}
-	}()
+
+	port, err := c.kubeCtl.RunProxy(ctx)
+	if err != nil {
+		return err
+	}
 	defer func() {
-		err := c.kubeCtl.StopDaemon()
+		err := c.kubeCtl.StopProxy()
 		if err != nil {
 			c.l.Error(err)
 		}
 	}()
-	var err error
-	// Wait for proxy to become alive, try at most 10 times.
-	for i := 0; i < 10; i++ {
-		var conn net.Conn
-		conn, err = net.DialTimeout("tcp", net.JoinHostPort("localhost", port), time.Second)
-		if conn != nil {
-			conn.Close() //nolint:errcheck,gosec
-			break
-		}
-		time.Sleep(time.Millisecond * 50)
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed to reach Kubernetes API")
-	}
 
 	client := http.Client{
 		Timeout: time.Second * 5,
@@ -1602,12 +1585,19 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 	}
 	req, err := http.NewRequestWithContext(ctx, method, "http://localhost:"+port+"/api"+endpoint, nil)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create Kubernetes API request")
 	}
-	resp, err := client.Do(req)
+	var resp *http.Response
+	retry.Do(
+		func() error {
+			resp, err = client.Do(req)
+			return err
+		},
+	)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to do Kubernetes API request")
 	}
+
 	defer resp.Body.Close() //nolint:errcheck
 	return json.NewDecoder(resp.Body).Decode(out)
 }

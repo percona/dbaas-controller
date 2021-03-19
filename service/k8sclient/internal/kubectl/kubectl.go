@@ -23,6 +23,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
+	"net"
 	"os"
 	"os/exec"
 	"strconv"
@@ -30,11 +32,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/avast/retry-go"
+	gocache "github.com/patrickmn/go-cache"
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
-
-	gocache "github.com/patrickmn/go-cache"
 
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
@@ -49,17 +51,24 @@ const (
 	expirationTime          = time.Second * 10
 	// UseCacheOption is an option that turns on cache of kubectl commands.
 	UseCacheOption Option = 1
+	maxRetries            = 10
 )
+
+type proxyProcess struct {
+	cmd  *exec.Cmd
+	port string
+}
 
 // KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
 type KubeCtl struct {
 	l              logger.Logger
 	cmd            []string
 	kubeconfigPath string
-	daemonMutex    *sync.Mutex
-	daemonCmdMutex *sync.Mutex
-	daemonCmd      *exec.Cmd
-	cache          *gocache.Cache
+	// proxyCmdMutex mutex protects us from running RunProxy twice from the same
+	// request and also protects the proxyCmd field against concurent use.
+	currentProxyMutex *sync.Mutex
+	currentProxy      *proxyProcess
+	cache             *gocache.Cache
 }
 
 // NewKubeCtl creates a new KubeCtl object with a given logger.
@@ -84,11 +93,10 @@ func NewKubeCtl(ctx context.Context, kubeconfig string, options ...Option) (*Kub
 	// Cannot identify k8s server version on non local env without kubeconfig (w/o address of k8s server).
 	if kubeconfig == "" {
 		return &KubeCtl{
-			l:              l,
-			cmd:            defaultKubectl,
-			daemonMutex:    new(sync.Mutex),
-			daemonCmdMutex: new(sync.Mutex),
-			cache:          cache,
+			l:                 l,
+			cmd:               defaultKubectl,
+			currentProxyMutex: new(sync.Mutex),
+			cache:             cache,
 		}, nil
 	}
 
@@ -111,12 +119,11 @@ func NewKubeCtl(ctx context.Context, kubeconfig string, options ...Option) (*Kub
 	cmd = append(cmd, fmt.Sprintf("--kubeconfig=%s", kubeconfigPath))
 
 	return &KubeCtl{
-		l:              l,
-		cmd:            cmd,
-		kubeconfigPath: kubeconfigPath,
-		daemonMutex:    new(sync.Mutex),
-		daemonCmdMutex: new(sync.Mutex),
-		cache:          cache,
+		l:                 l,
+		cmd:               cmd,
+		kubeconfigPath:    kubeconfigPath,
+		currentProxyMutex: new(sync.Mutex),
+		cache:             cache,
 	}, nil
 }
 
@@ -323,54 +330,129 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 	return outBuf.Bytes(), err
 }
 
-// RunDaemon runs kubectl command with args and assigns the process to daemonCmd
-// so we can later kill it. This call blocks. StopDaemon has to be run when daemon
-// is no longer needed. Concurrent calls to this method blocks until the current
-// daemon is stopped.
-func (k *KubeCtl) RunDaemon(ctx context.Context, args ...string) error {
-	// don't start another daemon until current stops.
-	k.daemonMutex.Lock()
-	defer k.daemonMutex.Unlock()
-	var outBuf bytes.Buffer
-	var errBuf bytes.Buffer
-	args = append(k.cmd, args...)
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...) //nolint:gosec
-	pdeathsig.Set(cmd, unix.SIGKILL)
-	cmd.Stdout = &outBuf
-	cmd.Stderr = &errBuf
-	envs := os.Environ()
-	for _, env := range envs {
-		if strings.HasPrefix(env, "PATH=") {
-			env = fmt.Sprintf("PATH=%s:%s", dbaasToolPath, os.Getenv("PATH"))
-		}
-		cmd.Env = append(cmd.Env, env)
-	}
-	k.daemonCmdMutex.Lock()
-	k.daemonCmd = cmd
-	k.daemonCmdMutex.Unlock()
-	err := cmd.Run()
-	if err != nil {
-		if strings.Contains(errBuf.String(), "NotFound") {
-			return ErrNotFound
-		}
-		return &kubeCtlError{
-			err:    errors.WithStack(err),
-			cmd:    strings.Join(args, " "),
-			stderr: errBuf.String(),
-		}
-	}
-	k.daemonCmdMutex.Lock()
-	k.daemonCmd = nil
-	k.daemonCmdMutex.Unlock()
-	return nil
+var (
+	reservedProxyPortsMutex *sync.Mutex = new(sync.Mutex)
+	reservedProxyPorts      *sync.Map   = new(sync.Map)
+)
+
+func (k *KubeCtl) reserveProxyPort(port string) {
+	mutex, _ := reservedProxyPorts.LoadOrStore(port, new(sync.Mutex))
+	mutex.(*sync.Mutex).Lock()
 }
 
-// StopDaemon stops current daemon if there is any running.
-func (k *KubeCtl) StopDaemon() error {
-	k.daemonCmdMutex.Lock()
-	defer k.daemonCmdMutex.Unlock()
-	if k.daemonCmd == nil {
+func (k *KubeCtl) releaseProxyPort(port string) {
+	mutex, ok := reservedProxyPorts.Load(port)
+	if !ok {
+		return
+	}
+	mutex.(*sync.Mutex).Unlock()
+}
+
+// RunProxy runs kubectl proxy on port that is returned.
+func (k *KubeCtl) RunProxy(ctx context.Context) (string, error) {
+	k.currentProxyMutex.Lock()
+	defer k.currentProxyMutex.Unlock()
+
+	if k.currentProxy != nil {
+		return "", errors.New("kubectl proxy is already running")
+	}
+
+	var port string
+	// Try to run kubectl proxy on random port.
+	err := retry.Do(
+		func() error {
+			// Generate a random port.
+			random := rand.New(rand.NewSource(time.Now().UnixNano()))
+			port = strconv.Itoa(10000 + random.Intn(10000))
+
+			// Check if port is occupied.
+			var conn net.Conn
+			conn, _ = net.DialTimeout("tcp", net.JoinHostPort("localhost", port), time.Second)
+			if conn != nil {
+				conn.Close() //nolint:errcheck,gosec
+				return errors.Errorf("port %s is already used", port)
+			}
+
+			// Reserve the port so we don't try to use the same port from more
+			// goroutines at the same time.
+			k.reserveProxyPort(port)
+			var err error
+			defer func() {
+				if err != nil {
+					k.releaseProxyPort(port)
+				}
+			}()
+
+			// Prepare the command
+			args := []string{"proxy", "--port=" + port}
+			args = append(k.cmd, args...)
+			cmd := exec.CommandContext(ctx, args[0], args[1:]...) //nolint:gosec
+			pdeathsig.Set(cmd, unix.SIGKILL)
+			outBuf := new(bytes.Buffer)
+			errBuf := new(bytes.Buffer)
+			cmd.Stdout = outBuf
+			cmd.Stderr = errBuf
+			envs := os.Environ()
+			for _, env := range envs {
+				if strings.HasPrefix(env, "PATH=") {
+					env = fmt.Sprintf("PATH=%s:%s", dbaasToolPath, os.Getenv("PATH"))
+				}
+				cmd.Env = append(cmd.Env, env)
+			}
+			err = cmd.Start()
+			if err != nil {
+				if strings.Contains(errBuf.String(), "NotFound") {
+					return ErrNotFound
+				}
+				return &kubeCtlError{
+					err:    errors.WithStack(err),
+					cmd:    strings.Join(args, " "),
+					stderr: errBuf.String(),
+				}
+			}
+
+			// Wait for proxy to become alive.
+			err = retry.Do(
+				func() error {
+					var conn net.Conn
+					conn, err = net.DialTimeout("tcp", net.JoinHostPort("localhost", port), time.Second)
+					if conn != nil {
+						conn.Close() //nolint:errcheck,gosec
+						return nil
+					}
+					return err
+				},
+			)
+			if err != nil {
+				return errors.Wrap(err, "failed to reach Kubernetes API")
+			}
+
+			k.currentProxy = &proxyProcess{
+				cmd:  cmd,
+				port: port,
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to run kubectl proxy")
+	}
+
+	return port, nil
+}
+
+// StopProxy stops kubectl proxy if there is any running.
+func (k *KubeCtl) StopProxy() error {
+	k.currentProxyMutex.Lock()
+	defer k.currentProxyMutex.Unlock()
+	if k.currentProxy == nil {
 		return nil
 	}
-	return k.daemonCmd.Process.Kill()
+	k.l.Info("Stop Proxy, port %s, killing proxy", k.currentProxy.port)
+	err := k.currentProxy.cmd.Process.Kill()
+	k.l.Info("Stop Proxy, releasing port %s", k.currentProxy.port)
+	k.releaseProxyPort(k.currentProxy.port)
+	k.l.Info("Stop Proxy, port %s released, returning", k.currentProxy.port)
+	k.currentProxy = nil
+	return err
 }
