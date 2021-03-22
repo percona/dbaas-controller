@@ -489,7 +489,13 @@ func TestGetAllClusterResources(t *testing.T) {
 		assert.NotEmpty(t, memory)
 	}
 
-	cpuMillis, memoryBytes, storageBytes, err := client.GetAllClusterResources(ctx)
+	clusterType := client.GetKubernetesClusterType(ctx)
+	var volumes *common.PersistentVolumeList
+	if clusterType == AmazonEKSClusterType {
+		volumes, err = client.GetPersistentVolumes(ctx)
+		require.NoError(t, err)
+	}
+	cpuMillis, memoryBytes, storageBytes, err := client.GetAllClusterResources(ctx, clusterType, volumes)
 	require.NoError(t, err)
 	// We check 1 CPU because it is hard to imagine somebody running cluster with less CPU allocatable.
 	t.Log("nodes is", len(nodes))

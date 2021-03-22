@@ -96,8 +96,8 @@ type kubernetesClusterType uint8
 
 const (
 	clusterTypeUnknown kubernetesClusterType = iota
-	amazonEKS
-	minikube
+	AmazonEKSClusterType
+	MinikubeClusterType
 )
 
 // ContainerState describes container's state - waiting, running, terminated.
@@ -124,14 +124,6 @@ const (
 const (
 	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
-)
-
-// Option is meant to be bitmask to specify k8sClient's options.
-type Option uint64
-
-const (
-	// UseCacheOption togles use of cache.
-	UseCacheOption Option = Option(kubectl.UseCacheOption)
 )
 
 // Operators contains statuses of operators.
@@ -324,14 +316,11 @@ func (d DetailedState) CountAllPods() (count int32) {
 }
 
 // New returns new K8Client object.
-func New(ctx context.Context, kubeconfig string, options ...Option) (*K8sClient, error) {
+func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "K8sClient")
-	kubectlOptions := make([]kubectl.Option, 0, len(options))
-	for _, option := range options {
-		kubectlOptions = append(kubectlOptions, kubectl.Option(option))
-	}
-	kubeCtl, err := kubectl.NewKubeCtl(ctx, kubeconfig, kubectlOptions...)
+
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, kubeconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -488,7 +477,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	// This enables ingress for the cluster and exposes the cluster to the world.
 	// The cluster will have an internal IP and a world accessible hostname.
 	// This feature cannot be tested with minikube. Please use EKS for testing.
-	if clusterType := c.getKubernetesClusterType(ctx); clusterType != minikube {
+	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType {
 		res.Spec.ProxySQL.ServiceType = common.ServiceTypeLoadBalancer
 	}
 
@@ -613,7 +602,7 @@ func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) 
 	return storageClass, nil
 }
 
-func (c *K8sClient) getKubernetesClusterType(ctx context.Context) kubernetesClusterType {
+func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) kubernetesClusterType {
 	sc, err := c.getStorageClass(ctx)
 	if err != nil {
 		c.l.Error(errors.Wrap(err, "failed to get k8s cluster type"))
@@ -626,10 +615,10 @@ func (c *K8sClient) getKubernetesClusterType(ctx context.Context) kubernetesClus
 
 	for _, class := range sc.Items {
 		if strings.Contains(class.Provisioner, "aws") {
-			return amazonEKS
+			return AmazonEKSClusterType
 		}
 		if strings.Contains(class.Provisioner, "minikube") {
-			return minikube
+			return MinikubeClusterType
 		}
 	}
 
@@ -804,7 +793,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 	affinity := new(psmdb.PodAffinity)
 	var expose psmdb.Expose
-	if clusterType := c.getKubernetesClusterType(ctx); clusterType != minikube {
+	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType {
 		affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
 
 		// This enables ingress for the cluster and exposes the cluster to the world.
@@ -1376,11 +1365,9 @@ func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
 }
 
 // GetAllClusterResources goes through all cluster nodes and sums their allocatable resources.
-func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
+func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType kubernetesClusterType, volumes *common.PersistentVolumeList) (
 	cpuMillis uint64, memoryBytes uint64, diskSizeBytes uint64, err error,
 ) {
-	clusterType := c.getKubernetesClusterType(ctx)
-
 	nodes, err := c.getWorkerNodes(ctx)
 	if err != nil {
 		return 0, 0, 0, errors.Wrap(err, "could not get a list of nodes")
@@ -1395,7 +1382,7 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 		memoryBytes += memory
 
 		switch clusterType {
-		case minikube:
+		case MinikubeClusterType:
 			storage, ok := node.Status.Allocatable[common.ResourceEphemeralStorage]
 			if !ok {
 				return 0, 0, 0, errors.Errorf("could not get storage size of the node")
@@ -1405,7 +1392,7 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 				return 0, 0, 0, errors.Wrapf(err, "could not convert storage size '%s' to bytes", storage)
 			}
 			diskSizeBytes += bytes
-		case amazonEKS:
+		case AmazonEKSClusterType:
 			// See https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/#scheduler.
 			if common.IsNodeInCondition(node, common.NodeConditionDiskPressure) {
 				continue
@@ -1432,12 +1419,7 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
 			volumeCountEKS += volumeLimitPerNode
 		}
 	}
-	if clusterType == amazonEKS {
-		volumes, err := c.GetPersistentVolumes(ctx)
-		if err != nil {
-			return 0, 0, 0, errors.Wrap(err, "failed to get persistent volumes")
-		}
-
+	if clusterType == AmazonEKSClusterType {
 		volumeCountEKSBackup := volumeCountEKS
 		volumeCountEKS -= uint64(len(volumes.Items))
 		if volumeCountEKS > volumeCountEKSBackup {
@@ -1518,11 +1500,9 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 }
 
 // GetConsumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
-func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context) (consumedBytes uint64, err error) {
-	clusterType := c.getKubernetesClusterType(ctx)
-
+func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType kubernetesClusterType, volumes *common.PersistentVolumeList) (consumedBytes uint64, err error) {
 	switch clusterType {
-	case minikube:
+	case MinikubeClusterType:
 		nodes, err := c.getWorkerNodes(ctx)
 		if err != nil {
 			return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes")
@@ -1538,11 +1518,7 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context) (consumedBytes uin
 			consumedBytes += summary.Node.FileSystem.UsedBytes
 		}
 		return consumedBytes, nil
-	case amazonEKS:
-		volumes, err := c.GetPersistentVolumes(ctx)
-		if err != nil {
-			return 0, errors.Wrap(err, "failed to get persistent volumes")
-		}
+	case AmazonEKSClusterType:
 		consumedBytes, err := sumVolumesSize(volumes)
 		if err != nil {
 			return 0, errors.Wrap(err, "failed to sum persistent volumes storage sizes")
@@ -1565,7 +1541,7 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 		return err
 	}
 	defer func() {
-		err := c.kubeCtl.StopProxy()
+		err := c.kubeCtl.StopProxy(port)
 		if err != nil {
 			c.l.Error(err)
 		}

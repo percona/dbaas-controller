@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
 var operatorStatusesMap = map[k8sclient.OperatorStatus]controllerv1beta1.OperatorsStatus{
@@ -72,17 +73,22 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 
 // GetResources returns total and available amounts of resources of certain k8s cluster.
 func (k KubernetesClusterService) GetResources(ctx context.Context, req *controllerv1beta1.GetResourcesRequest) (*controllerv1beta1.GetResourcesResponse, error) {
-	// Turn on cache for kubectl because we get persistent volumes both in
-	// GetAllClusterResources and GetConsumedDiskBytes methods. We also get
-	// storage classes in both of them.  This RPC takes 10s with cache and 18s
-	// without it for EKS cluster living in a datacenter far away.
-	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig, k8sclient.UseCacheOption)
+	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
 
-	allCPUMillis, allMemoryBytes, allDiskBytes, err := k8sClient.GetAllClusterResources(ctx)
+	// Get cluster type
+	clusterType := k8sClient.GetKubernetesClusterType(ctx)
+	var volumes *common.PersistentVolumeList
+	if clusterType == k8sclient.AmazonEKSClusterType {
+		volumes, err = k8sClient.GetPersistentVolumes(ctx)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+	allCPUMillis, allMemoryBytes, allDiskBytes, err := k8sClient.GetAllClusterResources(ctx, clusterType, volumes)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -92,7 +98,7 @@ func (k KubernetesClusterService) GetResources(ctx context.Context, req *control
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	consumedDiskBytes, err := k8sClient.GetConsumedDiskBytes(ctx)
+	consumedDiskBytes, err := k8sClient.GetConsumedDiskBytes(ctx, clusterType, volumes)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
