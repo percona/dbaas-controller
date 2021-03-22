@@ -9,9 +9,9 @@ go 1.15
 // go get -v github.com/percona-platform/dbaas-api@main
 
 require (
-	github.com/percona-platform/dbaas-api v0.0.0-20210202072632-370e085e6f54
+	github.com/percona-platform/dbaas-api v0.0.0-20210225094813-4635efc4e85c
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.0
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7 // indirect
 	golang.org/x/sys v0.0.0-20201029080932-201ba4db2418

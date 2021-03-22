@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 
@@ -81,4 +82,22 @@ func TestKubernetesClusterAPI(t *testing.T) {
 		tests.AssertGRPCErrorRE(t, codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: exit status", err)
 		require.Nil(t, response)
 	})
+}
+
+func TestGetResources(t *testing.T) {
+	kubeConfig := os.Getenv("PERCONA_TEST_DBAAS_KUBECONFIG")
+	if kubeConfig == "" {
+		t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")
+	}
+	ctx := context.TODO()
+	response, err := tests.KubernetesClusterAPIClient.GetResources(ctx,
+		&controllerv1beta1.GetResourcesRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{Kubeconfig: kubeConfig},
+		},
+	)
+	require.NoError(t, err)
+	assert.Greater(t, response.Available.CpuM, int64(0))
+	assert.Greater(t, response.Available.MemoryBytes, int64(0))
+	assert.Less(t, response.Available.CpuM, response.All.CpuM)
+	assert.Less(t, response.Available.MemoryBytes, response.All.MemoryBytes)
 }

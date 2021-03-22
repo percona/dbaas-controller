@@ -18,18 +18,18 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
-	github.com/percona-platform/dbaas-api v0.0.0-20210222082335-41f004193c1a
+	github.com/percona-platform/dbaas-api v0.0.0-20210318204543-0d16006be752
 	github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871
-	github.com/percona/pmm v2.14.1-0.20210214124250-4559713b8bc0+incompatible
+	github.com/percona/pmm v2.15.1-0.20210318204615-bbf8e9314afd+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.9.0
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.16.0
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
 	golang.org/x/sys v0.0.0-20201214210602-f9fddec55a1e
 	golang.org/x/text v0.3.5
-	google.golang.org/grpc v1.35.0
+	google.golang.org/grpc v1.36.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
