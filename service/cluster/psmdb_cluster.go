@@ -121,8 +121,9 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 	defer client.Cleanup() //nolint:errcheck
 
 	params := &k8sclient.PSMDBParams{
-		Name: req.Name,
-		Size: req.Params.ClusterSize,
+		Name:  req.Name,
+		Image: req.Params.Image,
+		Size:  req.Params.ClusterSize,
 		Replicaset: &k8sclient.Replicaset{
 			DiskSize: convertors.BytesToStr(req.Params.Replicaset.DiskSize),
 		},

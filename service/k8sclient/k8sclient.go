@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	version "github.com/hashicorp/go-version"
+
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 
@@ -69,18 +71,18 @@ const (
 	k8sAPIVersion     = "v1"
 	k8sMetaKindSecret = "Secret"
 
-	pxcCRVersion         = "1.7.0"
-	pxcBackupImage       = "percona/percona-xtradb-cluster-operator:1.6.0-pxc8.0-backup"
-	pxcImage             = "percona/percona-xtradb-cluster:8.0.20-11.1"
-	pxcBackupStorageName = "pxc-backup-storage-%s"
-	pxcAPIVersion        = "pxc.percona.com/v1-6-0"
-	pxcProxySQLImage     = "percona/percona-xtradb-cluster-operator:1.6.0-proxysql"
-	pxcSecretNameTmpl    = "dbaas-%s-pxc-secrets"
-	defaultPXCSecretName = "my-cluster-secrets"
+	pxcCRVersion            = "1.7.0"
+	pxcBackupImage          = "percona/percona-xtradb-cluster-operator:1.6.0-pxc8.0-backup"
+	pxcDefaultImage         = "percona/percona-xtradb-cluster:8.0.20-11.1"
+	pxcBackupStorageName    = "pxc-backup-storage-%s"
+	pxcAPIVersion           = "pxc.percona.com/v1-7-0"
+	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.6.0-proxysql"
+	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
+	defaultPXCSecretName    = "my-cluster-secrets"
 
 	psmdbCRVersion         = "1.6.0"
 	psmdbBackupImage       = "percona/percona-server-mongodb-operator:1.5.0-backup"
-	psmdbImage             = "percona/percona-server-mongodb:4.2.8-8"
+	psmdbDefaultImage      = "percona/percona-server-mongodb:4.2.8-8"
 	psmdbAPIVersion        = "psmdb.percona.com/v1-6-0"
 	psmdbSecretNameTmpl    = "dbaas-%s-psmdb-secrets"
 	defaultPSMDBSecretName = "my-cluster-name-secrets"
@@ -112,10 +114,15 @@ const (
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
 )
 
+type Operator struct {
+	Status  OperatorStatus
+	Version string
+}
+
 // Operators contains statuses of operators.
 type Operators struct {
-	Xtradb OperatorStatus
-	Psmdb  OperatorStatus
+	Xtradb Operator
+	Psmdb  Operator
 }
 
 // ComputeResources represents container computer resources requests or limits.
@@ -126,12 +133,14 @@ type ComputeResources struct {
 
 // PXC contains information related to PXC containers in Percona XtraDB cluster.
 type PXC struct {
+	Image            string
 	ComputeResources *ComputeResources
 	DiskSize         string
 }
 
 // ProxySQL contains information related to ProxySQL containers in Percona XtraDB cluster.
 type ProxySQL struct {
+	Image            string
 	ComputeResources *ComputeResources
 	DiskSize         string
 }
@@ -161,6 +170,7 @@ type Cluster struct {
 // PSMDBParams contains all parameters required to create or update percona server for mongodb cluster.
 type PSMDBParams struct {
 	Name             string
+	Image            string
 	PMMPublicAddress string
 	Size             int32
 	Suspend          bool
@@ -390,6 +400,14 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
 	storageName := fmt.Sprintf(pxcBackupStorageName, params.Name)
+	pxcImage := pxcDefaultImage
+	if params.PXC.Image != "" {
+		pxcImage = params.PXC.Image
+	}
+	pxcProxySQLImage := pxcProxySQLDefaultImage
+	if params.ProxySQL.Image != "" {
+		pxcProxySQLImage = params.ProxySQL.Image
+	}
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
 			APIVersion: pxcAPIVersion,
@@ -789,6 +807,10 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		// > set affinity.antiAffinityTopologyKey key to "none"
 		// > (the Operator will be unable to spread the cluster on several nodes)
 		affinity.TopologyKey = pointer.ToString(psmdb.AffinityOff)
+	}
+	psmdbImage := psmdbDefaultImage
+	if params.Image != "" {
+		psmdbImage = params.Image
 	}
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
@@ -1209,21 +1231,38 @@ func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 	}, nil
 }
 
-func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIVersion string) (operator OperatorStatus) {
+func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIVersion string) (operator Operator) {
 	apiNamespace := strings.Split(expectedAPIVersion, "/")[0]
-	installed := false
-	for _, version := range installedVersions {
-		switch {
-		case version == expectedAPIVersion:
-			return OperatorStatusOK
-		case strings.HasPrefix(version, apiNamespace):
-			installed = true
+	operator.Status = OperatorStatusNotInstalled
+	lastVersion, _ := version.NewVersion("v0.0.1")
+	for _, apiVersion := range installedVersions {
+		if !strings.HasPrefix(apiVersion, apiNamespace) {
+			continue
 		}
+		if apiVersion == expectedAPIVersion {
+			operator.Status = OperatorStatusOK
+		}
+		if operator.Status == OperatorStatusNotInstalled {
+			operator.Status = OperatorStatusUnsupported
+		}
+		v := strings.Split(apiVersion, "/")[1]
+
+		versionParts := strings.Split(v, "-")
+		if len(versionParts) != 3 {
+			continue
+		}
+		v = strings.Join(versionParts, ".")
+		newVersion, err := version.NewVersion(v)
+		if err != nil {
+			c.l.Warn("can't parse version %s: %s", v, err)
+			continue
+		}
+		if newVersion.LessThanOrEqual(lastVersion) {
+			continue
+		}
+		operator.Version = newVersion.String()
 	}
-	if installed {
-		return OperatorStatusUnsupported
-	}
-	return OperatorStatusNotInstalled
+	return operator
 }
 
 // GetPods returns list of pods based on given filters. Filters are args to

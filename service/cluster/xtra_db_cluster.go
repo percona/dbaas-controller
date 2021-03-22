@@ -143,10 +143,12 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 		Name: req.Name,
 		Size: req.Params.ClusterSize,
 		PXC: &k8sclient.PXC{
+			Image:            req.Params.Pxc.Image,
 			ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
 			DiskSize:         convertors.BytesToStr(req.Params.Pxc.DiskSize),
 		},
 		ProxySQL: &k8sclient.ProxySQL{
+			Image:            req.Params.Proxysql.Image,
 			ComputeResources: computeResources(req.Params.Proxysql.ComputeResources),
 			DiskSize:         convertors.BytesToStr(req.Params.Proxysql.DiskSize),
 		},
