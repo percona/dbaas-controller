@@ -188,7 +188,7 @@ type ReplsetSpec struct {
 	Size                int32                           `json:"size"`
 	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
 	Resources           *common.PodResources            `json:"resources,omitempty"`
-	Name                string                          `json:"name"`
+	Name                string                          `json:"name,omitempty"`
 	ClusterRole         clusterRole                     `json:"clusterRole,omitempty"`
 	VolumeSpec          *common.VolumeSpec              `json:"volumeSpec,omitempty"`
 	LivenessProbe       *livenessProbeExtended          `json:"livenessProbe,omitempty"`
