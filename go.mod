@@ -21,7 +21,7 @@ require (
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/percona-platform/dbaas-api v0.0.0-20210322144728-186062445c94
 	github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871
-	github.com/percona/pmm v2.14.1-0.20210214124250-4559713b8bc0+incompatible
+	github.com/percona/pmm v2.15.1-0.20210318204615-bbf8e9314afd+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.9.0
 	github.com/sirupsen/logrus v1.8.0
