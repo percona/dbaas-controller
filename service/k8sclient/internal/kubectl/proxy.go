@@ -36,7 +36,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var reservedProxyPorts *sync.Map = new(sync.Map)
+var reservedProxyPorts = new(sync.Map)
 
 // reserveProxyPort reserves a ramdom proxy port from range [10000, 19999).
 // It stores the proxy command under the reserved port so we can get back to it later.

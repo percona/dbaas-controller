@@ -88,7 +88,7 @@ const (
 	psmdbSecretNameTmpl    = "dbaas-%s-psmdb-secrets"
 	defaultPSMDBSecretName = "my-cluster-name-secrets"
 
-	// Max size of volume for AWS Elastic Block Storage service is 16TiB
+	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
 )
 
@@ -96,7 +96,9 @@ type kubernetesClusterType uint8
 
 const (
 	clusterTypeUnknown kubernetesClusterType = iota
+	// AmazonEKSClusterType represents EKS cluster type.
 	AmazonEKSClusterType
+	// MinikubeClusterType represents minikube Kubernetes cluster.
 	MinikubeClusterType
 )
 
@@ -602,6 +604,7 @@ func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) 
 	return storageClass, nil
 }
 
+// GetKubernetesClusterType returns k8s cluster type based on storage class.
 func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) kubernetesClusterType {
 	sc, err := c.getStorageClass(ctx)
 	if err != nil {
@@ -1559,7 +1562,7 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 		return errors.Wrap(err, "failed to create Kubernetes API request")
 	}
 	var resp *http.Response
-	retry.Do(
+	err = retry.Do(
 		func() error {
 			resp, err = client.Do(req)
 			return err
