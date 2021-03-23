@@ -1233,7 +1233,7 @@ func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIVersion string) (operator Operator) {
 	apiNamespace := strings.Split(expectedAPIVersion, "/")[0]
 	operator.Status = OperatorStatusNotInstalled
-	lastVersion, _ := version.NewVersion("v0.0.1")
+	lastVersion, _ := version.NewVersion("v0.0.0")
 	for _, apiVersion := range installedVersions {
 		if !strings.HasPrefix(apiVersion, apiNamespace) {
 			continue
@@ -1259,7 +1259,8 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 		if newVersion.LessThanOrEqual(lastVersion) {
 			continue
 		}
-		operator.Version = newVersion.String()
+		lastVersion = newVersion
+		operator.Version = lastVersion.String()
 	}
 	return operator
 }
