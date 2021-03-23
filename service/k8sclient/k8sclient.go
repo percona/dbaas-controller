@@ -1230,6 +1230,9 @@ func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 	}, nil
 }
 
+// checkOperatorStatus returns if operator is installed and operators version.
+// It checks for all API versions supported by the operator and based on the latest API version in the list
+// figures out which version of operator is installed
 func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIVersion string) (operator Operator) {
 	apiNamespace := strings.Split(expectedAPIVersion, "/")[0]
 	operator.Status = OperatorStatusNotInstalled
