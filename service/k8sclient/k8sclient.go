@@ -25,9 +25,8 @@ import (
 	"strings"
 	"time"
 
-	version "github.com/hashicorp/go-version"
-
 	"github.com/AlekSi/pointer"
+	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
@@ -72,16 +71,16 @@ const (
 	k8sMetaKindSecret = "Secret"
 
 	pxcCRVersion            = "1.7.0"
-	pxcBackupImage          = "percona/percona-xtradb-cluster-operator:1.6.0-pxc8.0-backup"
+	pxcBackupImage          = "percona/percona-xtradb-cluster-operator:1.7.0-pxc8.0-backup"
 	pxcDefaultImage         = "percona/percona-xtradb-cluster:8.0.20-11.1"
 	pxcBackupStorageName    = "pxc-backup-storage-%s"
 	pxcAPIVersion           = "pxc.percona.com/v1-7-0"
-	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.6.0-proxysql"
+	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.7.0-proxysql"
 	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
 	defaultPXCSecretName    = "my-cluster-secrets"
 
 	psmdbCRVersion         = "1.6.0"
-	psmdbBackupImage       = "percona/percona-server-mongodb-operator:1.5.0-backup"
+	psmdbBackupImage       = "percona/percona-server-mongodb-operator:1.6.0-backup"
 	psmdbDefaultImage      = "percona/percona-server-mongodb:4.2.8-8"
 	psmdbAPIVersion        = "psmdb.percona.com/v1-6-0"
 	psmdbSecretNameTmpl    = "dbaas-%s-psmdb-secrets"
