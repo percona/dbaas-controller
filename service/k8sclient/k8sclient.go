@@ -1567,6 +1567,7 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 			resp, err = client.Do(req)
 			return err
 		},
+		retry.Context(ctx),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to do Kubernetes API request")
