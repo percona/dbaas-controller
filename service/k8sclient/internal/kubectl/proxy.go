@@ -72,7 +72,6 @@ func (k *KubeCtl) RunProxy(ctx context.Context) (string, error) {
 				return err
 			}
 			cmd.Args = append(cmd.Args, "proxy", "--port="+port)
-			var err error
 			defer func() {
 				if err != nil {
 					reservedProxyPorts.Delete(port)
