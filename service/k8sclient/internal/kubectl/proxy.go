@@ -112,6 +112,9 @@ func (k *KubeCtl) RunProxy(ctx context.Context) (string, error) {
 				},
 				retry.Context(ctx),
 			)
+			if err != nil {
+				k.StopProxy(port)
+			}
 			return errors.Wrap(err, "failed to reach Kubernetes API")
 		},
 		retry.Context(ctx),
