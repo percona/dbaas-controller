@@ -40,7 +40,7 @@ var reservedProxyPorts = new(sync.Map)
 
 // reserveProxyPort reserves a ramdom proxy port from range [10000, 19999).
 // It stores the proxy command under the reserved port so we can get back to it later.
-func (k *KubeCtl) reserveProxyPort(cmd *exec.Cmd) string {
+func (k *KubeCtl) reserveProxyPort(ctx context.Context, cmd *exec.Cmd) (string, error) {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	var port int
 	for {
@@ -49,8 +49,13 @@ func (k *KubeCtl) reserveProxyPort(cmd *exec.Cmd) string {
 		if !loaded {
 			break
 		}
+		select {
+		case <-ctx.Done():
+			return "", errors.New("timeout while reserving port for the kubectl proxy")
+		default:
+		}
 	}
-	return strconv.Itoa(port)
+	return strconv.Itoa(port), nil
 }
 
 // RunProxy runs kubectl proxy on port that is returned.
@@ -62,7 +67,10 @@ func (k *KubeCtl) RunProxy(ctx context.Context) (string, error) {
 			cmd := exec.CommandContext(ctx, k.cmd[0], k.cmd[1:]...) //nolint:gosec
 			// Reserve a port so we don't try to use the same port from more
 			// goroutines at the same time.
-			port = k.reserveProxyPort(cmd)
+			port, err := k.reserveProxyPort(ctx, cmd)
+			if err != nil {
+				return err
+			}
 			cmd.Args = append(cmd.Args, "proxy", "--port="+port)
 			var err error
 			defer func() {
