@@ -19,8 +19,10 @@ package k8sclient
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+  "math/big"
 	"math/rand"
 	"net/http"
 	"reflect"
@@ -369,16 +371,19 @@ func (c *K8sClient) CreateSecret(ctx context.Context, secretName string, data ma
 	return c.kubeCtl.Apply(ctx, secret)
 }
 
-func randSeq(n int) string {
-	rand.Seed(time.Now().UnixNano())
+func randSeq(n int) (string, error) {
 	// PSMDB do not support all special characters in password https://jira.percona.com/browse/K8SPSMDB-364
-	symbols := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~=+%^*/(){}!$|")
+	symbols := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 	symbolsLen := len(symbols)
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = symbols[rand.Intn(symbolsLen)]
+		randomIndex, err := rand.Int(rand.Reader, big.NewInt(int64(symbolsLen)))
+		if err != nil {
+			return "", err
+		}
+		b[i] = symbols[randomIndex.Uint64()]
 	}
-	return string(b)
+	return string(b), nil
 }
 
 // CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
@@ -396,7 +401,10 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	secretName := fmt.Sprintf(pxcSecretNameTmpl, params.Name)
-	pwd := randSeq(passwordLength)
+	pwd, err := randSeq(passwordLength)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate password")
+	}
 
 	// TODO: add a link to ticket to set random password for all other users.
 	data := secret.Data
@@ -784,7 +792,10 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 
 	secretName := fmt.Sprintf(psmdbSecretNameTmpl, params.Name)
-	pwd := randSeq(passwordLength)
+	pwd, err := randSeq(passwordLength)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate password")
+	}
 
 	data := secret.Data
 	data["MONGODB_USER_ADMIN_PASSWORD"] = []byte(pwd)
