@@ -308,8 +308,17 @@ func TestK8sClient(t *testing.T) {
 	t.Run("CheckOperators", func(t *testing.T) {
 		operators, err := client.CheckOperators(ctx)
 		require.NoError(t, err)
-		assert.Equal(t, operators.Xtradb, OperatorStatusOK)
-		assert.Equal(t, operators.Psmdb, OperatorStatusOK)
+		assert.Equal(t, &Operators{
+			Xtradb: Operator{
+				Status:  OperatorStatusOK,
+				Version: "1.7.0",
+			},
+			Psmdb: Operator{
+				Status:  OperatorStatusOK,
+				Version: "1.6.0",
+			},
+		}, operators,
+		)
 	})
 }
 
