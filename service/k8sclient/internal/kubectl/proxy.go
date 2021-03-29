@@ -67,7 +67,8 @@ func (k *KubeCtl) RunProxy(ctx context.Context) (string, error) {
 			cmd := exec.CommandContext(ctx, k.cmd[0], k.cmd[1:]...) //nolint:gosec
 			// Reserve a port so we don't try to use the same port from more
 			// goroutines at the same time.
-			port, err := k.reserveProxyPort(ctx, cmd)
+			var err error
+			port, err = k.reserveProxyPort(ctx, cmd)
 			if err != nil {
 				return err
 			}
