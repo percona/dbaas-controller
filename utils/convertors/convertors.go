@@ -27,18 +27,18 @@ import (
 )
 
 const (
-	kiloByte int64 = 1000
-	kibiByte int64 = 1024
-	megaByte int64 = kiloByte * 1000
-	mibiByte int64 = kibiByte * 1024
-	gigaByte int64 = megaByte * 1000
-	gibiByte int64 = mibiByte * 1024
-	teraByte int64 = gigaByte * 1000
-	tebiByte int64 = gibiByte * 1024
+	kiloByte uint64 = 1000
+	kibiByte uint64 = 1024
+	megaByte uint64 = kiloByte * 1000
+	mibiByte uint64 = kibiByte * 1024
+	gigaByte uint64 = megaByte * 1000
+	gibiByte uint64 = mibiByte * 1024
+	teraByte uint64 = gigaByte * 1000
+	tebiByte uint64 = gibiByte * 1024
 )
 
 // StrToBytes converts string containing memory as string to number of bytes the string represents.
-func StrToBytes(memory string) (int64, error) {
+func StrToBytes(memory string) (uint64, error) {
 	if len(memory) == 0 {
 		return 0, nil
 	}
@@ -74,17 +74,17 @@ func StrToBytes(memory string) (int64, error) {
 	if err != nil {
 		return 0, errors.Errorf("given value '%s' is not a number", memory)
 	}
-	return int64(math.Ceil(value * coeficient)), nil
+	return uint64(math.Ceil(value * coeficient)), nil
 }
 
 // StrToMilliCPU converts CPU as a string representation to millicpus represented as an integer.
-func StrToMilliCPU(cpu string) (int64, error) {
+func StrToMilliCPU(cpu string) (uint64, error) {
 	if cpu == "" {
 		return 0, nil
 	}
 	if strings.HasSuffix(cpu, "m") {
 		cpu = cpu[:len(cpu)-1]
-		millis, err := strconv.ParseInt(cpu, 10, 64)
+		millis, err := strconv.ParseUint(cpu, 10, 64)
 		if err != nil {
 			return 0, err
 		}
@@ -94,7 +94,7 @@ func StrToMilliCPU(cpu string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return int64(floatCPU * 1000), nil
+	return uint64(floatCPU * 1000), nil
 }
 
 // BytesToStr converts integer of bytes to string.

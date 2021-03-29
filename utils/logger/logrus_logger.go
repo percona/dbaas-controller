@@ -20,8 +20,10 @@ package logger
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/grpclog"
@@ -60,7 +62,18 @@ func (l *logrusGrpcLoggerV2) V(level int) bool {
 
 // NewLogger returns new LogrusLogger.
 func NewLogger() Logger {
-	l := logrus.NewEntry(logrus.New())
+	// l := logrus.NewEntry(logrus.New())
+	formater := new(logrus.TextFormatter)
+	formater.TimestampFormat = time.StampNano
+	l := logrus.NewEntry(&logrus.Logger{
+		Out:          os.Stderr,
+		Formatter:    formater,
+		Hooks:        make(logrus.LevelHooks),
+		Level:        logrus.InfoLevel,
+		ExitFunc:     os.Exit,
+		ReportCaller: false,
+	})
+
 	return &LogrusLogger{
 		l: l,
 	}

@@ -27,7 +27,7 @@ func TestConvertToCPUMillis(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		in             string
-		expectedOut    int64
+		expectedOut    uint64
 		errShouldBeNil bool
 	}{
 		{in: "100m", expectedOut: 100, errShouldBeNil: true},
@@ -57,7 +57,7 @@ func TestConvertToBytes(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		in             string
-		expectedOut    int64
+		expectedOut    uint64
 		errShouldBeNil bool
 	}{
 		{in: "100M", expectedOut: 100 * 1000 * 1000, errShouldBeNil: true},

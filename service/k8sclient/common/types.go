@@ -142,5 +142,29 @@ const (
 type NodeList struct {
 	TypeMeta // anonymous for embedding
 
-	Items []Node `json:"items"`
+	Items []Node `json:"items,omitempty"`
+}
+
+// PersistentVolumeList holds a list of persistent volume objects.
+type PersistentVolumeList struct {
+	TypeMeta // anonymous for embedding
+
+	Items []PersistentVolume `json:"items,omitempty"`
+}
+
+// NodeFileSystemSummary holds a summary of Node's filesystem.
+type NodeFileSystemSummary struct {
+	UsedBytes uint64 `json:"usedBytes,omitempty"`
+}
+
+// NodeSummaryNode holds information about Node inside Node's summary.
+type NodeSummaryNode struct {
+	FileSystem NodeFileSystemSummary `json:"fs,omitempty"`
+}
+
+// NodeSummary holds summary of the Node.
+// One gets this by requesting Kubernetes API endpoint:
+// /v1/nodes/<node-name>/proxy/stats/summary.
+type NodeSummary struct {
+	Node NodeSummaryNode `json:"node,omitempty"`
 }
