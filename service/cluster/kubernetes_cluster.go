@@ -65,8 +65,14 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 		return resp, nil
 	}
 
-	resp.Operators.Xtradb.Status = operatorStatusesMap[operators.Xtradb]
-	resp.Operators.Psmdb.Status = operatorStatusesMap[operators.Psmdb]
+	resp.Operators.Xtradb = &controllerv1beta1.Operator{
+		Status:  operatorStatusesMap[operators.Xtradb.Status],
+		Version: operators.Xtradb.Version,
+	}
+	resp.Operators.Psmdb = &controllerv1beta1.Operator{
+		Status:  operatorStatusesMap[operators.Psmdb.Status],
+		Version: operators.Psmdb.Version,
+	}
 
 	return resp, nil
 }
