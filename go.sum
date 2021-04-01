@@ -144,8 +144,9 @@ github.com/hashicorp/go-sockaddr v1.0.0/go.mod h1:7Xibr9yA9JjQq1JpNB2Vw7kxv8xerX
 github.com/hashicorp/go-syslog v1.0.0/go.mod h1:qPfqrKkXGihmCqbJM2mZgkZGvKG1dFdvsLplgctolz4=
 github.com/hashicorp/go-uuid v1.0.0/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/hashicorp/go-uuid v1.0.1/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
-github.com/hashicorp/go-version v1.2.0 h1:3vNe/fWF5CBgRIguda1meWhsZHy3m8gCJ5wx+dIzX/E=
 github.com/hashicorp/go-version v1.2.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
+github.com/hashicorp/go-version v1.2.1 h1:zEfKbn2+PDgroKdiOzqiE8rsmLqU2uwi5PB5pBJ3TkI=
+github.com/hashicorp/go-version v1.2.1/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
 github.com/hashicorp/go.net v0.0.1/go.mod h1:hjKkEWcCURg++eb33jQU7oqQcI9XDCnUzHA0oac0k90=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
@@ -231,10 +232,6 @@ github.com/openzipkin/zipkin-go v0.2.2/go.mod h1:NaW6tEwdmWMaCDZzg8sh+IBNOxHMPnh
 github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIwwtUjcrb0b5/5kLM=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
-github.com/percona-platform/dbaas-api v0.0.0-20210322144728-186062445c94 h1:aGuFweTLvc7AQMbzuGy29V6eE2/ck/iSFINIJl3WnT8=
-github.com/percona-platform/dbaas-api v0.0.0-20210322144728-186062445c94/go.mod h1:YS1v1YWwqJd4JaD9wUtNaOSpJPHzIwS9YTWdl3M8hHk=
-github.com/percona-platform/dbaas-api v0.0.0-20210329093136-9eb831cb0dcf h1:FISvoi9XfKnzk6/536OJXU1LvcwLZBFFQ1OkkrJkHa8=
-github.com/percona-platform/dbaas-api v0.0.0-20210329093136-9eb831cb0dcf/go.mod h1:YS1v1YWwqJd4JaD9wUtNaOSpJPHzIwS9YTWdl3M8hHk=
 github.com/percona-platform/dbaas-api v0.0.0-20210329112158-1d3454914a79 h1:mgv5cJvIM89mAchVKr2gv47DSDkOVIBevPyEpIsq+Ck=
 github.com/percona-platform/dbaas-api v0.0.0-20210329112158-1d3454914a79/go.mod h1:YS1v1YWwqJd4JaD9wUtNaOSpJPHzIwS9YTWdl3M8hHk=
 github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871 h1:ZZ0kr0qHypQwWUdxkZU+FNcbxr3XEoeONGOTNAxHvkg=
