@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
 var operatorStatusesMap = map[k8sclient.OperatorStatus]controllerv1beta1.OperatorsStatus{
@@ -84,24 +85,56 @@ func (k KubernetesClusterService) GetResources(ctx context.Context, req *control
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
 
-	allCPUMillis, allMemoryBytes, _, err := k8sClient.GetAllClusterResources(ctx)
+	// Get cluster type
+	clusterType := k8sClient.GetKubernetesClusterType(ctx)
+	var volumes *common.PersistentVolumeList
+	if clusterType == k8sclient.AmazonEKSClusterType {
+		volumes, err = k8sClient.GetPersistentVolumes(ctx)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+	allCPUMillis, allMemoryBytes, allDiskBytes, err := k8sClient.GetAllClusterResources(ctx, clusterType, volumes)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	consumedCPUMillis, consumedMemoryBytes, _, err := k8sClient.GetConsumedResources(ctx, "")
+	consumedCPUMillis, consumedMemoryBytes, err := k8sClient.GetConsumedCPUAndMemory(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	consumedDiskBytes, err := k8sClient.GetConsumedDiskBytes(ctx, clusterType, volumes)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	availableCPUMillis := allCPUMillis - consumedCPUMillis
+	// handle underflow
+	if availableCPUMillis > allCPUMillis {
+		availableCPUMillis = 0
+	}
+	availableMemoryBytes := allMemoryBytes - consumedMemoryBytes
+	// handle underflow
+	if availableMemoryBytes > allMemoryBytes {
+		availableMemoryBytes = 0
+	}
+	availableDiskBytes := allDiskBytes - consumedDiskBytes
+	// handle underflow
+	if availableDiskBytes > allDiskBytes {
+		availableDiskBytes = 0
 	}
 
 	return &controllerv1beta1.GetResourcesResponse{
 		All: &controllerv1beta1.Resources{
 			CpuM:        allCPUMillis,
 			MemoryBytes: allMemoryBytes,
+			DiskSize:    allDiskBytes,
 		},
 		Available: &controllerv1beta1.Resources{
-			CpuM:        allCPUMillis - consumedCPUMillis,
-			MemoryBytes: allMemoryBytes - consumedMemoryBytes,
+			CpuM:        availableCPUMillis,
+			MemoryBytes: availableMemoryBytes,
+			DiskSize:    availableDiskBytes,
 		},
 	}, nil
 }

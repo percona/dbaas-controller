@@ -37,14 +37,23 @@ type EmptyDirVolumeSource struct{}
 
 // ContainerStatus contains container's status.
 type ContainerStatus struct {
-	Name  string                 `json:"name,omitempty"`
-	State map[string]interface{} `json:"state,omitempty"`
+	Name  string              `json:"name,omitempty"`
+	State map[string]struct{} `json:"state,omitempty"`
 }
 
 // ContainerSpec represents a container definition.
 type ContainerSpec struct {
 	Name      string               `json:"name,omitempty"`
+	Image     string               `json:"image,omitempty"`
 	Resources ResourceRequirements `json:"resources,omitempty"`
+}
+
+// PodVolumePersistentVolumeClaim represents PVC of volume mounted to a pod.
+type PodVolumePersistentVolumeClaim struct{}
+
+// PodVolume holds info about volume attached to pod.
+type PodVolume struct {
+	PersistentVolumeClaim *PodVolumePersistentVolumeClaim `json:"persistentVolumeClaim,omitempty"`
 }
 
 // PodSpec is a description of a pod.
@@ -63,6 +72,9 @@ type PodSpec struct {
 
 	// List of init containers.
 	InitContainers []ContainerSpec `json:"initContainers,omitempty"`
+
+	// Volumes stores list of volumes used by pod.
+	Volumes []PodVolume `json:"volumes,omitempty"`
 }
 
 // PodPhase defines Pod's phase.
@@ -83,6 +95,10 @@ const (
 	// and at least one container has terminated in failure. That is,
 	// the container either exited with non-zero status or was terminated by the system.
 	PodPhaseFailed PodPhase = "Failed"
+	// PodPhaseRunning indicates that the Pod has been bound to a node, and all
+	// of the containers have been created. At least one container is still running,
+	// or is in the process of starting or restarting.
+	PodPhaseRunning PodPhase = "Running"
 )
 
 // ContainerState describes container's state - waiting, running, terminated.
@@ -164,12 +180,54 @@ const (
 	SecretTypeOpaque SecretType = "Opaque"
 )
 
+type (
+	// NodeConditionType represents type of condition Node can get into.
+	NodeConditionType string
+	// NodeConditionStatus represents status of Node's condition.
+	NodeConditionStatus string
+)
+
+const (
+	// NodeConditionStatusTrue represents status when a Node's condition is true.
+	NodeConditionStatusTrue NodeConditionStatus = "True"
+	// NodeConditionDiskPressure indicates if Node has enough free disk space.
+	// If this condition is True, it means Node has less free space then defined.
+	// The Node then tries to free space by deleting unused images first. If more
+	// disk space is needed after that, it starts evicting pods.
+	NodeConditionDiskPressure NodeConditionType = "DiskPressure"
+)
+
+// NodeCondition holds Node's condition.
+type NodeCondition struct {
+	// Type of condition.
+	Type NodeConditionType `json:"type,omitempty"`
+	// Status of the condition could be "True", "False" or "Unknown".
+	Status NodeConditionStatus `json:"status,omitempty"`
+}
+
+// IsNodeInCondition returns true if node's condition given as an argument has
+// status "True". Otherwise it returns false.
+func IsNodeInCondition(node Node, conditionType NodeConditionType) bool {
+	for _, condition := range node.Status.Conditions {
+		if condition.Status == NodeConditionStatusTrue && condition.Type == conditionType {
+			return true
+		}
+	}
+	return false
+}
+
 // NodeStatus holds Kubernetes node status.
 type NodeStatus struct {
 	// Allocatable is amount of recources from node's capacity that is available
 	// for allocation by pods. The difference between capacity and allocatable of
 	// the node is reserved for Kubernetes overhead and non-Kubernetes processes.
 	Allocatable ResourceList `json:"allocatable,omitempty"`
+
+	// Images is a list of container images stored at node.
+	Images []Image `json:"images,omitempty"`
+
+	// Conditions stores node's conditions.
+	Conditions []NodeCondition `json:"conditions,omitempty"`
 }
 
 // Taint reserves node for pods that tolerate the taint.
@@ -177,6 +235,12 @@ type NodeStatus struct {
 type Taint struct {
 	Effect string `json:"effect,omitempty"`
 	Key    string `json:"key,omitempty"`
+}
+
+// Image holds continaer image names and image size.
+type Image struct {
+	Names     []string `json:"names,omitempty"`
+	SizeBytes int64    `json:"sizeBytes,omitempty"`
 }
 
 // NodeSpec holds Kubernetes node specification.
@@ -187,8 +251,28 @@ type NodeSpec struct {
 // Node holds information about Kubernetes node.
 type Node struct {
 	TypeMeta
+	ObjectMeta `json:"metadata,omitempty"`
 	// Specification of the node.
 	Spec NodeSpec `json:"spec,omitempty"`
 	// Status of the node.
 	Status NodeStatus `json:"status,omitempty"`
+}
+
+// PersistentVolumeCapacity holds string representation of storage size.
+type PersistentVolumeCapacity struct {
+	// Storage size as string.
+	Storage string `json:"storage,omitempty"`
+}
+
+// PersistentVolumeSpec holds PV specs.
+type PersistentVolumeSpec struct {
+	// Capacity of the volume.
+	Capacity PersistentVolumeCapacity `json:"capacity,omitempty"`
+}
+
+// PersistentVolume holds information about PV.
+type PersistentVolume struct {
+	TypeMeta
+	// Specification of the volume.
+	Spec PersistentVolumeSpec `json:"spec,omitempty"`
 }

@@ -23,10 +23,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
 	"github.com/AlekSi/pointer"
+	"github.com/avast/retry-go"
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 
@@ -80,12 +83,25 @@ const (
 	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
 	defaultPXCSecretName    = "my-cluster-secrets"
 
-	psmdbCRVersion         = "1.6.0"
-	psmdbBackupImage       = "percona/percona-server-mongodb-operator:1.6.0-backup"
+	psmdbCRVersion         = "1.7.0"
+	psmdbBackupImage       = "percona/percona-server-mongodb-operator:1.7.0-backup"
 	psmdbDefaultImage      = "percona/percona-server-mongodb:4.2.8-8"
-	psmdbAPIVersion        = "psmdb.percona.com/v1-6-0"
+	psmdbAPIVersion        = "psmdb.percona.com/v1-7-0"
 	psmdbSecretNameTmpl    = "dbaas-%s-psmdb-secrets"
 	defaultPSMDBSecretName = "my-cluster-name-secrets"
+
+	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
+	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
+)
+
+type kubernetesClusterType uint8
+
+const (
+	clusterTypeUnknown kubernetesClusterType = iota
+	// AmazonEKSClusterType represents EKS cluster type.
+	AmazonEKSClusterType
+	// MinikubeClusterType represents minikube Kubernetes cluster.
+	MinikubeClusterType
 )
 
 // ContainerState describes container's state - waiting, running, terminated.
@@ -315,6 +331,7 @@ func (d DetailedState) CountAllPods() (count int32) {
 func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "K8sClient")
+
 	kubeCtl, err := kubectl.NewKubeCtl(ctx, kubeconfig)
 	if err != nil {
 		return nil, err
@@ -486,7 +503,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	// This enables ingress for the cluster and exposes the cluster to the world.
 	// The cluster will have an internal IP and a world accessible hostname.
 	// This feature cannot be tested with minikube. Please use EKS for testing.
-	if isMinikube, err := c.isMinikube(ctx); err == nil && !isMinikube {
+	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType {
 		res.Spec.ProxySQL.ServiceType = common.ServiceTypeLoadBalancer
 	}
 
@@ -611,21 +628,28 @@ func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) 
 	return storageClass, nil
 }
 
-func (c *K8sClient) isMinikube(ctx context.Context) (bool, error) {
+// GetKubernetesClusterType returns k8s cluster type based on storage class.
+func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) kubernetesClusterType {
 	sc, err := c.getStorageClass(ctx)
 	if err != nil {
-		return false, err
+		c.l.Error(errors.Wrap(err, "failed to get k8s cluster type"))
+		return clusterTypeUnknown
 	}
 
 	if len(sc.Items) == 0 {
-		return false, fmt.Errorf("cannot get storage class. empty items list")
+		return clusterTypeUnknown
 	}
 
-	if strings.Contains(sc.Items[0].Provisioner, "minikube") {
-		return true, nil
+	for _, class := range sc.Items {
+		if strings.Contains(class.Provisioner, "aws") {
+			return AmazonEKSClusterType
+		}
+		if strings.Contains(class.Provisioner, "minikube") {
+			return MinikubeClusterType
+		}
 	}
 
-	return false, nil
+	return clusterTypeUnknown
 }
 
 func (c *K8sClient) restartDBClusterCmd(name, kind string) []string {
@@ -799,7 +823,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 	affinity := new(psmdb.PodAffinity)
 	var expose psmdb.Expose
-	if isMinikube, err := c.isMinikube(ctx); err == nil && !isMinikube {
+	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType {
 		affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
 
 		// This enables ingress for the cluster and exposes the cluster to the world.
@@ -1278,6 +1302,33 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 	return operator
 }
 
+// sumVolumesSize returns sum of persistent volumes storage size in bytes.
+func sumVolumesSize(pvs *common.PersistentVolumeList) (sum uint64, err error) {
+	for _, pv := range pvs.Items {
+		bytes, err := convertors.StrToBytes(pv.Spec.Capacity.Storage)
+		if err != nil {
+			return 0, err
+		}
+		sum += bytes
+	}
+	return
+}
+
+// GetPersistentVolumes returns list of persistent volumes.
+func (c *K8sClient) GetPersistentVolumes(ctx context.Context) (*common.PersistentVolumeList, error) {
+	list := new(common.PersistentVolumeList)
+	args := []string{"get", "pv", "-ojson"}
+	out, err := c.kubeCtl.Run(ctx, args, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get persistent volumes")
+	}
+	err = json.Unmarshal(out, list)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't get persistent volumes")
+	}
+	return list, nil
+}
+
 // GetPods returns list of pods based on given filters. Filters are args to
 // kubectl command. For example "-lyour-label=value", "-ntest-namespace".
 func (c *K8sClient) GetPods(ctx context.Context, filters ...string) (*common.PodList, error) {
@@ -1289,6 +1340,7 @@ func (c *K8sClient) GetPods(ctx context.Context, filters ...string) (*common.Pod
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
+
 	err = json.Unmarshal(out, list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
@@ -1368,61 +1420,117 @@ func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
 }
 
 // GetAllClusterResources goes through all cluster nodes and sums their allocatable resources.
-func (c *K8sClient) GetAllClusterResources(ctx context.Context) (
-	cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error,
+func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType kubernetesClusterType, volumes *common.PersistentVolumeList) (
+	cpuMillis uint64, memoryBytes uint64, diskSizeBytes uint64, err error,
 ) {
 	nodes, err := c.getWorkerNodes(ctx)
 	if err != nil {
 		return 0, 0, 0, errors.Wrap(err, "could not get a list of nodes")
 	}
+	var volumeCountEKS uint64
 	for _, node := range nodes {
-		cpu, memory, _, err := getResources(node.Status.Allocatable)
+		cpu, memory, err := getResources(node.Status.Allocatable)
 		if err != nil {
 			return 0, 0, 0, errors.Wrap(err, "could not get allocatable resources of the node")
 		}
 		cpuMillis += cpu
 		memoryBytes += memory
+
+		switch clusterType {
+		case MinikubeClusterType:
+			storage, ok := node.Status.Allocatable[common.ResourceEphemeralStorage]
+			if !ok {
+				return 0, 0, 0, errors.Errorf("could not get storage size of the node")
+			}
+			bytes, err := convertors.StrToBytes(storage)
+			if err != nil {
+				return 0, 0, 0, errors.Wrapf(err, "could not convert storage size '%s' to bytes", storage)
+			}
+			diskSizeBytes += bytes
+		case AmazonEKSClusterType:
+			// See https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/#scheduler.
+			if common.IsNodeInCondition(node, common.NodeConditionDiskPressure) {
+				continue
+			}
+
+			// Get nodes's type.
+			nodeType, ok := node.Labels["beta.kubernetes.io/instance-type"]
+			if !ok {
+				return 0, 0, 0, errors.New("dealing with AWS EKS cluster but the node does not have label 'beta.kubernetes.io/instance-type'")
+			}
+			// 39 is a default limit for EKS cluster nodes ...
+			var volumeLimitPerNode uint64 = 39
+			typeAndSize := strings.Split(strings.ToLower(nodeType), ".")
+			if len(typeAndSize) < 2 {
+				return 0, 0, 0, errors.Errorf("failed to parse EKS node type '%s', it's not in expected format 'type.size'", nodeType)
+			}
+			// ... however, if the node type is one of M5, C5, R5, T3, Z1D it's 25.
+			limitedVolumesSet := map[string]struct{}{
+				"m5": {}, "c5": {}, "r5": {}, "t3": {}, "t1d": {},
+			}
+			if _, ok := limitedVolumesSet[typeAndSize[0]]; ok {
+				volumeLimitPerNode = 25
+			}
+			volumeCountEKS += volumeLimitPerNode
+		}
+	}
+	if clusterType == AmazonEKSClusterType {
+		volumeCountEKSBackup := volumeCountEKS
+		volumeCountEKS -= uint64(len(volumes.Items))
+		if volumeCountEKS > volumeCountEKSBackup {
+			// handle uint underflow
+			volumeCountEKS = 0
+		}
+
+		consumedBytes, err := sumVolumesSize(volumes)
+		if err != nil {
+			return 0, 0, 0, errors.Wrap(err, "failed to sum persistent volumes storage sizes")
+		}
+		diskSizeBytes = (volumeCountEKS * maxVolumeSizeEBS) + consumedBytes
 	}
 	return cpuMillis, memoryBytes, diskSizeBytes, nil
 }
 
 // getResources extracts resources out of common.ResourceList and converts them to int64 values.
 // Millicpus are used for CPU values and bytes for memory.
-func getResources(resources common.ResourceList) (cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error) {
+func getResources(resources common.ResourceList) (cpuMillis uint64, memoryBytes uint64, err error) {
 	cpu, ok := resources[common.ResourceCPU]
 	if ok {
 		cpuMillis, err = convertors.StrToMilliCPU(cpu)
 		if err != nil {
-			return 0, 0, 0, errors.Wrapf(err, "failed to convert '%s' to millicpus", cpu)
+			return 0, 0, errors.Wrapf(err, "failed to convert '%s' to millicpus", cpu)
 		}
 	}
 	memory, ok := resources[common.ResourceMemory]
 	if ok {
 		memoryBytes, err = convertors.StrToBytes(memory)
 		if err != nil {
-			return 0, 0, 0, errors.Wrapf(err, "failed to convert '%s' to bytes", memory)
+			return 0, 0, errors.Wrapf(err, "failed to convert '%s' to bytes", memory)
 		}
 	}
-	return cpuMillis, memoryBytes, diskSizeBytes, nil
+	return cpuMillis, memoryBytes, nil
 }
 
-// GetConsumedResources returns consumed resources in given namespace. If namespace
-// is empty string, it tries to get consumed resouces from all namespaces.
-func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) (
-	cpuMillis int64, memoryBytes int64, diskSizeBytes int64, err error,
+// GetConsumedCPUAndMemory returns consumed CPU and Memory in given namespace. If namespaces
+// is empty slice, it tries to get them from all namespaces.
+func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...string) (
+	cpuMillis uint64, memoryBytes uint64, err error,
 ) {
-	if namespace == "" {
-		namespace = "--all-namespaces"
+	// Get CPU and Memory Requests of Pods' containers.
+	if len(namespaces) == 0 {
+		namespaces = []string{"--all-namespaces"}
 	} else {
-		namespace = "-n" + namespace
+		for i := 0; i < len(namespaces); i++ {
+			namespaces[i] = "-n" + namespaces[i]
+		}
 	}
-	pods, err := c.GetPods(ctx, namespace)
+
+	pods, err := c.GetPods(ctx, namespaces...)
 	if err != nil {
-		return 0, 0, 0, errors.Wrap(err, "could not get consumed resources")
+		return 0, 0, errors.Wrap(err, "failed to get consumed resources")
 	}
 	for _, ppod := range pods.Items {
-		if ppod.Status.Phase == common.PodPhasePending ||
-			ppod.Status.Phase == common.PodPhaseSucceded || ppod.Status.Phase == common.PodPhaseFailed {
+		if ppod.Status.Phase != common.PodPhaseRunning {
 			continue
 		}
 		nonTerminatedInitContainers := make([]common.ContainerSpec, 0, len(ppod.Spec.InitContainers))
@@ -1434,13 +1542,89 @@ func (c *K8sClient) GetConsumedResources(ctx context.Context, namespace string) 
 			}
 		}
 		for _, container := range append(ppod.Spec.Containers, nonTerminatedInitContainers...) {
-			cpu, memory, _, err := getResources(container.Resources.Requests)
+			cpu, memory, err := getResources(container.Resources.Requests)
 			if err != nil {
-				return 0, 0, 0, errors.Wrap(err, "failed to sum all consumed resources")
+				return 0, 0, errors.Wrap(err, "failed to sum all consumed resources")
 			}
 			cpuMillis += cpu
 			memoryBytes += memory
 		}
 	}
-	return cpuMillis, memoryBytes, diskSizeBytes, nil
+
+	return cpuMillis, memoryBytes, nil
+}
+
+// GetConsumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
+func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType kubernetesClusterType, volumes *common.PersistentVolumeList) (consumedBytes uint64, err error) {
+	switch clusterType {
+	case MinikubeClusterType:
+		nodes, err := c.getWorkerNodes(ctx)
+		if err != nil {
+			return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes")
+		}
+		for _, node := range nodes {
+			method := "GET"
+			endpoint := fmt.Sprintf("/v1/nodes/%s/proxy/stats/summary", node.Name)
+			summary := new(common.NodeSummary)
+			err = c.doAPIRequest(ctx, method, endpoint, &summary)
+			if err != nil {
+				return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes summary")
+			}
+			consumedBytes += summary.Node.FileSystem.UsedBytes
+		}
+		return consumedBytes, nil
+	case AmazonEKSClusterType:
+		consumedBytes, err := sumVolumesSize(volumes)
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to sum persistent volumes storage sizes")
+		}
+		return consumedBytes, nil
+	}
+
+	return 0, nil
+}
+
+// doAPIRequest starts kubectl proxy, does the request described using given endpoint and method,
+// unmarshals the result into the variable out and stops kubectl proxy.
+func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, out interface{}) error {
+	if reflect.ValueOf(out).Kind() != reflect.Ptr {
+		return errors.New("output expected to be pointer")
+	}
+
+	port, err := c.kubeCtl.RunProxy(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err := c.kubeCtl.StopProxy(port)
+		if err != nil {
+			c.l.Error(err)
+		}
+	}()
+
+	client := http.Client{
+		Timeout: time.Second * 5,
+		Transport: &http.Transport{
+			MaxIdleConns:    1,
+			IdleConnTimeout: 10 * time.Second,
+		},
+	}
+	req, err := http.NewRequestWithContext(ctx, method, "http://localhost:"+port+"/api"+endpoint, nil)
+	if err != nil {
+		return errors.Wrap(err, "failed to create Kubernetes API request")
+	}
+	var resp *http.Response
+	err = retry.Do(
+		func() error {
+			resp, err = client.Do(req)
+			return err
+		},
+		retry.Context(ctx),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to do Kubernetes API request")
+	}
+
+	defer resp.Body.Close() //nolint:errcheck
+	return json.NewDecoder(resp.Body).Decode(out)
 }

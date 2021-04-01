@@ -38,12 +38,11 @@ func logGRPCRequest(l logger.Logger, prefix string, warnD time.Duration, f func(
 
 	defer func() {
 		dur := time.Since(start)
-
 		if p := recover(); p != nil {
 			// Always log with %+v - there can be inner stacktraces
 			// produced by panic(errors.WithStack(err)).
 			// Also always log debug.Stack() for all panics.
-			l.Debugf("%s done in %s with panic: %+v\nStack: %s", prefix, dur, p, debug.Stack())
+			l.Infof("%s done in %s with panic: %+v\nStack: %s", prefix, dur, p, debug.Stack())
 
 			err = status.Error(codes.Internal, "Internal server error.")
 			return

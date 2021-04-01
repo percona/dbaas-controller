@@ -78,10 +78,10 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 		params := &controllerv1beta1.XtraDBClusterParams{
 			ClusterSize: cluster.Size,
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
-				DiskSize: pxcDiskSize,
+				DiskSize: int64(pxcDiskSize),
 			},
 			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				DiskSize: proxySQLDiskSize,
+				DiskSize: int64(proxySQLDiskSize),
 			},
 		}
 		if cluster.PXC.ComputeResources != nil {
@@ -95,7 +95,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			}
 			params.Pxc.ComputeResources = &controllerv1beta1.ComputeResources{
 				CpuM:        int32(cpuMillis),
-				MemoryBytes: memoryBytes,
+				MemoryBytes: int64(memoryBytes),
 			}
 		}
 		if cluster.ProxySQL.ComputeResources != nil {
@@ -109,7 +109,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			}
 			params.Proxysql.ComputeResources = &controllerv1beta1.ComputeResources{
 				CpuM:        int32(cpuMillis),
-				MemoryBytes: memoryBytes,
+				MemoryBytes: int64(memoryBytes),
 			}
 		}
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{
