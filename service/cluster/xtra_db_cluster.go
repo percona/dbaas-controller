@@ -67,10 +67,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 	}
 
 	for i, cluster := range xtradbClusters {
-		proxySQLDiskSize, err := convertors.StrToBytes(cluster.ProxySQL.DiskSize)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
+
 		pxcDiskSize, err := convertors.StrToBytes(cluster.PXC.DiskSize)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -80,10 +77,47 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
 				DiskSize: int64(pxcDiskSize),
 			},
-			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				DiskSize: int64(proxySQLDiskSize),
-			},
 		}
+
+		if cluster.ProxySQL != nil {
+			proxySQLDiskSize, err := convertors.StrToBytes(cluster.ProxySQL.DiskSize)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			params.Proxysql = &controllerv1beta1.XtraDBClusterParams_ProxySQL{
+				DiskSize: int64(proxySQLDiskSize),
+			}
+			if cluster.ProxySQL.ComputeResources != nil {
+				cpuMillis, err := convertors.StrToMilliCPU(cluster.ProxySQL.ComputeResources.CPUM)
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+				memoryBytes, err := convertors.StrToBytes(cluster.ProxySQL.ComputeResources.MemoryBytes)
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+				params.Proxysql.ComputeResources = &controllerv1beta1.ComputeResources{
+					CpuM:        int32(cpuMillis),
+					MemoryBytes: int64(memoryBytes),
+				}
+			}
+		} else {
+			cpuMillis, err := convertors.StrToMilliCPU(cluster.HAProxy.ComputeResources.CPUM)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			memoryBytes, err := convertors.StrToBytes(cluster.HAProxy.ComputeResources.MemoryBytes)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			params.Haproxy = &controllerv1beta1.XtraDBClusterParams_HAProxy{
+				ComputeResources: &controllerv1beta1.ComputeResources{
+					CpuM:        int32(cpuMillis),
+					MemoryBytes: int64(memoryBytes),
+				},
+			}
+		}
+
 		if cluster.PXC.ComputeResources != nil {
 			cpuMillis, err := convertors.StrToMilliCPU(cluster.PXC.ComputeResources.CPUM)
 			if err != nil {
@@ -98,20 +132,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 				MemoryBytes: int64(memoryBytes),
 			}
 		}
-		if cluster.ProxySQL.ComputeResources != nil {
-			cpuMillis, err := convertors.StrToMilliCPU(cluster.ProxySQL.ComputeResources.CPUM)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			memoryBytes, err := convertors.StrToBytes(cluster.ProxySQL.ComputeResources.MemoryBytes)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			params.Proxysql.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        int32(cpuMillis),
-				MemoryBytes: int64(memoryBytes),
-			}
-		}
+
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{
 			Name:  cluster.Name,
 			State: pxcStatesMap[cluster.State],
@@ -147,14 +168,21 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 			ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
 			DiskSize:         convertors.BytesToStr(req.Params.Pxc.DiskSize),
 		},
-		ProxySQL: &k8sclient.ProxySQL{
+
+		PMMPublicAddress: req.PmmPublicAddress,
+	}
+	if req.Params.Proxysql != nil {
+		params.ProxySQL = &k8sclient.ProxySQL{
 			Image:            req.Params.Proxysql.Image,
 			ComputeResources: computeResources(req.Params.Proxysql.ComputeResources),
 			DiskSize:         convertors.BytesToStr(req.Params.Proxysql.DiskSize),
-		},
-		PMMPublicAddress: req.PmmPublicAddress,
+		}
+	} else {
+		params.HAProxy = &k8sclient.HAProxy{
+			Image:            req.Params.Haproxy.Image,
+			ComputeResources: computeResources(req.Params.Haproxy.ComputeResources),
+		}
 	}
-
 	err = client.CreateXtraDBCluster(ctx, params)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
