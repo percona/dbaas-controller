@@ -73,6 +73,7 @@ func TestK8sClient(t *testing.T) {
 
 	pmmPublicAddress := ""
 	t.Run("XtraDB", func(t *testing.T) {
+		t.Parallel()
 		name := "test-cluster-xtradb"
 		_ = client.DeleteXtraDBCluster(ctx, name)
 
@@ -99,6 +100,24 @@ func TestK8sClient(t *testing.T) {
 		t.Run("Get credentials of cluster that is not Ready", func(t *testing.T) {
 			_, err := client.GetXtraDBClusterCredentials(ctx, name)
 			assert.EqualError(t, errors.Cause(err), ErrXtraDBClusterNotReady.Error())
+		})
+
+		t.Run("Create cluster with HAProxy", func(t *testing.T) {
+			t.Parallel()
+			clusterName := "test-pxc-haproxy"
+			err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
+				Name:             clusterName,
+				Size:             1,
+				PXC:              &PXC{DiskSize: "1000000000"},
+				HAProxy:          new(HAProxy),
+				PMMPublicAddress: pmmPublicAddress,
+			})
+			require.NoError(t, err)
+			assertListXtraDBCluster(ctx, t, client, clusterName, func(cluster *XtraDBCluster) bool {
+				return cluster != nil && cluster.State == ClusterStateReady
+			})
+			err = client.DeleteXtraDBCluster(ctx, clusterName)
+			require.NoError(t, err)
 		})
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
@@ -219,6 +238,7 @@ func TestK8sClient(t *testing.T) {
 	})
 
 	t.Run("PSMDB", func(t *testing.T) {
+		t.Parallel()
 		name := "test-cluster-psmdb"
 		_ = client.DeletePSMDBCluster(ctx, name)
 
