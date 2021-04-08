@@ -83,7 +83,7 @@ func TestK8sClient(t *testing.T) {
 
 		l.Info("No XtraDB Clusters running")
 
-		err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
+		err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
 			Name:             name,
 			Size:             1,
 			PXC:              &PXC{DiskSize: "1000000000"},
@@ -267,7 +267,7 @@ func TestK8sClient(t *testing.T) {
 
 		l.Info("No PSMDB Clusters running")
 
-		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
+		err := client.CreatePSMDBCluster(ctx, &PSMDBParams{
 			Name:             name,
 			Size:             3,
 			Replicaset:       &Replicaset{DiskSize: "1000000000"},
