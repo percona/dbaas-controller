@@ -84,10 +84,10 @@ const (
 	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
 	defaultPXCSecretName    = "my-cluster-secrets"
 
-	psmdbCRVersion         = "1.6.0"
-	psmdbBackupImage       = "percona/percona-server-mongodb-operator:1.6.0-backup"
+	psmdbCRVersion         = "1.7.0"
+	psmdbBackupImage       = "percona/percona-server-mongodb-operator:1.7.0-backup"
 	psmdbDefaultImage      = "percona/percona-server-mongodb:4.2.8-8"
-	psmdbAPIVersion        = "psmdb.percona.com/v1-6-0"
+	psmdbAPIVersion        = "psmdb.percona.com/v1-7-0"
 	psmdbSecretNameTmpl    = "dbaas-%s-psmdb-secrets"
 	defaultPSMDBSecretName = "my-cluster-name-secrets"
 
