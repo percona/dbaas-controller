@@ -116,6 +116,25 @@ func TestK8sClient(t *testing.T) {
 			assertListXtraDBCluster(ctx, t, client, clusterName, func(cluster *XtraDBCluster) bool {
 				return cluster != nil && cluster.State == ClusterStateReady
 			})
+
+			// Test listing.
+			clusters, err := client.ListXtraDBClusters(ctx)
+			require.NoError(t, err)
+			assert.Conditionf(t,
+				func(clusters []XtraDBCluster, clusterName string) assert.Comparison {
+					return func() bool {
+						for _, cluster := range clusters {
+							if cluster.Name == clusterName {
+								return true
+							}
+						}
+						return false
+					}
+				}(clusters, clusterName),
+				"cluster '%s' was not found",
+				clusterName,
+			)
+
 			err = client.DeleteXtraDBCluster(ctx, clusterName)
 			require.NoError(t, err)
 		})
