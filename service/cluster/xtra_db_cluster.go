@@ -101,20 +101,19 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 				}
 			}
 		} else if cluster.HAProxy.ComputeResources != nil {
-				cpuMillis, err := convertors.StrToMilliCPU(cluster.HAProxy.ComputeResources.CPUM)
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-				memoryBytes, err := convertors.StrToBytes(cluster.HAProxy.ComputeResources.MemoryBytes)
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-				params.Haproxy = &controllerv1beta1.XtraDBClusterParams_HAProxy{
-					ComputeResources: &controllerv1beta1.ComputeResources{
-						CpuM:        int32(cpuMillis),
-						MemoryBytes: int64(memoryBytes),
-					},
-				}
+			cpuMillis, err := convertors.StrToMilliCPU(cluster.HAProxy.ComputeResources.CPUM)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			memoryBytes, err := convertors.StrToBytes(cluster.HAProxy.ComputeResources.MemoryBytes)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			params.Haproxy = &controllerv1beta1.XtraDBClusterParams_HAProxy{
+				ComputeResources: &controllerv1beta1.ComputeResources{
+					CpuM:        int32(cpuMillis),
+					MemoryBytes: int64(memoryBytes),
+				},
 			}
 		}
 
