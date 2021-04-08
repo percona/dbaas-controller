@@ -47,6 +47,8 @@ github.com/percona-platform/dbaas-api v0.0.0-20210202072632-370e085e6f54 h1:a3F9
 github.com/percona-platform/dbaas-api v0.0.0-20210202072632-370e085e6f54/go.mod h1:hgThsQ+HzKsEXeolr3u0i8oWTVgCKsN+RkNXgAY2vvM=
 github.com/percona-platform/dbaas-api v0.0.0-20210225094813-4635efc4e85c h1:+3zQ9hV71/l3bcRSQqgIcOwX6RuUqlsNxyL1tg+0bQM=
 github.com/percona-platform/dbaas-api v0.0.0-20210225094813-4635efc4e85c/go.mod h1:hgThsQ+HzKsEXeolr3u0i8oWTVgCKsN+RkNXgAY2vvM=
+github.com/percona-platform/dbaas-api v0.0.0-20210408061841-90c61ed52d7d h1:6x/YYyuwAR+qFsbFke+YqZ6PtpYXxbiNPGC+upK9h4U=
+github.com/percona-platform/dbaas-api v0.0.0-20210408061841-90c61ed52d7d/go.mod h1:YS1v1YWwqJd4JaD9wUtNaOSpJPHzIwS9YTWdl3M8hHk=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
@@ -105,6 +107,7 @@ google.golang.org/grpc v1.27.0/go.mod h1:qbnxyOmOxrQa7FizSgH+ReBfzJrCY1pSN7KXBS8
 google.golang.org/grpc v1.34.0/go.mod h1:WotjhfgOW/POjDeRt8vscBtXq+2VjORFy659qA51WJ8=
 google.golang.org/grpc v1.35.0 h1:TwIQcH3es+MojMVojxxfQ3l3OF2KzlRxML2xZq0kRo8=
 google.golang.org/grpc v1.35.0/go.mod h1:qjiiYl8FncCW8feJPdyg3v6XW24KsRHe+dy9BAGRRjU=
+google.golang.org/grpc v1.36.0/go.mod h1:qjiiYl8FncCW8feJPdyg3v6XW24KsRHe+dy9BAGRRjU=
 google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
 google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ01Woi6D6+Kah6886xMZcty6N08ah7+eCXa0=
 google.golang.org/protobuf v0.0.0-20200228230310-ab0ca4ff8a60/go.mod h1:cfTl7dwQJ+fmap5saPgwCLgHXTUD7jkjRqWcaiX5VyM=
