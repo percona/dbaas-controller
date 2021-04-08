@@ -100,8 +100,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 					MemoryBytes: int64(memoryBytes),
 				}
 			}
-		} else {
-			if cluster.HAProxy.ComputeResources != nil {
+		} else if cluster.HAProxy.ComputeResources != nil {
 				cpuMillis, err := convertors.StrToMilliCPU(cluster.HAProxy.ComputeResources.CPUM)
 				if err != nil {
 					return nil, status.Error(codes.Internal, err.Error())
