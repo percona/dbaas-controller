@@ -67,7 +67,6 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 	}
 
 	for i, cluster := range xtradbClusters {
-
 		pxcDiskSize, err := convertors.StrToBytes(cluster.PXC.DiskSize)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -102,19 +101,21 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 				}
 			}
 		} else {
-			cpuMillis, err := convertors.StrToMilliCPU(cluster.HAProxy.ComputeResources.CPUM)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			memoryBytes, err := convertors.StrToBytes(cluster.HAProxy.ComputeResources.MemoryBytes)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			params.Haproxy = &controllerv1beta1.XtraDBClusterParams_HAProxy{
-				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        int32(cpuMillis),
-					MemoryBytes: int64(memoryBytes),
-				},
+			if cluster.HAProxy.ComputeResources != nil {
+				cpuMillis, err := convertors.StrToMilliCPU(cluster.HAProxy.ComputeResources.CPUM)
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+				memoryBytes, err := convertors.StrToBytes(cluster.HAProxy.ComputeResources.MemoryBytes)
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+				params.Haproxy = &controllerv1beta1.XtraDBClusterParams_HAProxy{
+					ComputeResources: &controllerv1beta1.ComputeResources{
+						CpuM:        int32(cpuMillis),
+						MemoryBytes: int64(memoryBytes),
+					},
+				}
 			}
 		}
 
