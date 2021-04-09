@@ -113,6 +113,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 		}
 
 		if cluster.HAProxy != nil {
+			params.Haproxy = new(controllerv1beta1.XtraDBClusterParams_HAProxy)
 			err = setComputeResources(cluster.HAProxy.ComputeResources, params.Haproxy.ComputeResources)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
