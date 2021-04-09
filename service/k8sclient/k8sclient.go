@@ -739,12 +739,13 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 				DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
 			}
-		} else {
-			val.HAProxy = &HAProxy{
-				ComputeResources: c.getComputeResources(cluster.Spec.HAProxy.Resources),
-			}
+			res[i] = val
+			continue
 		}
 
+		val.HAProxy = &HAProxy{
+			ComputeResources: c.getComputeResources(cluster.Spec.HAProxy.Resources),
+		}
 		res[i] = val
 	}
 	return res, nil
