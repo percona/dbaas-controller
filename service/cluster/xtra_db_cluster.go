@@ -50,8 +50,8 @@ func NewXtraDBClusterService(p *message.Printer) *XtraDBClusterService {
 	return &XtraDBClusterService{p: p}
 }
 
-// setCoputeResources converts input resources and sets them to output compute resources.
-func setCoputeResources(inputResources *k8sclient.ComputeResources, outputResources *controllerv1beta1.ComputeResources) error {
+// setComputeResources converts input resources and sets them to output compute resources.
+func setComputeResources(inputResources *k8sclient.ComputeResources, outputResources *controllerv1beta1.ComputeResources) error {
 	if inputResources == nil || outputResources == nil {
 		return nil
 	}
@@ -106,21 +106,21 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			params.Proxysql = &controllerv1beta1.XtraDBClusterParams_ProxySQL{
 				DiskSize: int64(proxySQLDiskSize),
 			}
-			err = setCoputeResources(cluster.ProxySQL.ComputeResources, params.Proxysql.ComputeResources)
+			err = setComputeResources(cluster.ProxySQL.ComputeResources, params.Proxysql.ComputeResources)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 		}
 
 		if cluster.HAProxy != nil {
-			err = setCoputeResources(cluster.HAProxy.ComputeResources, params.Haproxy.ComputeResources)
+			err = setComputeResources(cluster.HAProxy.ComputeResources, params.Haproxy.ComputeResources)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 		}
 
 		if cluster.PXC.ComputeResources != nil {
-			err = setCoputeResources(cluster.PXC.ComputeResources, params.Pxc.ComputeResources)
+			err = setComputeResources(cluster.PXC.ComputeResources, params.Pxc.ComputeResources)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
