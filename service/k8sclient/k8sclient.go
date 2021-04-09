@@ -742,9 +742,10 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 			res[i] = val
 			continue
 		}
-
-		val.HAProxy = &HAProxy{
-			ComputeResources: c.getComputeResources(cluster.Spec.HAProxy.Resources),
+		if cluster.Spec.HAProxy != nil {
+			val.HAProxy = &HAProxy{
+				ComputeResources: c.getComputeResources(cluster.Spec.HAProxy.Resources),
+			}
 		}
 		res[i] = val
 	}
