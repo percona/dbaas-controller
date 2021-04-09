@@ -50,6 +50,58 @@ func NewXtraDBClusterService(p *message.Printer) *XtraDBClusterService {
 	return &XtraDBClusterService{p: p}
 }
 
+// setProxySQLParams sets proxy's compute resources and disk size to given params.
+// The function was created to increase readablility.
+func setProxySQLParams(proxy *k8sclient.ProxySQL, params *controllerv1beta1.XtraDBClusterParams) error {
+	proxySQLDiskSize, err := convertors.StrToBytes(proxy.DiskSize)
+	if err != nil {
+		return err
+	}
+	params.Proxysql = &controllerv1beta1.XtraDBClusterParams_ProxySQL{
+		DiskSize: int64(proxySQLDiskSize),
+	}
+
+	if proxy.ComputeResources == nil {
+		return nil
+	}
+	cpuMillis, err := convertors.StrToMilliCPU(proxy.ComputeResources.CPUM)
+	if err != nil {
+		return err
+	}
+	memoryBytes, err := convertors.StrToBytes(proxy.ComputeResources.MemoryBytes)
+	if err != nil {
+		return err
+	}
+	params.Proxysql.ComputeResources = &controllerv1beta1.ComputeResources{
+		CpuM:        int32(cpuMillis),
+		MemoryBytes: int64(memoryBytes),
+	}
+	return nil
+}
+
+// setHAProxyParams sets proxy's compute resources to given params.
+// The function was created to increase readablility.
+func setHAProxyParams(proxy *k8sclient.HAProxy, params *controllerv1beta1.XtraDBClusterParams) error {
+	if proxy.ComputeResources == nil {
+		return nil
+	}
+	cpuMillis, err := convertors.StrToMilliCPU(proxy.ComputeResources.CPUM)
+	if err != nil {
+		return err
+	}
+	memoryBytes, err := convertors.StrToBytes(proxy.ComputeResources.MemoryBytes)
+	if err != nil {
+		return err
+	}
+	params.Haproxy = &controllerv1beta1.XtraDBClusterParams_HAProxy{
+		ComputeResources: &controllerv1beta1.ComputeResources{
+			CpuM:        int32(cpuMillis),
+			MemoryBytes: int64(memoryBytes),
+		},
+	}
+	return nil
+}
+
 // ListXtraDBClusters returns a list of XtraDB clusters.
 func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1.ListXtraDBClustersRequest) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
@@ -79,43 +131,16 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 		}
 
 		if cluster.ProxySQL != nil {
-			proxySQLDiskSize, err := convertors.StrToBytes(cluster.ProxySQL.DiskSize)
+			err = setProxySQLParams(cluster.ProxySQL, params)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
-			}
-			params.Proxysql = &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				DiskSize: int64(proxySQLDiskSize),
-			}
-			if cluster.ProxySQL.ComputeResources != nil {
-				cpuMillis, err := convertors.StrToMilliCPU(cluster.ProxySQL.ComputeResources.CPUM)
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-				memoryBytes, err := convertors.StrToBytes(cluster.ProxySQL.ComputeResources.MemoryBytes)
-				if err != nil {
-					return nil, status.Error(codes.Internal, err.Error())
-				}
-				params.Proxysql.ComputeResources = &controllerv1beta1.ComputeResources{
-					CpuM:        int32(cpuMillis),
-					MemoryBytes: int64(memoryBytes),
-				}
 			}
 		}
 
-		if cluster.HAProxy != nil && cluster.HAProxy.ComputeResources != nil {
-			cpuMillis, err := convertors.StrToMilliCPU(cluster.HAProxy.ComputeResources.CPUM)
+		if cluster.HAProxy != nil {
+			err = setHAProxyParams(cluster.HAProxy, params)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
-			}
-			memoryBytes, err := convertors.StrToBytes(cluster.HAProxy.ComputeResources.MemoryBytes)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			params.Haproxy = &controllerv1beta1.XtraDBClusterParams_HAProxy{
-				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        int32(cpuMillis),
-					MemoryBytes: int64(memoryBytes),
-				},
 			}
 		}
 
