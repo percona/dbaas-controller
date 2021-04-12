@@ -71,7 +71,7 @@ func TestK8sClient(t *testing.T) {
 		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
 	})
 
-	pmmPublicAddress := ""
+	var pmm *PMM
 	t.Run("XtraDB", func(t *testing.T) {
 		name := "test-cluster-xtradb"
 		_ = client.DeleteXtraDBCluster(ctx, name)
@@ -83,11 +83,11 @@ func TestK8sClient(t *testing.T) {
 		l.Info("No XtraDB Clusters running")
 
 		err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
-			Name:             name,
-			Size:             1,
-			PXC:              &PXC{DiskSize: "1000000000"},
-			ProxySQL:         &ProxySQL{DiskSize: "1000000000"},
-			PMMPublicAddress: pmmPublicAddress,
+			Name:     name,
+			Size:     1,
+			PXC:      &PXC{DiskSize: "1000000000"},
+			ProxySQL: &ProxySQL{DiskSize: "1000000000"},
+			PMM:      pmm,
 		})
 		require.NoError(t, err)
 
@@ -103,11 +103,11 @@ func TestK8sClient(t *testing.T) {
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
 			err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
-				Name:             name,
-				Size:             1,
-				PXC:              &PXC{DiskSize: "1000000000"},
-				ProxySQL:         &ProxySQL{DiskSize: "1000000000"},
-				PMMPublicAddress: pmmPublicAddress,
+				Name:     name,
+				Size:     1,
+				PXC:      &PXC{DiskSize: "1000000000"},
+				ProxySQL: &ProxySQL{DiskSize: "1000000000"},
+				PMM:      pmm,
 			})
 			require.Error(t, err)
 			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
@@ -229,10 +229,10 @@ func TestK8sClient(t *testing.T) {
 		l.Info("No PSMDB Clusters running")
 
 		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name:             name,
-			Size:             3,
-			Replicaset:       &Replicaset{DiskSize: "1000000000"},
-			PMMPublicAddress: pmmPublicAddress,
+			Name:       name,
+			Size:       3,
+			Replicaset: &Replicaset{DiskSize: "1000000000"},
+			PMM:        pmm,
 		})
 		require.NoError(t, err)
 
@@ -249,10 +249,10 @@ func TestK8sClient(t *testing.T) {
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
 			err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
-				Name:             name,
-				Size:             1,
-				Replicaset:       &Replicaset{DiskSize: "1000000000"},
-				PMMPublicAddress: pmmPublicAddress,
+				Name:       name,
+				Size:       1,
+				Replicaset: &Replicaset{DiskSize: "1000000000"},
+				PMM:        pmm,
 			})
 			require.Error(t, err)
 			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
