@@ -106,6 +106,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			params.Proxysql = &controllerv1beta1.XtraDBClusterParams_ProxySQL{
 				DiskSize: int64(proxySQLDiskSize),
 			}
+			params.Proxysql.ComputeResources = new(controllerv1beta1.ComputeResources)
 			err = setComputeResources(cluster.ProxySQL.ComputeResources, params.Proxysql.ComputeResources)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
@@ -114,6 +115,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 
 		if cluster.HAProxy != nil {
 			params.Haproxy = new(controllerv1beta1.XtraDBClusterParams_HAProxy)
+			params.Haproxy.ComputeResources = new(controllerv1beta1.ComputeResources)
 			err = setComputeResources(cluster.HAProxy.ComputeResources, params.Haproxy.ComputeResources)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
@@ -121,6 +123,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 		}
 
 		if cluster.PXC.ComputeResources != nil {
+			params.Pxc.ComputeResources = new(controllerv1beta1.ComputeResources)
 			err = setComputeResources(cluster.PXC.ComputeResources, params.Pxc.ComputeResources)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
