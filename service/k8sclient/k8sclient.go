@@ -383,8 +383,8 @@ func (c *K8sClient) CreateSecret(ctx context.Context, secretName string, data ma
 		ObjectMeta: common.ObjectMeta{
 			Name: secretName,
 		},
-		Type: common.SecretTypeOpaque,
-		Data: data,
+		Type:       common.SecretTypeOpaque,
+		StringData: data,
 	}
 	return c.kubeCtl.Apply(ctx, secret)
 }
@@ -419,6 +419,8 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	// TODO: add a link to ticket to set random password for all other users.
+	// secrets represents stringData part of
+	// https://github.com/percona/percona-server-mongodb-operator/blob/main/deploy/secrets.yaml.
 	secrets := map[string][]byte{
 		"root":         []byte(rootPassword),
 		"xtrabackup":   []byte(rootPassword),
@@ -621,7 +623,7 @@ func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string
 		if err != nil {
 			return nil, errors.Wrap(err, "cannot get XtraDb cluster secrets")
 		}
-		password = string(secret.Data["root"])
+		password = string(secret.StringData["root"])
 	}
 
 	credentials := &XtraDBCredentials{
@@ -824,6 +826,9 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return errors.Wrap(err, "failed to generate password")
 	}
 
+	// TODO: add a link to ticket to set random password for all other users.
+	// secrets represents stringData part of
+	// https://github.com/percona/percona-xtradb-cluster-operator/blob/main/deploy/secrets.yaml.
 	secrets := map[string][]byte{
 		"MONGODB_BACKUP_USER":              []byte("backup"),
 		"MONGODB_BACKUP_PASSWORD":          []byte(password),
@@ -1097,8 +1102,8 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 		if err != nil {
 			return nil, errors.Wrap(err, "cannot get PSMDB cluster secrets")
 		}
-		username = string(secret.Data["MONGODB_USER_ADMIN_USER"])
-		password = string(secret.Data["MONGODB_USER_ADMIN_PASSWORD"])
+		username = string(secret.StringData["MONGODB_USER_ADMIN_USER"])
+		password = string(secret.StringData["MONGODB_USER_ADMIN_PASSWORD"])
 	}
 
 	credentials := &PSMDBCredentials{
