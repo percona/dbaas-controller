@@ -561,7 +561,11 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	if params.Size > 0 {
 		cluster.Spec.PXC.Size = params.Size
-		cluster.Spec.ProxySQL.Size = params.Size
+		if cluster.Spec.ProxySQL != nil {
+			cluster.Spec.ProxySQL.Size = params.Size
+		} else {
+			cluster.Spec.HAProxy.Size = params.Size
+		}
 	}
 
 	if params.PXC != nil {
