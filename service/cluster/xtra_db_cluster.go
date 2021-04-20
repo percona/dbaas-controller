@@ -50,6 +50,26 @@ func NewXtraDBClusterService(p *message.Printer) *XtraDBClusterService {
 	return &XtraDBClusterService{p: p}
 }
 
+// setComputeResources converts input resources and sets them to output compute resources.
+func setComputeResources(inputResources *k8sclient.ComputeResources, outputResources *controllerv1beta1.ComputeResources) error {
+	if inputResources == nil || outputResources == nil {
+		return nil
+	}
+
+	cpuMillis, err := convertors.StrToMilliCPU(inputResources.CPUM)
+	if err != nil {
+		return err
+	}
+	memoryBytes, err := convertors.StrToBytes(inputResources.MemoryBytes)
+	if err != nil {
+		return err
+	}
+
+	outputResources.CpuM = int32(cpuMillis)
+	outputResources.MemoryBytes = int64(memoryBytes)
+	return nil
+}
+
 // ListXtraDBClusters returns a list of XtraDB clusters.
 func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1.ListXtraDBClustersRequest) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
@@ -67,10 +87,6 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 	}
 
 	for i, cluster := range xtradbClusters {
-		proxySQLDiskSize, err := convertors.StrToBytes(cluster.ProxySQL.DiskSize)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
 		pxcDiskSize, err := convertors.StrToBytes(cluster.PXC.DiskSize)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -80,38 +96,40 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
 				DiskSize: int64(pxcDiskSize),
 			},
-			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
+		}
+
+		if cluster.ProxySQL != nil {
+			proxySQLDiskSize, err := convertors.StrToBytes(cluster.ProxySQL.DiskSize)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			params.Proxysql = &controllerv1beta1.XtraDBClusterParams_ProxySQL{
 				DiskSize: int64(proxySQLDiskSize),
-			},
+			}
+			params.Proxysql.ComputeResources = new(controllerv1beta1.ComputeResources)
+			err = setComputeResources(cluster.ProxySQL.ComputeResources, params.Proxysql.ComputeResources)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
 		}
+
+		if cluster.HAProxy != nil {
+			params.Haproxy = new(controllerv1beta1.XtraDBClusterParams_HAProxy)
+			params.Haproxy.ComputeResources = new(controllerv1beta1.ComputeResources)
+			err = setComputeResources(cluster.HAProxy.ComputeResources, params.Haproxy.ComputeResources)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+
 		if cluster.PXC.ComputeResources != nil {
-			cpuMillis, err := convertors.StrToMilliCPU(cluster.PXC.ComputeResources.CPUM)
+			params.Pxc.ComputeResources = new(controllerv1beta1.ComputeResources)
+			err = setComputeResources(cluster.PXC.ComputeResources, params.Pxc.ComputeResources)
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
-			}
-			memoryBytes, err := convertors.StrToBytes(cluster.PXC.ComputeResources.MemoryBytes)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			params.Pxc.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        int32(cpuMillis),
-				MemoryBytes: int64(memoryBytes),
 			}
 		}
-		if cluster.ProxySQL.ComputeResources != nil {
-			cpuMillis, err := convertors.StrToMilliCPU(cluster.ProxySQL.ComputeResources.CPUM)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			memoryBytes, err := convertors.StrToBytes(cluster.ProxySQL.ComputeResources.MemoryBytes)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			params.Proxysql.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        int32(cpuMillis),
-				MemoryBytes: int64(memoryBytes),
-			}
-		}
+
 		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{
 			Name:  cluster.Name,
 			State: pxcStatesMap[cluster.State],
@@ -147,11 +165,18 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 			ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
 			DiskSize:         convertors.BytesToStr(req.Params.Pxc.DiskSize),
 		},
-		ProxySQL: &k8sclient.ProxySQL{
+	}
+	if req.Params.Proxysql != nil {
+		params.ProxySQL = &k8sclient.ProxySQL{
 			Image:            req.Params.Proxysql.Image,
 			ComputeResources: computeResources(req.Params.Proxysql.ComputeResources),
 			DiskSize:         convertors.BytesToStr(req.Params.Proxysql.DiskSize),
-		},
+		}
+	} else {
+		params.HAProxy = &k8sclient.HAProxy{
+			Image:            req.Params.Haproxy.Image,
+			ComputeResources: computeResources(req.Params.Haproxy.ComputeResources),
+		}
 	}
 
 	if req.Pmm != nil {
@@ -161,7 +186,6 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 			Password:      req.Pmm.Password,
 		}
 	}
-
 	err = client.CreateXtraDBCluster(ctx, params)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
