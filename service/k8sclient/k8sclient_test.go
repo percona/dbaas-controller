@@ -106,11 +106,11 @@ func TestK8sClient(t *testing.T) {
 			t.Parallel()
 			clusterName := "test-pxc-haproxy"
 			err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
-				Name:             clusterName,
-				Size:             1,
-				PXC:              &PXC{DiskSize: "1000000000"},
-				HAProxy:          new(HAProxy),
-				PMMPublicAddress: pmmPublicAddress,
+				Name:    clusterName,
+				Size:    1,
+				PXC:     &PXC{DiskSize: "1000000000"},
+				HAProxy: new(HAProxy),
+				PMM:     pmm,
 			})
 			require.NoError(t, err)
 			assertListXtraDBCluster(ctx, t, client, clusterName, func(cluster *XtraDBCluster) bool {
