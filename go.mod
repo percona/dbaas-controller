@@ -30,7 +30,7 @@ require (
 	go.uber.org/zap v1.16.0
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
 	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2
-	golang.org/x/text v0.3.5
+	golang.org/x/text v0.3.6
 	google.golang.org/grpc v1.36.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
