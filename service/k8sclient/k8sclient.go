@@ -80,6 +80,7 @@ const (
 	pxcBackupStorageName    = "pxc-backup-storage-%s"
 	pxcAPIVersion           = "pxc.percona.com/v1-7-0"
 	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.7.0-proxysql"
+	pxcHAProxyDefaultImage  = "percona/percona-xtradb-cluster-operator:1.7.0-haproxy"
 	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
 	defaultPXCSecretName    = "my-cluster-secrets"
 
@@ -161,6 +162,12 @@ type ProxySQL struct {
 	DiskSize         string
 }
 
+// HAProxy contains information related to HAProxy containers in Percona XtraDB cluster.
+type HAProxy struct {
+	Image            string
+	ComputeResources *ComputeResources
+}
+
 // Replicaset contains information related to Replicaset containers in PSMDB cluster.
 type Replicaset struct {
 	ComputeResources *ComputeResources
@@ -176,6 +183,7 @@ type XtraDBParams struct {
 	Resume           bool
 	PXC              *PXC
 	ProxySQL         *ProxySQL
+	HAProxy          *HAProxy
 }
 
 // Cluster contains common information related to cluster.
@@ -210,6 +218,7 @@ type XtraDBCluster struct {
 	Message       string
 	PXC           *PXC
 	ProxySQL      *ProxySQL
+	HAProxy       *HAProxy
 	Pause         bool
 	DetailedState DetailedState
 }
@@ -396,6 +405,10 @@ func randSeq(n int) (string, error) {
 
 // CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
 func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
+	if (params.ProxySQL != nil) == (params.HAProxy != nil) {
+		return errors.New("xtradb cluster must have one and only one proxy type defined")
+	}
+
 	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
 	if err == nil {
@@ -427,10 +440,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	if params.PXC.Image != "" {
 		pxcImage = params.PXC.Image
 	}
-	pxcProxySQLImage := pxcProxySQLDefaultImage
-	if params.ProxySQL.Image != "" {
-		pxcProxySQLImage = params.ProxySQL.Image
-	}
+
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
 			APIVersion: pxcAPIVersion,
@@ -454,17 +464,6 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 				},
 				PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
 					MaxUnavailable: pointer.ToInt(1),
-				},
-			},
-
-			ProxySQL: &pxc.PodSpec{
-				Enabled:    true,
-				Size:       params.Size,
-				Resources:  c.setComputeResources(params.ProxySQL.ComputeResources),
-				Image:      pxcProxySQLImage,
-				VolumeSpec: c.volumeSpec(params.ProxySQL.DiskSize),
-				Affinity: &pxc.PodAffinity{
-					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 				},
 			},
 
@@ -500,11 +499,37 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 		},
 	}
 
+	var podSpec *pxc.PodSpec
+	if params.ProxySQL != nil {
+		res.Spec.ProxySQL = new(pxc.PodSpec)
+		podSpec = res.Spec.ProxySQL
+		podSpec.Image = pxcProxySQLDefaultImage
+		if params.ProxySQL.Image != "" {
+			podSpec.Image = params.ProxySQL.Image
+		}
+		podSpec.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
+		podSpec.VolumeSpec = c.volumeSpec(params.ProxySQL.DiskSize)
+	} else {
+		res.Spec.HAProxy = new(pxc.PodSpec)
+		podSpec = res.Spec.HAProxy
+		podSpec.Image = pxcHAProxyDefaultImage
+		if params.HAProxy.Image != "" {
+			podSpec.Image = params.HAProxy.Image
+		}
+		podSpec.Resources = c.setComputeResources(params.HAProxy.ComputeResources)
+	}
+
 	// This enables ingress for the cluster and exposes the cluster to the world.
 	// The cluster will have an internal IP and a world accessible hostname.
 	// This feature cannot be tested with minikube. Please use EKS for testing.
 	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType {
-		res.Spec.ProxySQL.ServiceType = common.ServiceTypeLoadBalancer
+		podSpec.ServiceType = common.ServiceTypeLoadBalancer
+	}
+
+	podSpec.Enabled = true
+	podSpec.Size = params.Size
+	podSpec.Affinity = &pxc.PodAffinity{
+		TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 	}
 
 	return c.kubeCtl.Apply(ctx, res)
@@ -512,6 +537,10 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 // UpdateXtraDBCluster changes size of provided Percona XtraDB cluster.
 func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
+	if (params.ProxySQL != nil) && (params.HAProxy != nil) {
+		return errors.New("can't update both proxies, only one should be in use")
+	}
+
 	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
 	if err != nil {
@@ -532,7 +561,11 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	if params.Size > 0 {
 		cluster.Spec.PXC.Size = params.Size
-		cluster.Spec.ProxySQL.Size = params.Size
+		if cluster.Spec.ProxySQL != nil {
+			cluster.Spec.ProxySQL.Size = params.Size
+		} else {
+			cluster.Spec.HAProxy.Size = params.Size
+		}
 	}
 
 	if params.PXC != nil {
@@ -541,6 +574,10 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	if params.ProxySQL != nil {
 		cluster.Spec.ProxySQL.Resources = c.updateComputeResources(params.ProxySQL.ComputeResources, cluster.Spec.ProxySQL.Resources)
+	}
+
+	if params.HAProxy != nil {
+		cluster.Spec.HAProxy.Resources = c.updateComputeResources(params.HAProxy.ComputeResources, cluster.Spec.HAProxy.Resources)
 	}
 
 	return c.kubeCtl.Apply(ctx, &cluster)
@@ -664,13 +701,14 @@ func (c *K8sClient) RestartXtraDBCluster(ctx context.Context, name string) error
 		return err
 	}
 
-	// TODO: implement logic to handle the case when there is HAProxy instead of ProxySQL.
-	_, err = c.kubeCtl.Run(ctx, c.restartDBClusterCmd(name, "proxysql"), nil)
-	if err != nil {
-		return err
+	for _, proxy := range []string{"proxysql", "haproxy"} {
+		if _, err := c.kubeCtl.Run(ctx, []string{"get", "statefulset", name + "-" + proxy}, nil); err == nil {
+			_, err = c.kubeCtl.Run(ctx, c.restartDBClusterCmd(name, proxy), nil)
+			return err
+		}
 	}
 
-	return nil
+	return errors.New("failed to restart pxc cluster proxy statefulset")
 }
 
 // getPerconaXtraDBClusters returns Percona XtraDB clusters.
@@ -685,16 +723,12 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 	for i, cluster := range list.Items {
 		val := XtraDBCluster{
 			Name:    cluster.Name,
-			Size:    cluster.Spec.ProxySQL.Size,
+			Size:    cluster.Spec.PXC.Size,
 			State:   getPXCState(cluster.Status.Status),
 			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
-			},
-			ProxySQL: &ProxySQL{
-				DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
-				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
 			},
 			Pause: cluster.Spec.Pause,
 			DetailedState: []appStatus{
@@ -704,7 +738,19 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 				{size: cluster.Status.PXC.Size, ready: cluster.Status.PXC.Ready},
 			},
 		}
-
+		if cluster.Spec.ProxySQL != nil {
+			val.ProxySQL = &ProxySQL{
+				DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
+				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
+			}
+			res[i] = val
+			continue
+		}
+		if cluster.Spec.HAProxy != nil {
+			val.HAProxy = &HAProxy{
+				ComputeResources: c.getComputeResources(cluster.Spec.HAProxy.Resources),
+			}
+		}
 		res[i] = val
 	}
 	return res, nil
@@ -771,6 +817,7 @@ func (c *K8sClient) getDeletingXtraDBClusters(ctx context.Context, clusters []Xt
 			State:         ClusterStateDeleting,
 			PXC:           new(PXC),
 			ProxySQL:      new(ProxySQL),
+			HAProxy:       new(HAProxy),
 			DetailedState: []appStatus{},
 		}
 	}
