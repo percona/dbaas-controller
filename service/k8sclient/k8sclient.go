@@ -193,7 +193,7 @@ type XtraDBParams struct {
 	PXC      *PXC
 	ProxySQL *ProxySQL
 	PMM      *PMM
-	HAProxy          *HAProxy
+	HAProxy  *HAProxy
 }
 
 // Cluster contains common information related to cluster.
@@ -392,8 +392,8 @@ func (c *K8sClient) CreateSecret(ctx context.Context, secretName string, data ma
 		ObjectMeta: common.ObjectMeta{
 			Name: secretName,
 		},
-		Type:       common.SecretTypeOpaque,
-		StringData: data,
+		Type: common.SecretTypeOpaque,
+		Data: data,
 	}
 	return c.kubeCtl.Apply(ctx, secret)
 }
@@ -660,7 +660,7 @@ func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string
 		if err != nil {
 			return nil, errors.Wrap(err, "cannot get XtraDb cluster secrets")
 		}
-		password = string(secret.StringData["root"])
+		password = string(secret.Data["root"])
 	}
 
 	credentials := &XtraDBCredentials{
@@ -1149,8 +1149,8 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 		if err != nil {
 			return nil, errors.Wrap(err, "cannot get PSMDB cluster secrets")
 		}
-		username = string(secret.StringData["MONGODB_USER_ADMIN_USER"])
-		password = string(secret.StringData["MONGODB_USER_ADMIN_PASSWORD"])
+		username = string(secret.Data["MONGODB_USER_ADMIN_USER"])
+		password = string(secret.Data["MONGODB_USER_ADMIN_PASSWORD"])
 	}
 
 	credentials := &PSMDBCredentials{

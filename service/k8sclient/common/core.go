@@ -157,17 +157,17 @@ type Pod struct {
 }
 
 // Secret holds secret data of a certain type. The total bytes of the values in
-// the StringData field must be less than 1024 * 1024 bytes.
+// the Data field must be less than 1024 * 1024 bytes.
 type Secret struct {
 	TypeMeta
 	// Standard object's metadata.
 	ObjectMeta `json:"metadata,omitempty"`
 
-	// StringData contains the secret data. Each key must consist of alphanumeric
+	// Data contains the secret data. Each key must consist of alphanumeric
 	// characters, '-', '_' or '.'. The serialized form of the secret data is a
 	// base64 encoded string, representing the arbitrary (possibly non-string)
 	// data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
-	StringData map[string][]byte `json:"stringData,omitempty"`
+	Data map[string][]byte `json:"data,omitempty"`
 
 	// Used to facilitate programmatic handling of secret data.
 	Type SecretType `json:"type,omitempty"`
