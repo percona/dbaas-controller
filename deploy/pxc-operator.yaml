@@ -219,6 +219,7 @@ rules:
   resources:
   - pods
   - pods/exec
+  - pods/log
   - configmaps
   - services
   - persistentvolumeclaims
@@ -343,7 +344,7 @@ spec:
               fieldPath: metadata.name
         - name: OPERATOR_NAME
           value: percona-xtradb-cluster-operator
-        image: perconalab/percona-xtradb-cluster-operator:k8spxc-497
+        image: perconalab/percona-xtradb-cluster-operator:1.7.0-k8spxc-668-custom
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3
