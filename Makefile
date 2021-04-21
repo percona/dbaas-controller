@@ -176,3 +176,7 @@ eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run t
 eks-delete-current-namespace:
 	NAMESPACE=$$(kubectl config view --minify --output 'jsonpath={..namespace}'); \
 	if [ "$$NAMESPACE" != "default" ]; then kubectl delete ns "$$NAMESPACE"; fi
+
+deploy-to-pmm-server:
+	docker cp bin/dbaas-controller ${PMM_CONTAINER}:/usr/sbin/dbaas-controller
+	docker exec ${PMM_CONTAINER} supervisorctl restart dbaas-controller
