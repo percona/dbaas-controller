@@ -26,14 +26,12 @@ jobs:
           # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
           - 1.15.11
           - 1.16.8
-        build_tags: ["", "saas"]
         os: [ubuntu-latest]
         may-fail: [false]
 
         include:
           - go-version: tip
             kubernetes_version: 1.16.8
-            build_tags: ""
             os: ubuntu-latest
             may-fail: true
 
@@ -43,7 +41,6 @@ jobs:
     env:
       # no `-mod=readonly` to test PRs made by @dependabot;
       # `git diff --exit-code` step below still checks what we need
-      GOFLAGS: -v -tags='${{ matrix.build_tags }}'
       KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
       MINIKUBE_IN_STYLE: 1
       CHANGE_MINIKUBE_NONE_USER: true
@@ -187,12 +184,10 @@ jobs:
       matrix:
         go-version:
           - 1.15.x
-        build_tags: [""]
         os: [ubuntu-latest]
         may-fail: [false]
         include:
           - go-version: tip
-            build_tags: ""
             os: ubuntu-latest
             may-fail: true
 
@@ -202,7 +197,7 @@ jobs:
     env:
       # no `-mod=readonly` to test PRs made by @dependabot;
       # `git diff --exit-code` step below still checks what we need
-      GOFLAGS: -v -tags='${{ matrix.build_tags }}'
+      GOFLAGS: -v
 
     steps:
       - name: Set up Go release
