@@ -74,13 +74,13 @@ const (
 	k8sAPIVersion     = "v1"
 	k8sMetaKindSecret = "Secret"
 
-	pxcCRVersion            = "1.7.0"
-	pxcBackupImage          = "percona/percona-xtradb-cluster-operator:1.7.0-pxc8.0-backup"
+	pxcCRVersion            = "1.8.0"
+	pxcBackupImage          = "percona/percona-xtradb-cluster-operator:1.8.0-pxc8.0-backup"
 	pxcDefaultImage         = "percona/percona-xtradb-cluster:8.0.20-11.1"
 	pxcBackupStorageName    = "pxc-backup-storage-%s"
-	pxcAPIVersion           = "pxc.percona.com/v1-7-0"
-	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.7.0-proxysql"
-	pxcHAProxyDefaultImage  = "percona/percona-xtradb-cluster-operator:1.7.0-haproxy"
+	pxcAPIVersion           = "pxc.percona.com/v1-8-0"
+	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.8.0-proxysql"
+	pxcHAProxyDefaultImage  = "percona/percona-xtradb-cluster-operator:1.8.0-haproxy"
 	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
 	defaultPXCSecretName    = "my-cluster-secrets"
 
