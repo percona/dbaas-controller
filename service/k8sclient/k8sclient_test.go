@@ -102,43 +102,6 @@ func TestK8sClient(t *testing.T) {
 			assert.EqualError(t, errors.Cause(err), ErrXtraDBClusterNotReady.Error())
 		})
 
-		t.Run("Create cluster with HAProxy", func(t *testing.T) {
-			t.Parallel()
-			clusterName := "test-pxc-haproxy"
-			err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
-				Name:    clusterName,
-				Size:    1,
-				PXC:     &PXC{DiskSize: "1000000000"},
-				HAProxy: new(HAProxy),
-				PMM:     pmm,
-			})
-			require.NoError(t, err)
-			assertListXtraDBCluster(ctx, t, client, clusterName, func(cluster *XtraDBCluster) bool {
-				return cluster != nil && cluster.State == ClusterStateReady
-			})
-
-			// Test listing.
-			clusters, err := client.ListXtraDBClusters(ctx)
-			require.NoError(t, err)
-			assert.Conditionf(t,
-				func(clusters []XtraDBCluster, clusterName string) assert.Comparison {
-					return func() bool {
-						for _, cluster := range clusters {
-							if cluster.Name == clusterName {
-								return true
-							}
-						}
-						return false
-					}
-				}(clusters, clusterName),
-				"cluster '%s' was not found",
-				clusterName,
-			)
-
-			err = client.DeleteXtraDBCluster(ctx, clusterName)
-			require.NoError(t, err)
-		})
-
 		t.Run("Create cluster with the same name", func(t *testing.T) {
 			err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
 				Name:     name,
@@ -254,6 +217,43 @@ func TestK8sClient(t *testing.T) {
 			return cluster == nil
 		})
 		l.Info("XtraDB Cluster is deleted")
+	})
+
+	t.Run("Create XtraDB with HAProxy", func(t *testing.T) {
+		t.Parallel()
+		clusterName := "test-pxc-haproxy"
+		err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
+			Name:    clusterName,
+			Size:    1,
+			PXC:     &PXC{DiskSize: "1000000000"},
+			HAProxy: new(HAProxy),
+			PMM:     pmm,
+		})
+		require.NoError(t, err)
+		assertListXtraDBCluster(ctx, t, client, clusterName, func(cluster *XtraDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+
+		// Test listing.
+		clusters, err := client.ListXtraDBClusters(ctx)
+		require.NoError(t, err)
+		assert.Conditionf(t,
+			func(clusters []XtraDBCluster, clusterName string) assert.Comparison {
+				return func() bool {
+					for _, cluster := range clusters {
+						if cluster.Name == clusterName {
+							return true
+						}
+					}
+					return false
+				}
+			}(clusters, clusterName),
+			"cluster '%s' was not found",
+			clusterName,
+		)
+
+		err = client.DeleteXtraDBCluster(ctx, clusterName)
+		require.NoError(t, err)
 	})
 
 	t.Run("PSMDB", func(t *testing.T) {

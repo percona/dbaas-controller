@@ -82,17 +82,17 @@ const (
 	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.7.0-proxysql"
 	pxcHAProxyDefaultImage  = "percona/percona-xtradb-cluster-operator:1.7.0-haproxy"
 	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
-	defaultPXCSecretName    = "my-cluster-secrets"
 
-	psmdbCRVersion         = "1.7.0"
-	psmdbBackupImage       = "percona/percona-server-mongodb-operator:1.7.0-backup"
-	psmdbDefaultImage      = "percona/percona-server-mongodb:4.2.8-8"
-	psmdbAPIVersion        = "psmdb.percona.com/v1-7-0"
-	psmdbSecretNameTmpl    = "dbaas-%s-psmdb-secrets"
-	defaultPSMDBSecretName = "my-cluster-name-secrets"
+	psmdbCRVersion      = "1.7.0"
+	psmdbBackupImage    = "percona/percona-server-mongodb-operator:1.7.0-backup"
+	psmdbDefaultImage   = "percona/percona-server-mongodb:4.2.8-8"
+	psmdbAPIVersion     = "psmdb.percona.com/v1-7-0"
+	psmdbSecretNameTmpl = "dbaas-%s-psmdb-secrets"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
-	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
+	maxVolumeSizeEBS   uint64 = 16 * 1024 * 1024 * 1024 * 1024
+	internalSecretTmpl        = "internal-%s"
+	pullPolicy                = common.PullIfNotPresent
 )
 
 type kubernetesClusterType uint8
@@ -464,10 +464,11 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			SecretsName:       secretName,
 
 			PXC: &pxc.PodSpec{
-				Size:       params.Size,
-				Resources:  c.setComputeResources(params.PXC.ComputeResources),
-				Image:      pxcImage,
-				VolumeSpec: c.volumeSpec(params.PXC.DiskSize),
+				Size:            params.Size,
+				Resources:       c.setComputeResources(params.PXC.ComputeResources),
+				Image:           pxcImage,
+				ImagePullPolicy: pullPolicy,
+				VolumeSpec:      c.volumeSpec(params.PXC.DiskSize),
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 				},
@@ -500,10 +501,11 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 	if params.PMM != nil {
 		res.Spec.PMM = &pxc.PMMSpec{
-			Enabled:    true,
-			ServerHost: params.PMM.PublicAddress,
-			ServerUser: params.PMM.Login,
-			Image:      pmmClientImage,
+			Enabled:         true,
+			ServerHost:      params.PMM.PublicAddress,
+			ServerUser:      params.PMM.Login,
+			Image:           pmmClientImage,
+			ImagePullPolicy: pullPolicy,
 			Resources: &common.PodResources{
 				Requests: &common.ResourcesList{
 					Memory: "500M",
@@ -542,6 +544,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	podSpec.Enabled = true
+	podSpec.ImagePullPolicy = pullPolicy
 	podSpec.Size = params.Size
 	podSpec.Affinity = &pxc.PodAffinity{
 		TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
@@ -619,22 +622,31 @@ func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error 
 		return errors.Wrap(err, "cannot delete PXC")
 	}
 
+	err = c.deleteSecret(ctx, fmt.Sprintf(pxcSecretNameTmpl, name))
+	if err != nil {
+		c.l.Errorf("cannot delete secret for %s: %v", name, err)
+	}
+
+	err = c.deleteSecret(ctx, fmt.Sprintf(internalSecretTmpl, name))
+	if err != nil {
+		c.l.Errorf("cannot delete internal secret for %s: %v", name, err)
+	}
+
+	return nil
+}
+
+func (c *K8sClient) deleteSecret(ctx context.Context, secretName string) error {
 	secret := &common.Secret{
 		TypeMeta: common.TypeMeta{
 			APIVersion: k8sAPIVersion,
 			Kind:       k8sMetaKindSecret,
 		},
 		ObjectMeta: common.ObjectMeta{
-			Name: fmt.Sprintf(pxcSecretNameTmpl, name),
+			Name: secretName,
 		},
 	}
 
-	err = c.kubeCtl.Delete(ctx, secret)
-	if err != nil {
-		c.l.Errorf("cannot delete secret for %s: %v", name, err)
-	}
-
-	return nil
+	return c.kubeCtl.Delete(ctx, secret)
 }
 
 // GetXtraDBClusterCredentials returns an XtraDB cluster credentials.
@@ -1102,19 +1114,14 @@ func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
 		return errors.Wrap(err, "cannot delete PSMDB")
 	}
 
-	secret := &common.Secret{
-		TypeMeta: common.TypeMeta{
-			APIVersion: k8sAPIVersion,
-			Kind:       k8sMetaKindSecret,
-		},
-		ObjectMeta: common.ObjectMeta{
-			Name: fmt.Sprintf(psmdbSecretNameTmpl, name),
-		},
-	}
-
-	err = c.kubeCtl.Delete(ctx, secret)
+	err = c.deleteSecret(ctx, fmt.Sprintf(psmdbSecretNameTmpl, name))
 	if err != nil {
 		c.l.Errorf("cannot delete secret for %s: %v", name, err)
+	}
+
+	err = c.deleteSecret(ctx, fmt.Sprintf(internalSecretTmpl, name))
+	if err != nil {
+		c.l.Errorf("cannot delete internal secret for %s: %v", name, err)
 	}
 
 	return nil
