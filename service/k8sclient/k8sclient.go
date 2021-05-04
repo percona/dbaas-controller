@@ -82,6 +82,7 @@ const (
 	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.7.0-proxysql"
 	pxcHAProxyDefaultImage  = "percona/percona-xtradb-cluster-operator:1.7.0-haproxy"
 	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
+	pxcInternalSecretTmpl   = "internal-%s"
 
 	psmdbCRVersion      = "1.7.0"
 	psmdbBackupImage    = "percona/percona-server-mongodb-operator:1.7.0-backup"
@@ -90,9 +91,8 @@ const (
 	psmdbSecretNameTmpl = "dbaas-%s-psmdb-secrets"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
-	maxVolumeSizeEBS   uint64 = 16 * 1024 * 1024 * 1024 * 1024
-	internalSecretTmpl        = "internal-%s"
-	pullPolicy                = common.PullIfNotPresent
+	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
+	pullPolicy              = common.PullIfNotPresent
 )
 
 type kubernetesClusterType uint8
@@ -627,7 +627,7 @@ func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error 
 		c.l.Errorf("cannot delete secret for %s: %v", name, err)
 	}
 
-	err = c.deleteSecret(ctx, fmt.Sprintf(internalSecretTmpl, name))
+	err = c.deleteSecret(ctx, fmt.Sprintf(pxcInternalSecretTmpl, name))
 	if err != nil {
 		c.l.Errorf("cannot delete internal secret for %s: %v", name, err)
 	}
@@ -949,7 +949,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 				Security: &psmdb.MongodSpecSecurity{
 					RedactClientLogData:  false,
 					EnableEncryption:     pointer.ToBool(true),
-					EncryptionKeySecret:  "my-cluster-name-mongodb-encryption-key",
+					EncryptionKeySecret:  fmt.Sprintf("%s-mongodb-encryption-key", params.Name),
 					EncryptionCipherMode: psmdb.MongodChiperModeCBC,
 				},
 				Storage: &psmdb.MongodSpecStorage{
@@ -1119,9 +1119,13 @@ func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
 		c.l.Errorf("cannot delete secret for %s: %v", name, err)
 	}
 
-	err = c.deleteSecret(ctx, fmt.Sprintf(internalSecretTmpl, name))
-	if err != nil {
-		c.l.Errorf("cannot delete internal secret for %s: %v", name, err)
+	var psmdbInternalSecrets = []string{"internal-%s-users", "%s-ssl", "%s-ssl-internal", "%-mongodb-keyfile", "%s-mongodb-encryption-key"}
+
+	for _, secretTmpl := range psmdbInternalSecrets {
+		err = c.deleteSecret(ctx, fmt.Sprintf(secretTmpl, name))
+		if err != nil {
+			c.l.Errorf("cannot delete internal secret for %s: %v", name, err)
+		}
 	}
 
 	return nil
