@@ -26,7 +26,7 @@ jobs:
           # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
           - 1.15.11
           - 1.16.8
-        build_tags: ["", "saas"]
+        build_tags: [""]
         os: [ubuntu-latest]
         may-fail: [false]
 
