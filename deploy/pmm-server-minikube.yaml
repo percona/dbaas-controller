@@ -70,7 +70,7 @@ spec:
       - name: pmm-server
         image: docker.io/percona/pmm-server:2
         env:
-        - name: PERCONA_TEST_DBAAS
+        - name: ENABLE_DBAAS
           value: "1"
         ports:
         - containerPort: 80
