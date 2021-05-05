@@ -127,7 +127,7 @@ const (
 )
 
 const (
-	clusterWithSameNameExistsErrTemplate = "cluster '%s' already exists"
+	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
 )
 
