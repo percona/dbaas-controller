@@ -354,7 +354,7 @@ func TestK8sClient(t *testing.T) {
 			},
 			Psmdb: Operator{
 				Status:  OperatorStatusOK,
-				Version: "1.7.0",
+				Version: psmdbCRVersion,
 			},
 		}, operators,
 		)
