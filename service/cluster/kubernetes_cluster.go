@@ -26,6 +26,7 @@ import (
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
 var operatorStatusesMap = map[k8sclient.OperatorStatus]controllerv1beta1.OperatorsStatus{
@@ -60,8 +61,12 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 		Status: controllerv1beta1.KubernetesClusterStatus_KUBERNETES_CLUSTER_STATUS_OK,
 	}
 
+	l := logger.Get(ctx)
+	l = l.WithField("component", "kubernetesClusterService")
+
 	operators, err := k8Client.CheckOperators(ctx)
 	if err != nil {
+		l.Error(err)
 		return resp, nil
 	}
 

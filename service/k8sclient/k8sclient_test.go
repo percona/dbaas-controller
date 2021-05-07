@@ -71,7 +71,7 @@ func TestK8sClient(t *testing.T) {
 		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
 	})
 
-	pmmPublicAddress := ""
+	var pmm *PMM
 	t.Run("XtraDB", func(t *testing.T) {
 		t.Parallel()
 		name := "test-cluster-xtradb"
@@ -84,11 +84,11 @@ func TestK8sClient(t *testing.T) {
 		l.Info("No XtraDB Clusters running")
 
 		err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
-			Name:             name,
-			Size:             1,
-			PXC:              &PXC{DiskSize: "1000000000"},
-			ProxySQL:         &ProxySQL{DiskSize: "1000000000"},
-			PMMPublicAddress: pmmPublicAddress,
+			Name:     name,
+			Size:     1,
+			PXC:      &PXC{DiskSize: "1000000000"},
+			ProxySQL: &ProxySQL{DiskSize: "1000000000"},
+			PMM:      pmm,
 		})
 		require.NoError(t, err)
 
@@ -102,50 +102,13 @@ func TestK8sClient(t *testing.T) {
 			assert.EqualError(t, errors.Cause(err), ErrXtraDBClusterNotReady.Error())
 		})
 
-		t.Run("Create cluster with HAProxy", func(t *testing.T) {
-			t.Parallel()
-			clusterName := "test-pxc-haproxy"
-			err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
-				Name:             clusterName,
-				Size:             1,
-				PXC:              &PXC{DiskSize: "1000000000"},
-				HAProxy:          new(HAProxy),
-				PMMPublicAddress: pmmPublicAddress,
-			})
-			require.NoError(t, err)
-			assertListXtraDBCluster(ctx, t, client, clusterName, func(cluster *XtraDBCluster) bool {
-				return cluster != nil && cluster.State == ClusterStateReady
-			})
-
-			// Test listing.
-			clusters, err := client.ListXtraDBClusters(ctx)
-			require.NoError(t, err)
-			assert.Conditionf(t,
-				func(clusters []XtraDBCluster, clusterName string) assert.Comparison {
-					return func() bool {
-						for _, cluster := range clusters {
-							if cluster.Name == clusterName {
-								return true
-							}
-						}
-						return false
-					}
-				}(clusters, clusterName),
-				"cluster '%s' was not found",
-				clusterName,
-			)
-
-			err = client.DeleteXtraDBCluster(ctx, clusterName)
-			require.NoError(t, err)
-		})
-
 		t.Run("Create cluster with the same name", func(t *testing.T) {
 			err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
-				Name:             name,
-				Size:             1,
-				PXC:              &PXC{DiskSize: "1000000000"},
-				ProxySQL:         &ProxySQL{DiskSize: "1000000000"},
-				PMMPublicAddress: pmmPublicAddress,
+				Name:     name,
+				Size:     1,
+				PXC:      &PXC{DiskSize: "1000000000"},
+				ProxySQL: &ProxySQL{DiskSize: "1000000000"},
+				PMM:      pmm,
 			})
 			require.Error(t, err)
 			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
@@ -256,6 +219,43 @@ func TestK8sClient(t *testing.T) {
 		l.Info("XtraDB Cluster is deleted")
 	})
 
+	t.Run("Create XtraDB with HAProxy", func(t *testing.T) {
+		t.Parallel()
+		clusterName := "test-pxc-haproxy"
+		err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
+			Name:    clusterName,
+			Size:    1,
+			PXC:     &PXC{DiskSize: "1000000000"},
+			HAProxy: new(HAProxy),
+			PMM:     pmm,
+		})
+		require.NoError(t, err)
+		assertListXtraDBCluster(ctx, t, client, clusterName, func(cluster *XtraDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+
+		// Test listing.
+		clusters, err := client.ListXtraDBClusters(ctx)
+		require.NoError(t, err)
+		assert.Conditionf(t,
+			func(clusters []XtraDBCluster, clusterName string) assert.Comparison {
+				return func() bool {
+					for _, cluster := range clusters {
+						if cluster.Name == clusterName {
+							return true
+						}
+					}
+					return false
+				}
+			}(clusters, clusterName),
+			"cluster '%s' was not found",
+			clusterName,
+		)
+
+		err = client.DeleteXtraDBCluster(ctx, clusterName)
+		require.NoError(t, err)
+	})
+
 	t.Run("PSMDB", func(t *testing.T) {
 		t.Parallel()
 		name := "test-cluster-psmdb"
@@ -268,10 +268,10 @@ func TestK8sClient(t *testing.T) {
 		l.Info("No PSMDB Clusters running")
 
 		err := client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name:             name,
-			Size:             3,
-			Replicaset:       &Replicaset{DiskSize: "1000000000"},
-			PMMPublicAddress: pmmPublicAddress,
+			Name:       name,
+			Size:       3,
+			Replicaset: &Replicaset{DiskSize: "1000000000"},
+			PMM:        pmm,
 		})
 		require.NoError(t, err)
 
@@ -288,10 +288,10 @@ func TestK8sClient(t *testing.T) {
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
 			err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
-				Name:             name,
-				Size:             1,
-				Replicaset:       &Replicaset{DiskSize: "1000000000"},
-				PMMPublicAddress: pmmPublicAddress,
+				Name:       name,
+				Size:       1,
+				Replicaset: &Replicaset{DiskSize: "1000000000"},
+				PMM:        pmm,
 			})
 			require.Error(t, err)
 			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
