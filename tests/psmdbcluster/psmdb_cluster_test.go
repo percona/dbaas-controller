@@ -73,7 +73,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 				DiskSize: diskSize,
 			},
 		},
-		PmmPublicAddress: tests.PMMServerAddress,
+		Pmm: tests.PMMServerParams,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createPSMDBClusterResponse)
