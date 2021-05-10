@@ -230,8 +230,10 @@ github.com/openzipkin/zipkin-go v0.2.2/go.mod h1:NaW6tEwdmWMaCDZzg8sh+IBNOxHMPnh
 github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIwwtUjcrb0b5/5kLM=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
-github.com/percona-platform/dbaas-api v0.0.0-20210420093041-724dc163a829 h1:o4RU0OE83vZtaGDQBxjGZ7ZmoMm8sTy4MxvTQss1nrY=
-github.com/percona-platform/dbaas-api v0.0.0-20210420093041-724dc163a829/go.mod h1:35XsODD/au51FcfaQ7IhW1uSe689IPyCjaWVMRTYweQ=
+github.com/percona-platform/dbaas-api v0.0.0-20210420115836-fa7ca800ec9b h1:jHZBvZ9dQ0CYq8vZfFbkUqTQNRifJ5/SP5Jt6mT6LhQ=
+github.com/percona-platform/dbaas-api v0.0.0-20210420115836-fa7ca800ec9b/go.mod h1:35XsODD/au51FcfaQ7IhW1uSe689IPyCjaWVMRTYweQ=
+github.com/percona-platform/dbaas-api v0.0.0-20210507083902-25a21bc6b9f5 h1:l+yoQ9Hjt0SrcDYAU3Al1eCOIPVEwgcR+nz7Yok2cfc=
+github.com/percona-platform/dbaas-api v0.0.0-20210507083902-25a21bc6b9f5/go.mod h1:35XsODD/au51FcfaQ7IhW1uSe689IPyCjaWVMRTYweQ=
 github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871 h1:ZZ0kr0qHypQwWUdxkZU+FNcbxr3XEoeONGOTNAxHvkg=
 github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871/go.mod h1:FrPTFbFWkDaTwvfjRCsaqC5UYgBar+BUOJUzbQl1q5c=
 github.com/percona/pmm v2.15.1-0.20210318204615-bbf8e9314afd+incompatible h1:Jgfznlzuy1RTUjb4ooEt8fzHjkqRDSHZ2U1rFnqa7fA=

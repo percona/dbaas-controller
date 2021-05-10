@@ -82,17 +82,17 @@ const (
 	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.7.0-proxysql"
 	pxcHAProxyDefaultImage  = "percona/percona-xtradb-cluster-operator:1.7.0-haproxy"
 	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
-	defaultPXCSecretName    = "my-cluster-secrets"
+	pxcInternalSecretTmpl   = "internal-%s"
 
-	psmdbCRVersion         = "1.7.0"
-	psmdbBackupImage       = "percona/percona-server-mongodb-operator:1.7.0-backup"
-	psmdbDefaultImage      = "percona/percona-server-mongodb:4.2.8-8"
-	psmdbAPIVersion        = "psmdb.percona.com/v1-7-0"
-	psmdbSecretNameTmpl    = "dbaas-%s-psmdb-secrets"
-	defaultPSMDBSecretName = "my-cluster-name-secrets"
+	psmdbCRVersion      = "1.7.0"
+	psmdbBackupImage    = "percona/percona-server-mongodb-operator:1.7.0-backup"
+	psmdbDefaultImage   = "percona/percona-server-mongodb:4.2.8-8"
+	psmdbAPIVersion     = "psmdb.percona.com/v1-7-0"
+	psmdbSecretNameTmpl = "dbaas-%s-psmdb-secrets"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
+	pullPolicy              = common.PullIfNotPresent
 )
 
 type kubernetesClusterType uint8
@@ -174,16 +174,26 @@ type Replicaset struct {
 	DiskSize         string
 }
 
+// PMM contains information related to PMM.
+type PMM struct {
+	// PMM server public address.
+	PublicAddress string
+	// PMM server admin login.
+	Login string
+	// PMM server admin password.
+	Password string
+}
+
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
 type XtraDBParams struct {
-	Name             string
-	PMMPublicAddress string
-	Size             int32
-	Suspend          bool
-	Resume           bool
-	PXC              *PXC
-	ProxySQL         *ProxySQL
-	HAProxy          *HAProxy
+	Name     string
+	Size     int32
+	Suspend  bool
+	Resume   bool
+	PXC      *PXC
+	ProxySQL *ProxySQL
+	PMM      *PMM
+	HAProxy  *HAProxy
 }
 
 // Cluster contains common information related to cluster.
@@ -193,13 +203,13 @@ type Cluster struct {
 
 // PSMDBParams contains all parameters required to create or update percona server for mongodb cluster.
 type PSMDBParams struct {
-	Name             string
-	Image            string
-	PMMPublicAddress string
-	Size             int32
-	Suspend          bool
-	Resume           bool
-	Replicaset       *Replicaset
+	Name       string
+	Image      string
+	Size       int32
+	Suspend    bool
+	Resume     bool
+	Replicaset *Replicaset
+	PMM        *PMM
 }
 
 type appStatus struct {
@@ -388,7 +398,7 @@ func (c *K8sClient) CreateSecret(ctx context.Context, secretName string, data ma
 	return c.kubeCtl.Apply(ctx, secret)
 }
 
-func randSeq(n int) (string, error) {
+func generatePassword(n int) (string, error) {
 	// PSMDB do not support all special characters in password https://jira.percona.com/browse/K8SPSMDB-364
 	symbols := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 	symbolsLen := len(symbols)
@@ -415,26 +425,24 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 		return fmt.Errorf(clusterWithSameNameExistsErrTemplate, params.Name)
 	}
 
-	var secret common.Secret
-	err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPXCSecretName, &secret)
-	if err != nil {
-		return errors.Wrap(err, "cannot get default PXC secrets")
-	}
-
 	secretName := fmt.Sprintf(pxcSecretNameTmpl, params.Name)
-	pwd, err := randSeq(passwordLength)
+	rootPassword, err := generatePassword(passwordLength)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate password")
 	}
 
 	// TODO: add a link to ticket to set random password for all other users.
-	data := secret.Data
-	data["root"] = []byte(pwd)
-
-	err = c.CreateSecret(ctx, secretName, data)
-	if err != nil {
-		return errors.Wrap(err, "cannot create secret for PXC")
+	// secrets represents stringData part of
+	// https://github.com/percona/percona-server-mongodb-operator/blob/main/deploy/secrets.yaml.
+	secrets := map[string][]byte{
+		"root":         []byte(rootPassword),
+		"xtrabackup":   []byte(rootPassword),
+		"monitor":      []byte(rootPassword),
+		"clustercheck": []byte(rootPassword),
+		"proxyadmin":   []byte(rootPassword),
+		"operator":     []byte(rootPassword),
 	}
+
 	storageName := fmt.Sprintf(pxcBackupStorageName, params.Name)
 	pxcImage := pxcDefaultImage
 	if params.PXC.Image != "" {
@@ -456,10 +464,11 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			SecretsName:       secretName,
 
 			PXC: &pxc.PodSpec{
-				Size:       params.Size,
-				Resources:  c.setComputeResources(params.PXC.ComputeResources),
-				Image:      pxcImage,
-				VolumeSpec: c.volumeSpec(params.PXC.DiskSize),
+				Size:            params.Size,
+				Resources:       c.setComputeResources(params.PXC.ComputeResources),
+				Image:           pxcImage,
+				ImagePullPolicy: pullPolicy,
+				VolumeSpec:      c.volumeSpec(params.PXC.DiskSize),
 				Affinity: &pxc.PodAffinity{
 					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 				},
@@ -469,16 +478,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			},
 
 			PMM: &pxc.PMMSpec{
-				Enabled:    params.PMMPublicAddress != "",
-				ServerHost: params.PMMPublicAddress,
-				ServerUser: "admin",
-				Image:      pmmClientImage,
-				Resources: &common.PodResources{
-					Requests: &common.ResourcesList{
-						Memory: "500M",
-						CPU:    "500m",
-					},
-				},
+				Enabled: false,
 			},
 
 			Backup: &pxc.PXCScheduledBackup{
@@ -498,6 +498,22 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 				ServiceAccountName: "percona-xtradb-cluster-operator",
 			},
 		},
+	}
+	if params.PMM != nil {
+		res.Spec.PMM = &pxc.PMMSpec{
+			Enabled:         true,
+			ServerHost:      params.PMM.PublicAddress,
+			ServerUser:      params.PMM.Login,
+			Image:           pmmClientImage,
+			ImagePullPolicy: pullPolicy,
+			Resources: &common.PodResources{
+				Requests: &common.ResourcesList{
+					Memory: "500M",
+					CPU:    "500m",
+				},
+			},
+		}
+		secrets["pmmserver"] = []byte(params.PMM.Password)
 	}
 
 	var podSpec *pxc.PodSpec
@@ -528,9 +544,15 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	podSpec.Enabled = true
+	podSpec.ImagePullPolicy = pullPolicy
 	podSpec.Size = params.Size
 	podSpec.Affinity = &pxc.PodAffinity{
 		TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
+	}
+
+	err = c.CreateSecret(ctx, secretName, secrets)
+	if err != nil {
+		return errors.Wrap(err, "cannot create secret for PXC")
 	}
 
 	return c.kubeCtl.Apply(ctx, res)
@@ -600,22 +622,31 @@ func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error 
 		return errors.Wrap(err, "cannot delete PXC")
 	}
 
+	err = c.deleteSecret(ctx, fmt.Sprintf(pxcSecretNameTmpl, name))
+	if err != nil {
+		c.l.Errorf("cannot delete secret for %s: %v", name, err)
+	}
+
+	err = c.deleteSecret(ctx, fmt.Sprintf(pxcInternalSecretTmpl, name))
+	if err != nil {
+		c.l.Errorf("cannot delete internal secret for %s: %v", name, err)
+	}
+
+	return nil
+}
+
+func (c *K8sClient) deleteSecret(ctx context.Context, secretName string) error {
 	secret := &common.Secret{
 		TypeMeta: common.TypeMeta{
 			APIVersion: k8sAPIVersion,
 			Kind:       k8sMetaKindSecret,
 		},
 		ObjectMeta: common.ObjectMeta{
-			Name: fmt.Sprintf(pxcSecretNameTmpl, name),
+			Name: secretName,
 		},
 	}
 
-	err = c.kubeCtl.Delete(ctx, secret)
-	if err != nil {
-		c.l.Errorf("cannot delete secret for %s: %v", name, err)
-	}
-
-	return nil
+	return c.kubeCtl.Delete(ctx, secret)
 }
 
 // GetXtraDBClusterCredentials returns an XtraDB cluster credentials.
@@ -849,24 +880,24 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return fmt.Errorf(clusterWithSameNameExistsErrTemplate, params.Name)
 	}
 
-	var secret common.Secret
-	err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, defaultPSMDBSecretName, &secret)
-	if err != nil {
-		return errors.Wrap(err, "cannot get default PSMDB secrets")
-	}
-
 	secretName := fmt.Sprintf(psmdbSecretNameTmpl, params.Name)
-	pwd, err := randSeq(passwordLength)
+	password, err := generatePassword(passwordLength)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate password")
 	}
 
-	data := secret.Data
-	data["MONGODB_USER_ADMIN_PASSWORD"] = []byte(pwd)
-
-	err = c.CreateSecret(ctx, secretName, data)
-	if err != nil {
-		return errors.Wrap(err, "cannot create secret for PXC")
+	// TODO: add a link to ticket to set random password for all other users.
+	// secrets represents stringData part of
+	// https://github.com/percona/percona-xtradb-cluster-operator/blob/main/deploy/secrets.yaml.
+	secrets := map[string][]byte{
+		"MONGODB_BACKUP_USER":              []byte("backup"),
+		"MONGODB_BACKUP_PASSWORD":          []byte(password),
+		"MONGODB_CLUSTER_ADMIN_USER":       []byte("clusterAdmin"),
+		"MONGODB_CLUSTER_ADMIN_PASSWORD":   []byte(password),
+		"MONGODB_CLUSTER_MONITOR_USER":     []byte("clusterMonitor"),
+		"MONGODB_CLUSTER_MONITOR_PASSWORD": []byte(password),
+		"MONGODB_USER_ADMIN_USER":          []byte("userAdmin"),
+		"MONGODB_USER_ADMIN_PASSWORD":      []byte(password),
 	}
 
 	affinity := new(psmdb.PodAffinity)
@@ -918,7 +949,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 				Security: &psmdb.MongodSpecSecurity{
 					RedactClientLogData:  false,
 					EnableEncryption:     pointer.ToBool(true),
-					EncryptionKeySecret:  "my-cluster-name-mongodb-encryption-key",
+					EncryptionKeySecret:  fmt.Sprintf("%s-mongodb-encryption-key", params.Name),
 					EncryptionCipherMode: psmdb.MongodChiperModeCBC,
 				},
 				Storage: &psmdb.MongodSpecStorage{
@@ -998,15 +1029,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			},
 
 			PMM: psmdb.PmmSpec{
-				Enabled:    params.PMMPublicAddress != "",
-				ServerHost: params.PMMPublicAddress,
-				Image:      pmmClientImage,
-				Resources: &common.PodResources{
-					Requests: &common.ResourcesList{
-						Memory: "500M",
-						CPU:    "500m",
-					},
-				},
+				Enabled: false,
 			},
 
 			Backup: psmdb.BackupSpec{
@@ -1019,6 +1042,26 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	if params.Replicaset != nil {
 		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+	}
+	if params.PMM != nil {
+		res.Spec.PMM = psmdb.PmmSpec{
+			Enabled:    true,
+			ServerHost: params.PMM.PublicAddress,
+			Image:      pmmClientImage,
+			Resources: &common.PodResources{
+				Requests: &common.ResourcesList{
+					Memory: "500M",
+					CPU:    "500m",
+				},
+			},
+		}
+		secrets["PMM_SERVER_USER"] = []byte(params.PMM.Login)
+		secrets["PMM_SERVER_PASSWORD"] = []byte(params.PMM.Password)
+	}
+
+	err = c.CreateSecret(ctx, secretName, secrets)
+	if err != nil {
+		return errors.Wrap(err, "cannot create secret for PXC")
 	}
 
 	return c.kubeCtl.Apply(ctx, res)
@@ -1071,19 +1114,18 @@ func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
 		return errors.Wrap(err, "cannot delete PSMDB")
 	}
 
-	secret := &common.Secret{
-		TypeMeta: common.TypeMeta{
-			APIVersion: k8sAPIVersion,
-			Kind:       k8sMetaKindSecret,
-		},
-		ObjectMeta: common.ObjectMeta{
-			Name: fmt.Sprintf(psmdbSecretNameTmpl, name),
-		},
-	}
-
-	err = c.kubeCtl.Delete(ctx, secret)
+	err = c.deleteSecret(ctx, fmt.Sprintf(psmdbSecretNameTmpl, name))
 	if err != nil {
 		c.l.Errorf("cannot delete secret for %s: %v", name, err)
+	}
+
+	psmdbInternalSecrets := []string{"internal-%s-users", "%s-ssl", "%s-ssl-internal", "%-mongodb-keyfile", "%s-mongodb-encryption-key"}
+
+	for _, secretTmpl := range psmdbInternalSecrets {
+		err = c.deleteSecret(ctx, fmt.Sprintf(secretTmpl, name))
+		if err != nil {
+			c.l.Errorf("cannot delete internal secret for %s: %v", name, err)
+		}
 	}
 
 	return nil
