@@ -127,7 +127,14 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 		Replicaset: &k8sclient.Replicaset{
 			DiskSize: convertors.BytesToStr(req.Params.Replicaset.DiskSize),
 		},
-		PMMPublicAddress: req.PmmPublicAddress,
+	}
+
+	if req.Pmm != nil {
+		params.PMM = &k8sclient.PMM{
+			PublicAddress: req.Pmm.PublicAddress,
+			Login:         req.Pmm.Login,
+			Password:      req.Pmm.Password,
+		}
 	}
 
 	if req.Params.Replicaset.ComputeResources != nil {
