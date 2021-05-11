@@ -350,7 +350,7 @@ func TestK8sClient(t *testing.T) {
 		assert.Equal(t, &Operators{
 			Xtradb: Operator{
 				Status:  OperatorStatusOK,
-				Version: "1.7.0",
+				Version: pxcCRVersion,
 			},
 			Psmdb: Operator{
 				Status:  OperatorStatusOK,
