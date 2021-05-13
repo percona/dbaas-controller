@@ -16,3 +16,8 @@
 
 // Package dbaascontroller is a dummy package.
 package dbaascontroller
+
+import "embed"
+
+//go:embed deploy/*
+var DeployDir embed.FS

@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 
+	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
@@ -1718,4 +1719,20 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 
 	defer resp.Body.Close() //nolint:errcheck
 	return json.NewDecoder(resp.Body).Decode(out)
+}
+
+func (c *K8sClient) InstallXtraDBOperator(ctx context.Context) error {
+	file, err := dbaascontroller.DeployDir.ReadFile("deploy/pxc-operator.yaml")
+	if err != nil {
+		return err
+	}
+	return c.kubeCtl.Apply(ctx, file)
+}
+
+func (c *K8sClient) InstallPSMDBOperator(ctx context.Context) error {
+	file, err := dbaascontroller.DeployDir.ReadFile("deploy/psmdb-operator.yaml")
+	if err != nil {
+		return err
+	}
+	return c.kubeCtl.Apply(ctx, file)
 }

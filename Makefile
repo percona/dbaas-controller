@@ -111,7 +111,6 @@ run: install                      ## Run dbaas-controller
 
 env-up:                           ## Start development environment
 	make env-up-start
-	make env-up-wait
 
 env-up-start:
 	minikube config set kubernetes-version $(KUBERNETES_VERSION)
@@ -121,14 +120,9 @@ env-up-start:
 	minikube profile list
 	minikube addons list
 	minikube kubectl -- version
-	cat ./deploy/pxc-operator.yaml | minikube kubectl -- apply -f -
-	cat ./deploy/psmdb-operator.yaml | minikube kubectl -- apply -f -
 	minikube kubectl -- get nodes
 	minikube kubectl -- get pods
 
-env-up-wait:
-	minikube kubectl -- wait --for=condition=Available deployment percona-xtradb-cluster-operator
-	minikube kubectl -- wait --for=condition=Available deployment percona-server-mongodb-operator
 
 env-down:
 	#
@@ -151,14 +145,6 @@ collect-debugdata:                ## Collect debugdata
 eks-setup-test-namespace:
 	kubectl ${KUBECTL_ARGS} create ns "${NAMESPACE}"
 	kubectl ${KUBECTL_ARGS} config set-context --current --namespace="${NAMESPACE}"
-
-eks-install-operators:            ## Install Kubernetes operators in EKS.
-	# Install the PXC operator
-	cat ./deploy/pxc-operator.yaml | kubectl ${KUBECTL_ARGS} apply -f -
-	# Install the PSMDB operator
-	cat ./deploy/psmdb-operator.yaml | kubectl ${KUBECTL_ARGS} apply -f -
-	kubectl ${KUBECTL_ARGS} wait --timeout=60s --for=condition=Available deployment percona-xtradb-cluster-operator
-	kubectl ${KUBECTL_ARGS} wait --timeout=60s --for=condition=Available deployment percona-server-mongodb-operator
 
 eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage.
 	# Delete the PXC operator

@@ -63,6 +63,36 @@ func TestK8sClient(t *testing.T) {
 
 	l := logger.Get(ctx)
 
+	t.Run("Install operators", func(t *testing.T) {
+		err = client.InstallXtraDBOperator(ctx)
+		require.NoError(t, err)
+
+		err = client.InstallPSMDBOperator(ctx)
+		require.NoError(t, err)
+
+		for i := 0; i < 5; i++ {
+			_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-xtradb-cluster-operator"}, nil)
+			if err == nil {
+				break
+			}
+			time.Sleep(3 * time.Second)
+		}
+		require.NoError(t, err)
+		err = client.kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", nil)
+		require.NoError(t, err)
+
+		for i := 0; i < 5; i++ {
+			_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil)
+			if err == nil {
+				break
+			}
+			time.Sleep(3 * time.Second)
+		}
+		require.NoError(t, err)
+		err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", nil)
+		require.NoError(t, err)
+	})
+
 	t.Run("Get non-existing clusters", func(t *testing.T) {
 		t.Parallel()
 		_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdb")
