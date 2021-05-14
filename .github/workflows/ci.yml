@@ -294,11 +294,6 @@ jobs:
         env:
            BASE64_KUBECONFIG: ${{secrets.BASE64_KUBECONFIG}}
 
-      - name: Deploy operators to the test namespace
-        if: steps.setupenv.outputs.exit_code == 0
-        run: |
-          make eks-install-operators
-
       - name: Run tests
         if: steps.setupenv.outputs.exit_code == 0
         run: |

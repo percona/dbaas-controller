@@ -78,7 +78,8 @@ func TestK8sClient(t *testing.T) {
 			time.Sleep(3 * time.Second)
 		}
 		require.NoError(t, err)
-		err = client.kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", nil)
+		var res interface{}
+		err = client.kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", &res)
 		require.NoError(t, err)
 
 		for i := 0; i < 5; i++ {
@@ -89,7 +90,7 @@ func TestK8sClient(t *testing.T) {
 			time.Sleep(3 * time.Second)
 		}
 		require.NoError(t, err)
-		err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", nil)
+		err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
 		require.NoError(t, err)
 	})
 
