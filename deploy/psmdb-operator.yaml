@@ -10,7 +10,7 @@ spec:
     plural: perconaservermongodbs
     singular: perconaservermongodb
     shortNames:
-    - psmdb
+      - psmdb
   scope: Namespaced
   versions:
     - name: v1
@@ -35,6 +35,9 @@ spec:
       storage: false
       served: true
     - name: v1-7-0
+      storage: false
+      served: true
+    - name: v1-8-0
       storage: true
       served: true
     - name: v1alpha1
@@ -65,7 +68,7 @@ spec:
     plural: perconaservermongodbbackups
     singular: perconaservermongodbbackup
     shortNames:
-    - psmdb-backup
+      - psmdb-backup
   scope: Namespaced
   versions:
     - name: v1
@@ -110,7 +113,7 @@ spec:
     plural: perconaservermongodbrestores
     singular: perconaservermongodbrestore
     shortNames:
-    - psmdb-restore
+      - psmdb-restore
   scope: Namespaced
   versions:
     - name: v1
@@ -136,93 +139,93 @@ apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: percona-server-mongodb-operator
 rules:
-- apiGroups:
-  - psmdb.percona.com
-  resources:
-  - perconaservermongodbs
-  - perconaservermongodbs/status
-  - perconaservermongodbbackups
-  - perconaservermongodbbackups/status
-  - perconaservermongodbrestores
-  - perconaservermongodbrestores/status
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  - pods/exec
-  - services
-  - persistentvolumeclaims
-  - secrets
-  - configmaps
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  - replicasets
-  - statefulsets
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
-  - batch
-  resources:
-  - cronjobs
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
-  - policy
-  resources:
-  - poddisruptionbudgets
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
-  - certmanager.k8s.io
-  - cert-manager.io
-  resources:
-  - issuers
-  - certificates
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
+  - apiGroups:
+      - psmdb.percona.com
+    resources:
+      - perconaservermongodbs
+      - perconaservermongodbs/status
+      - perconaservermongodbbackups
+      - perconaservermongodbbackups/status
+      - perconaservermongodbrestores
+      - perconaservermongodbrestores/status
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/exec
+      - services
+      - persistentvolumeclaims
+      - secrets
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - replicasets
+      - statefulsets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - batch
+    resources:
+      - cronjobs
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - certmanager.k8s.io
+      - cert-manager.io
+    resources:
+      - issuers
+      - certificates
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -234,8 +237,8 @@ apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: service-account-percona-server-mongodb-operator
 subjects:
-- kind: ServiceAccount
-  name: percona-server-mongodb-operator
+  - kind: ServiceAccount
+    name: percona-server-mongodb-operator
 roleRef:
   kind: Role
   name: percona-server-mongodb-operator
@@ -258,12 +261,12 @@ spec:
       serviceAccountName: percona-server-mongodb-operator
       containers:
         - name: percona-server-mongodb-operator
-          image: percona/percona-server-mongodb-operator:1.7.0
+          image: percona/percona-server-mongodb-operator:1.8.0
           ports:
-          - containerPort: 60000
-            name: metrics
+            - containerPort: 60000
+              name: metrics
           command:
-          - percona-server-mongodb-operator
+            - percona-server-mongodb-operator
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
