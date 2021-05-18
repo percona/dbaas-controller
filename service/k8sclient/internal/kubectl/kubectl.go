@@ -249,10 +249,14 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 
 	var inBuf bytes.Buffer
 	if stdin != nil {
-		e := json.NewEncoder(&inBuf)
-		e.SetIndent("", "  ")
-		if err := e.Encode(stdin); err != nil {
-			return nil, err
+		if b, ok := stdin.([]byte); ok {
+			inBuf.Write(b)
+		} else {
+			e := json.NewEncoder(&inBuf)
+			e.SetIndent("", "  ")
+			if err := e.Encode(stdin); err != nil {
+				return nil, err
+			}
 		}
 		l.Debugf("Running %s with input:\n%s", argsString, inBuf.String())
 	} else {

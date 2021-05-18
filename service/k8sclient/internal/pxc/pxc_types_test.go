@@ -124,6 +124,7 @@ const expected = `
 `
 
 func TestPXCTypesMarshal(t *testing.T) {
+	t.Parallel()
 	t.Run("check inline marshal", func(t *testing.T) {
 		res := &PerconaXtraDBCluster{
 			TypeMeta: common.TypeMeta{

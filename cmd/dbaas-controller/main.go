@@ -29,6 +29,7 @@ import (
 	_ "github.com/percona-platform/dbaas-controller/catalog" // load messages.
 	"github.com/percona-platform/dbaas-controller/service/cluster"
 	"github.com/percona-platform/dbaas-controller/service/logs"
+	"github.com/percona-platform/dbaas-controller/service/operator"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 	"github.com/percona-platform/dbaas-controller/utils/servers"
@@ -70,6 +71,8 @@ func main() {
 	controllerv1beta1.RegisterPSMDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewPSMDBClusterService(i18nPrinter))
 	controllerv1beta1.RegisterKubernetesClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewKubernetesClusterService(i18nPrinter))
 	controllerv1beta1.RegisterLogsAPIServer(gRPCServer.GetUnderlyingServer(), logs.NewService(i18nPrinter))
+	controllerv1beta1.RegisterXtraDBOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewXtraDBOperatorService(i18nPrinter))
+	controllerv1beta1.RegisterPSMDBOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewPSMDBOperatorService(i18nPrinter))
 
 	go servers.RunDebugServer(ctx, &servers.RunDebugServerOpts{
 		Addr: flags.DebugAddr,
