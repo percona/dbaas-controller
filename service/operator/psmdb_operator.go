@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package operator contains logic related to kubernetes operators.
 package operator
 
 import (
@@ -48,5 +49,5 @@ func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *con
 		return nil, err
 	}
 
-	return &controllerv1beta1.InstallPSMDBOperatorResponse{}, nil
+	return new(controllerv1beta1.InstallPSMDBOperatorResponse), nil
 }

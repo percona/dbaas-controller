@@ -63,7 +63,7 @@ func TestK8sClient(t *testing.T) {
 
 	l := logger.Get(ctx)
 
-	t.Run("Install operators", func(t *testing.T) {
+	t.Run("Install operators", func(t *testing.T) { //nolint:paralleltest
 		err = client.InstallXtraDBOperator(ctx)
 		require.NoError(t, err)
 
@@ -71,7 +71,7 @@ func TestK8sClient(t *testing.T) {
 		require.NoError(t, err)
 
 		for i := 0; i < 5; i++ {
-			_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-xtradb-cluster-operator"}, nil)
+			_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-xtradb-cluster-operator"}, nil) //nolint:paralleltest
 			if err == nil {
 				break
 			}
@@ -83,7 +83,7 @@ func TestK8sClient(t *testing.T) {
 		require.NoError(t, err)
 
 		for i := 0; i < 5; i++ {
-			_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil)
+			_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil) //nolint:paralleltest
 			if err == nil {
 				break
 			}
@@ -376,6 +376,7 @@ func TestK8sClient(t *testing.T) {
 	})
 
 	t.Run("CheckOperators", func(t *testing.T) {
+		t.Parallel()
 		operators, err := client.CheckOperators(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, &Operators{

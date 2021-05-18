@@ -132,6 +132,7 @@ const (
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
 )
 
+// Operator represents kubernetes operator.
 type Operator struct {
 	Status  OperatorStatus
 	Version string

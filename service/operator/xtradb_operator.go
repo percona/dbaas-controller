@@ -48,5 +48,5 @@ func (x XtraDBOperatorService) InstallXtraDBOperator(ctx context.Context, req *c
 		return nil, err
 	}
 
-	return &controllerv1beta1.InstallXtraDBOperatorResponse{}, nil
+	return new(controllerv1beta1.InstallXtraDBOperatorResponse), nil
 }
