@@ -61,6 +61,14 @@ func TestNewKubeCtl(t *testing.T) {
 		require.Error(t, err)
 		assert.True(t, os.IsNotExist(err))
 	})
+
+	t.Run("BasicNewKubeCtl", func(t *testing.T) {
+		kubeCtl, err := NewKubeCtl(ctx, "{")
+		require.Error(t, err)
+		// lookup for kubeconfig path
+		require.NotNil(t, kubeCtl)
+		assert.NoFileExists(t, kubeCtl.kubeconfigPath)
+	})
 }
 
 const kubernetsVersions = `

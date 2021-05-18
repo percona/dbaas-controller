@@ -76,21 +76,26 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 
 	l.Infof("kubectl config: %q", kubeconfigPath)
 
+	k := &KubeCtl{
+		l:              l,
+		kubeconfigPath: kubeconfigPath,
+	}
+
 	// Handle kubectl versions
 	cmd, err := getKubectlCmd(ctx, defaultKubectl, kubeconfigPath)
 	if err != nil {
-		return nil, err
+		e := k.Cleanup()
+		if e != nil {
+			l.Error(e)
+		}
+		return k, err // we return k only for tests
 	}
 
 	l.Infof("Using %q", strings.Join(cmd, " "))
 
 	cmd = append(cmd, fmt.Sprintf("--kubeconfig=%s", kubeconfigPath))
-
-	return &KubeCtl{
-		l:              l,
-		cmd:            cmd,
-		kubeconfigPath: kubeconfigPath,
-	}, nil
+	k.cmd = cmd
+	return k, nil
 }
 
 func saveKubeconfig(kubeconfig string) (string, error) {
@@ -101,10 +106,12 @@ func saveKubeconfig(kubeconfig string) (string, error) {
 
 	_, err = tmpFile.Write([]byte(kubeconfig))
 	if err != nil {
+		_ = os.RemoveAll(tmpFile.Name())
 		return "", err
 	}
 
 	if err := tmpFile.Close(); err != nil {
+		_ = os.RemoveAll(tmpFile.Name())
 		return "", err
 	}
 
