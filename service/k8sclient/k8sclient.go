@@ -428,21 +428,9 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	secretName := fmt.Sprintf(pxcSecretNameTmpl, params.Name)
-	rootPassword, err := generatePassword(passwordLength)
+	secrets, err := c.generateXtraDBPasswords()
 	if err != nil {
-		return errors.Wrap(err, "failed to generate password")
-	}
-
-	// TODO: add a link to ticket to set random password for all other users.
-	// secrets represents stringData part of
-	// https://github.com/percona/percona-server-mongodb-operator/blob/main/deploy/secrets.yaml.
-	secrets := map[string][]byte{
-		"root":         []byte(rootPassword),
-		"xtrabackup":   []byte(rootPassword),
-		"monitor":      []byte(rootPassword),
-		"clustercheck": []byte(rootPassword),
-		"proxyadmin":   []byte(rootPassword),
-		"operator":     []byte(rootPassword),
+		return err
 	}
 
 	storageName := fmt.Sprintf(pxcBackupStorageName, params.Name)
@@ -558,6 +546,45 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	return c.kubeCtl.Apply(ctx, res)
+}
+
+func (c *K8sClient) generateXtraDBPasswords() (map[string][]byte, error) {
+	root, err := generatePassword(passwordLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate root password")
+	}
+	xtrabackup, err := generatePassword(passwordLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate xtrabackup password")
+	}
+	monitor, err := generatePassword(passwordLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate monitor password")
+	}
+	clustercheck, err := generatePassword(passwordLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate clustercheck password")
+	}
+	proxyadmin, err := generatePassword(passwordLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate proxyadmin password")
+	}
+	operator, err := generatePassword(passwordLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate operator password")
+	}
+
+	// secrets represents stringData part of
+	// https://github.com/percona/percona-server-mongodb-operator/blob/main/deploy/secrets.yaml.
+	secrets := map[string][]byte{
+		"root":         []byte(root),
+		"xtrabackup":   []byte(xtrabackup),
+		"monitor":      []byte(monitor),
+		"clustercheck": []byte(clustercheck),
+		"proxyadmin":   []byte(proxyadmin),
+		"operator":     []byte(operator),
+	}
+	return secrets, nil
 }
 
 // UpdateXtraDBCluster changes size of provided Percona XtraDB cluster.
@@ -883,23 +910,9 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 
 	secretName := fmt.Sprintf(psmdbSecretNameTmpl, params.Name)
-	password, err := generatePassword(passwordLength)
+	secrets, err := c.generatePSMDBPasswords()
 	if err != nil {
-		return errors.Wrap(err, "failed to generate password")
-	}
-
-	// TODO: add a link to ticket to set random password for all other users.
-	// secrets represents stringData part of
-	// https://github.com/percona/percona-xtradb-cluster-operator/blob/main/deploy/secrets.yaml.
-	secrets := map[string][]byte{
-		"MONGODB_BACKUP_USER":              []byte("backup"),
-		"MONGODB_BACKUP_PASSWORD":          []byte(password),
-		"MONGODB_CLUSTER_ADMIN_USER":       []byte("clusterAdmin"),
-		"MONGODB_CLUSTER_ADMIN_PASSWORD":   []byte(password),
-		"MONGODB_CLUSTER_MONITOR_USER":     []byte("clusterMonitor"),
-		"MONGODB_CLUSTER_MONITOR_PASSWORD": []byte(password),
-		"MONGODB_USER_ADMIN_USER":          []byte("userAdmin"),
-		"MONGODB_USER_ADMIN_PASSWORD":      []byte(password),
+		return err
 	}
 
 	affinity := new(psmdb.PodAffinity)
@@ -1067,6 +1080,39 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 
 	return c.kubeCtl.Apply(ctx, res)
+}
+
+func (c *K8sClient) generatePSMDBPasswords() (map[string][]byte, error) {
+	backup, err := generatePassword(passwordLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate backup password")
+	}
+	clusterAdmin, err := generatePassword(passwordLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate clusterAdmin password")
+	}
+	clusterMonitor, err := generatePassword(passwordLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate clusterMonitor password")
+	}
+	userAdmin, err := generatePassword(passwordLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate userAdmin password")
+	}
+
+	// secrets represents stringData part of
+	// https://github.com/percona/percona-xtradb-cluster-operator/blob/main/deploy/secrets.yaml.
+	secrets := map[string][]byte{
+		"MONGODB_BACKUP_USER":              []byte("backup"),
+		"MONGODB_BACKUP_PASSWORD":          []byte(backup),
+		"MONGODB_CLUSTER_ADMIN_USER":       []byte("clusterAdmin"),
+		"MONGODB_CLUSTER_ADMIN_PASSWORD":   []byte(clusterAdmin),
+		"MONGODB_CLUSTER_MONITOR_USER":     []byte("clusterMonitor"),
+		"MONGODB_CLUSTER_MONITOR_PASSWORD": []byte(clusterMonitor),
+		"MONGODB_USER_ADMIN_USER":          []byte("userAdmin"),
+		"MONGODB_USER_ADMIN_PASSWORD":      []byte(userAdmin),
+	}
+	return secrets, nil
 }
 
 // UpdatePSMDBCluster changes size of provided percona server for mongodb cluster.
