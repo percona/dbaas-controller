@@ -19,10 +19,8 @@ package k8sclient
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"net/http"
 	"reflect"
 	"strings"
@@ -48,7 +46,6 @@ type ClusterKind string
 const (
 	perconaXtraDBClusterKind = ClusterKind("PerconaXtraDBCluster")
 	perconaServerMongoDBKind = ClusterKind("PerconaServerMongoDB")
-	passwordLength           = 24
 )
 
 // ClusterState represents XtraDB cluster CR state.
@@ -400,21 +397,6 @@ func (c *K8sClient) CreateSecret(ctx context.Context, secretName string, data ma
 	return c.kubeCtl.Apply(ctx, secret)
 }
 
-func generatePassword(n int) (string, error) {
-	// PSMDB do not support all special characters in password https://jira.percona.com/browse/K8SPSMDB-364
-	symbols := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-	symbolsLen := len(symbols)
-	b := make([]rune, n)
-	for i := range b {
-		randomIndex, err := rand.Int(rand.Reader, big.NewInt(int64(symbolsLen)))
-		if err != nil {
-			return "", err
-		}
-		b[i] = symbols[randomIndex.Uint64()]
-	}
-	return string(b), nil
-}
-
 // CreateXtraDBCluster creates Percona XtraDB cluster with provided parameters.
 func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParams) error {
 	if (params.ProxySQL != nil) == (params.HAProxy != nil) {
@@ -428,21 +410,9 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	secretName := fmt.Sprintf(pxcSecretNameTmpl, params.Name)
-	rootPassword, err := generatePassword(passwordLength)
+	secrets, err := generateXtraDBPasswords()
 	if err != nil {
-		return errors.Wrap(err, "failed to generate password")
-	}
-
-	// TODO: add a link to ticket to set random password for all other users.
-	// secrets represents stringData part of
-	// https://github.com/percona/percona-server-mongodb-operator/blob/main/deploy/secrets.yaml.
-	secrets := map[string][]byte{
-		"root":         []byte(rootPassword),
-		"xtrabackup":   []byte(rootPassword),
-		"monitor":      []byte(rootPassword),
-		"clustercheck": []byte(rootPassword),
-		"proxyadmin":   []byte(rootPassword),
-		"operator":     []byte(rootPassword),
+		return err
 	}
 
 	storageName := fmt.Sprintf(pxcBackupStorageName, params.Name)
@@ -883,23 +853,9 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 
 	secretName := fmt.Sprintf(psmdbSecretNameTmpl, params.Name)
-	password, err := generatePassword(passwordLength)
+	secrets, err := generatePSMDBPasswords()
 	if err != nil {
-		return errors.Wrap(err, "failed to generate password")
-	}
-
-	// TODO: add a link to ticket to set random password for all other users.
-	// secrets represents stringData part of
-	// https://github.com/percona/percona-xtradb-cluster-operator/blob/main/deploy/secrets.yaml.
-	secrets := map[string][]byte{
-		"MONGODB_BACKUP_USER":              []byte("backup"),
-		"MONGODB_BACKUP_PASSWORD":          []byte(password),
-		"MONGODB_CLUSTER_ADMIN_USER":       []byte("clusterAdmin"),
-		"MONGODB_CLUSTER_ADMIN_PASSWORD":   []byte(password),
-		"MONGODB_CLUSTER_MONITOR_USER":     []byte("clusterMonitor"),
-		"MONGODB_CLUSTER_MONITOR_PASSWORD": []byte(password),
-		"MONGODB_USER_ADMIN_USER":          []byte("userAdmin"),
-		"MONGODB_USER_ADMIN_PASSWORD":      []byte(password),
+		return err
 	}
 
 	affinity := new(psmdb.PodAffinity)
