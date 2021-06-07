@@ -209,6 +209,7 @@ type PSMDBParams struct {
 	Resume     bool
 	Replicaset *Replicaset
 	PMM        *PMM
+	External   bool
 }
 
 type appStatus struct {
@@ -863,12 +864,14 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType {
 		affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
 
-		// This enables ingress for the cluster and exposes the cluster to the world.
-		// The cluster will have an internal IP and a world accessible hostname.
-		// This feature cannot be tested with minikube. Please use EKS for testing.
-		expose = psmdb.Expose{
-			Enabled:    true,
-			ExposeType: common.ServiceTypeLoadBalancer,
+		if params.External {
+			// This enables ingress for the cluster and exposes the cluster to the world.
+			// The cluster will have an internal IP and a world accessible hostname.
+			// This feature cannot be tested with minikube. Please use EKS for testing.
+			expose = psmdb.Expose{
+				Enabled:    true,
+				ExposeType: common.ServiceTypeLoadBalancer,
+			}
 		}
 	} else {
 		// https://www.percona.com/doc/kubernetes-operator-for-psmongodb/minikube.html
