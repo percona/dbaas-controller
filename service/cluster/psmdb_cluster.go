@@ -101,7 +101,8 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 				TotalSteps:    cluster.DetailedState.CountAllPods(),
 				Message:       cluster.Message,
 			},
-			Params: params,
+			Params:  params,
+			Exposed: cluster.Exposed,
 		}
 
 		if cluster.State == k8sclient.ClusterStateReady && cluster.Pause {
@@ -127,7 +128,7 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 		Replicaset: &k8sclient.Replicaset{
 			DiskSize: convertors.BytesToStr(req.Params.Replicaset.DiskSize),
 		},
-		External: req.Params.External,
+		Expose: req.Expose,
 	}
 
 	if req.Pmm != nil {
