@@ -760,6 +760,8 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 			val.HAProxy = &HAProxy{
 				ComputeResources: c.getComputeResources(cluster.Spec.HAProxy.Resources),
 			}
+			val.Exposed = cluster.Spec.HAProxy.ServiceType != "" &&
+				cluster.Spec.HAProxy.ServiceType != common.ServiceTypeClusterIP
 		}
 		res[i] = val
 	}
@@ -1179,7 +1181,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
 			DetailedState: status,
-			Exposed:       cluster.Spec.Replsets[0].Expose.Enabled,
+			Exposed:       cluster.Spec.Sharding.Mongos.Expose.Enabled,
 		}
 
 		res[i] = val
