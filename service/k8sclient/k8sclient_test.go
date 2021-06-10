@@ -64,10 +64,10 @@ func TestK8sClient(t *testing.T) {
 	l := logger.Get(ctx)
 
 	t.Run("Install operators", func(t *testing.T) { //nolint:paralleltest
-		err = client.InstallXtraDBOperator(ctx)
+		err = client.InstallXtraDBOperator(ctx, "1.8.0")
 		require.NoError(t, err)
 
-		err = client.InstallPSMDBOperator(ctx)
+		err = client.InstallPSMDBOperator(ctx, "1.8.0")
 		require.NoError(t, err)
 
 		for i := 0; i < 5; i++ {

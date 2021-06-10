@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
@@ -31,7 +32,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 
-	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
@@ -127,6 +127,7 @@ const (
 const (
 	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
+	operatorManifestsURLTemplate         = "https://raw.githubusercontent.com/percona/%s/v%s/deploy/bundle.yaml"
 )
 
 // Operator represents kubernetes operator.
@@ -326,6 +327,7 @@ var (
 type K8sClient struct {
 	kubeCtl *kubectl.KubeCtl
 	l       logger.Logger
+	client  *http.Client
 }
 
 // CountReadyPods returns number of pods that are ready and belong to the
@@ -357,6 +359,13 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	return &K8sClient{
 		kubeCtl: kubeCtl,
 		l:       l,
+		client: &http.Client{
+			Timeout: time.Second * 5,
+			Transport: &http.Transport{
+				MaxIdleConns:    1,
+				IdleConnTimeout: 10 * time.Second,
+			},
+		},
 	}, nil
 }
 
@@ -1651,13 +1660,6 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 		}
 	}()
 
-	client := http.Client{
-		Timeout: time.Second * 5,
-		Transport: &http.Transport{
-			MaxIdleConns:    1,
-			IdleConnTimeout: 10 * time.Second,
-		},
-	}
 	req, err := http.NewRequestWithContext(ctx, method, "http://localhost:"+port+"/api"+endpoint, nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to create Kubernetes API request")
@@ -1665,7 +1667,7 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 	var resp *http.Response
 	err = retry.Do(
 		func() error {
-			resp, err = client.Do(req)
+			resp, err = c.client.Do(req)
 			return err
 		},
 		retry.Context(ctx),
@@ -1678,18 +1680,31 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 	return json.NewDecoder(resp.Body).Decode(out)
 }
 
-func (c *K8sClient) InstallXtraDBOperator(ctx context.Context) error {
-	file, err := dbaascontroller.DeployDir.ReadFile("deploy/pxc-operator.yaml")
-	if err != nil {
-		return err
-	}
-	return c.kubeCtl.Apply(ctx, file)
+func (c *K8sClient) InstallXtraDBOperator(ctx context.Context, version string) error {
+	return c.installOperator(ctx, "percona-xtradb-cluster-operator", version)
 }
 
-func (c *K8sClient) InstallPSMDBOperator(ctx context.Context) error {
-	file, err := dbaascontroller.DeployDir.ReadFile("deploy/psmdb-operator.yaml")
+func (c *K8sClient) InstallPSMDBOperator(ctx context.Context, version string) error {
+	return c.installOperator(ctx, "percona-server-mongodb-operator", version)
+}
+
+func (c *K8sClient) installOperator(ctx context.Context, operatorGithubRepoSlug, version string) error {
+	bundleURL := fmt.Sprintf(operatorManifestsURLTemplate, operatorGithubRepoSlug, version)
+	req, err := http.NewRequestWithContext(ctx, "GET", bundleURL, nil)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to fetch operator manifests")
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch operator manifests")
+	}
+	if resp.StatusCode != http.StatusOK {
+		return errors.Errorf("failed to fetch operator manifests, http request ended with status %q", resp.Status)
+	}
+	defer resp.Body.Close()
+	file, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch operator manifests")
 	}
 	return c.kubeCtl.Apply(ctx, file)
 }

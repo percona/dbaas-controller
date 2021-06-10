@@ -43,7 +43,7 @@ func (x XtraDBOperatorService) InstallXtraDBOperator(ctx context.Context, req *c
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	err = client.InstallXtraDBOperator(ctx)
+	err = client.InstallXtraDBOperator(ctx, req.Version)
 	if err != nil {
 		return nil, err
 	}

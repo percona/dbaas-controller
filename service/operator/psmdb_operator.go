@@ -44,7 +44,7 @@ func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *con
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	err = client.InstallPSMDBOperator(ctx)
+	err = client.InstallPSMDBOperator(ctx, req.Version)
 	if err != nil {
 		return nil, err
 	}
