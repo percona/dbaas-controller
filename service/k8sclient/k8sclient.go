@@ -72,21 +72,19 @@ const (
 	k8sAPIVersion     = "v1"
 	k8sMetaKindSecret = "Secret"
 
-	pxcCRVersion            = "1.8.0"
-	pxcBackupImage          = "percona/percona-xtradb-cluster-operator:1.8.0-pxc8.0-backup"
+	pxcBackupImageTemplate  = "percona/percona-xtradb-cluster-operator:%s-pxc8.0-backup"
 	pxcDefaultImage         = "percona/percona-xtradb-cluster:8.0.20-11.1"
 	pxcBackupStorageName    = "pxc-backup-storage-%s"
-	pxcAPIVersion           = "pxc.percona.com/v1-8-0"
+	pxcAPIVersionTemplate   = "pxc.percona.com/v%s"
 	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.8.0-proxysql"
 	pxcHAProxyDefaultImage  = "percona/percona-xtradb-cluster-operator:1.8.0-haproxy"
 	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
 	pxcInternalSecretTmpl   = "internal-%s"
 
-	psmdbCRVersion      = "1.8.0"
-	psmdbBackupImage    = "percona/percona-server-mongodb-operator:1.8.0-backup"
-	psmdbDefaultImage   = "percona/percona-server-mongodb:4.2.8-8"
-	psmdbAPIVersion     = "psmdb.percona.com/v1-8-0"
-	psmdbSecretNameTmpl = "dbaas-%s-psmdb-secrets"
+	psmdbBackupImageTemplate = "percona/percona-server-mongodb-operator:%s-backup"
+	psmdbDefaultImage        = "percona/percona-server-mongodb:4.2.8-8"
+	psmdbAPIVersionTemplate  = "psmdb.percona.com/v%s"
+	psmdbSecretNameTmpl      = "dbaas-%s-psmdb-secrets"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
@@ -194,6 +192,8 @@ type XtraDBParams struct {
 	ProxySQL *ProxySQL
 	PMM      *PMM
 	HAProxy  *HAProxy
+	// Version is a version of installed PXC operator.
+	Version string
 }
 
 // Cluster contains common information related to cluster.
@@ -210,6 +210,8 @@ type PSMDBParams struct {
 	Resume     bool
 	Replicaset *Replicaset
 	PMM        *PMM
+	// Version is a version of installed PSMDB operator.
+	Version string
 }
 
 type appStatus struct {
@@ -432,7 +434,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
-			APIVersion: pxcAPIVersion,
+			APIVersion: fmt.Sprintf(pxcAPIVersionTemplate, strings.Replace(params.Version, ".", "-", -1)),
 			Kind:       string(perconaXtraDBClusterKind),
 		},
 		ObjectMeta: common.ObjectMeta{
@@ -440,7 +442,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
 		},
 		Spec: pxc.PerconaXtraDBClusterSpec{
-			CRVersion:         pxcCRVersion,
+			CRVersion:         params.Version,
 			AllowUnsafeConfig: true,
 			SecretsName:       secretName,
 
@@ -463,7 +465,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			},
 
 			Backup: &pxc.PXCScheduledBackup{
-				Image: pxcBackupImage,
+				Image: fmt.Sprintf(pxcBackupImageTemplate, params.Version),
 				Schedule: []pxc.PXCScheduledBackupSchedule{{
 					Name:        "test",
 					Schedule:    "*/30 * * * *",
@@ -591,8 +593,8 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error {
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
-			APIVersion: pxcAPIVersion,
-			Kind:       string(perconaXtraDBClusterKind),
+			// TODO make sure this works after deletion
+			Kind: string(perconaXtraDBClusterKind),
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name: name,
@@ -893,7 +895,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
-			APIVersion: psmdbAPIVersion,
+			APIVersion: fmt.Sprintf(psmdbAPIVersionTemplate, strings.Replace(params.Version, ".", "-", -1)),
 			Kind:       string(perconaServerMongoDBKind),
 		},
 		ObjectMeta: common.ObjectMeta{
@@ -901,7 +903,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			Finalizers: []string{"delete-psmdb-pvc"},
 		},
 		Spec: psmdb.PerconaServerMongoDBSpec{
-			CRVersion: psmdbCRVersion,
+			CRVersion: params.Version,
 			Image:     psmdbImage,
 			Secrets: &psmdb.SecretsSpec{
 				Users: secretName,
@@ -1001,7 +1003,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 			Backup: psmdb.BackupSpec{
 				Enabled:            true,
-				Image:              psmdbBackupImage,
+				Image:              fmt.Sprintf(psmdbBackupImageTemplate, params.Version),
 				ServiceAccountName: "percona-server-mongodb-operator",
 			},
 		},
@@ -1069,8 +1071,8 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
-			APIVersion: psmdbAPIVersion,
-			Kind:       string(perconaServerMongoDBKind),
+			// TODO MAKE SURE THAT THIS STILL WORKS
+			Kind: string(perconaServerMongoDBKind),
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name: name,
@@ -1308,13 +1310,15 @@ func (c *K8sClient) volumeSpec(diskSize string) *common.VolumeSpec {
 }
 
 // CheckOperators checks if operator installed and have required API version.
-func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
+func (c *K8sClient) CheckOperators(ctx context.Context, pxcOperatorVersion, psmdbOperatorVersion string) (*Operators, error) {
 	output, err := c.kubeCtl.Run(ctx, []string{"api-versions"}, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get api versions list")
 	}
 
 	apiVersions := strings.Split(string(output), "\n")
+	pxcAPIVersion := fmt.Sprintf(pxcAPIVersionTemplate, strings.Replace(pxcOperatorVersion, ".", "-", -1))
+	psmdbAPIVersion := fmt.Sprintf(psmdbAPIVersionTemplate, strings.Replace(psmdbOperatorVersion, ".", "-", -1))
 
 	return &Operators{
 		Xtradb: c.checkOperatorStatus(apiVersions, pxcAPIVersion),

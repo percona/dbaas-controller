@@ -64,7 +64,7 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 	l := logger.Get(ctx)
 	l = l.WithField("component", "kubernetesClusterService")
 
-	operators, err := k8Client.CheckOperators(ctx)
+	operators, err := k8Client.CheckOperators(ctx, req.PxcOperatorVersion, req.PsmdbOperatorVersion)
 	if err != nil {
 		l.Error(err)
 		return resp, nil
