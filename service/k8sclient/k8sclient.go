@@ -75,7 +75,8 @@ const (
 	pxcBackupImageTemplate  = "percona/percona-xtradb-cluster-operator:%s-pxc8.0-backup"
 	pxcDefaultImage         = "percona/percona-xtradb-cluster:8.0.20-11.1"
 	pxcBackupStorageName    = "pxc-backup-storage-%s"
-	pxcAPIVersionTemplate   = "pxc.percona.com/v%s"
+	pxcAPINamespace         = "pxc.percona.com"
+	pxcAPIVersionTemplate   = pxcAPINamespace + "/v%s"
 	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.8.0-proxysql"
 	pxcHAProxyDefaultImage  = "percona/percona-xtradb-cluster-operator:1.8.0-haproxy"
 	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
@@ -83,7 +84,8 @@ const (
 
 	psmdbBackupImageTemplate = "percona/percona-server-mongodb-operator:%s-backup"
 	psmdbDefaultImage        = "percona/percona-server-mongodb:4.2.8-8"
-	psmdbAPIVersionTemplate  = "psmdb.percona.com/v%s"
+	psmdbAPINamespace        = "psmdb.percona.com"
+	psmdbAPIVersionTemplate  = psmdbAPINamespace + "/v%s"
 	psmdbSecretNameTmpl      = "dbaas-%s-psmdb-secrets"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
@@ -116,8 +118,6 @@ type OperatorStatus int32
 const (
 	// OperatorStatusOK represents that operators are installed and have supported API version.
 	OperatorStatusOK OperatorStatus = 1
-	// OperatorStatusUnsupported represents that operators are installed, but doesn't have supported API version.
-	OperatorStatusUnsupported OperatorStatus = 2
 	// OperatorStatusNotInstalled represents that operators are not installed.
 	OperatorStatusNotInstalled OperatorStatus = 3
 )
@@ -1310,41 +1310,31 @@ func (c *K8sClient) volumeSpec(diskSize string) *common.VolumeSpec {
 }
 
 // CheckOperators checks if operator installed and have required API version.
-func (c *K8sClient) CheckOperators(ctx context.Context, pxcOperatorVersion, psmdbOperatorVersion string) (*Operators, error) {
+func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 	output, err := c.kubeCtl.Run(ctx, []string{"api-versions"}, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get api versions list")
 	}
 
 	apiVersions := strings.Split(string(output), "\n")
-	pxcAPIVersion := fmt.Sprintf(pxcAPIVersionTemplate, strings.Replace(pxcOperatorVersion, ".", "-", -1))
-	psmdbAPIVersion := fmt.Sprintf(psmdbAPIVersionTemplate, strings.Replace(psmdbOperatorVersion, ".", "-", -1))
 
 	return &Operators{
-		Xtradb: c.checkOperatorStatus(apiVersions, pxcAPIVersion),
-		Psmdb:  c.checkOperatorStatus(apiVersions, psmdbAPIVersion),
+		Xtradb: c.checkOperatorStatus(apiVersions, pxcAPINamespace),
+		Psmdb:  c.checkOperatorStatus(apiVersions, psmdbAPINamespace),
 	}, nil
 }
 
 // checkOperatorStatus returns if operator is installed and operators version.
 // It checks for all API versions supported by the operator and based on the latest API version in the list
 // figures out which version of operator is installed.
-func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIVersion string) (operator Operator) {
-	apiNamespace := strings.Split(expectedAPIVersion, "/")[0]
+func (c *K8sClient) checkOperatorStatus(installedVersions []string, apiPrefix string) (operator Operator) {
 	operator.Status = OperatorStatusNotInstalled
 	lastVersion, _ := version.NewVersion("v0.0.0")
 	for _, apiVersion := range installedVersions {
-		if !strings.HasPrefix(apiVersion, apiNamespace) {
+		if !strings.HasPrefix(apiVersion, apiPrefix) {
 			continue
 		}
-		if apiVersion == expectedAPIVersion {
-			operator.Status = OperatorStatusOK
-		}
-		if operator.Status == OperatorStatusNotInstalled {
-			operator.Status = OperatorStatusUnsupported
-		}
 		v := strings.Split(apiVersion, "/")[1]
-
 		versionParts := strings.Split(v, "-")
 		if len(versionParts) != 3 {
 			continue
@@ -1355,11 +1345,13 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 			c.l.Warn("can't parse version %s: %s", v, err)
 			continue
 		}
-		if newVersion.LessThanOrEqual(lastVersion) {
-			continue
+		if newVersion.GreaterThan(lastVersion) {
+			lastVersion = newVersion
 		}
-		lastVersion = newVersion
-		operator.Version = lastVersion.String()
+	}
+	operator.Version = lastVersion.String()
+	if lastVersion.String() != "v0.0.0" {
+		operator.Status = OperatorStatusOK
 	}
 	return operator
 }

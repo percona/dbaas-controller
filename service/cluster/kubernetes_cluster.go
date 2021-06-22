@@ -31,7 +31,6 @@ import (
 
 var operatorStatusesMap = map[k8sclient.OperatorStatus]controllerv1beta1.OperatorsStatus{
 	k8sclient.OperatorStatusOK:           controllerv1beta1.OperatorsStatus_OPERATORS_STATUS_OK,
-	k8sclient.OperatorStatusUnsupported:  controllerv1beta1.OperatorsStatus_OPERATORS_STATUS_UNSUPPORTED,
 	k8sclient.OperatorStatusNotInstalled: controllerv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED,
 }
 
@@ -64,7 +63,7 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 	l := logger.Get(ctx)
 	l = l.WithField("component", "kubernetesClusterService")
 
-	operators, err := k8Client.CheckOperators(ctx, req.PxcOperatorVersion, req.PsmdbOperatorVersion)
+	operators, err := k8Client.CheckOperators(ctx)
 	if err != nil {
 		l.Error(err)
 		return resp, nil
