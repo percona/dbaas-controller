@@ -192,8 +192,6 @@ type XtraDBParams struct {
 	ProxySQL *ProxySQL
 	PMM      *PMM
 	HAProxy  *HAProxy
-	// Version is a version of installed PXC operator.
-	Version string
 }
 
 // Cluster contains common information related to cluster.
@@ -210,8 +208,6 @@ type PSMDBParams struct {
 	Resume     bool
 	Replicaset *Replicaset
 	PMM        *PMM
-	// Version is a version of installed PSMDB operator.
-	Version string
 }
 
 type appStatus struct {
@@ -432,9 +428,14 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 		pxcImage = params.PXC.Image
 	}
 
+	operators, err := c.CheckOperators(ctx)
+	if err != nil {
+		return err
+	}
+
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
-			APIVersion: fmt.Sprintf(pxcAPIVersionTemplate, strings.Replace(params.Version, ".", "-", -1)),
+			APIVersion: c.getAPIVersionForPXCOperator(operators),
 			Kind:       string(perconaXtraDBClusterKind),
 		},
 		ObjectMeta: common.ObjectMeta{
@@ -442,7 +443,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
 		},
 		Spec: pxc.PerconaXtraDBClusterSpec{
-			CRVersion:         params.Version,
+			CRVersion:         operators.Xtradb.Version,
 			AllowUnsafeConfig: true,
 			SecretsName:       secretName,
 
@@ -465,7 +466,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			},
 
 			Backup: &pxc.PXCScheduledBackup{
-				Image: fmt.Sprintf(pxcBackupImageTemplate, params.Version),
+				Image: fmt.Sprintf(pxcBackupImageTemplate, operators.Xtradb.Version),
 				Schedule: []pxc.PXCScheduledBackupSchedule{{
 					Name:        "test",
 					Schedule:    "*/30 * * * *",
@@ -591,16 +592,20 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 // DeleteXtraDBCluster deletes Percona XtraDB cluster with provided name.
 func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error {
+	operators, err := c.CheckOperators(ctx)
+	if err != nil {
+		return err
+	}
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
-			// TODO make sure this works after deletion
-			Kind: string(perconaXtraDBClusterKind),
+			APIVersion: c.getAPIVersionForPXCOperator(operators),
+			Kind:       string(perconaXtraDBClusterKind),
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name: name,
 		},
 	}
-	err := c.kubeCtl.Delete(ctx, res)
+	err = c.kubeCtl.Delete(ctx, res)
 	if err != nil {
 		return errors.Wrap(err, "cannot delete PXC")
 	}
@@ -893,9 +898,15 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	if params.Image != "" {
 		psmdbImage = params.Image
 	}
+
+	operators, err := c.CheckOperators(ctx)
+	if err != nil {
+		return err
+	}
+
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
-			APIVersion: fmt.Sprintf(psmdbAPIVersionTemplate, strings.Replace(params.Version, ".", "-", -1)),
+			APIVersion: c.getAPIVersionForPSMDBOperator(operators),
 			Kind:       string(perconaServerMongoDBKind),
 		},
 		ObjectMeta: common.ObjectMeta{
@@ -903,7 +914,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			Finalizers: []string{"delete-psmdb-pvc"},
 		},
 		Spec: psmdb.PerconaServerMongoDBSpec{
-			CRVersion: params.Version,
+			CRVersion: operators.Psmdb.Version,
 			Image:     psmdbImage,
 			Secrets: &psmdb.SecretsSpec{
 				Users: secretName,
@@ -1003,7 +1014,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 			Backup: psmdb.BackupSpec{
 				Enabled:            true,
-				Image:              fmt.Sprintf(psmdbBackupImageTemplate, params.Version),
+				Image:              fmt.Sprintf(psmdbBackupImageTemplate, operators.Psmdb.Version),
 				ServiceAccountName: "percona-server-mongodb-operator",
 			},
 		},
@@ -1069,16 +1080,20 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 // DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
 func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
+	operators, err := c.CheckOperators(ctx)
+	if err != nil {
+		return err
+	}
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
-			// TODO MAKE SURE THAT THIS STILL WORKS
-			Kind: string(perconaServerMongoDBKind),
+			APIVersion: c.getAPIVersionForPSMDBOperator(operators),
+			Kind:       string(perconaServerMongoDBKind),
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name: name,
 		},
 	}
-	err := c.kubeCtl.Delete(ctx, res)
+	err = c.kubeCtl.Delete(ctx, res)
 	if err != nil {
 		return errors.Wrap(err, "cannot delete PSMDB")
 	}
@@ -1675,6 +1690,14 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 
 	defer resp.Body.Close() //nolint:errcheck
 	return json.NewDecoder(resp.Body).Decode(out)
+}
+
+func (c *K8sClient) getAPIVersionForPSMDBOperator(operators *Operators) string {
+	return fmt.Sprintf(psmdbAPIVersionTemplate, strings.Replace(operators.Psmdb.Version, ".", "-", -1))
+}
+
+func (c *K8sClient) getAPIVersionForPXCOperator(operators *Operators) string {
+	return fmt.Sprintf(pxcAPIVersionTemplate, strings.Replace(operators.Xtradb.Version, ".", "-", -1))
 }
 
 func (c *K8sClient) InstallXtraDBOperator(ctx context.Context, version string) error {
