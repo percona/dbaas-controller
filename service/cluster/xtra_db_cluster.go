@@ -138,7 +138,8 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 				TotalSteps:    cluster.DetailedState.CountAllPods(),
 				Message:       cluster.Message,
 			},
-			Params: params,
+			Params:  params,
+			Exposed: cluster.Exposed,
 		}
 
 		if cluster.State == k8sclient.ClusterStateReady && cluster.Pause {
@@ -165,6 +166,7 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 			ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
 			DiskSize:         convertors.BytesToStr(req.Params.Pxc.DiskSize),
 		},
+		Expose: req.Expose,
 	}
 	if req.Params.Proxysql != nil {
 		params.ProxySQL = &k8sclient.ProxySQL{

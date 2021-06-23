@@ -192,6 +192,7 @@ type XtraDBParams struct {
 	ProxySQL *ProxySQL
 	PMM      *PMM
 	HAProxy  *HAProxy
+	Expose   bool
 }
 
 // Cluster contains common information related to cluster.
@@ -208,6 +209,7 @@ type PSMDBParams struct {
 	Resume     bool
 	Replicaset *Replicaset
 	PMM        *PMM
+	Expose     bool
 }
 
 type appStatus struct {
@@ -229,6 +231,7 @@ type XtraDBCluster struct {
 	HAProxy       *HAProxy
 	Pause         bool
 	DetailedState DetailedState
+	Exposed       bool
 }
 
 // PSMDBCluster contains information related to psmdb cluster.
@@ -240,6 +243,7 @@ type PSMDBCluster struct {
 	Message       string
 	Replicaset    *Replicaset
 	DetailedState DetailedState
+	Exposed       bool
 }
 
 // PSMDBCredentials represents PSMDB connection credentials.
@@ -523,7 +527,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	// This enables ingress for the cluster and exposes the cluster to the world.
 	// The cluster will have an internal IP and a world accessible hostname.
 	// This feature cannot be tested with minikube. Please use EKS for testing.
-	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType {
+	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType && params.Expose {
 		podSpec.ServiceType = common.ServiceTypeLoadBalancer
 	}
 
@@ -763,6 +767,8 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 				DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
 			}
+			val.Exposed = cluster.Spec.ProxySQL.ServiceType != "" &&
+				cluster.Spec.ProxySQL.ServiceType != common.ServiceTypeClusterIP
 			res[i] = val
 			continue
 		}
@@ -770,6 +776,8 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 			val.HAProxy = &HAProxy{
 				ComputeResources: c.getComputeResources(cluster.Spec.HAProxy.Resources),
 			}
+			val.Exposed = cluster.Spec.HAProxy.ServiceType != "" &&
+				cluster.Spec.HAProxy.ServiceType != common.ServiceTypeClusterIP
 		}
 		res[i] = val
 	}
@@ -879,12 +887,14 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType {
 		affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
 
-		// This enables ingress for the cluster and exposes the cluster to the world.
-		// The cluster will have an internal IP and a world accessible hostname.
-		// This feature cannot be tested with minikube. Please use EKS for testing.
-		expose = psmdb.Expose{
-			Enabled:    true,
-			ExposeType: common.ServiceTypeLoadBalancer,
+		if params.Expose {
+			// This enables ingress for the cluster and exposes the cluster to the world.
+			// The cluster will have an internal IP and a world accessible hostname.
+			// This feature cannot be tested with minikube. Please use EKS for testing.
+			expose = psmdb.Expose{
+				Enabled:    true,
+				ExposeType: common.ServiceTypeLoadBalancer,
+			}
 		}
 	} else {
 		// https://www.percona.com/doc/kubernetes-operator-for-psmongodb/minikube.html
@@ -1197,6 +1207,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
 			DetailedState: status,
+			Exposed:       cluster.Spec.Sharding.Mongos.Expose.Enabled,
 		}
 
 		res[i] = val
