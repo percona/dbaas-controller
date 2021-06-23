@@ -244,7 +244,9 @@ func (k *KubeCtl) Run(ctx context.Context, args []string, stdin interface{}) ([]
 func run(ctx context.Context, kubectlCmd []string, args []string, stdin interface{}) ([]byte, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "kubectl")
-	args = append(kubectlCmd, args...)
+	cmds := make([]string, len(kubectlCmd))
+	copy(cmds, kubectlCmd)
+	args = append(cmds, args...)
 	argsString := strings.Join(args, " ")
 
 	var inBuf bytes.Buffer
