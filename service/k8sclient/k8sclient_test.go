@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	goversion "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -379,17 +380,13 @@ func TestK8sClient(t *testing.T) {
 		t.Parallel()
 		operators, err := client.CheckOperators(ctx)
 		require.NoError(t, err)
-		assert.Equal(t, &Operators{
-			Xtradb: Operator{
-				Status:  OperatorStatusOK,
-				Version: pxcCRVersion,
-			},
-			Psmdb: Operator{
-				Status:  OperatorStatusOK,
-				Version: psmdbCRVersion,
-			},
-		}, operators,
-		)
+		require.NotNil(t, operators)
+		assert.Equal(t, OperatorStatusOK, operators.Psmdb.Status)
+		assert.Equal(t, OperatorStatusOK, operators.Xtradb.Status)
+		_, err = goversion.NewVersion(operators.Psmdb.Version)
+		require.NoError(t, err)
+		_, err = goversion.NewVersion(operators.Xtradb.Version)
+		require.NoError(t, err)
 	})
 }
 
