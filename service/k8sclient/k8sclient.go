@@ -1113,7 +1113,7 @@ func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
 		c.l.Errorf("cannot delete secret for %s: %v", name, err)
 	}
 
-	psmdbInternalSecrets := []string{"internal-%s-users", "%s-ssl", "%s-ssl-internal", "%-mongodb-keyfile", "%s-mongodb-encryption-key"}
+	psmdbInternalSecrets := []string{"internal-%s-users", "%s-ssl", "%s-ssl-internal", "%s-mongodb-keyfile", "%s-mongodb-encryption-key"}
 
 	for _, secretTmpl := range psmdbInternalSecrets {
 		err = c.deleteSecret(ctx, fmt.Sprintf(secretTmpl, name))
