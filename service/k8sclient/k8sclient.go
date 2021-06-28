@@ -123,7 +123,7 @@ const (
 const (
 	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
-	operatorManifestsURLTemplate         = "https://raw.githubusercontent.com/percona/%s/v%s/deploy/bundle.yaml"
+	operatorManifestsURLTemplate         = "%s/percona/%s/v%s/deploy/bundle.yaml"
 )
 
 // Operator represents kubernetes operator.
@@ -1708,16 +1708,16 @@ func (c *K8sClient) getAPIVersionForPXCOperator(operators *Operators) string {
 	return fmt.Sprintf(pxcAPIVersionTemplate, strings.Replace(operators.Xtradb.Version, ".", "-", -1))
 }
 
-func (c *K8sClient) InstallXtraDBOperator(ctx context.Context, version string) error {
-	return c.installOperator(ctx, "percona-xtradb-cluster-operator", version)
+func (c *K8sClient) InstallXtraDBOperator(ctx context.Context, version string, githubContentURL string) error {
+	return c.installOperator(ctx, "percona-xtradb-cluster-operator", version, githubContentURL)
 }
 
-func (c *K8sClient) InstallPSMDBOperator(ctx context.Context, version string) error {
-	return c.installOperator(ctx, "percona-server-mongodb-operator", version)
+func (c *K8sClient) InstallPSMDBOperator(ctx context.Context, version string, githubContentURL string) error {
+	return c.installOperator(ctx, "percona-server-mongodb-operator", version, githubContentURL)
 }
 
-func (c *K8sClient) installOperator(ctx context.Context, operatorGithubRepoSlug, version string) error {
-	bundleURL := fmt.Sprintf(operatorManifestsURLTemplate, operatorGithubRepoSlug, version)
+func (c *K8sClient) installOperator(ctx context.Context, operatorGithubRepoSlug, version string, githubContentURL string) error {
+	bundleURL := fmt.Sprintf(operatorManifestsURLTemplate, githubContentURL, operatorGithubRepoSlug, version)
 	req, err := http.NewRequestWithContext(ctx, "GET", bundleURL, nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch operator manifests")

@@ -33,6 +33,8 @@ type Flags struct {
 	GRPCAddr string
 	// Debug listen address
 	DebugAddr string
+	// GithubUserContentURL enables air gapped cluster fetching manifests from local github instance or just github like stub.
+	GithubUserContentURL string
 }
 
 // SetupOpts contains options required for app.
@@ -58,6 +60,7 @@ func Setup(opts *SetupOpts) (*Flags, error) {
 	var flags Flags
 	kingpin.Flag("grpc.addr", "gRPC listen address").Default(":20201").StringVar(&flags.GRPCAddr)
 	kingpin.Flag("debug.addr", "Debug listen address").Default(":20203").StringVar(&flags.DebugAddr)
+	kingpin.Flag("github.url", "github url to fetch operator manifests from").Default("https://raw.githubusercontent.com").StringVar(&flags.GithubUserContentURL)
 
 	return &flags, nil
 }
