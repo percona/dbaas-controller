@@ -118,7 +118,7 @@ func TestK8sClient(t *testing.T) {
 		err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
 			Name:     name,
 			Size:     1,
-			PXC:      &PXC{DiskSize: "1000000000"},
+			PXC:      &PXC{Image: "percona/percona-xtradb-cluster:8.0.20-11.1", DiskSize: "1000000000"},
 			ProxySQL: &ProxySQL{DiskSize: "1000000000"},
 			PMM:      pmm,
 		})
@@ -257,7 +257,7 @@ func TestK8sClient(t *testing.T) {
 		err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
 			Name:    clusterName,
 			Size:    1,
-			PXC:     &PXC{DiskSize: "1000000000"},
+			PXC:     &PXC{Image: "percona/percona-xtradb-cluster:8.0.20-11.1", DiskSize: "1000000000"},
 			HAProxy: new(HAProxy),
 			PMM:     pmm,
 		})
@@ -304,6 +304,7 @@ func TestK8sClient(t *testing.T) {
 			Size:       3,
 			Replicaset: &Replicaset{DiskSize: "1000000000"},
 			PMM:        pmm,
+			Image:      "percona/percona-server-mongodb:4.2.8-8",
 		})
 		require.NoError(t, err)
 

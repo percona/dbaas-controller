@@ -72,18 +72,16 @@ const (
 	k8sAPIVersion     = "v1"
 	k8sMetaKindSecret = "Secret"
 
-	pxcBackupImageTemplate  = "percona/percona-xtradb-cluster-operator:%s-pxc8.0-backup"
-	pxcDefaultImage         = "percona/percona-xtradb-cluster:8.0.20-11.1"
-	pxcBackupStorageName    = "pxc-backup-storage-%s"
-	pxcAPINamespace         = "pxc.percona.com"
-	pxcAPIVersionTemplate   = pxcAPINamespace + "/v%s"
-	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.8.0-proxysql"
-	pxcHAProxyDefaultImage  = "percona/percona-xtradb-cluster-operator:1.8.0-haproxy"
-	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
-	pxcInternalSecretTmpl   = "internal-%s"
+	pxcBackupImageTemplate          = "percona/percona-xtradb-cluster-operator:%s-pxc8.0-backup"
+	pxcBackupStorageName            = "pxc-backup-storage-%s"
+	pxcAPINamespace                 = "pxc.percona.com"
+	pxcAPIVersionTemplate           = pxcAPINamespace + "/v%s"
+	pxcProxySQLDefaultImageTemplate = "percona/percona-xtradb-cluster-operator:%s-proxysql"
+	pxcHAProxyDefaultImageTemplate  = "percona/percona-xtradb-cluster-operator:%s-haproxy"
+	pxcSecretNameTmpl               = "dbaas-%s-pxc-secrets"
+	pxcInternalSecretTmpl           = "internal-%s"
 
 	psmdbBackupImageTemplate = "percona/percona-server-mongodb-operator:%s-backup"
-	psmdbDefaultImage        = "percona/percona-server-mongodb:4.2.8-8"
 	psmdbAPINamespace        = "psmdb.percona.com"
 	psmdbAPIVersionTemplate  = psmdbAPINamespace + "/v%s"
 	psmdbSecretNameTmpl      = "dbaas-%s-psmdb-secrets"
@@ -413,6 +411,9 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	if (params.ProxySQL != nil) == (params.HAProxy != nil) {
 		return errors.New("xtradb cluster must have one and only one proxy type defined")
 	}
+	if params.PXC.Image == "" {
+		return errors.New("PXC image can't be empty")
+	}
 
 	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
@@ -427,10 +428,6 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	storageName := fmt.Sprintf(pxcBackupStorageName, params.Name)
-	pxcImage := pxcDefaultImage
-	if params.PXC.Image != "" {
-		pxcImage = params.PXC.Image
-	}
 
 	operators, err := c.CheckOperators(ctx)
 	if err != nil {
@@ -454,7 +451,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			PXC: &pxc.PodSpec{
 				Size:            params.Size,
 				Resources:       c.setComputeResources(params.PXC.ComputeResources),
-				Image:           pxcImage,
+				Image:           params.PXC.Image,
 				ImagePullPolicy: pullPolicy,
 				VolumeSpec:      c.volumeSpec(params.PXC.DiskSize),
 				Affinity: &pxc.PodAffinity{
@@ -508,7 +505,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	if params.ProxySQL != nil {
 		res.Spec.ProxySQL = new(pxc.PodSpec)
 		podSpec = res.Spec.ProxySQL
-		podSpec.Image = pxcProxySQLDefaultImage
+		podSpec.Image = fmt.Sprintf(pxcProxySQLDefaultImageTemplate, operators.Xtradb.Version)
 		if params.ProxySQL.Image != "" {
 			podSpec.Image = params.ProxySQL.Image
 		}
@@ -517,7 +514,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	} else {
 		res.Spec.HAProxy = new(pxc.PodSpec)
 		podSpec = res.Spec.HAProxy
-		podSpec.Image = pxcHAProxyDefaultImage
+		podSpec.Image = fmt.Sprintf(pxcHAProxyDefaultImageTemplate, operators.Xtradb.Version)
 		if params.HAProxy.Image != "" {
 			podSpec.Image = params.HAProxy.Image
 		}
@@ -870,6 +867,10 @@ func (c *K8sClient) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, erro
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
+	if params.Image == "" {
+		return errors.New("PSMDB image can't be empyt")
+	}
+
 	var cluster psmdb.PerconaServerMongoDB
 	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), params.Name, &cluster)
 	if err == nil {
@@ -904,10 +905,6 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		// > (the Operator will be unable to spread the cluster on several nodes)
 		affinity.TopologyKey = pointer.ToString(psmdb.AffinityOff)
 	}
-	psmdbImage := psmdbDefaultImage
-	if params.Image != "" {
-		psmdbImage = params.Image
-	}
 
 	operators, err := c.CheckOperators(ctx)
 	if err != nil {
@@ -925,7 +922,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		},
 		Spec: psmdb.PerconaServerMongoDBSpec{
 			CRVersion: operators.Psmdb.Version,
-			Image:     psmdbImage,
+			Image:     params.Image,
 			Secrets: &psmdb.SecretsSpec{
 				Users: secretName,
 			},
