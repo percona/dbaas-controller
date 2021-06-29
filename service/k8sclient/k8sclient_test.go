@@ -138,7 +138,7 @@ func TestK8sClient(t *testing.T) {
 			err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
 				Name:     name,
 				Size:     1,
-				PXC:      &PXC{DiskSize: "1000000000"},
+				PXC:      &PXC{Image: "percona/percona-xtradb-cluster:8.0.20-11.1", DiskSize: "1000000000"},
 				ProxySQL: &ProxySQL{DiskSize: "1000000000"},
 				PMM:      pmm,
 			})
@@ -325,6 +325,7 @@ func TestK8sClient(t *testing.T) {
 				Size:       1,
 				Replicaset: &Replicaset{DiskSize: "1000000000"},
 				PMM:        pmm,
+				Image:      "percona/percona-server-mongodb:4.2.8-8",
 			})
 			require.Error(t, err)
 			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
@@ -354,8 +355,9 @@ func TestK8sClient(t *testing.T) {
 		l.Info("PSMDB Cluster is restarted")
 
 		err = client.UpdatePSMDBCluster(ctx, &PSMDBParams{
-			Name: name,
-			Size: 5,
+			Name:  name,
+			Size:  5,
+			Image: "percona/percona-server-mongodb:4.2.8-8",
 		})
 		require.NoError(t, err)
 		l.Info("PSMDB Cluster is updated")

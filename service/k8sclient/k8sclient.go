@@ -1688,30 +1688,34 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 	err = retry.Do(
 		func() error {
 			resp, err = c.client.Do(req)
-			return err
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close() //nolint:errcheck
+			return json.NewDecoder(resp.Body).Decode(out)
 		},
 		retry.Context(ctx),
 	)
 	if err != nil {
-		return errors.Wrap(err, "failed to do Kubernetes API request")
+		return errors.Wrap(err, "failed to fetch results from Kubernetes API")
 	}
-
-	defer resp.Body.Close() //nolint:errcheck
-	return json.NewDecoder(resp.Body).Decode(out)
+	return nil
 }
 
 func (c *K8sClient) getAPIVersionForPSMDBOperator(operators *Operators) string {
-	return fmt.Sprintf(psmdbAPIVersionTemplate, strings.Replace(operators.Psmdb.Version, ".", "-", -1))
+	return fmt.Sprintf(psmdbAPIVersionTemplate, strings.ReplaceAll(operators.Psmdb.Version, ".", "-"))
 }
 
 func (c *K8sClient) getAPIVersionForPXCOperator(operators *Operators) string {
-	return fmt.Sprintf(pxcAPIVersionTemplate, strings.Replace(operators.Xtradb.Version, ".", "-", -1))
+	return fmt.Sprintf(pxcAPIVersionTemplate, strings.ReplaceAll(operators.Xtradb.Version, ".", "-"))
 }
 
+// InstallXtraDBOperator installs requested version of PXC operator.
 func (c *K8sClient) InstallXtraDBOperator(ctx context.Context, version string, githubContentURL string) error {
 	return c.installOperator(ctx, "percona-xtradb-cluster-operator", version, githubContentURL)
 }
 
+// InstallPSMDBOperator installs requested version of PSMDB operator.
 func (c *K8sClient) InstallPSMDBOperator(ctx context.Context, version string, githubContentURL string) error {
 	return c.installOperator(ctx, "percona-server-mongodb-operator", version, githubContentURL)
 }
@@ -1729,7 +1733,12 @@ func (c *K8sClient) installOperator(ctx context.Context, operatorGithubRepoSlug,
 	if resp.StatusCode != http.StatusOK {
 		return errors.Errorf("failed to fetch operator manifests, http request ended with status %q", resp.Status)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			c.l.Errorf("failed to close response's body: %v", err)
+		}
+	}()
 	file, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch operator manifests")
