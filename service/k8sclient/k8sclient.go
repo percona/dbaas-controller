@@ -45,7 +45,7 @@ type ClusterKind string
 
 const (
 	perconaXtraDBClusterKind = ClusterKind("PerconaXtraDBCluster")
-	perconaServerMongoDBKind = ClusterKind("perconaservermongodb")
+	perconaServerMongoDBKind = ClusterKind("PerconaServerMongoDB")
 )
 
 // ClusterState represents XtraDB cluster CR state.
