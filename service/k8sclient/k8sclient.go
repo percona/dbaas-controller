@@ -82,10 +82,10 @@ const (
 	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
 	pxcInternalSecretTmpl   = "internal-%s"
 
-	psmdbCRVersion      = "1.8.0"
-	psmdbBackupImage    = "percona/percona-server-mongodb-operator:1.8.0-backup"
+	psmdbCRVersion      = "1.9.0"
+	psmdbBackupImage    = "percona/percona-server-mongodb-operator:1.9.0-backup"
 	psmdbDefaultImage   = "percona/percona-server-mongodb:4.2.8-8"
-	psmdbAPIVersion     = "psmdb.percona.com/v1-8-0"
+	psmdbAPIVersion     = "psmdb.percona.com/v1-9-0"
 	psmdbSecretNameTmpl = "dbaas-%s-psmdb-secrets"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.

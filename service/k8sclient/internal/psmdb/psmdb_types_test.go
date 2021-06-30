@@ -34,7 +34,7 @@ const expected = `
         "name": "test-psmdb"
     },
     "spec": {
-        "crVersion": "1.8.0",
+        "crVersion": "1.9.0",
         "allowUnsafeConfigurations": false,
         "image": "percona/percona-server-mongodb-operator:1.4.0-mongod4.2",
         "mongod": {
@@ -132,7 +132,7 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 				Name: "test-psmdb",
 			},
 			Spec: PerconaServerMongoDBSpec{
-				CRVersion: "1.8.0",
+				CRVersion: "1.9.0",
 				Image:     "percona/percona-server-mongodb-operator:1.4.0-mongod4.2",
 				Secrets: &SecretsSpec{
 					Users: "my-cluster-name-secrets",
