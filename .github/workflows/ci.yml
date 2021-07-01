@@ -15,7 +15,7 @@ on:
 jobs:
   test:
     name: Test
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false
@@ -180,7 +180,7 @@ jobs:
 
   test-on-eks:
     name: Test on EKS
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false
