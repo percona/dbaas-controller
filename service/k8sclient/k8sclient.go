@@ -1626,6 +1626,8 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType kubern
 		if err != nil {
 			return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes")
 		}
+		// TODO We want to use clientcmd.Load in the future to load the kubeconfig from slice of bytes.
+		// This way we can avoid storing the kubeconfig in a temporary file.
 		config, err := clientcmd.BuildConfigFromFlags("", c.kubeconfig)
 		if err != nil {
 			return 0, errors.Wrap(err, "failed to build kubeconfig out of given path")
