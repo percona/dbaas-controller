@@ -361,7 +361,7 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	return &K8sClient{
 		kubeCtl:    kubeCtl,
 		l:          l,
-		kubeconfig: kubeCtl.GetKubeconfigPath(),
+		kubeconfig: kubeconfig,
 	}, nil
 }
 
@@ -1623,9 +1623,11 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType kubern
 		if err != nil {
 			return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes")
 		}
-		// TODO We want to use clientcmd.Load in the future to load the kubeconfig from slice of bytes.
-		// This way we can avoid storing the kubeconfig in a temporary file.
-		config, err := clientcmd.BuildConfigFromFlags("", c.kubeconfig)
+		clientConfig, err := clientcmd.NewClientConfigFromBytes([]byte(c.kubeconfig))
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to build kubeconfig out of given path")
+		}
+		config, err := clientConfig.ClientConfig()
 		if err != nil {
 			return 0, errors.Wrap(err, "failed to build kubeconfig out of given path")
 		}

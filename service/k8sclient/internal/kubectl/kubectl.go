@@ -98,11 +98,6 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 	return k, nil
 }
 
-// GetKubeconfigPath returns kubeconfig path.
-func (k *KubeCtl) GetKubeconfigPath() string {
-	return k.kubeconfigPath
-}
-
 func saveKubeconfig(kubeconfig string) (string, error) {
 	tmpFile, err := ioutil.TempFile("", "dbaas-controller-kubeconfig-*")
 	if err != nil {
