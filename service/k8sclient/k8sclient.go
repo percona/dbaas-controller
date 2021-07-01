@@ -21,13 +21,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"reflect"
 	"strings"
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"github.com/avast/retry-go"
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
@@ -1658,51 +1655,6 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType kubern
 	}
 
 	return 0, nil
-}
-
-// doAPIRequest starts kubectl proxy, does the request described using given endpoint and method,
-// unmarshals the result into the variable out and stops kubectl proxy.
-func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, out interface{}) error {
-	if reflect.ValueOf(out).Kind() != reflect.Ptr {
-		return errors.New("output expected to be pointer")
-	}
-
-	port, err := c.kubeCtl.RunProxy(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err := c.kubeCtl.StopProxy(port)
-		if err != nil {
-			c.l.Error(err)
-		}
-	}()
-
-	client := http.Client{
-		Timeout: time.Second * 5,
-		Transport: &http.Transport{
-			MaxIdleConns:    1,
-			IdleConnTimeout: 10 * time.Second,
-		},
-	}
-	req, err := http.NewRequestWithContext(ctx, method, "http://localhost:"+port+"/api"+endpoint, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to create Kubernetes API request")
-	}
-	var resp *http.Response
-	err = retry.Do(
-		func() error {
-			resp, err = client.Do(req)
-			return err
-		},
-		retry.Context(ctx),
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to do Kubernetes API request")
-	}
-
-	defer resp.Body.Close() //nolint:errcheck
-	return json.NewDecoder(resp.Body).Decode(out)
 }
 
 func (c *K8sClient) InstallXtraDBOperator(ctx context.Context) error {
