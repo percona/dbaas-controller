@@ -597,20 +597,16 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 // DeleteXtraDBCluster deletes Percona XtraDB cluster with provided name.
 func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error {
-	operators, err := c.CheckOperators(ctx)
-	if err != nil {
-		return err
-	}
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
-			APIVersion: c.getAPIVersionForPXCOperator(operators),
+			APIVersion: pxcAPINamespace + "/v1",
 			Kind:       string(perconaXtraDBClusterKind),
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name: name,
 		},
 	}
-	err = c.kubeCtl.Delete(ctx, res)
+	err := c.kubeCtl.Delete(ctx, res)
 	if err != nil {
 		return errors.Wrap(err, "cannot delete PXC")
 	}
@@ -1092,20 +1088,16 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 // DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
 func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
-	operators, err := c.CheckOperators(ctx)
-	if err != nil {
-		return err
-	}
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
-			APIVersion: c.getAPIVersionForPSMDBOperator(operators),
+			APIVersion: psmdbAPINamespace + "/v1",
 			Kind:       string(perconaServerMongoDBKind),
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name: name,
 		},
 	}
-	err = c.kubeCtl.Delete(ctx, res)
+	err := c.kubeCtl.Delete(ctx, res)
 	if err != nil {
 		return errors.Wrap(err, "cannot delete PSMDB")
 	}
