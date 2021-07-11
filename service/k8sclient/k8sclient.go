@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/monitoring"
+
 	"github.com/AlekSi/pointer"
 	"github.com/avast/retry-go"
 	"github.com/hashicorp/go-version"
@@ -1703,4 +1705,93 @@ func (c *K8sClient) InstallPSMDBOperator(ctx context.Context) error {
 		return err
 	}
 	return c.kubeCtl.Apply(ctx, file)
+}
+
+func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
+	files := []string{
+		"deploy/victoriametrics/crds/crd.yaml",
+		"deploy/victoriametrics/operator/rbac.yaml",
+		"deploy/victoriametrics/operator/manager.yaml",
+		"deploy/victoriametrics/crs/vmagent_rbac.yaml",
+		"deploy/victoriametrics/crs/vmnodescrape.yaml",
+		"deploy/victoriametrics/crs/vmpodscrape.yaml",
+	}
+	for _, path := range files {
+		file, err := dbaascontroller.DeployDir.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		err = c.kubeCtl.Apply(ctx, file)
+		if err != nil {
+			return err
+		}
+	}
+
+	secretName := "victoria-metrics-operator"
+	err := c.CreateSecret(ctx, secretName, map[string][]byte{
+		"username": []byte(params.Login),
+		"password": []byte(params.Password),
+	})
+	if err != nil {
+		return err
+	}
+
+	vmagent := vmAgentSpec(params, secretName)
+
+	return c.kubeCtl.Apply(ctx, vmagent)
+}
+
+func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
+	return monitoring.VMAgent{
+		TypeMeta: common.TypeMeta{
+			Kind:       "VMAgent",
+			APIVersion: "operator.victoriametrics.com/v1beta1",
+		},
+		ObjectMeta: common.ObjectMeta{
+			Name: "pmm-vmagent",
+		},
+		Spec: monitoring.VMAgentSpec{
+			ServiceScrapeNamespaceSelector: new(common.LabelSelector),
+			ServiceScrapeSelector:          new(common.LabelSelector),
+			PodScrapeNamespaceSelector:     new(common.LabelSelector),
+			PodScrapeSelector:              new(common.LabelSelector),
+			ProbeSelector:                  new(common.LabelSelector),
+			ProbeNamespaceSelector:         new(common.LabelSelector),
+			StaticScrapeSelector:           new(common.LabelSelector),
+			StaticScrapeNamespaceSelector:  new(common.LabelSelector),
+			ReplicaCount:                   1,
+			Resources: &common.PodResources{
+				Requests: &common.ResourcesList{
+					CPU:    "250m",
+					Memory: "350Mi",
+				},
+				Limits: &common.ResourcesList{
+					CPU:    "500m",
+					Memory: "850Mi",
+				},
+			},
+			AdditionalArgs: map[string]string{
+				"memory.allowedPercent": "40",
+			},
+			RemoteWrite: []monitoring.RemoteWriteSpec{
+				{
+					URL: fmt.Sprintf("%s/api/v1/write", params.PublicAddress),
+					BasicAuth: &monitoring.BasicAuth{
+						Username: common.SecretKeySelector{
+							LocalObjectReference: common.LocalObjectReference{
+								Name: secretName,
+							},
+							Key: "username",
+						},
+						Password: common.SecretKeySelector{
+							LocalObjectReference: common.LocalObjectReference{
+								Name: secretName,
+							},
+							Key: "password",
+						},
+					},
+				},
+			},
+		},
+	}
 }
