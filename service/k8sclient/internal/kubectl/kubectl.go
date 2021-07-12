@@ -280,6 +280,7 @@ func run(ctx context.Context, kubectlCmd []string, args []string, stdin interfac
 	err := cmd.Run()
 	if err != nil {
 		if strings.Contains(errBuf.String(), "NotFound") {
+			l.Warn(errBuf.String())
 			err = ErrNotFound
 		} else {
 			err = &kubeCtlError{
