@@ -33,6 +33,8 @@ type Flags struct {
 	GRPCAddr string
 	// Debug listen address
 	DebugAddr string
+	// Debug enabled.
+	LogDebug bool
 }
 
 // SetupOpts contains options required for app.
@@ -58,6 +60,7 @@ func Setup(opts *SetupOpts) (*Flags, error) {
 	var flags Flags
 	kingpin.Flag("grpc.addr", "gRPC listen address").Default(":20201").StringVar(&flags.GRPCAddr)
 	kingpin.Flag("debug.addr", "Debug listen address").Default(":20203").StringVar(&flags.DebugAddr)
+	kingpin.Flag("debug", "Enable debug").Envar("PMM_DEBUG").BoolVar(&flags.LogDebug)
 
 	return &flags, nil
 }

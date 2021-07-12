@@ -62,7 +62,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     username:
                       description: The secret in the service scrape namespace that
@@ -81,7 +81,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                   type: object
                 bearerToken:
@@ -115,7 +115,7 @@ spec:
                                 must be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                         secret:
                           description: Secret containing data to use for the targets.
@@ -133,7 +133,7 @@ spec:
                                 be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                       type: object
                     caFile:
@@ -159,7 +159,7 @@ spec:
                                 must be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                         secret:
                           description: Secret containing data to use for the targets.
@@ -177,7 +177,7 @@ spec:
                                 be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                       type: object
                     certFile:
@@ -207,14 +207,14 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     serverName:
                       description: Used to verify the hostname for the targets.
                       type: string
                   type: object
               required:
-              - host
+                - host
               type: object
             additionalScrapeConfigs:
               description: AdditionalScrapeConfigs As scrape configs are appended,
@@ -235,7 +235,7 @@ spec:
                   description: Specify whether the Secret or its key must be defined
                   type: boolean
               required:
-              - key
+                - key
               type: object
             affinity:
               description: Affinity If specified, the pod's scheduling constraints.
@@ -263,7 +263,7 @@ spec:
                 description: A single application container that you want to run within
                   a pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
             dnsPolicy:
@@ -324,7 +324,7 @@ spec:
                               must be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       fieldRef:
                         description: 'Selects a field of the pod: supports metadata.name,
@@ -341,7 +341,7 @@ spec:
                               API version.
                             type: string
                         required:
-                        - fieldPath
+                          - fieldPath
                         type: object
                       resourceFieldRef:
                         description: 'Selects a resource of the container: only resources
@@ -355,8 +355,8 @@ spec:
                             type: string
                           divisor:
                             anyOf:
-                            - type: integer
-                            - type: string
+                              - type: integer
+                              - type: string
                             description: Specifies the output format of the exposed
                               resources, defaults to "1"
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -365,7 +365,7 @@ spec:
                             description: 'Required: resource to select'
                             type: string
                         required:
-                        - resource
+                          - resource
                         type: object
                       secretKeyRef:
                         description: Selects a key of a secret in the pod's namespace
@@ -383,11 +383,11 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                     type: object
                 required:
-                - name
+                  - name
                 type: object
               type: array
             host_aliases:
@@ -460,7 +460,7 @@ spec:
                 description: A single application container that you want to run within
                   a pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
             inlineRelabelConfig:
@@ -592,8 +592,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -601,8 +601,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -611,7 +611,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -640,13 +640,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -671,18 +671,18 @@ spec:
             logFormat:
               description: LogFormat for VMAgent to be configured with.
               enum:
-              - default
-              - json
+                - default
+                - json
               type: string
             logLevel:
               description: LogLevel for VMAgent to be configured with. INFO, WARN,
                 ERROR, FATAL, PANIC
               enum:
-              - INFO
-              - WARN
-              - ERROR
-              - FATAL
-              - PANIC
+                - INFO
+                - WARN
+                - ERROR
+                - FATAL
+                - PANIC
               type: string
             nodeScrapeNamespaceSelector:
               description: NodeScrapeNamespaceSelector defines Namespaces to be selected
@@ -714,8 +714,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -758,8 +758,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -792,8 +792,8 @@ spec:
               properties:
                 maxUnavailable:
                   anyOf:
-                  - type: integer
-                  - type: string
+                    - type: integer
+                    - type: string
                   description: An eviction is allowed if at most "maxUnavailable"
                     pods selected by "selector" are unavailable after the eviction,
                     i.e. even in absence of the evicted pod. For example, one can
@@ -802,8 +802,8 @@ spec:
                   x-kubernetes-int-or-string: true
                 minAvailable:
                   anyOf:
-                  - type: integer
-                  - type: string
+                    - type: integer
+                    - type: string
                   description: An eviction is allowed if at least "minAvailable" pods
                     selected by "selector" will still be available after the eviction,
                     i.e. even in the absence of the evicted pod.  So for example you
@@ -868,8 +868,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -912,8 +912,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -966,8 +966,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -1010,8 +1010,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -1070,8 +1070,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -1079,8 +1079,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -1089,7 +1089,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -1118,13 +1118,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -1162,7 +1162,7 @@ spec:
                   description: Specify whether the ConfigMap or its key must be defined
                   type: boolean
               required:
-              - key
+                - key
               type: object
             remoteWrite:
               description: 'RemoteWrite list of victoria metrics /some other remote
@@ -1193,7 +1193,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       username:
                         description: The secret in the service scrape namespace that
@@ -1212,7 +1212,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                     type: object
                   bearerTokenSecret:
@@ -1231,7 +1231,7 @@ spec:
                           defined
                         type: boolean
                     required:
-                    - key
+                      - key
                     type: object
                   inlineUrlRelabelConfig:
                     description: InlineUrlRelabelConfig defines relabeling config
@@ -1293,12 +1293,6 @@ spec:
                           type: string
                       type: object
                     type: array
-                  label:
-                    additionalProperties:
-                      type: string
-                    description: Optional labels in the form 'name=value' to add to
-                      all the metrics before sending them
-                    type: object
                   sendTimeout:
                     description: Timeout for sending a single block of data to -remoteWrite.url
                       (default 1m0s)
@@ -1328,7 +1322,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           secret:
                             description: Secret containing data to use for the targets.
@@ -1347,7 +1341,7 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                       caFile:
@@ -1375,7 +1369,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           secret:
                             description: Secret containing data to use for the targets.
@@ -1394,7 +1388,7 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                       certFile:
@@ -1425,7 +1419,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       serverName:
                         description: Used to verify the hostname for the targets.
@@ -1450,10 +1444,10 @@ spec:
                           be defined
                         type: boolean
                     required:
-                    - key
+                      - key
                     type: object
                 required:
-                - url
+                  - url
                 type: object
               type: array
             remoteWriteSettings:
@@ -1465,6 +1459,12 @@ spec:
                     1s)
                   pattern: '[0-9]+(ms|s|m|h)'
                   type: string
+                label:
+                  additionalProperties:
+                    type: string
+                  description: Optional labels in the form 'name=value' to add to
+                    all the metrics before sending them
+                  type: object
                 maxBlockSize:
                   description: The maximum size in bytes of unpacked request to send
                     to remote storage
@@ -1501,8 +1501,8 @@ spec:
                 limits:
                   additionalProperties:
                     anyOf:
-                    - type: integer
-                    - type: string
+                      - type: integer
+                      - type: string
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   description: 'Limits describes the maximum amount of compute resources
@@ -1511,8 +1511,8 @@ spec:
                 requests:
                   additionalProperties:
                     anyOf:
-                    - type: integer
-                    - type: string
+                      - type: integer
+                      - type: string
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   description: 'Requests describes the minimum amount of compute resources
@@ -1526,8 +1526,8 @@ spec:
               properties:
                 maxSurge:
                   anyOf:
-                  - type: integer
-                  - type: string
+                    - type: integer
+                    - type: string
                   description: 'The maximum number of pods that can be scheduled above
                     the desired number of pods. Value can be an absolute number (ex:
                     5) or a percentage of desired pods (ex: 10%). This can not be
@@ -1542,8 +1542,8 @@ spec:
                   x-kubernetes-int-or-string: true
                 maxUnavailable:
                   anyOf:
-                  - type: integer
-                  - type: string
+                    - type: integer
+                    - type: string
                   description: 'The maximum number of pods that can be unavailable
                     during the update. Value can be an absolute number (ex: 5) or
                     a percentage of desired pods (ex: 10%). Absolute number is calculated
@@ -1664,7 +1664,7 @@ spec:
                         - no profile should be applied."
                       type: string
                   required:
-                  - type
+                    - type
                   type: object
                 supplementalGroups:
                   description: A list of groups applied to the first process run in
@@ -1688,8 +1688,8 @@ spec:
                         description: Value of a property to set
                         type: string
                     required:
-                    - name
-                    - value
+                      - name
+                      - value
                     type: object
                   type: array
                 windowsOptions:
@@ -1751,8 +1751,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -1795,8 +1795,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -2053,7 +2053,7 @@ spec:
                       type: string
                   type: object
               required:
-              - spec
+                - spec
               type: object
             shardCount:
               description: ShardCount - numbers of shards of VMAgent in this case
@@ -2106,8 +2106,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -2115,8 +2115,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -2125,7 +2125,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -2154,13 +2154,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -2212,8 +2212,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -2256,8 +2256,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -2319,17 +2319,17 @@ spec:
                 description: TopologySpreadConstraint specifies how to spread matching
                   pods among the given topology.
                 required:
-                - maxSkew
-                - topologyKey
-                - whenUnsatisfiable
+                  - maxSkew
+                  - topologyKey
+                  - whenUnsatisfiable
                 type: object
               type: array
             updateStrategy:
               description: UpdateStrategy - overrides default update strategy. works
                 only for deployments, statefulset always use OnDelete.
               enum:
-              - Recreate
-              - RollingUpdate
+                - Recreate
+                - RollingUpdate
               type: string
             vmAgentExternalLabelName:
               description: VMAgentExternalLabelName Name of vmAgent external label
@@ -2374,8 +2374,8 @@ spec:
                       SubPath are mutually exclusive.
                     type: string
                 required:
-                - mountPath
-                - name
+                  - mountPath
+                  - name
                 type: object
               type: array
             volumes:
@@ -2386,7 +2386,7 @@ spec:
                 description: Volume represents a named volume in a pod that may be
                   accessed by any container in the pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
           type: object
@@ -2414,17 +2414,17 @@ spec:
               format: int32
               type: integer
           required:
-          - availableReplicas
-          - replicas
-          - unavailableReplicas
-          - updatedReplicas
+            - availableReplicas
+            - replicas
+            - unavailableReplicas
+            - updatedReplicas
           type: object
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -2434,24 +2434,24 @@ metadata:
   name: vmalertmanagers.operator.victoriametrics.com
 spec:
   additionalPrinterColumns:
-  - JSONPath: .spec.version
-    description: The version of VMAlertmanager
-    name: Version
-    type: string
-  - JSONPath: .spec.ReplicaCount
-    description: The desired replicas number of Alertmanagers
-    name: ReplicaCount
-    type: integer
-  - JSONPath: .metadata.creationTimestamp
-    name: Age
-    type: date
+    - JSONPath: .spec.version
+      description: The version of VMAlertmanager
+      name: Version
+      type: string
+    - JSONPath: .spec.ReplicaCount
+      description: The desired replicas number of Alertmanagers
+      name: ReplicaCount
+      type: integer
+    - JSONPath: .metadata.creationTimestamp
+      name: Age
+      type: date
   group: operator.victoriametrics.com
   names:
     kind: VMAlertmanager
     listKind: VMAlertmanagerList
     plural: vmalertmanagers
     shortNames:
-    - vma
+      - vma
     singular: vmalertmanager
   scope: Namespaced
   subresources: {}
@@ -2517,7 +2517,7 @@ spec:
                 description: A single application container that you want to run within
                   a pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
             dnsPolicy:
@@ -2575,7 +2575,7 @@ spec:
                 description: A single application container that you want to run within
                   a pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
             listenLocal:
@@ -2629,8 +2629,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -2638,8 +2638,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -2648,7 +2648,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -2677,13 +2677,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -2726,8 +2726,8 @@ spec:
               properties:
                 maxUnavailable:
                   anyOf:
-                  - type: integer
-                  - type: string
+                    - type: integer
+                    - type: string
                   description: An eviction is allowed if at most "maxUnavailable"
                     pods selected by "selector" are unavailable after the eviction,
                     i.e. even in absence of the evicted pod. For example, one can
@@ -2736,8 +2736,8 @@ spec:
                   x-kubernetes-int-or-string: true
                 minAvailable:
                   anyOf:
-                  - type: integer
-                  - type: string
+                    - type: integer
+                    - type: string
                   description: An eviction is allowed if at least "minAvailable" pods
                     selected by "selector" will still be available after the eviction,
                     i.e. even in the absence of the evicted pod.  So for example you
@@ -2829,8 +2829,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -2838,8 +2838,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -2848,7 +2848,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -2877,13 +2877,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -2918,8 +2918,8 @@ spec:
                 limits:
                   additionalProperties:
                     anyOf:
-                    - type: integer
-                    - type: string
+                      - type: integer
+                      - type: string
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   description: 'Limits describes the maximum amount of compute resources
@@ -2928,8 +2928,8 @@ spec:
                 requests:
                   additionalProperties:
                     anyOf:
-                    - type: integer
-                    - type: string
+                      - type: integer
+                      - type: string
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   description: 'Requests describes the minimum amount of compute resources
@@ -3055,7 +3055,7 @@ spec:
                         - no profile should be applied."
                       type: string
                   required:
-                  - type
+                    - type
                   type: object
                 supplementalGroups:
                   description: A list of groups applied to the first process run in
@@ -3079,8 +3079,8 @@ spec:
                         description: Value of a property to set
                         type: string
                     required:
-                    - name
-                    - value
+                      - name
+                      - value
                     type: object
                   type: array
                 windowsOptions:
@@ -3357,7 +3357,7 @@ spec:
                       type: string
                   type: object
               required:
-              - spec
+                - spec
               type: object
             startupProbe:
               description: StartupProbe that will be added to CRD pod
@@ -3405,8 +3405,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -3414,8 +3414,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -3424,7 +3424,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -3453,13 +3453,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -3502,8 +3502,8 @@ spec:
                       type: string
                     sizeLimit:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: 'Total amount of local storage required for this
                         EmptyDir volume. The size limit is also applicable for memory
                         medium. The maximum usage on memory medium EmptyDir would
@@ -3594,8 +3594,8 @@ spec:
                               description: Name is the name of resource being referenced
                               type: string
                           required:
-                          - kind
-                          - name
+                            - kind
+                            - name
                           type: object
                         resources:
                           description: 'Resources represents the minimum resources
@@ -3604,8 +3604,8 @@ spec:
                             limits:
                               additionalProperties:
                                 anyOf:
-                                - type: integer
-                                - type: string
+                                  - type: integer
+                                  - type: string
                                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                 x-kubernetes-int-or-string: true
                               description: 'Limits describes the maximum amount of
@@ -3614,8 +3614,8 @@ spec:
                             requests:
                               additionalProperties:
                                 anyOf:
-                                - type: integer
-                                - type: string
+                                  - type: integer
+                                  - type: string
                                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                 x-kubernetes-int-or-string: true
                               description: 'Requests describes the minimum amount
@@ -3657,8 +3657,8 @@ spec:
                                       type: string
                                     type: array
                                 required:
-                                - key
-                                - operator
+                                  - key
+                                  - operator
                                 type: object
                               type: array
                             matchLabels:
@@ -3698,8 +3698,8 @@ spec:
                         capacity:
                           additionalProperties:
                             anyOf:
-                            - type: integer
-                            - type: string
+                              - type: integer
+                              - type: string
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           description: Represents the actual resources of the underlying
@@ -3740,8 +3740,8 @@ spec:
                                   a valid value of PersistentVolumeClaimCondition.Type
                                 type: string
                             required:
-                            - status
-                            - type
+                              - status
+                              - type
                             type: object
                           type: array
                         phase:
@@ -3799,9 +3799,9 @@ spec:
                 description: TopologySpreadConstraint specifies how to spread matching
                   pods among the given topology.
                 required:
-                - maxSkew
-                - topologyKey
-                - whenUnsatisfiable
+                  - maxSkew
+                  - topologyKey
+                  - whenUnsatisfiable
                 type: object
               type: array
             volumeMounts:
@@ -3841,8 +3841,8 @@ spec:
                       SubPath are mutually exclusive.
                     type: string
                 required:
-                - mountPath
-                - name
+                  - mountPath
+                  - name
                 type: object
               type: array
             volumes:
@@ -3853,7 +3853,7 @@ spec:
                 description: Volume represents a named volume in a pod that may be
                   accessed by any container in the pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
           type: object
@@ -3886,20 +3886,20 @@ spec:
               format: int32
               type: integer
           required:
-          - availableReplicas
-          - paused
-          - replicas
-          - unavailableReplicas
-          - updatedReplicas
+            - availableReplicas
+            - paused
+            - replicas
+            - unavailableReplicas
+            - updatedReplicas
           type: object
       required:
-      - spec
+        - spec
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -3955,7 +3955,7 @@ spec:
                 description: A single application container that you want to run within
                   a pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
             datasource:
@@ -3983,7 +3983,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     username:
                       description: The secret in the service scrape namespace that
@@ -4002,7 +4002,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                   type: object
                 tlsConfig:
@@ -4027,7 +4027,7 @@ spec:
                                 must be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                         secret:
                           description: Secret containing data to use for the targets.
@@ -4045,7 +4045,7 @@ spec:
                                 be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                       type: object
                     caFile:
@@ -4071,7 +4071,7 @@ spec:
                                 must be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                         secret:
                           description: Secret containing data to use for the targets.
@@ -4089,7 +4089,7 @@ spec:
                                 be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                       type: object
                     certFile:
@@ -4119,7 +4119,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     serverName:
                       description: Used to verify the hostname for the targets.
@@ -4130,7 +4130,7 @@ spec:
                     E.g. http://127.0.0.1:8428
                   type: string
               required:
-              - url
+                - url
               type: object
             dnsPolicy:
               description: DNSPolicy sets DNS policy for the pod
@@ -4193,7 +4193,7 @@ spec:
                               must be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       fieldRef:
                         description: 'Selects a field of the pod: supports metadata.name,
@@ -4210,7 +4210,7 @@ spec:
                               API version.
                             type: string
                         required:
-                        - fieldPath
+                          - fieldPath
                         type: object
                       resourceFieldRef:
                         description: 'Selects a resource of the container: only resources
@@ -4224,8 +4224,8 @@ spec:
                             type: string
                           divisor:
                             anyOf:
-                            - type: integer
-                            - type: string
+                              - type: integer
+                              - type: string
                             description: Specifies the output format of the exposed
                               resources, defaults to "1"
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -4234,7 +4234,7 @@ spec:
                             description: 'Required: resource to select'
                             type: string
                         required:
-                        - resource
+                          - resource
                         type: object
                       secretKeyRef:
                         description: Selects a key of a secret in the pod's namespace
@@ -4252,11 +4252,11 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                     type: object
                 required:
-                - name
+                  - name
                 type: object
               type: array
             hostNetwork:
@@ -4306,7 +4306,7 @@ spec:
                 description: A single application container that you want to run within
                   a pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
             livenessProbe:
@@ -4355,8 +4355,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -4364,8 +4364,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -4374,7 +4374,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -4403,13 +4403,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -4435,17 +4435,17 @@ spec:
               description: LogFormat for VMAlert to be configured with. default or
                 json
               enum:
-              - default
-              - json
+                - default
+                - json
               type: string
             logLevel:
               description: LogLevel for VMAlert to be configured with.
               enum:
-              - INFO
-              - WARN
-              - ERROR
-              - FATAL
-              - PANIC
+                - INFO
+                - WARN
+                - ERROR
+                - FATAL
+                - PANIC
               type: string
             nodeSelector:
               additionalProperties:
@@ -4480,7 +4480,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     username:
                       description: The secret in the service scrape namespace that
@@ -4499,7 +4499,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                   type: object
                 tlsConfig:
@@ -4523,7 +4523,7 @@ spec:
                                 must be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                         secret:
                           description: Secret containing data to use for the targets.
@@ -4541,7 +4541,7 @@ spec:
                                 be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                       type: object
                     caFile:
@@ -4567,7 +4567,7 @@ spec:
                                 must be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                         secret:
                           description: Secret containing data to use for the targets.
@@ -4585,7 +4585,7 @@ spec:
                                 be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                       type: object
                     certFile:
@@ -4615,7 +4615,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     serverName:
                       description: Used to verify the hostname for the targets.
@@ -4625,7 +4625,7 @@ spec:
                   description: AlertManager url. Required parameter. E.g. http://127.0.0.1:9093
                   type: string
               required:
-              - url
+                - url
               type: object
             notifiers:
               description: Notifiers prometheus alertmanager endpoints. Required at
@@ -4657,7 +4657,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       username:
                         description: The secret in the service scrape namespace that
@@ -4676,7 +4676,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                     type: object
                   tlsConfig:
@@ -4702,7 +4702,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           secret:
                             description: Secret containing data to use for the targets.
@@ -4721,7 +4721,7 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                       caFile:
@@ -4749,7 +4749,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           secret:
                             description: Secret containing data to use for the targets.
@@ -4768,7 +4768,7 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                       certFile:
@@ -4799,7 +4799,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       serverName:
                         description: Used to verify the hostname for the targets.
@@ -4809,7 +4809,7 @@ spec:
                     description: AlertManager url. Required parameter. E.g. http://127.0.0.1:9093
                     type: string
                 required:
-                - url
+                  - url
                 type: object
               type: array
             podDisruptionBudget:
@@ -4817,8 +4817,8 @@ spec:
               properties:
                 maxUnavailable:
                   anyOf:
-                  - type: integer
-                  - type: string
+                    - type: integer
+                    - type: string
                   description: An eviction is allowed if at most "maxUnavailable"
                     pods selected by "selector" are unavailable after the eviction,
                     i.e. even in absence of the evicted pod. For example, one can
@@ -4827,8 +4827,8 @@ spec:
                   x-kubernetes-int-or-string: true
                 minAvailable:
                   anyOf:
-                  - type: integer
-                  - type: string
+                    - type: integer
+                    - type: string
                   description: An eviction is allowed if at least "minAvailable" pods
                     selected by "selector" will still be available after the eviction,
                     i.e. even in the absence of the evicted pod.  So for example you
@@ -4919,8 +4919,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -4928,8 +4928,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -4938,7 +4938,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -4967,13 +4967,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -5021,7 +5021,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     username:
                       description: The secret in the service scrape namespace that
@@ -5040,7 +5040,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                   type: object
                 lookback:
@@ -5071,7 +5071,7 @@ spec:
                                 must be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                         secret:
                           description: Secret containing data to use for the targets.
@@ -5089,7 +5089,7 @@ spec:
                                 be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                       type: object
                     caFile:
@@ -5115,7 +5115,7 @@ spec:
                                 must be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                         secret:
                           description: Secret containing data to use for the targets.
@@ -5133,7 +5133,7 @@ spec:
                                 be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                       type: object
                     certFile:
@@ -5163,7 +5163,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     serverName:
                       description: Used to verify the hostname for the targets.
@@ -5173,7 +5173,7 @@ spec:
                   description: URL of the endpoint to send samples to.
                   type: string
               required:
-              - url
+                - url
               type: object
             remoteWrite:
               description: RemoteWrite Optional URL to remote-write compatible storage
@@ -5200,7 +5200,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     username:
                       description: The secret in the service scrape namespace that
@@ -5219,7 +5219,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                   type: object
                 concurrency:
@@ -5264,7 +5264,7 @@ spec:
                                 must be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                         secret:
                           description: Secret containing data to use for the targets.
@@ -5282,7 +5282,7 @@ spec:
                                 be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                       type: object
                     caFile:
@@ -5308,7 +5308,7 @@ spec:
                                 must be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                         secret:
                           description: Secret containing data to use for the targets.
@@ -5326,7 +5326,7 @@ spec:
                                 be defined
                               type: boolean
                           required:
-                          - key
+                            - key
                           type: object
                       type: object
                     certFile:
@@ -5356,7 +5356,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     serverName:
                       description: Used to verify the hostname for the targets.
@@ -5366,7 +5366,7 @@ spec:
                   description: URL of the endpoint to send samples to.
                   type: string
               required:
-              - url
+                - url
               type: object
             replicaCount:
               description: ReplicaCount is the expected size of the VMAlert cluster.
@@ -5380,8 +5380,8 @@ spec:
                 limits:
                   additionalProperties:
                     anyOf:
-                    - type: integer
-                    - type: string
+                      - type: integer
+                      - type: string
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   description: 'Limits describes the maximum amount of compute resources
@@ -5390,8 +5390,8 @@ spec:
                 requests:
                   additionalProperties:
                     anyOf:
-                    - type: integer
-                    - type: string
+                      - type: integer
+                      - type: string
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   description: 'Requests describes the minimum amount of compute resources
@@ -5405,8 +5405,8 @@ spec:
               properties:
                 maxSurge:
                   anyOf:
-                  - type: integer
-                  - type: string
+                    - type: integer
+                    - type: string
                   description: 'The maximum number of pods that can be scheduled above
                     the desired number of pods. Value can be an absolute number (ex:
                     5) or a percentage of desired pods (ex: 10%). This can not be
@@ -5421,8 +5421,8 @@ spec:
                   x-kubernetes-int-or-string: true
                 maxUnavailable:
                   anyOf:
-                  - type: integer
-                  - type: string
+                    - type: integer
+                    - type: string
                   description: 'The maximum number of pods that can be unavailable
                     during the update. Value can be an absolute number (ex: 5) or
                     a percentage of desired pods (ex: 10%). Absolute number is calculated
@@ -5466,8 +5466,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -5519,8 +5519,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -5637,7 +5637,7 @@ spec:
                         - no profile should be applied."
                       type: string
                   required:
-                  - type
+                    - type
                   type: object
                 supplementalGroups:
                   description: A list of groups applied to the first process run in
@@ -5661,8 +5661,8 @@ spec:
                         description: Value of a property to set
                         type: string
                     required:
-                    - name
-                    - value
+                      - name
+                      - value
                     type: object
                   type: array
                 windowsOptions:
@@ -5938,7 +5938,7 @@ spec:
                       type: string
                   type: object
               required:
-              - spec
+                - spec
               type: object
             startupProbe:
               description: StartupProbe that will be added to CRD pod
@@ -5986,8 +5986,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -5995,8 +5995,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -6005,7 +6005,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -6034,13 +6034,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -6111,16 +6111,16 @@ spec:
                 description: TopologySpreadConstraint specifies how to spread matching
                   pods among the given topology.
                 required:
-                - maxSkew
-                - topologyKey
-                - whenUnsatisfiable
+                  - maxSkew
+                  - topologyKey
+                  - whenUnsatisfiable
                 type: object
               type: array
             updateStrategy:
               description: UpdateStrategy - overrides default update strategy.
               enum:
-              - Recreate
-              - RollingUpdate
+                - Recreate
+                - RollingUpdate
               type: string
             volumeMounts:
               description: VolumeMounts allows configuration of additional VolumeMounts
@@ -6159,8 +6159,8 @@ spec:
                       SubPath are mutually exclusive.
                     type: string
                 required:
-                - mountPath
-                - name
+                  - mountPath
+                  - name
                 type: object
               type: array
             volumes:
@@ -6171,11 +6171,11 @@ spec:
                 description: Volume represents a named volume in a pod that may be
                   accessed by any container in the pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
           required:
-          - datasource
+            - datasource
           type: object
         status:
           description: VmAlertStatus defines the observed state of VmAlert
@@ -6201,17 +6201,17 @@ spec:
               format: int32
               type: integer
           required:
-          - availableReplicas
-          - replicas
-          - unavailableReplicas
-          - updatedReplicas
+            - availableReplicas
+            - replicas
+            - unavailableReplicas
+            - updatedReplicas
           type: object
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -6265,7 +6265,7 @@ spec:
                 description: A single application container that you want to run within
                   a pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
             dnsPolicy:
@@ -6314,7 +6314,7 @@ spec:
                               must be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       fieldRef:
                         description: 'Selects a field of the pod: supports metadata.name,
@@ -6331,7 +6331,7 @@ spec:
                               API version.
                             type: string
                         required:
-                        - fieldPath
+                          - fieldPath
                         type: object
                       resourceFieldRef:
                         description: 'Selects a resource of the container: only resources
@@ -6345,8 +6345,8 @@ spec:
                             type: string
                           divisor:
                             anyOf:
-                            - type: integer
-                            - type: string
+                              - type: integer
+                              - type: string
                             description: Specifies the output format of the exposed
                               resources, defaults to "1"
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -6355,7 +6355,7 @@ spec:
                             description: 'Required: resource to select'
                             type: string
                         required:
-                        - resource
+                          - resource
                         type: object
                       secretKeyRef:
                         description: Selects a key of a secret in the pod's namespace
@@ -6373,11 +6373,11 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                     type: object
                 required:
-                - name
+                  - name
                 type: object
               type: array
             hostAliases:
@@ -6521,8 +6521,8 @@ spec:
                                             being referenced
                                           type: string
                                       required:
-                                      - kind
-                                      - name
+                                        - kind
+                                        - name
                                       type: object
                                     serviceName:
                                       description: Specifies the name of the referenced
@@ -6530,8 +6530,8 @@ spec:
                                       type: string
                                     servicePort:
                                       anyOf:
-                                      - type: integer
-                                      - type: string
+                                        - type: integer
+                                        - type: string
                                       description: Specifies the port of the referenced
                                         service.
                                       x-kubernetes-int-or-string: true
@@ -6567,11 +6567,11 @@ spec:
                                     to ImplementationSpecific.'
                                   type: string
                               required:
-                              - backend
+                                - backend
                               type: object
                             type: array
                         required:
-                        - paths
+                          - paths
                         type: object
                     type: object
                   type: array
@@ -6641,7 +6641,7 @@ spec:
                 description: A single application container that you want to run within
                   a pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
             livenessProbe:
@@ -6690,8 +6690,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -6699,8 +6699,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -6709,7 +6709,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -6738,13 +6738,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -6769,17 +6769,17 @@ spec:
             logFormat:
               description: LogFormat for VMAuth to be configured with.
               enum:
-              - default
-              - json
+                - default
+                - json
               type: string
             logLevel:
               description: LogLevel for victoria metrics single to be configured with.
               enum:
-              - INFO
-              - WARN
-              - ERROR
-              - FATAL
-              - PANIC
+                - INFO
+                - WARN
+                - ERROR
+                - FATAL
+                - PANIC
               type: string
             nodeSelector:
               additionalProperties:
@@ -6792,8 +6792,8 @@ spec:
               properties:
                 maxUnavailable:
                   anyOf:
-                  - type: integer
-                  - type: string
+                    - type: integer
+                    - type: string
                   description: An eviction is allowed if at most "maxUnavailable"
                     pods selected by "selector" are unavailable after the eviction,
                     i.e. even in absence of the evicted pod. For example, one can
@@ -6802,8 +6802,8 @@ spec:
                   x-kubernetes-int-or-string: true
                 minAvailable:
                   anyOf:
-                  - type: integer
-                  - type: string
+                    - type: integer
+                    - type: string
                   description: An eviction is allowed if at least "minAvailable" pods
                     selected by "selector" will still be available after the eviction,
                     i.e. even in the absence of the evicted pod.  So for example you
@@ -6894,8 +6894,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -6903,8 +6903,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -6913,7 +6913,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -6942,13 +6942,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -6982,8 +6982,8 @@ spec:
                 limits:
                   additionalProperties:
                     anyOf:
-                    - type: integer
-                    - type: string
+                      - type: integer
+                      - type: string
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   description: 'Limits describes the maximum amount of compute resources
@@ -6992,8 +6992,8 @@ spec:
                 requests:
                   additionalProperties:
                     anyOf:
-                    - type: integer
-                    - type: string
+                      - type: integer
+                      - type: string
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   description: 'Requests describes the minimum amount of compute resources
@@ -7105,7 +7105,7 @@ spec:
                         - no profile should be applied."
                       type: string
                   required:
-                  - type
+                    - type
                   type: object
                 supplementalGroups:
                   description: A list of groups applied to the first process run in
@@ -7129,8 +7129,8 @@ spec:
                         description: Value of a property to set
                         type: string
                     required:
-                    - name
-                    - value
+                      - name
+                      - value
                     type: object
                   type: array
                 windowsOptions:
@@ -7406,7 +7406,7 @@ spec:
                       type: string
                   type: object
               required:
-              - spec
+                - spec
               type: object
             startupProbe:
               description: StartupProbe that will be added to CRD pod
@@ -7454,8 +7454,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -7463,8 +7463,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -7473,7 +7473,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -7502,13 +7502,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -7579,9 +7579,9 @@ spec:
                 description: TopologySpreadConstraint specifies how to spread matching
                   pods among the given topology.
                 required:
-                - maxSkew
-                - topologyKey
-                - whenUnsatisfiable
+                  - maxSkew
+                  - topologyKey
+                  - whenUnsatisfiable
                 type: object
               type: array
             userNamespaceSelector:
@@ -7614,8 +7614,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -7658,8 +7658,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -7709,8 +7709,8 @@ spec:
                       SubPath are mutually exclusive.
                     type: string
                 required:
-                - mountPath
-                - name
+                  - mountPath
+                  - name
                 type: object
               type: array
             volumes:
@@ -7721,7 +7721,7 @@ spec:
                 description: Volume represents a named volume in a pod that may be
                   accessed by any container in the pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
           type: object
@@ -7731,9 +7731,9 @@ spec:
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -7743,25 +7743,25 @@ metadata:
   name: vmclusters.operator.victoriametrics.com
 spec:
   additionalPrinterColumns:
-  - JSONPath: .spec.vminsert.replicaCount
-    description: replicas of VMInsert
-    name: Insert Count
-    type: string
-  - JSONPath: .spec.vmstorage.replicaCount
-    description: replicas of VMStorage
-    name: Storage Count
-    type: string
-  - JSONPath: .spec.vmselect.replicaCount
-    description: replicas of VMSelect
-    name: Select Count
-    type: string
-  - JSONPath: .metadata.creationTimestamp
-    name: Age
-    type: date
-  - JSONPath: .status.clusterStatus
-    description: Current status of cluster
-    name: Status
-    type: string
+    - JSONPath: .spec.vminsert.replicaCount
+      description: replicas of VMInsert
+      name: Insert Count
+      type: string
+    - JSONPath: .spec.vmstorage.replicaCount
+      description: replicas of VMStorage
+      name: Storage Count
+      type: string
+    - JSONPath: .spec.vmselect.replicaCount
+      description: replicas of VMSelect
+      name: Select Count
+      type: string
+    - JSONPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - JSONPath: .status.clusterStatus
+      description: Current status of cluster
+      name: Status
+      type: string
   group: operator.victoriametrics.com
   names:
     kind: VMCluster
@@ -7846,7 +7846,7 @@ spec:
                     description: A single application container that you want to run
                       within a pod.
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
                 dnsPolicy:
@@ -7895,7 +7895,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           fieldRef:
                             description: 'Selects a field of the pod: supports metadata.name,
@@ -7912,7 +7912,7 @@ spec:
                                   API version.
                                 type: string
                             required:
-                            - fieldPath
+                              - fieldPath
                             type: object
                           resourceFieldRef:
                             description: 'Selects a resource of the container: only
@@ -7926,8 +7926,8 @@ spec:
                                 type: string
                               divisor:
                                 anyOf:
-                                - type: integer
-                                - type: string
+                                  - type: integer
+                                  - type: string
                                 description: Specifies the output format of the exposed
                                   resources, defaults to "1"
                                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -7936,7 +7936,7 @@ spec:
                                 description: 'Required: resource to select'
                                 type: string
                             required:
-                            - resource
+                              - resource
                             type: object
                           secretKeyRef:
                             description: Selects a key of a secret in the pod's namespace
@@ -7955,11 +7955,11 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
                 hostNetwork:
@@ -7998,7 +7998,7 @@ spec:
                     description: A single application container that you want to run
                       within a pod.
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
                 insertPorts:
@@ -8063,8 +8063,8 @@ spec:
                                 description: The header field value
                                 type: string
                             required:
-                            - name
-                            - value
+                              - name
+                              - value
                             type: object
                           type: array
                         path:
@@ -8072,8 +8072,8 @@ spec:
                           type: string
                         port:
                           anyOf:
-                          - type: integer
-                          - type: string
+                            - type: integer
+                            - type: string
                           description: Name or number of the port to access on the
                             container. Number must be in the range 1 to 65535. Name
                             must be an IANA_SVC_NAME.
@@ -8083,7 +8083,7 @@ spec:
                             to HTTP.
                           type: string
                       required:
-                      - port
+                        - port
                       type: object
                     initialDelaySeconds:
                       description: 'Number of seconds after the container has started
@@ -8112,14 +8112,14 @@ spec:
                           type: string
                         port:
                           anyOf:
-                          - type: integer
-                          - type: string
+                            - type: integer
+                            - type: string
                           description: Number or name of the port to access on the
                             container. Number must be in the range 1 to 65535. Name
                             must be an IANA_SVC_NAME.
                           x-kubernetes-int-or-string: true
                       required:
-                      - port
+                        - port
                       type: object
                     terminationGracePeriodSeconds:
                       description: Optional duration in seconds the pod needs to terminate
@@ -8147,17 +8147,17 @@ spec:
                   description: LogFormat for VMSelect to be configured with. default
                     or json
                   enum:
-                  - default
-                  - json
+                    - default
+                    - json
                   type: string
                 logLevel:
                   description: LogLevel for VMSelect to be configured with.
                   enum:
-                  - INFO
-                  - WARN
-                  - ERROR
-                  - FATAL
-                  - PANIC
+                    - INFO
+                    - WARN
+                    - ERROR
+                    - FATAL
+                    - PANIC
                   type: string
                 name:
                   type: string
@@ -8172,8 +8172,8 @@ spec:
                   properties:
                     maxUnavailable:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: An eviction is allowed if at most "maxUnavailable"
                         pods selected by "selector" are unavailable after the eviction,
                         i.e. even in absence of the evicted pod. For example, one
@@ -8182,8 +8182,8 @@ spec:
                       x-kubernetes-int-or-string: true
                     minAvailable:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: An eviction is allowed if at least "minAvailable"
                         pods selected by "selector" will still be available after
                         the eviction, i.e. even in the absence of the evicted pod.  So
@@ -8241,8 +8241,8 @@ spec:
                     limits:
                       additionalProperties:
                         anyOf:
-                        - type: integer
-                        - type: string
+                          - type: integer
+                          - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
@@ -8251,8 +8251,8 @@ spec:
                     requests:
                       additionalProperties:
                         anyOf:
-                        - type: integer
-                        - type: string
+                          - type: integer
+                          - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
@@ -8266,8 +8266,8 @@ spec:
                   properties:
                     maxSurge:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: 'The maximum number of pods that can be scheduled
                         above the desired number of pods. Value can be an absolute
                         number (ex: 5) or a percentage of desired pods (ex: 10%).
@@ -8283,8 +8283,8 @@ spec:
                       x-kubernetes-int-or-string: true
                     maxUnavailable:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: 'The maximum number of pods that can be unavailable
                         during the update. Value can be an absolute number (ex: 5)
                         or a percentage of desired pods (ex: 10%). Absolute number
@@ -8404,7 +8404,7 @@ spec:
                             Unconfined - no profile should be applied."
                           type: string
                       required:
-                      - type
+                        - type
                       type: object
                     supplementalGroups:
                       description: A list of groups applied to the first process run
@@ -8428,8 +8428,8 @@ spec:
                             description: Value of a property to set
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     windowsOptions:
@@ -8713,7 +8713,7 @@ spec:
                           type: string
                       type: object
                   required:
-                  - spec
+                    - spec
                   type: object
                 startupProbe:
                   description: StartupProbe that will be added to CRD pod
@@ -8767,16 +8767,16 @@ spec:
                     description: TopologySpreadConstraint specifies how to spread
                       matching pods among the given topology.
                     required:
-                    - maxSkew
-                    - topologyKey
-                    - whenUnsatisfiable
+                      - maxSkew
+                      - topologyKey
+                      - whenUnsatisfiable
                     type: object
                   type: array
                 updateStrategy:
                   description: UpdateStrategy - overrides default update strategy.
                   enum:
-                  - Recreate
-                  - RollingUpdate
+                    - Recreate
+                    - RollingUpdate
                   type: string
                 volumeMounts:
                   description: VolumeMounts allows configuration of additional VolumeMounts
@@ -8817,8 +8817,8 @@ spec:
                           exclusive.
                         type: string
                     required:
-                    - mountPath
-                    - name
+                      - mountPath
+                      - name
                     type: object
                   type: array
                 volumes:
@@ -8830,11 +8830,11 @@ spec:
                     description: Volume represents a named volume in a pod that may
                       be accessed by any container in the pod.
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
               required:
-              - replicaCount
+                - replicaCount
               type: object
             vmselect:
               properties:
@@ -8859,7 +8859,7 @@ spec:
                     description: A single application container that you want to run
                       within a pod.
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
                 dnsPolicy:
@@ -8908,7 +8908,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           fieldRef:
                             description: 'Selects a field of the pod: supports metadata.name,
@@ -8925,7 +8925,7 @@ spec:
                                   API version.
                                 type: string
                             required:
-                            - fieldPath
+                              - fieldPath
                             type: object
                           resourceFieldRef:
                             description: 'Selects a resource of the container: only
@@ -8939,8 +8939,8 @@ spec:
                                 type: string
                               divisor:
                                 anyOf:
-                                - type: integer
-                                - type: string
+                                  - type: integer
+                                  - type: string
                                 description: Specifies the output format of the exposed
                                   resources, defaults to "1"
                                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -8949,7 +8949,7 @@ spec:
                                 description: 'Required: resource to select'
                                 type: string
                             required:
-                            - resource
+                              - resource
                             type: object
                           secretKeyRef:
                             description: Selects a key of a secret in the pod's namespace
@@ -8968,11 +8968,11 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
                 hostNetwork:
@@ -9011,7 +9011,7 @@ spec:
                     description: A single application container that you want to run
                       within a pod.
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
                 livenessProbe:
@@ -9060,8 +9060,8 @@ spec:
                                 description: The header field value
                                 type: string
                             required:
-                            - name
-                            - value
+                              - name
+                              - value
                             type: object
                           type: array
                         path:
@@ -9069,8 +9069,8 @@ spec:
                           type: string
                         port:
                           anyOf:
-                          - type: integer
-                          - type: string
+                            - type: integer
+                            - type: string
                           description: Name or number of the port to access on the
                             container. Number must be in the range 1 to 65535. Name
                             must be an IANA_SVC_NAME.
@@ -9080,7 +9080,7 @@ spec:
                             to HTTP.
                           type: string
                       required:
-                      - port
+                        - port
                       type: object
                     initialDelaySeconds:
                       description: 'Number of seconds after the container has started
@@ -9109,14 +9109,14 @@ spec:
                           type: string
                         port:
                           anyOf:
-                          - type: integer
-                          - type: string
+                            - type: integer
+                            - type: string
                           description: Number or name of the port to access on the
                             container. Number must be in the range 1 to 65535. Name
                             must be an IANA_SVC_NAME.
                           x-kubernetes-int-or-string: true
                       required:
-                      - port
+                        - port
                       type: object
                     terminationGracePeriodSeconds:
                       description: Optional duration in seconds the pod needs to terminate
@@ -9144,17 +9144,17 @@ spec:
                   description: LogFormat for VMSelect to be configured with. default
                     or json
                   enum:
-                  - default
-                  - json
+                    - default
+                    - json
                   type: string
                 logLevel:
                   description: LogLevel for VMSelect to be configured with.
                   enum:
-                  - INFO
-                  - WARN
-                  - ERROR
-                  - FATAL
-                  - PANIC
+                    - INFO
+                    - WARN
+                    - ERROR
+                    - FATAL
+                    - PANIC
                   type: string
                 name:
                   type: string
@@ -9187,8 +9187,8 @@ spec:
                           type: string
                         sizeLimit:
                           anyOf:
-                          - type: integer
-                          - type: string
+                            - type: integer
+                            - type: string
                           description: 'Total amount of local storage required for
                             this EmptyDir volume. The size limit is also applicable
                             for memory medium. The maximum usage on memory medium
@@ -9208,8 +9208,8 @@ spec:
                   properties:
                     maxUnavailable:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: An eviction is allowed if at most "maxUnavailable"
                         pods selected by "selector" are unavailable after the eviction,
                         i.e. even in absence of the evicted pod. For example, one
@@ -9218,8 +9218,8 @@ spec:
                       x-kubernetes-int-or-string: true
                     minAvailable:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: An eviction is allowed if at least "minAvailable"
                         pods selected by "selector" will still be available after
                         the eviction, i.e. even in the absence of the evicted pod.  So
@@ -9277,8 +9277,8 @@ spec:
                     limits:
                       additionalProperties:
                         anyOf:
-                        - type: integer
-                        - type: string
+                          - type: integer
+                          - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
@@ -9287,8 +9287,8 @@ spec:
                     requests:
                       additionalProperties:
                         anyOf:
-                        - type: integer
-                        - type: string
+                          - type: integer
+                          - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
@@ -9403,7 +9403,7 @@ spec:
                             Unconfined - no profile should be applied."
                           type: string
                       required:
-                      - type
+                        - type
                       type: object
                     supplementalGroups:
                       description: A list of groups applied to the first process run
@@ -9427,8 +9427,8 @@ spec:
                             description: Value of a property to set
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     windowsOptions:
@@ -9712,7 +9712,7 @@ spec:
                           type: string
                       type: object
                   required:
-                  - spec
+                    - spec
                   type: object
                 startupProbe:
                   description: StartupProbe that will be added to CRD pod
@@ -9740,8 +9740,8 @@ spec:
                           type: string
                         sizeLimit:
                           anyOf:
-                          - type: integer
-                          - type: string
+                            - type: integer
+                            - type: string
                           description: 'Total amount of local storage required for
                             this EmptyDir volume. The size limit is also applicable
                             for memory medium. The maximum usage on memory medium
@@ -9834,8 +9834,8 @@ spec:
                                     referenced
                                   type: string
                               required:
-                              - kind
-                              - name
+                                - kind
+                                - name
                               type: object
                             resources:
                               description: 'Resources represents the minimum resources
@@ -9844,8 +9844,8 @@ spec:
                                 limits:
                                   additionalProperties:
                                     anyOf:
-                                    - type: integer
-                                    - type: string
+                                      - type: integer
+                                      - type: string
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                   description: 'Limits describes the maximum amount
@@ -9854,8 +9854,8 @@ spec:
                                 requests:
                                   additionalProperties:
                                     anyOf:
-                                    - type: integer
-                                    - type: string
+                                      - type: integer
+                                      - type: string
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                   description: 'Requests describes the minimum amount
@@ -9897,8 +9897,8 @@ spec:
                                           type: string
                                         type: array
                                     required:
-                                    - key
-                                    - operator
+                                      - key
+                                      - operator
                                     type: object
                                   type: array
                                 matchLabels:
@@ -9939,8 +9939,8 @@ spec:
                             capacity:
                               additionalProperties:
                                 anyOf:
-                                - type: integer
-                                - type: string
+                                  - type: integer
+                                  - type: string
                                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                 x-kubernetes-int-or-string: true
                               description: Represents the actual resources of the
@@ -9981,8 +9981,8 @@ spec:
                                       is a valid value of PersistentVolumeClaimCondition.Type
                                     type: string
                                 required:
-                                - status
-                                - type
+                                  - status
+                                  - type
                                 type: object
                               type: array
                             phase:
@@ -10040,9 +10040,9 @@ spec:
                     description: TopologySpreadConstraint specifies how to spread
                       matching pods among the given topology.
                     required:
-                    - maxSkew
-                    - topologyKey
-                    - whenUnsatisfiable
+                      - maxSkew
+                      - topologyKey
+                      - whenUnsatisfiable
                     type: object
                   type: array
                 volumeMounts:
@@ -10084,8 +10084,8 @@ spec:
                           exclusive.
                         type: string
                     required:
-                    - mountPath
-                    - name
+                      - mountPath
+                      - name
                     type: object
                   type: array
                 volumes:
@@ -10097,11 +10097,11 @@ spec:
                     description: Volume represents a named volume in a pod that may
                       be accessed by any container in the pod.
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
               required:
-              - replicaCount
+                - replicaCount
               type: object
             vmstorage:
               properties:
@@ -10123,7 +10123,7 @@ spec:
                     description: A single application container that you want to run
                       within a pod.
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
                 dnsPolicy:
@@ -10172,7 +10172,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           fieldRef:
                             description: 'Selects a field of the pod: supports metadata.name,
@@ -10189,7 +10189,7 @@ spec:
                                   API version.
                                 type: string
                             required:
-                            - fieldPath
+                              - fieldPath
                             type: object
                           resourceFieldRef:
                             description: 'Selects a resource of the container: only
@@ -10203,8 +10203,8 @@ spec:
                                 type: string
                               divisor:
                                 anyOf:
-                                - type: integer
-                                - type: string
+                                  - type: integer
+                                  - type: string
                                 description: Specifies the output format of the exposed
                                   resources, defaults to "1"
                                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -10213,7 +10213,7 @@ spec:
                                 description: 'Required: resource to select'
                                 type: string
                             required:
-                            - resource
+                              - resource
                             type: object
                           secretKeyRef:
                             description: Selects a key of a secret in the pod's namespace
@@ -10232,11 +10232,11 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
                 hostNetwork:
@@ -10271,7 +10271,7 @@ spec:
                     description: A single application container that you want to run
                       within a pod.
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
                 livenessProbe:
@@ -10320,8 +10320,8 @@ spec:
                                 description: The header field value
                                 type: string
                             required:
-                            - name
-                            - value
+                              - name
+                              - value
                             type: object
                           type: array
                         path:
@@ -10329,8 +10329,8 @@ spec:
                           type: string
                         port:
                           anyOf:
-                          - type: integer
-                          - type: string
+                            - type: integer
+                            - type: string
                           description: Name or number of the port to access on the
                             container. Number must be in the range 1 to 65535. Name
                             must be an IANA_SVC_NAME.
@@ -10340,7 +10340,7 @@ spec:
                             to HTTP.
                           type: string
                       required:
-                      - port
+                        - port
                       type: object
                     initialDelaySeconds:
                       description: 'Number of seconds after the container has started
@@ -10369,14 +10369,14 @@ spec:
                           type: string
                         port:
                           anyOf:
-                          - type: integer
-                          - type: string
+                            - type: integer
+                            - type: string
                           description: Number or name of the port to access on the
                             container. Number must be in the range 1 to 65535. Name
                             must be an IANA_SVC_NAME.
                           x-kubernetes-int-or-string: true
                       required:
-                      - port
+                        - port
                       type: object
                     terminationGracePeriodSeconds:
                       description: Optional duration in seconds the pod needs to terminate
@@ -10404,17 +10404,17 @@ spec:
                   description: LogFormat for VMSelect to be configured with. default
                     or json
                   enum:
-                  - default
-                  - json
+                    - default
+                    - json
                   type: string
                 logLevel:
                   description: LogLevel for VMSelect to be configured with.
                   enum:
-                  - INFO
-                  - WARN
-                  - ERROR
-                  - FATAL
-                  - PANIC
+                    - INFO
+                    - WARN
+                    - ERROR
+                    - FATAL
+                    - PANIC
                   type: string
                 maintenanceInsertNodeIDs:
                   description: 'MaintenanceInsertNodeIDs - excludes given node ids
@@ -10448,8 +10448,8 @@ spec:
                   properties:
                     maxUnavailable:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: An eviction is allowed if at most "maxUnavailable"
                         pods selected by "selector" are unavailable after the eviction,
                         i.e. even in absence of the evicted pod. For example, one
@@ -10458,8 +10458,8 @@ spec:
                       x-kubernetes-int-or-string: true
                     minAvailable:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: An eviction is allowed if at least "minAvailable"
                         pods selected by "selector" will still be available after
                         the eviction, i.e. even in the absence of the evicted pod.  So
@@ -10517,8 +10517,8 @@ spec:
                     limits:
                       additionalProperties:
                         anyOf:
-                        - type: integer
-                        - type: string
+                          - type: integer
+                          - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
@@ -10527,8 +10527,8 @@ spec:
                     requests:
                       additionalProperties:
                         anyOf:
-                        - type: integer
-                        - type: string
+                          - type: integer
+                          - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
@@ -10643,7 +10643,7 @@ spec:
                             Unconfined - no profile should be applied."
                           type: string
                       required:
-                      - type
+                        - type
                       type: object
                     supplementalGroups:
                       description: A list of groups applied to the first process run
@@ -10667,8 +10667,8 @@ spec:
                             description: Value of a property to set
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     windowsOptions:
@@ -10952,7 +10952,7 @@ spec:
                           type: string
                       type: object
                   required:
-                  - spec
+                    - spec
                   type: object
                 startupProbe:
                   description: StartupProbe that will be added to CRD pod
@@ -10980,8 +10980,8 @@ spec:
                           type: string
                         sizeLimit:
                           anyOf:
-                          - type: integer
-                          - type: string
+                            - type: integer
+                            - type: string
                           description: 'Total amount of local storage required for
                             this EmptyDir volume. The size limit is also applicable
                             for memory medium. The maximum usage on memory medium
@@ -11074,8 +11074,8 @@ spec:
                                     referenced
                                   type: string
                               required:
-                              - kind
-                              - name
+                                - kind
+                                - name
                               type: object
                             resources:
                               description: 'Resources represents the minimum resources
@@ -11084,8 +11084,8 @@ spec:
                                 limits:
                                   additionalProperties:
                                     anyOf:
-                                    - type: integer
-                                    - type: string
+                                      - type: integer
+                                      - type: string
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                   description: 'Limits describes the maximum amount
@@ -11094,8 +11094,8 @@ spec:
                                 requests:
                                   additionalProperties:
                                     anyOf:
-                                    - type: integer
-                                    - type: string
+                                      - type: integer
+                                      - type: string
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                   description: 'Requests describes the minimum amount
@@ -11137,8 +11137,8 @@ spec:
                                           type: string
                                         type: array
                                     required:
-                                    - key
-                                    - operator
+                                      - key
+                                      - operator
                                     type: object
                                   type: array
                                 matchLabels:
@@ -11179,8 +11179,8 @@ spec:
                             capacity:
                               additionalProperties:
                                 anyOf:
-                                - type: integer
-                                - type: string
+                                  - type: integer
+                                  - type: string
                                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                 x-kubernetes-int-or-string: true
                               description: Represents the actual resources of the
@@ -11221,8 +11221,8 @@ spec:
                                       is a valid value of PersistentVolumeClaimCondition.Type
                                     type: string
                                 required:
-                                - status
-                                - type
+                                  - status
+                                  - type
                                 type: object
                               type: array
                             phase:
@@ -11286,9 +11286,9 @@ spec:
                     description: TopologySpreadConstraint specifies how to spread
                       matching pods among the given topology.
                     required:
-                    - maxSkew
-                    - topologyKey
-                    - whenUnsatisfiable
+                      - maxSkew
+                      - topologyKey
+                      - whenUnsatisfiable
                     type: object
                   type: array
                 vmBackup:
@@ -11321,7 +11321,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     customS3Endpoint:
                       description: Custom S3 endpoint for use with S3-compatible storages
@@ -11387,7 +11387,7 @@ spec:
                                       its key must be defined
                                     type: boolean
                                 required:
-                                - key
+                                  - key
                                 type: object
                               fieldRef:
                                 description: 'Selects a field of the pod: supports
@@ -11405,7 +11405,7 @@ spec:
                                       specified API version.
                                     type: string
                                 required:
-                                - fieldPath
+                                  - fieldPath
                                 type: object
                               resourceFieldRef:
                                 description: 'Selects a resource of the container:
@@ -11420,8 +11420,8 @@ spec:
                                     type: string
                                   divisor:
                                     anyOf:
-                                    - type: integer
-                                    - type: string
+                                      - type: integer
+                                      - type: string
                                     description: Specifies the output format of the
                                       exposed resources, defaults to "1"
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -11430,7 +11430,7 @@ spec:
                                     description: 'Required: resource to select'
                                     type: string
                                 required:
-                                - resource
+                                  - resource
                                 type: object
                               secretKeyRef:
                                 description: Selects a key of a secret in the pod's
@@ -11451,11 +11451,11 @@ spec:
                                       key must be defined
                                     type: boolean
                                 required:
-                                - key
+                                  - key
                                 type: object
                             type: object
                         required:
-                        - name
+                          - name
                         type: object
                       type: array
                     image:
@@ -11476,17 +11476,17 @@ spec:
                       description: LogFormat for VMSelect to be configured with. default
                         or json
                       enum:
-                      - default
-                      - json
+                        - default
+                        - json
                       type: string
                     logLevel:
                       description: LogLevel for VMSelect to be configured with.
                       enum:
-                      - INFO
-                      - WARN
-                      - ERROR
-                      - FATAL
-                      - PANIC
+                        - INFO
+                        - WARN
+                        - ERROR
+                        - FATAL
+                        - PANIC
                       type: string
                     port:
                       description: Port for health check connections
@@ -11500,8 +11500,8 @@ spec:
                         limits:
                           additionalProperties:
                             anyOf:
-                            - type: integer
-                            - type: string
+                              - type: integer
+                              - type: string
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           description: 'Limits describes the maximum amount of compute
@@ -11510,8 +11510,8 @@ spec:
                         requests:
                           additionalProperties:
                             anyOf:
-                            - type: integer
-                            - type: string
+                              - type: integer
+                              - type: string
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           description: 'Requests describes the minimum amount of compute
@@ -11560,12 +11560,12 @@ spec:
                               exclusive.
                             type: string
                         required:
-                        - mountPath
-                        - name
+                          - mountPath
+                          - name
                         type: object
                       type: array
                   required:
-                  - acceptEULA
+                    - acceptEULA
                   type: object
                 vmInsertPort:
                   description: VMInsertPort for VMInsert connections
@@ -11612,8 +11612,8 @@ spec:
                           exclusive.
                         type: string
                     required:
-                    - mountPath
-                    - name
+                      - mountPath
+                      - name
                     type: object
                   type: array
                 volumes:
@@ -11625,14 +11625,14 @@ spec:
                     description: Volume represents a named volume in a pod that may
                       be accessed by any container in the pod.
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
               required:
-              - replicaCount
+                - replicaCount
               type: object
           required:
-          - retentionPeriod
+            - retentionPeriod
           type: object
         status:
           description: VMClusterStatus defines the observed state of VMCluster
@@ -11648,17 +11648,17 @@ spec:
               description: Deprecated.
               type: integer
           required:
-          - clusterStatus
-          - updateFailCount
+            - clusterStatus
+            - updateFailCount
           type: object
       required:
-      - spec
+        - spec
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -11717,7 +11717,7 @@ spec:
                       description: Specify whether the Secret or its key must be defined
                       type: boolean
                   required:
-                  - key
+                    - key
                   type: object
                 username:
                   description: The secret in the service scrape namespace that contains
@@ -11735,7 +11735,7 @@ spec:
                       description: Specify whether the Secret or its key must be defined
                       type: boolean
                   required:
-                  - key
+                    - key
                   type: object
               type: object
             bearerTokenFile:
@@ -11757,7 +11757,7 @@ spec:
                   description: Specify whether the Secret or its key must be defined
                   type: boolean
               required:
-              - key
+                - key
               type: object
             honorLabels:
               description: HonorLabels chooses the metric's labels on collisions with
@@ -11945,8 +11945,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -11986,7 +11986,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     secret:
                       description: Secret containing data to use for the targets.
@@ -12004,7 +12004,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                   type: object
                 caFile:
@@ -12029,7 +12029,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                     secret:
                       description: Secret containing data to use for the targets.
@@ -12047,7 +12047,7 @@ spec:
                             be defined
                           type: boolean
                       required:
-                      - key
+                        - key
                       type: object
                   type: object
                 certFile:
@@ -12076,7 +12076,7 @@ spec:
                       description: Specify whether the Secret or its key must be defined
                       type: boolean
                   required:
-                  - key
+                    - key
                   type: object
                 serverName:
                   description: Used to verify the hostname for the targets.
@@ -12089,9 +12089,9 @@ spec:
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -12173,7 +12173,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       username:
                         description: The secret in the service scrape namespace that
@@ -12192,7 +12192,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                     type: object
                   bearerTokenFile:
@@ -12216,7 +12216,7 @@ spec:
                           defined
                         type: boolean
                     required:
-                    - key
+                      - key
                     type: object
                   honorLabels:
                     description: HonorLabels chooses the metric's labels on collisions
@@ -12374,8 +12374,8 @@ spec:
                     type: string
                   targetPort:
                     anyOf:
-                    - type: integer
-                    - type: string
+                      - type: integer
+                      - type: string
                     description: 'Deprecated: Use ''port'' instead.'
                     x-kubernetes-int-or-string: true
                   tlsConfig:
@@ -12402,7 +12402,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           secret:
                             description: Secret containing data to use for the targets.
@@ -12421,7 +12421,7 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                       caFile:
@@ -12449,7 +12449,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           secret:
                             description: Secret containing data to use for the targets.
@@ -12468,7 +12468,7 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                       certFile:
@@ -12499,7 +12499,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       serverName:
                         description: Used to verify the hostname for the targets.
@@ -12547,8 +12547,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -12562,8 +12562,8 @@ spec:
                   type: object
               type: object
           required:
-          - podMetricsEndpoints
-          - selector
+            - podMetricsEndpoints
+            - selector
           type: object
         status:
           description: VMPodScrapeStatus defines the observed state of VMPodScrape
@@ -12571,9 +12571,9 @@ spec:
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -12738,8 +12738,8 @@ spec:
                                   type: string
                                 type: array
                             required:
-                            - key
-                            - operator
+                              - key
+                              - operator
                             type: object
                           type: array
                         matchLabels:
@@ -12830,7 +12830,7 @@ spec:
                         type: string
                       type: array
                   required:
-                  - targets
+                    - targets
                   type: object
               type: object
             vmProberSpec:
@@ -12848,22 +12848,22 @@ spec:
                   description: Mandatory URL of the prober.
                   type: string
               required:
-              - url
+                - url
               type: object
           required:
-          - vmProberSpec
+            - vmProberSpec
           type: object
         status:
           description: VMProbeStatus defines the observed state of VMProbe
           type: object
       required:
-      - spec
+        - spec
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -12930,8 +12930,8 @@ spec:
                           type: object
                         expr:
                           anyOf:
-                          - type: integer
-                          - type: string
+                            - type: integer
+                            - type: string
                           description: Expr is query, that will be evaluated at dataSource
                           x-kubernetes-int-or-string: true
                         for:
@@ -12950,24 +12950,24 @@ spec:
                       type: object
                     type: array
                 required:
-                - name
-                - rules
+                  - name
+                  - rules
                 type: object
               type: array
           required:
-          - groups
+            - groups
           type: object
         status:
           description: VMRuleStatus defines the observed state of VMRule
           type: object
       required:
-      - spec
+        - spec
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -13012,9 +13012,9 @@ spec:
                 endpointslices. note, that with service setting, you have to use port:
                 "name" and cannot use targetPort for endpoints.'
               enum:
-              - endpoints
-              - service
-              - endpointslices
+                - endpoints
+                - service
+                - endpointslices
               type: string
             endpoints:
               description: A list of endpoints allowed as part of this ServiceScrape.
@@ -13043,7 +13043,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       username:
                         description: The secret in the service scrape namespace that
@@ -13062,7 +13062,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                     type: object
                   bearerTokenFile:
@@ -13086,7 +13086,7 @@ spec:
                           defined
                         type: boolean
                     required:
-                    - key
+                      - key
                     type: object
                   honorLabels:
                     description: HonorLabels chooses the metric's labels on collisions
@@ -13244,8 +13244,8 @@ spec:
                     type: string
                   targetPort:
                     anyOf:
-                    - type: integer
-                    - type: string
+                      - type: integer
+                      - type: string
                     description: Name or number of the pod port this endpoint refers
                       to. Mutually exclusive with port.
                     x-kubernetes-int-or-string: true
@@ -13273,7 +13273,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           secret:
                             description: Secret containing data to use for the targets.
@@ -13292,7 +13292,7 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                       caFile:
@@ -13320,7 +13320,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           secret:
                             description: Secret containing data to use for the targets.
@@ -13339,7 +13339,7 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                       certFile:
@@ -13370,7 +13370,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       serverName:
                         description: Used to verify the hostname for the targets.
@@ -13436,8 +13436,8 @@ spec:
                           type: string
                         type: array
                     required:
-                    - key
-                    - operator
+                      - key
+                      - operator
                     type: object
                   type: array
                 matchLabels:
@@ -13457,20 +13457,20 @@ spec:
                 type: string
               type: array
           required:
-          - endpoints
-          - selector
+            - endpoints
+            - selector
           type: object
         status:
           description: VMServiceScrapeStatus defines the observed state of VMServiceScrape
           type: object
       required:
-      - spec
+        - spec
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -13524,7 +13524,7 @@ spec:
                 description: A single application container that you want to run within
                   a pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
             dnsPolicy:
@@ -13573,7 +13573,7 @@ spec:
                               must be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       fieldRef:
                         description: 'Selects a field of the pod: supports metadata.name,
@@ -13590,7 +13590,7 @@ spec:
                               API version.
                             type: string
                         required:
-                        - fieldPath
+                          - fieldPath
                         type: object
                       resourceFieldRef:
                         description: 'Selects a resource of the container: only resources
@@ -13604,8 +13604,8 @@ spec:
                             type: string
                           divisor:
                             anyOf:
-                            - type: integer
-                            - type: string
+                              - type: integer
+                              - type: string
                             description: Specifies the output format of the exposed
                               resources, defaults to "1"
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -13614,7 +13614,7 @@ spec:
                             description: 'Required: resource to select'
                             type: string
                         required:
-                        - resource
+                          - resource
                         type: object
                       secretKeyRef:
                         description: Selects a key of a secret in the pod's namespace
@@ -13632,11 +13632,11 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                     type: object
                 required:
-                - name
+                  - name
                 type: object
               type: array
             hostAliases:
@@ -13703,7 +13703,7 @@ spec:
                 description: A single application container that you want to run within
                   a pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
             insertPorts:
@@ -13768,8 +13768,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -13777,8 +13777,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -13787,7 +13787,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -13816,13 +13816,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -13847,17 +13847,17 @@ spec:
             logFormat:
               description: LogFormat for VMSingle to be configured with.
               enum:
-              - default
-              - json
+                - default
+                - json
               type: string
             logLevel:
               description: LogLevel for victoria metrics single to be configured with.
               enum:
-              - INFO
-              - WARN
-              - ERROR
-              - FATAL
-              - PANIC
+                - INFO
+                - WARN
+                - ERROR
+                - FATAL
+                - PANIC
               type: string
             nodeSelector:
               additionalProperties:
@@ -13949,8 +13949,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -13958,8 +13958,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -13968,7 +13968,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -13997,13 +13997,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -14042,8 +14042,8 @@ spec:
                 limits:
                   additionalProperties:
                     anyOf:
-                    - type: integer
-                    - type: string
+                      - type: integer
+                      - type: string
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   description: 'Limits describes the maximum amount of compute resources
@@ -14052,8 +14052,8 @@ spec:
                 requests:
                   additionalProperties:
                     anyOf:
-                    - type: integer
-                    - type: string
+                      - type: integer
+                      - type: string
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
                   description: 'Requests describes the minimum amount of compute resources
@@ -14169,7 +14169,7 @@ spec:
                         - no profile should be applied."
                       type: string
                   required:
-                  - type
+                    - type
                   type: object
                 supplementalGroups:
                   description: A list of groups applied to the first process run in
@@ -14193,8 +14193,8 @@ spec:
                         description: Value of a property to set
                         type: string
                     required:
-                    - name
-                    - value
+                      - name
+                      - value
                     type: object
                   type: array
                 windowsOptions:
@@ -14470,7 +14470,7 @@ spec:
                       type: string
                   type: object
               required:
-              - spec
+                - spec
               type: object
             startupProbe:
               description: StartupProbe that will be added to CRD pod
@@ -14518,8 +14518,8 @@ spec:
                             description: The header field value
                             type: string
                         required:
-                        - name
-                        - value
+                          - name
+                          - value
                         type: object
                       type: array
                     path:
@@ -14527,8 +14527,8 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Name or number of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
@@ -14537,7 +14537,7 @@ spec:
                         to HTTP.
                       type: string
                   required:
-                  - port
+                    - port
                   type: object
                 initialDelaySeconds:
                   description: 'Number of seconds after the container has started
@@ -14566,13 +14566,13 @@ spec:
                       type: string
                     port:
                       anyOf:
-                      - type: integer
-                      - type: string
+                        - type: integer
+                        - type: string
                       description: Number or name of the port to access on the container.
                         Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
                       x-kubernetes-int-or-string: true
                   required:
-                  - port
+                    - port
                   type: object
                 terminationGracePeriodSeconds:
                   description: Optional duration in seconds the pod needs to terminate
@@ -14627,8 +14627,8 @@ spec:
                       description: Name is the name of resource being referenced
                       type: string
                   required:
-                  - kind
-                  - name
+                    - kind
+                    - name
                   type: object
                 resources:
                   description: 'Resources represents the minimum resources the volume
@@ -14637,8 +14637,8 @@ spec:
                     limits:
                       additionalProperties:
                         anyOf:
-                        - type: integer
-                        - type: string
+                          - type: integer
+                          - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
@@ -14647,8 +14647,8 @@ spec:
                     requests:
                       additionalProperties:
                         anyOf:
-                        - type: integer
-                        - type: string
+                          - type: integer
+                          - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
@@ -14687,8 +14687,8 @@ spec:
                               type: string
                             type: array
                         required:
-                        - key
-                        - operator
+                          - key
+                          - operator
                         type: object
                       type: array
                     matchLabels:
@@ -14769,9 +14769,9 @@ spec:
                 description: TopologySpreadConstraint specifies how to spread matching
                   pods among the given topology.
                 required:
-                - maxSkew
-                - topologyKey
-                - whenUnsatisfiable
+                  - maxSkew
+                  - topologyKey
+                  - whenUnsatisfiable
                 type: object
               type: array
             vmBackup:
@@ -14803,7 +14803,7 @@ spec:
                       description: Specify whether the Secret or its key must be defined
                       type: boolean
                   required:
-                  - key
+                    - key
                   type: object
                 customS3Endpoint:
                   description: Custom S3 endpoint for use with S3-compatible storages
@@ -14867,7 +14867,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           fieldRef:
                             description: 'Selects a field of the pod: supports metadata.name,
@@ -14884,7 +14884,7 @@ spec:
                                   API version.
                                 type: string
                             required:
-                            - fieldPath
+                              - fieldPath
                             type: object
                           resourceFieldRef:
                             description: 'Selects a resource of the container: only
@@ -14898,8 +14898,8 @@ spec:
                                 type: string
                               divisor:
                                 anyOf:
-                                - type: integer
-                                - type: string
+                                  - type: integer
+                                  - type: string
                                 description: Specifies the output format of the exposed
                                   resources, defaults to "1"
                                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -14908,7 +14908,7 @@ spec:
                                 description: 'Required: resource to select'
                                 type: string
                             required:
-                            - resource
+                              - resource
                             type: object
                           secretKeyRef:
                             description: Selects a key of a secret in the pod's namespace
@@ -14927,11 +14927,11 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                     required:
-                    - name
+                      - name
                     type: object
                   type: array
                 image:
@@ -14952,17 +14952,17 @@ spec:
                   description: LogFormat for VMSelect to be configured with. default
                     or json
                   enum:
-                  - default
-                  - json
+                    - default
+                    - json
                   type: string
                 logLevel:
                   description: LogLevel for VMSelect to be configured with.
                   enum:
-                  - INFO
-                  - WARN
-                  - ERROR
-                  - FATAL
-                  - PANIC
+                    - INFO
+                    - WARN
+                    - ERROR
+                    - FATAL
+                    - PANIC
                   type: string
                 port:
                   description: Port for health check connections
@@ -14975,8 +14975,8 @@ spec:
                     limits:
                       additionalProperties:
                         anyOf:
-                        - type: integer
-                        - type: string
+                          - type: integer
+                          - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       description: 'Limits describes the maximum amount of compute
@@ -14985,8 +14985,8 @@ spec:
                     requests:
                       additionalProperties:
                         anyOf:
-                        - type: integer
-                        - type: string
+                          - type: integer
+                          - type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       description: 'Requests describes the minimum amount of compute
@@ -15034,12 +15034,12 @@ spec:
                           exclusive.
                         type: string
                     required:
-                    - mountPath
-                    - name
+                      - mountPath
+                      - name
                     type: object
                   type: array
               required:
-              - acceptEULA
+                - acceptEULA
               type: object
             volumeMounts:
               description: VolumeMounts allows configuration of additional VolumeMounts
@@ -15078,8 +15078,8 @@ spec:
                       SubPath are mutually exclusive.
                     type: string
                 required:
-                - mountPath
-                - name
+                  - mountPath
+                  - name
                 type: object
               type: array
             volumes:
@@ -15090,11 +15090,11 @@ spec:
                 description: Volume represents a named volume in a pod that may be
                   accessed by any container in the pod.
                 required:
-                - name
+                  - name
                 type: object
               type: array
           required:
-          - retentionPeriod
+            - retentionPeriod
           type: object
         status:
           description: VMSingleStatus defines the observed state of VMSingle
@@ -15120,17 +15120,17 @@ spec:
               format: int32
               type: integer
           required:
-          - availableReplicas
-          - replicas
-          - unavailableReplicas
-          - updatedReplicas
+            - availableReplicas
+            - replicas
+            - unavailableReplicas
+            - updatedReplicas
           type: object
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -15201,7 +15201,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       username:
                         description: The secret in the service scrape namespace that
@@ -15220,7 +15220,7 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                     type: object
                   bearerTokenFile:
@@ -15244,7 +15244,7 @@ spec:
                           defined
                         type: boolean
                     required:
-                    - key
+                      - key
                     type: object
                   honorLabels:
                     description: HonorLabels chooses the metric's labels on collisions
@@ -15433,7 +15433,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           secret:
                             description: Secret containing data to use for the targets.
@@ -15452,7 +15452,7 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                       caFile:
@@ -15480,7 +15480,7 @@ spec:
                                   key must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                           secret:
                             description: Secret containing data to use for the targets.
@@ -15499,7 +15499,7 @@ spec:
                                   must be defined
                                 type: boolean
                             required:
-                            - key
+                              - key
                             type: object
                         type: object
                       certFile:
@@ -15530,18 +15530,18 @@ spec:
                               be defined
                             type: boolean
                         required:
-                        - key
+                          - key
                         type: object
                       serverName:
                         description: Used to verify the hostname for the targets.
                         type: string
                     type: object
                 required:
-                - targets
+                  - targets
                 type: object
               type: array
           required:
-          - targetEndpoints
+            - targetEndpoints
           type: object
         status:
           description: VMStaticScrapeStatus defines the observed state of VMStaticScrape
@@ -15549,9 +15549,9 @@ spec:
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -15616,7 +15616,7 @@ spec:
                   description: Specify whether the Secret or its key must be defined
                   type: boolean
               required:
-              - key
+                - key
               type: object
             targetRefs:
               description: TargetRefs - reference to endpoints, which user may access.
@@ -15640,9 +15640,9 @@ spec:
                         description: Namespace target CRD object namespace.
                         type: string
                     required:
-                    - kind
-                    - name
-                    - namespace
+                      - kind
+                      - name
+                      - namespace
                     type: object
                   paths:
                     description: Paths - matched path to route.
@@ -15657,7 +15657,7 @@ spec:
                         description: URL http url for given staticRef.
                         type: string
                     required:
-                    - url
+                      - url
                     type: object
                 type: object
               type: array
@@ -15666,7 +15666,7 @@ spec:
                 will be replaced with metadata.name of VMUser if omitted.
               type: string
           required:
-          - targetRefs
+            - targetRefs
           type: object
         status:
           description: VMUserStatus defines the observed state of VMUser
@@ -15674,9 +15674,9 @@ spec:
       type: object
   version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
+    - name: v1beta1
+      served: true
+      storage: true
 status:
   acceptedNames:
     kind: ""
