@@ -1370,8 +1370,8 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, apiPrefix st
 			lastVersion = newVersion
 		}
 	}
-	operator.Version = lastVersion.String()
 	if lastVersion != zeroVersion { // comparing pointers
+		operator.Version = lastVersion.String()
 		operator.Status = OperatorStatusOK
 	}
 	return operator
