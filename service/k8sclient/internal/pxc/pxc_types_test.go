@@ -126,6 +126,7 @@ const expected = `
 func TestPXCTypesMarshal(t *testing.T) {
 	t.Parallel()
 	t.Run("check inline marshal", func(t *testing.T) {
+		t.Parallel()
 		res := &PerconaXtraDBCluster{
 			TypeMeta: common.TypeMeta{
 				APIVersion: "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0",

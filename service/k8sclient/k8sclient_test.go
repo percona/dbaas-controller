@@ -600,6 +600,7 @@ func TestGetAllClusterResources(t *testing.T) {
 }
 
 func TestVMAgentSpec(t *testing.T) {
+	t.Parallel()
 	expected := `{
   "kind": "VMAgent",
   "apiVersion": "operator.victoriametrics.com/v1beta1",
@@ -647,9 +648,10 @@ func TestVMAgentSpec(t *testing.T) {
   }
 }
 `
-	spec := vmAgentSpec(&PMM{
-		PublicAddress: "http://vmsingle-example-vmsingle-pvc.default.svc:8429",
-	}, "rws-basic-auth")
+	spec := vmAgentSpec(
+		&PMM{PublicAddress: "http://vmsingle-example-vmsingle-pvc.default.svc:8429"},
+		"rws-basic-auth",
+	)
 	var inBuf bytes.Buffer
 	e := json.NewEncoder(&inBuf)
 	e.SetIndent("", "  ")

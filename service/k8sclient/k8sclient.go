@@ -26,8 +26,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/monitoring"
-
 	"github.com/AlekSi/pointer"
 	"github.com/avast/retry-go"
 	"github.com/hashicorp/go-version"
@@ -36,6 +34,7 @@ import (
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/monitoring"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/utils/convertors"
@@ -95,10 +94,11 @@ const (
 	pullPolicy              = common.PullIfNotPresent
 )
 
-type kubernetesClusterType uint8
+// KubernetesClusterType represents kubernetes cluster type(eg: EKS, Minikube).
+type KubernetesClusterType uint8
 
 const (
-	clusterTypeUnknown kubernetesClusterType = iota
+	clusterTypeUnknown KubernetesClusterType = iota
 	// AmazonEKSClusterType represents EKS cluster type.
 	AmazonEKSClusterType
 	// MinikubeClusterType represents minikube Kubernetes cluster.
@@ -676,7 +676,7 @@ func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) 
 }
 
 // GetKubernetesClusterType returns k8s cluster type based on storage class.
-func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) kubernetesClusterType {
+func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) KubernetesClusterType {
 	sc, err := c.getStorageClass(ctx)
 	if err != nil {
 		c.l.Error(errors.Wrap(err, "failed to get k8s cluster type"))
@@ -1482,7 +1482,7 @@ func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
 }
 
 // GetAllClusterResources goes through all cluster nodes and sums their allocatable resources.
-func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType kubernetesClusterType, volumes *common.PersistentVolumeList) (
+func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType KubernetesClusterType, volumes *common.PersistentVolumeList) (
 	cpuMillis uint64, memoryBytes uint64, diskSizeBytes uint64, err error,
 ) {
 	nodes, err := c.getWorkerNodes(ctx)
@@ -1617,7 +1617,7 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 }
 
 // GetConsumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
-func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType kubernetesClusterType, volumes *common.PersistentVolumeList) (consumedBytes uint64, err error) {
+func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType KubernetesClusterType, volumes *common.PersistentVolumeList) (consumedBytes uint64, err error) {
 	switch clusterType {
 	case MinikubeClusterType:
 		nodes, err := c.getWorkerNodes(ctx)

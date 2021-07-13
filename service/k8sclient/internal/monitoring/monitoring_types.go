@@ -17,8 +17,11 @@
 // Package monitoring contains all structs required to monitor kubernetes cluster.
 package monitoring
 
-import "github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+import (
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+)
 
+// BasicAuth contains basic auth credentials to connect to Victoria Metrics.
 type BasicAuth struct {
 	// The secret in the service scrape namespace that contains the username
 	// for authentication.
@@ -28,11 +31,13 @@ type BasicAuth struct {
 	Password common.SecretKeySelector `json:"password,omitempty"`
 }
 
+// RemoteWriteSpec contains address and credentials to connect to Victoria Metrics.
 type RemoteWriteSpec struct {
 	URL       string     `json:"url"`
 	BasicAuth *BasicAuth `json:"basicAuth"`
 }
 
+// VMAgentSpec contains configuration for VM Agent pod.
 type VMAgentSpec struct {
 	ServiceScrapeNamespaceSelector *common.LabelSelector `json:"serviceScrapeNamespaceSelector"`
 	ServiceScrapeSelector          *common.LabelSelector `json:"serviceScrapeSelector"`
@@ -48,6 +53,7 @@ type VMAgentSpec struct {
 	RemoteWrite                    []RemoteWriteSpec     `json:"remoteWrite"`
 }
 
+// VMAgent contains CR for VM Agent.
 type VMAgent struct {
 	common.TypeMeta // anonymous for embedding
 

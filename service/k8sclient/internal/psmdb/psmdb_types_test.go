@@ -122,7 +122,9 @@ const expected = `
 `
 
 func TestPSMDBTypesMarshal(t *testing.T) {
+	t.Parallel()
 	t.Run("check inline marshal", func(t *testing.T) {
+		t.Parallel()
 		res := &PerconaServerMongoDB{
 			TypeMeta: common.TypeMeta{
 				APIVersion: "psmdb.percona.com/v1-4-0",

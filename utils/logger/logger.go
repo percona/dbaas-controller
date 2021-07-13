@@ -44,7 +44,7 @@ type Logger interface {
 	Panicf(format string, args ...interface{})
 }
 
-// Level type
+// Level type.
 type Level uint32
 
 // These are the different logging levels. You can set the logging level to log
