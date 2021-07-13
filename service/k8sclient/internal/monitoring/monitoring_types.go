@@ -31,26 +31,30 @@ type BasicAuth struct {
 	Password common.SecretKeySelector `json:"password,omitempty"`
 }
 
-// RemoteWriteSpec contains address and credentials to connect to Victoria Metrics.
-type RemoteWriteSpec struct {
-	URL       string     `json:"url"`
+// VMAgentRemoteWriteSpec defines the remote storage configuration for VmAgent
+type VMAgentRemoteWriteSpec struct {
+	// URL of the endpoint to send samples to.
+	URL string `json:"url"`
+	// BasicAuth allow an endpoint to authenticate over basic authentication
 	BasicAuth *BasicAuth `json:"basicAuth"`
+	// TLSConfig describes tls configuration for remote write target.
+	TLSConfig *TLSConfig `json:"tlsConfig,omitempty"`
 }
 
 // VMAgentSpec contains configuration for VM Agent pod.
 type VMAgentSpec struct {
-	ServiceScrapeNamespaceSelector *common.LabelSelector `json:"serviceScrapeNamespaceSelector"`
-	ServiceScrapeSelector          *common.LabelSelector `json:"serviceScrapeSelector"`
-	PodScrapeNamespaceSelector     *common.LabelSelector `json:"podScrapeNamespaceSelector"`
-	PodScrapeSelector              *common.LabelSelector `json:"podScrapeSelector"`
-	ProbeSelector                  *common.LabelSelector `json:"probeSelector"`
-	ProbeNamespaceSelector         *common.LabelSelector `json:"probeNamespaceSelector"`
-	StaticScrapeSelector           *common.LabelSelector `json:"staticScrapeSelector"`
-	StaticScrapeNamespaceSelector  *common.LabelSelector `json:"staticScrapeNamespaceSelector"`
-	ReplicaCount                   int                   `json:"replicaCount"`
-	Resources                      *common.PodResources  `json:"resources"`
-	AdditionalArgs                 map[string]string     `json:"additionalArgs"`
-	RemoteWrite                    []RemoteWriteSpec     `json:"remoteWrite"`
+	ServiceScrapeNamespaceSelector *common.LabelSelector    `json:"serviceScrapeNamespaceSelector"`
+	ServiceScrapeSelector          *common.LabelSelector    `json:"serviceScrapeSelector"`
+	PodScrapeNamespaceSelector     *common.LabelSelector    `json:"podScrapeNamespaceSelector"`
+	PodScrapeSelector              *common.LabelSelector    `json:"podScrapeSelector"`
+	ProbeSelector                  *common.LabelSelector    `json:"probeSelector"`
+	ProbeNamespaceSelector         *common.LabelSelector    `json:"probeNamespaceSelector"`
+	StaticScrapeSelector           *common.LabelSelector    `json:"staticScrapeSelector"`
+	StaticScrapeNamespaceSelector  *common.LabelSelector    `json:"staticScrapeNamespaceSelector"`
+	ReplicaCount                   int                      `json:"replicaCount"`
+	Resources                      *common.PodResources     `json:"resources"`
+	AdditionalArgs                 map[string]string        `json:"additionalArgs"`
+	RemoteWrite                    []VMAgentRemoteWriteSpec `json:"remoteWrite"`
 }
 
 // VMAgent contains CR for VM Agent.
@@ -62,4 +66,27 @@ type VMAgent struct {
 	common.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec VMAgentSpec `json:"spec"`
+}
+
+// TLSConfig specifies TLSConfig configuration parameters.
+type TLSConfig struct {
+	// Path to the CA cert in the container to use for the targets.
+	CAFile string `json:"caFile,omitempty"`
+	// Stuct containing the CA cert to use for the targets.
+	CA common.SecretKeySelector `json:"ca,omitempty"`
+
+	// Path to the client cert file in the container for the targets.
+	CertFile string `json:"certFile,omitempty"`
+	// Struct containing the client cert file for the targets.
+	Cert common.SecretKeySelector `json:"cert,omitempty"`
+
+	// Path to the client key file in the container for the targets.
+	KeyFile string `json:"keyFile,omitempty"`
+	// Secret containing the client key file for the targets.
+	KeySecret *common.SecretKeySelector `json:"keySecret,omitempty"`
+
+	// Used to verify the hostname for the targets.
+	ServerName string `json:"serverName,omitempty"`
+	// Disable target certificate validation.
+	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
 }

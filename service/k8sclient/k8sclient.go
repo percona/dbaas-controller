@@ -1773,9 +1773,10 @@ func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 			AdditionalArgs: map[string]string{
 				"memory.allowedPercent": "40",
 			},
-			RemoteWrite: []monitoring.RemoteWriteSpec{
+			RemoteWrite: []monitoring.VMAgentRemoteWriteSpec{
 				{
-					URL: fmt.Sprintf("%s/api/v1/write", params.PublicAddress),
+					URL:       fmt.Sprintf("%s/api/v1/write", params.PublicAddress),
+					TLSConfig: &monitoring.TLSConfig{InsecureSkipVerify: true},
 					BasicAuth: &monitoring.BasicAuth{
 						Username: common.SecretKeySelector{
 							LocalObjectReference: common.LocalObjectReference{
