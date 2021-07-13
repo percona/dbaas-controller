@@ -31,7 +31,7 @@ type BasicAuth struct {
 	Password common.SecretKeySelector `json:"password,omitempty"`
 }
 
-// VMAgentRemoteWriteSpec defines the remote storage configuration for VmAgent
+// VMAgentRemoteWriteSpec defines the remote storage configuration for VmAgent.
 type VMAgentRemoteWriteSpec struct {
 	// URL of the endpoint to send samples to.
 	URL string `json:"url"`
