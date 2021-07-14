@@ -203,7 +203,8 @@ jobs:
       # no `-mod=readonly` to test PRs made by @dependabot;
       # `git diff --exit-code` step below still checks what we need
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
-
+      # Set DELETE_NAMESPACE to false when you want to debug in EKS cluster after job is done.
+      DELETE_NAMESPACE: true
     steps:
       - name: Set up Go release
         if: matrix.go-version != 'tip'
@@ -309,7 +310,7 @@ jobs:
           fail_ci_if_error: false
       
       - name: Report Kubernetes resources count and state
-        if: steps.setupenv.outputs.exit_code == 0
+        if: always() && steps.setupenv.outputs.exit_code == 0
         run: |
           echo "Kubernetes resources counts:"
           echo "Namespaces: $(kubectl get ns | tail +2 | wc -l)"
@@ -319,8 +320,9 @@ jobs:
           kubectl describe pods
 
       - name: Delete the test namespace
-        if: steps.setupenv.outputs.exit_code == 0
+        if: ${{ always() && steps.setupenv.outputs.exit_code == 0 && env.DELETE_NAMESPACE }}
         run: |
+          make eks-cleanup-namespace
           make eks-delete-operators
           make eks-delete-current-namespace
 
