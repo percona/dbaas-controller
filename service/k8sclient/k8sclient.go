@@ -920,6 +920,9 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 					EncryptionKeySecret:  fmt.Sprintf("%s-mongodb-encryption-key", params.Name),
 					EncryptionCipherMode: psmdb.MongodChiperModeCBC,
 				},
+				SetParameter: &psmdb.MongodSpecSetParameter{
+					TTLMonitorSleepSecs: 60,
+				},
 				Storage: &psmdb.MongodSpecStorage{
 					Engine: psmdb.StorageEngineWiredTiger,
 					MMAPv1: &psmdb.MongodSpecMMAPv1{
