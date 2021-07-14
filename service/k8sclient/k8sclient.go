@@ -1760,7 +1760,7 @@ func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 			APIVersion: "operator.victoriametrics.com/v1beta1",
 		},
 		ObjectMeta: common.ObjectMeta{
-			Name: "pmm-vmagent",
+			Name: "pmm-vmagent-" + secretName,
 		},
 		Spec: monitoring.VMAgentSpec{
 			ServiceScrapeNamespaceSelector: new(common.LabelSelector),
@@ -1787,7 +1787,7 @@ func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 			},
 			RemoteWrite: []monitoring.VMAgentRemoteWriteSpec{
 				{
-					URL:       fmt.Sprintf("%s/api/v1/write", params.PublicAddress),
+					URL:       fmt.Sprintf("%s/victoriametrics/api/v1/write", params.PublicAddress),
 					TLSConfig: &monitoring.TLSConfig{InsecureSkipVerify: true},
 					BasicAuth: &monitoring.BasicAuth{
 						Username: common.SecretKeySelector{
