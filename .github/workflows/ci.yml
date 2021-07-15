@@ -297,7 +297,7 @@ jobs:
            BASE64_KUBECONFIG: ${{secrets.BASE64_KUBECONFIG}}
 
       - name: Run tests
-        if: steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == "1"
+        if: steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1'
         run: |
           go clean -testcache
           make test-crosscover
@@ -311,7 +311,7 @@ jobs:
           fail_ci_if_error: false
       
       - name: Report Kubernetes resources count and state
-        if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == "1"
+        if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1'
         run: |
           echo "Kubernetes resources counts:"
           echo "Namespaces: $(kubectl get ns | tail +2 | wc -l)"
@@ -321,7 +321,7 @@ jobs:
           kubectl describe pods
 
       - name: Delete the test namespace
-        if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == "1" && env.DELETE_NAMESPACE
+        if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1' && env.DELETE_NAMESPACE
         run: |
           make eks-cleanup-namespace
           make eks-delete-operators
