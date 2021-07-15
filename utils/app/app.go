@@ -33,8 +33,10 @@ type Flags struct {
 	GRPCAddr string
 	// Debug listen address
 	DebugAddr string
-	// GithubUserContentURL enables air gapped cluster fetching manifests from local github instance or just github like stub.
-	GithubUserContentURL string
+	// PXCOperatorURLTemplate exists for user to fetch Kubernetes manifests when running DBaaS on air-gapped cluster.
+	PXCOperatorURLTemplate string
+	// PSMDBOperatorURLTemplate exists for user to fetch Kubernetes manifests when running DBaaS on air-gapped cluster.
+	PSMDBOperatorURLTemplate string
 }
 
 // SetupOpts contains options required for app.
@@ -60,7 +62,17 @@ func Setup(opts *SetupOpts) (*Flags, error) {
 	var flags Flags
 	kingpin.Flag("grpc.addr", "gRPC listen address").Default(":20201").StringVar(&flags.GRPCAddr)
 	kingpin.Flag("debug.addr", "Debug listen address").Default(":20203").StringVar(&flags.DebugAddr)
-	kingpin.Flag("github.url", "github url to fetch operator manifests from").Default("https://raw.githubusercontent.com").StringVar(&flags.GithubUserContentURL)
-
+	kingpin.Flag(
+		"pxc.operator.url.template",
+		"URL template for fetching yaml manifests for Percona Kubernetes Operator for PXC. Place '%s' into URL where version should be placed.",
+	).Default(
+		"https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/v%s/deploy/bundle.yaml",
+	).StringVar(&flags.PXCOperatorURLTemplate)
+	kingpin.Flag(
+		"psmdb.operator.url.template",
+		"URL template for fetching yaml manifests for Percona Kubernetes Operator for PSMDB. Place '%s' into URL where version should be placed.",
+	).Default(
+		"https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v%s/deploy/bundle.yaml",
+	).StringVar(&flags.PSMDBOperatorURLTemplate)
 	return &flags, nil
 }

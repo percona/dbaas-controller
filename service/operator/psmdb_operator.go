@@ -29,13 +29,13 @@ import (
 )
 
 type PSMDBOperatorService struct {
-	p                    *message.Printer
-	githubUserContentURL string
+	p                   *message.Printer
+	manifestsURLTemplate string
 }
 
 // NewPSMDBOperatorService returns new PSMDBOperatorService instance.
 func NewPSMDBOperatorService(p *message.Printer, url string) *PSMDBOperatorService {
-	return &PSMDBOperatorService{p: p, githubUserContentURL: url}
+	return &PSMDBOperatorService{p: p, manifestsURLTemplate: url}
 }
 
 func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *controllerv1beta1.InstallPSMDBOperatorRequest) (*controllerv1beta1.InstallPSMDBOperatorResponse, error) {
@@ -45,7 +45,7 @@ func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *con
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	err = client.InstallPSMDBOperator(ctx, req.Version, x.githubUserContentURL)
+	err = client.InstallOperator(ctx, req.Version, x.manifestsURLTemplate)
 	if err != nil {
 		return nil, err
 	}
