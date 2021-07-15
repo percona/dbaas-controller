@@ -73,12 +73,12 @@ type TLSConfig struct {
 	// Path to the CA cert in the container to use for the targets.
 	CAFile string `json:"caFile,omitempty"`
 	// Stuct containing the CA cert to use for the targets.
-	CA common.SecretKeySelector `json:"ca,omitempty"`
+	CA *common.SecretKeySelector `json:"ca,omitempty"`
 
 	// Path to the client cert file in the container for the targets.
 	CertFile string `json:"certFile,omitempty"`
 	// Struct containing the client cert file for the targets.
-	Cert common.SecretKeySelector `json:"cert,omitempty"`
+	Cert *common.SecretKeySelector `json:"cert,omitempty"`
 
 	// Path to the client key file in the container for the targets.
 	KeyFile string `json:"keyFile,omitempty"`

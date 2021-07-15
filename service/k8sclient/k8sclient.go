@@ -19,9 +19,9 @@ package k8sclient
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"reflect"
 	"strings"
@@ -1728,28 +1728,21 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 		}
 	}
 
-	secretName := fmt.Sprintf("victoria-metrics-operator-%d", rand.Int())
-	secret := common.Secret{
-		TypeMeta: common.TypeMeta{
-			APIVersion: k8sAPIVersion,
-			Kind:       k8sMetaKindSecret,
-		},
-		ObjectMeta: common.ObjectMeta{
-			Name: secretName,
-		},
-		Type: common.SecretTypeOpaque,
-		Data: map[string][]byte{
-			"username": []byte(params.Login),
-			"password": []byte(params.Password),
-		},
+	randomCrypto, err := rand.Prime(rand.Reader, 64)
+	if err != nil {
+		return err
 	}
-	err := c.kubeCtl.Apply(ctx, secret)
+
+	secretName := fmt.Sprintf("victoria-metrics-operator-%d", randomCrypto)
+	err = c.CreateSecret(ctx, secretName, map[string][]byte{
+		"username": []byte(params.Login),
+		"password": []byte(params.Password),
+	})
 	if err != nil {
 		return err
 	}
 
 	vmagent := vmAgentSpec(params, secretName)
-
 	return c.kubeCtl.Apply(ctx, vmagent)
 }
 

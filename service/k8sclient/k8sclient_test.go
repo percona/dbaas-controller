@@ -605,7 +605,7 @@ func TestVMAgentSpec(t *testing.T) {
   "kind": "VMAgent",
   "apiVersion": "operator.victoriametrics.com/v1beta1",
   "metadata": {
-    "name": "pmm-vmagent"
+    "name": "pmm-vmagent-rws-basic-auth"
   },
   "spec": {
     "serviceScrapeNamespaceSelector": {},
@@ -632,7 +632,7 @@ func TestVMAgentSpec(t *testing.T) {
     },
     "remoteWrite": [
       {
-        "url": "http://vmsingle-example-vmsingle-pvc.default.svc:8429/api/v1/write",
+        "url": "http://vmsingle-example-vmsingle-pvc.default.svc:8429/victoriametrics/api/v1/write",
         "basicAuth": {
           "username": {
             "name": "rws-basic-auth",
@@ -642,6 +642,9 @@ func TestVMAgentSpec(t *testing.T) {
             "name": "rws-basic-auth",
             "key": "password"
           }
+        },
+        "tlsConfig": {
+          "insecureSkipVerify": true
         }
       }
     ]
