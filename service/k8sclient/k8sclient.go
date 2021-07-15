@@ -1738,7 +1738,7 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 			Name: secretName,
 		},
 		Type: common.SecretTypeOpaque,
-		StringData: map[string][]byte{
+		Data: map[string][]byte{
 			"username": []byte(params.Login),
 			"password": []byte(params.Password),
 		},
