@@ -381,11 +381,9 @@ func TestK8sClient(t *testing.T) {
 		operators, err := client.CheckOperators(ctx)
 		require.NoError(t, err)
 		require.NotNil(t, operators)
-		assert.Equal(t, OperatorStatusOK, operators.Psmdb.Status)
-		assert.Equal(t, OperatorStatusOK, operators.Xtradb.Status)
-		_, err = goversion.NewVersion(operators.Psmdb.Version)
+		_, err = goversion.NewVersion(operators.PsmdbOperatorVersion)
 		require.NoError(t, err)
-		_, err = goversion.NewVersion(operators.Xtradb.Version)
+		_, err = goversion.NewVersion(operators.XtradbOperatorVersion)
 		require.NoError(t, err)
 	})
 }

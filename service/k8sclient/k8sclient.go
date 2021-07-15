@@ -112,16 +112,6 @@ const (
 	ContainerStateWaiting ContainerState = "waiting"
 )
 
-// OperatorStatus represents status of operator.
-type OperatorStatus int32
-
-const (
-	// OperatorStatusOK represents that operators are installed and have supported API version.
-	OperatorStatusOK OperatorStatus = 1
-	// OperatorStatusNotInstalled represents that operators are not installed.
-	OperatorStatusNotInstalled OperatorStatus = 3
-)
-
 const (
 	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
@@ -130,14 +120,15 @@ const (
 
 // Operator represents kubernetes operator.
 type Operator struct {
-	Status  OperatorStatus
+	// If version is empty, operator is not installed.
 	Version string
 }
 
-// Operators contains statuses of operators.
+// Operators contains versions of installed operators.
+// If version is empty, operator is not installed.
 type Operators struct {
-	Xtradb Operator
-	Psmdb  Operator
+	XtradbOperatorVersion string
+	PsmdbOperatorVersion  string
 }
 
 // ComputeResources represents container computer resources requests or limits.
@@ -440,7 +431,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
-			APIVersion: c.getAPIVersionForPXCOperator(operators),
+			APIVersion: c.getAPIVersionForPXCOperator(operators.XtradbOperatorVersion),
 			Kind:       string(perconaXtraDBClusterKind),
 		},
 		ObjectMeta: common.ObjectMeta{
@@ -448,7 +439,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
 		},
 		Spec: pxc.PerconaXtraDBClusterSpec{
-			CRVersion:         operators.Xtradb.Version,
+			CRVersion:         operators.XtradbOperatorVersion,
 			AllowUnsafeConfig: true,
 			SecretsName:       secretName,
 
@@ -471,7 +462,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			},
 
 			Backup: &pxc.PXCScheduledBackup{
-				Image: fmt.Sprintf(pxcBackupImageTemplate, operators.Xtradb.Version),
+				Image: fmt.Sprintf(pxcBackupImageTemplate, operators.XtradbOperatorVersion),
 				Schedule: []pxc.PXCScheduledBackupSchedule{{
 					Name:        "test",
 					Schedule:    "*/30 * * * *",
@@ -509,7 +500,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	if params.ProxySQL != nil {
 		res.Spec.ProxySQL = new(pxc.PodSpec)
 		podSpec = res.Spec.ProxySQL
-		podSpec.Image = fmt.Sprintf(pxcProxySQLDefaultImageTemplate, operators.Xtradb.Version)
+		podSpec.Image = fmt.Sprintf(pxcProxySQLDefaultImageTemplate, operators.XtradbOperatorVersion)
 		if params.ProxySQL.Image != "" {
 			podSpec.Image = params.ProxySQL.Image
 		}
@@ -518,7 +509,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	} else {
 		res.Spec.HAProxy = new(pxc.PodSpec)
 		podSpec = res.Spec.HAProxy
-		podSpec.Image = fmt.Sprintf(pxcHAProxyDefaultImageTemplate, operators.Xtradb.Version)
+		podSpec.Image = fmt.Sprintf(pxcHAProxyDefaultImageTemplate, operators.XtradbOperatorVersion)
 		if params.HAProxy.Image != "" {
 			podSpec.Image = params.HAProxy.Image
 		}
@@ -914,7 +905,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
-			APIVersion: c.getAPIVersionForPSMDBOperator(operators),
+			APIVersion: c.getAPIVersionForPSMDBOperator(operators.PsmdbOperatorVersion),
 			Kind:       string(perconaServerMongoDBKind),
 		},
 		ObjectMeta: common.ObjectMeta{
@@ -922,7 +913,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			Finalizers: []string{"delete-psmdb-pvc"},
 		},
 		Spec: psmdb.PerconaServerMongoDBSpec{
-			CRVersion: operators.Psmdb.Version,
+			CRVersion: operators.PsmdbOperatorVersion,
 			Image:     psmdbImage,
 			Secrets: &psmdb.SecretsSpec{
 				Users: secretName,
@@ -1022,7 +1013,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 			Backup: psmdb.BackupSpec{
 				Enabled:            true,
-				Image:              fmt.Sprintf(psmdbBackupImageTemplate, operators.Psmdb.Version),
+				Image:              fmt.Sprintf(psmdbBackupImageTemplate, operators.PsmdbOperatorVersion),
 				ServiceAccountName: "percona-server-mongodb-operator",
 			},
 		},
@@ -1329,7 +1320,7 @@ func (c *K8sClient) volumeSpec(diskSize string) *common.VolumeSpec {
 	}
 }
 
-// CheckOperators checks if operator installed and have required API version.
+// CheckOperators checks installed operator API version.
 func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 	output, err := c.kubeCtl.Run(ctx, []string{"api-versions"}, "")
 	if err != nil {
@@ -1339,16 +1330,15 @@ func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 	apiVersions := strings.Split(string(output), "\n")
 
 	return &Operators{
-		Xtradb: c.checkOperatorStatus(apiVersions, pxcAPINamespace),
-		Psmdb:  c.checkOperatorStatus(apiVersions, psmdbAPINamespace),
+		XtradbOperatorVersion: c.getLatestOperatorAPIVersion(apiVersions, pxcAPINamespace),
+		PsmdbOperatorVersion:  c.getLatestOperatorAPIVersion(apiVersions, psmdbAPINamespace),
 	}, nil
 }
 
-// checkOperatorStatus returns if operator is installed and operators version.
+// getLatestOperatorVersion returns installed operators API version.
 // It checks for all API versions supported by the operator and based on the latest API version in the list
-// figures out which version of operator is installed.
-func (c *K8sClient) checkOperatorStatus(installedVersions []string, apiPrefix string) (operator Operator) {
-	operator.Status = OperatorStatusNotInstalled
+// figures out the version. Returns empty string if operator API is not installed.
+func (c *K8sClient) getLatestOperatorAPIVersion(installedVersions []string, apiPrefix string) string {
 	lastVersion, _ := version.NewVersion("v0.0.0")
 	zeroVersion := lastVersion
 	for _, apiVersion := range installedVersions {
@@ -1371,10 +1361,9 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, apiPrefix st
 		}
 	}
 	if lastVersion != zeroVersion { // comparing pointers
-		operator.Version = lastVersion.String()
-		operator.Status = OperatorStatusOK
+		return lastVersion.String()
 	}
-	return operator
+	return ""
 }
 
 // sumVolumesSize returns sum of persistent volumes storage size in bytes.
@@ -1699,12 +1688,12 @@ func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, o
 	return nil
 }
 
-func (c *K8sClient) getAPIVersionForPSMDBOperator(operators *Operators) string {
-	return fmt.Sprintf(psmdbAPIVersionTemplate, strings.ReplaceAll(operators.Psmdb.Version, ".", "-"))
+func (c *K8sClient) getAPIVersionForPSMDBOperator(version string) string {
+	return fmt.Sprintf(psmdbAPIVersionTemplate, strings.ReplaceAll(version, ".", "-"))
 }
 
-func (c *K8sClient) getAPIVersionForPXCOperator(operators *Operators) string {
-	return fmt.Sprintf(pxcAPIVersionTemplate, strings.ReplaceAll(operators.Xtradb.Version, ".", "-"))
+func (c *K8sClient) getAPIVersionForPXCOperator(version string) string {
+	return fmt.Sprintf(pxcAPIVersionTemplate, strings.ReplaceAll(version, ".", "-"))
 }
 
 // InstallXtraDBOperator installs requested version of PXC operator.
