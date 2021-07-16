@@ -146,6 +146,12 @@ eks-setup-test-namespace:
 	kubectl ${KUBECTL_ARGS} create ns "${NAMESPACE}"
 	kubectl ${KUBECTL_ARGS} config set-context --current --namespace="${NAMESPACE}"
 
+eks-cleanup-namespace:
+	kubectl ${KUBECTL_ARGS} delete perconaxtradbcluster --all
+	kubectl ${KUBECTL_ARGS} delete perconaxtradbclusterbackup --all
+	kubectl ${KUBECTL_ARGS} delete perconaservermongodb --all
+	kubectl ${KUBECTL_ARGS} delete perconaservermongodbbackup --all
+
 eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage.
 	# Delete the PXC operator
 	kubectl ${KUBECTL_ARGS} delete deployment percona-xtradb-cluster-operator
