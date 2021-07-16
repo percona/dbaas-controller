@@ -28,7 +28,8 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/avast/retry-go"
-	"github.com/hashicorp/go-version"
+	goversion "github.com/hashicorp/go-version"
+	pmmversion "github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
@@ -67,8 +68,6 @@ const (
 )
 
 const (
-	pmmClientImage = "perconalab/pmm-client:2"
-
 	k8sAPIVersion     = "v1"
 	k8sMetaKindSecret = "Secret"
 
@@ -326,10 +325,33 @@ var (
 	ErrNotFound error = errors.New("resource was not found in Kubernetes cluster")
 )
 
+var pmmClientImage string
+
 // K8sClient is a client for Kubernetes.
 type K8sClient struct {
 	kubeCtl *kubectl.KubeCtl
 	l       logger.Logger
+}
+
+func init() {
+	if pmmversion.PMMVersion == "" {
+		// Prevent panicing on local development builds.
+		pmmClientImage = "perconalab/pmm-client:dev-latest"
+		return
+	}
+
+	v, err := goversion.NewVersion(pmmversion.PMMVersion)
+	if err != nil {
+		panic("failed to decide what version of pmm-client to use: " + err.Error())
+	}
+
+	if v.Core().String() == v.String() {
+		// Production version contains only major.minor.patch ...
+		pmmClientImage = "perconalab/pmm-client:2"
+	} else {
+		// ... development version contains also commit.
+		pmmClientImage = "perconalab/pmm-client:dev-latest"
+	}
 }
 
 // CountReadyPods returns number of pods that are ready and belong to the
@@ -1330,7 +1352,7 @@ func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIVersion string) (operator Operator) {
 	apiNamespace := strings.Split(expectedAPIVersion, "/")[0]
 	operator.Status = OperatorStatusNotInstalled
-	lastVersion, _ := version.NewVersion("v0.0.0")
+	lastVersion, _ := goversion.NewVersion("v0.0.0")
 	for _, apiVersion := range installedVersions {
 		if !strings.HasPrefix(apiVersion, apiNamespace) {
 			continue
@@ -1348,7 +1370,7 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 			continue
 		}
 		v = strings.Join(versionParts, ".")
-		newVersion, err := version.NewVersion(v)
+		newVersion, err := goversion.NewVersion(v)
 		if err != nil {
 			c.l.Warn("can't parse version %s: %s", v, err)
 			continue
