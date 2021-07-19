@@ -57,12 +57,17 @@ func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *con
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+		err = client.PatchAllPSMDBClusters(ctx, operators.PsmdbOperatorVersion, req.Version)
+		if err != nil {
+			return nil, err
+		}
+
 		return new(controllerv1beta1.InstallPSMDBOperatorResponse), nil
 	}
 
-	err = client.InstallOperator(ctx, req.Version, x.manifestsURLTemplate)
+	err = client.ApplyOperator(ctx, req.Version, x.manifestsURLTemplate)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
 	return new(controllerv1beta1.InstallPSMDBOperatorResponse), nil
