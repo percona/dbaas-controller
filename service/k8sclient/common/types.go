@@ -174,16 +174,15 @@ type NodeSummary struct {
 type LocalObjectReference struct {
 	// Name of the referent.
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	Name string `json:"name,omitempty"`
 }
 
 // SecretKeySelector selects a key of a Secret.
 type SecretKeySelector struct {
 	// The name of the secret in the pod's namespace to select from.
-	LocalObjectReference `json:",inline" protobuf:"bytes,1,opt,name=localObjectReference"`
+	LocalObjectReference `json:",inline"`
 	// The key of the secret to select from.  Must be a valid secret key.
-	Key string `json:"key" protobuf:"bytes,2,opt,name=key"`
+	Key string `json:"key"`
 	// Specify whether the Secret or its key must be defined
-	// +optional
-	Optional *bool `json:"optional,omitempty" protobuf:"varint,3,opt,name=optional"`
+	Optional *bool `json:"optional,omitempty"`
 }
