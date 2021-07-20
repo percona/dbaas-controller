@@ -1745,7 +1745,9 @@ func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVe
 		cluster.Spec.CRVersion = newVersion
 		cluster.Spec.Image = strings.Replace(cluster.Spec.Image, oldVersion, newVersion, 1)
 		cluster.Spec.Backup.Image = strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1)
-		c.kubeCtl.Apply(ctx, cluster)
+		if err := c.kubeCtl.Apply(ctx, cluster); err != nil {
+			return err
+		}
 	}
 	return nil
 }
