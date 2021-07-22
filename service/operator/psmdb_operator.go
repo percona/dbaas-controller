@@ -52,6 +52,8 @@ func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *con
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	// NOTE: This does not handle corner case when user has deployed database clusters and operator is no longer installed.
 	if operators.PsmdbOperatorVersion != "" {
 		err = client.UpdateOperator(ctx, req.Version, psmdbOperatorDeploymentName, x.manifestsURLTemplate)
 		if err != nil {
