@@ -95,6 +95,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			ClusterSize: cluster.Size,
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
 				DiskSize: int64(pxcDiskSize),
+				Image:    cluster.PXC.Image,
 			},
 		}
 

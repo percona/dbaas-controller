@@ -245,6 +245,7 @@ type PSMDBCluster struct {
 	Replicaset    *Replicaset
 	DetailedState DetailedState
 	Exposed       bool
+	Image         string
 }
 
 // PSMDBCredentials represents PSMDB connection credentials.
@@ -1180,6 +1181,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
+			Image:         cluster.Spec.Image,
 			DetailedState: status,
 			Exposed:       cluster.Spec.Sharding.Mongos.Expose.Enabled,
 		}
