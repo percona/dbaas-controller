@@ -19,6 +19,7 @@ package k8sclient
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -34,6 +35,7 @@ import (
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/monitoring"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/utils/convertors"
@@ -93,10 +95,11 @@ const (
 	pullPolicy              = common.PullIfNotPresent
 )
 
-type kubernetesClusterType uint8
+// KubernetesClusterType represents kubernetes cluster type(eg: EKS, Minikube).
+type KubernetesClusterType uint8
 
 const (
-	clusterTypeUnknown kubernetesClusterType = iota
+	clusterTypeUnknown KubernetesClusterType = iota
 	// AmazonEKSClusterType represents EKS cluster type.
 	AmazonEKSClusterType
 	// MinikubeClusterType represents minikube Kubernetes cluster.
@@ -674,7 +677,7 @@ func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) 
 }
 
 // GetKubernetesClusterType returns k8s cluster type based on storage class.
-func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) kubernetesClusterType {
+func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) KubernetesClusterType {
 	sc, err := c.getStorageClass(ctx)
 	if err != nil {
 		c.l.Error(errors.Wrap(err, "failed to get k8s cluster type"))
@@ -1480,7 +1483,7 @@ func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
 }
 
 // GetAllClusterResources goes through all cluster nodes and sums their allocatable resources.
-func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType kubernetesClusterType, volumes *common.PersistentVolumeList) (
+func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType KubernetesClusterType, volumes *common.PersistentVolumeList) (
 	cpuMillis uint64, memoryBytes uint64, diskSizeBytes uint64, err error,
 ) {
 	nodes, err := c.getWorkerNodes(ctx)
@@ -1615,7 +1618,7 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 }
 
 // GetConsumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
-func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType kubernetesClusterType, volumes *common.PersistentVolumeList) (consumedBytes uint64, err error) {
+func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType KubernetesClusterType, volumes *common.PersistentVolumeList) (consumedBytes uint64, err error) {
 	switch clusterType {
 	case MinikubeClusterType:
 		nodes, err := c.getWorkerNodes(ctx)
@@ -1703,4 +1706,98 @@ func (c *K8sClient) InstallPSMDBOperator(ctx context.Context) error {
 		return err
 	}
 	return c.kubeCtl.Apply(ctx, file)
+}
+
+func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
+	files := []string{
+		"deploy/victoriametrics/crds/crd.yaml",
+		"deploy/victoriametrics/operator/manager.yaml",
+		"deploy/victoriametrics/operator/rbac.yaml",
+		"deploy/victoriametrics/crs/vmagent_rbac.yaml",
+		"deploy/victoriametrics/crs/vmnodescrape.yaml",
+		"deploy/victoriametrics/crs/vmpodscrape.yaml",
+	}
+	for _, path := range files {
+		file, err := dbaascontroller.DeployDir.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		err = c.kubeCtl.Apply(ctx, file)
+		if err != nil {
+			return err
+		}
+	}
+
+	randomCrypto, err := rand.Prime(rand.Reader, 64)
+	if err != nil {
+		return err
+	}
+
+	secretName := fmt.Sprintf("victoria-metrics-operator-%d", randomCrypto)
+	err = c.CreateSecret(ctx, secretName, map[string][]byte{
+		"username": []byte(params.Login),
+		"password": []byte(params.Password),
+	})
+	if err != nil {
+		return err
+	}
+
+	vmagent := vmAgentSpec(params, secretName)
+	return c.kubeCtl.Apply(ctx, vmagent)
+}
+
+func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
+	return monitoring.VMAgent{
+		TypeMeta: common.TypeMeta{
+			Kind:       "VMAgent",
+			APIVersion: "operator.victoriametrics.com/v1beta1",
+		},
+		ObjectMeta: common.ObjectMeta{
+			Name: "pmm-vmagent-" + secretName,
+		},
+		Spec: monitoring.VMAgentSpec{
+			ServiceScrapeNamespaceSelector: new(common.LabelSelector),
+			ServiceScrapeSelector:          new(common.LabelSelector),
+			PodScrapeNamespaceSelector:     new(common.LabelSelector),
+			PodScrapeSelector:              new(common.LabelSelector),
+			ProbeSelector:                  new(common.LabelSelector),
+			ProbeNamespaceSelector:         new(common.LabelSelector),
+			StaticScrapeSelector:           new(common.LabelSelector),
+			StaticScrapeNamespaceSelector:  new(common.LabelSelector),
+			ReplicaCount:                   1,
+			Resources: &common.PodResources{
+				Requests: &common.ResourcesList{
+					CPU:    "250m",
+					Memory: "350Mi",
+				},
+				Limits: &common.ResourcesList{
+					CPU:    "500m",
+					Memory: "850Mi",
+				},
+			},
+			AdditionalArgs: map[string]string{
+				"memory.allowedPercent": "40",
+			},
+			RemoteWrite: []monitoring.VMAgentRemoteWriteSpec{
+				{
+					URL:       fmt.Sprintf("%s/victoriametrics/api/v1/write", params.PublicAddress),
+					TLSConfig: &monitoring.TLSConfig{InsecureSkipVerify: true},
+					BasicAuth: &monitoring.BasicAuth{
+						Username: common.SecretKeySelector{
+							LocalObjectReference: common.LocalObjectReference{
+								Name: secretName,
+							},
+							Key: "username",
+						},
+						Password: common.SecretKeySelector{
+							LocalObjectReference: common.LocalObjectReference{
+								Name: secretName,
+							},
+							Key: "password",
+						},
+					},
+				},
+			},
+		},
+	}
 }

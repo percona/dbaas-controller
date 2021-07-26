@@ -168,3 +168,21 @@ type NodeSummaryNode struct {
 type NodeSummary struct {
 	Node NodeSummaryNode `json:"node,omitempty"`
 }
+
+// LocalObjectReference contains enough information to let you locate the
+// referenced object inside the same namespace.
+type LocalObjectReference struct {
+	// Name of the referent.
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+	Name string `json:"name,omitempty"`
+}
+
+// SecretKeySelector selects a key of a Secret.
+type SecretKeySelector struct {
+	// The name of the secret in the pod's namespace to select from.
+	LocalObjectReference `json:",inline"`
+	// The key of the secret to select from.  Must be a valid secret key.
+	Key string `json:"key"`
+	// Specify whether the Secret or its key must be defined
+	Optional *bool `json:"optional,omitempty"`
+}

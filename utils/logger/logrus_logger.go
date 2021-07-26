@@ -101,6 +101,11 @@ func (z *LogrusLogger) WithField(key string, value interface{}) Logger {
 	return &LogrusLogger{l: z.l.WithField(key, value)}
 }
 
+// SetLevel sets log level.
+func (z *LogrusLogger) SetLevel(level Level) {
+	z.l.Level = logrus.Level(level)
+}
+
 func (z *LogrusLogger) Debug(args ...interface{}) { z.l.Debug(args...) } //nolint:golint
 func (z *LogrusLogger) Info(args ...interface{})  { z.l.Info(args...) }  //nolint:golint
 func (z *LogrusLogger) Warn(args ...interface{})  { z.l.Warn(args...) }  //nolint:golint
