@@ -225,12 +225,15 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 		Resume:  req.Params.Resume,
 	}
 
-	if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
-		if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
-			params.PXC = &k8sclient.PXC{
-				ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
+	if req.Params.Pxc != nil {
+		if req.Params.Pxc.ComputeResources != nil {
+			if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
+				params.PXC = &k8sclient.PXC{
+					ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
+				}
 			}
 		}
+		params.PXC.Image = req.Params.Pxc.Image
 	}
 
 	if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {

@@ -19,6 +19,7 @@ package psmdb
 
 import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/commontypes"
 )
 
 // AffinityOff turn off affinity.
@@ -31,6 +32,26 @@ type PerconaServerMongoDB struct {
 
 	Spec   PerconaServerMongoDBSpec   `json:"spec,omitempty"`
 	Status perconaServerMongoDBStatus `json:"status,omitempty"`
+}
+
+func (p *PerconaServerMongoDB) IsReady() bool {
+	return p.Status.Status == AppStateReady
+}
+
+func (p *PerconaServerMongoDB) IsChanging() bool {
+	return p.Status.Status == AppStatePending || p.Status.Status == AppStateInit
+}
+
+func (p *PerconaServerMongoDB) SetUpgradeOptions(upgradeOptions *commontypes.UpgradeOptions) {
+	p.Spec.UpgradeOptions = upgradeOptions
+}
+
+func (p *PerconaServerMongoDB) GetImage() string {
+	return p.Spec.Image
+}
+
+func (p *PerconaServerMongoDB) GetName() string {
+	return p.Name
 }
 
 // PerconaServerMongoDBList holds a list of PSMDB objects.
@@ -71,22 +92,22 @@ type UpgradeOptions struct {
 
 // PerconaServerMongoDBSpec defines the desired state of PerconaServerMongoDB.
 type PerconaServerMongoDBSpec struct {
-	UpdateStrategy          string          `json:"updateStrategy,omitempty"`
-	UpgradeOptions          *UpgradeOptions `json:"upgradeOptions,omitempty"`
-	CRVersion               string          `json:"crVersion,omitempty"`
-	Pause                   bool            `json:"pause,omitempty"`
-	UnsafeConf              bool            `json:"allowUnsafeConfigurations"`
-	RunUID                  int64           `json:"runUid,omitempty"`
-	Platform                *platform       `json:"platform,omitempty"`
-	Image                   string          `json:"image,omitempty"`
-	Mongod                  *MongodSpec     `json:"mongod,omitempty"`
-	Replsets                []*ReplsetSpec  `json:"replsets,omitempty"`
-	Secrets                 *SecretsSpec    `json:"secrets,omitempty"`
-	Backup                  BackupSpec      `json:"backup,omitempty"`
-	PMM                     PmmSpec         `json:"pmm,omitempty"`
-	SchedulerName           string          `json:"schedulerName,omitempty"`
-	ClusterServiceDNSSuffix string          `json:"clusterServiceDNSSuffix,omitempty"`
-	Sharding                *ShardingSpec   `json:"sharding,omitempty"`
+	UpdateStrategy          string                      `json:"updateStrategy,omitempty"`
+	UpgradeOptions          *commontypes.UpgradeOptions `json:"upgradeOptions,omitempty"`
+	CRVersion               string                      `json:"crVersion,omitempty"`
+	Pause                   bool                        `json:"pause,omitempty"`
+	UnsafeConf              bool                        `json:"allowUnsafeConfigurations"`
+	RunUID                  int64                       `json:"runUid,omitempty"`
+	Platform                *platform                   `json:"platform,omitempty"`
+	Image                   string                      `json:"image,omitempty"`
+	Mongod                  *MongodSpec                 `json:"mongod,omitempty"`
+	Replsets                []*ReplsetSpec              `json:"replsets,omitempty"`
+	Secrets                 *SecretsSpec                `json:"secrets,omitempty"`
+	Backup                  BackupSpec                  `json:"backup,omitempty"`
+	PMM                     PmmSpec                     `json:"pmm,omitempty"`
+	SchedulerName           string                      `json:"schedulerName,omitempty"`
+	ClusterServiceDNSSuffix string                      `json:"clusterServiceDNSSuffix,omitempty"`
+	Sharding                *ShardingSpec               `json:"sharding,omitempty"`
 }
 
 type replsetMemberStatus struct {

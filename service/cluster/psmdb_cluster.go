@@ -18,7 +18,6 @@ package cluster
 
 import (
 	"context"
-	"strings"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"

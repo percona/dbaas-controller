@@ -19,39 +19,33 @@ package pxc
 
 import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/commontypes"
 )
 
 // PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
 type PerconaXtraDBClusterSpec struct { //nolint:maligned
-	Platform              string              `json:"platform,omitempty"`
-	CRVersion             string              `json:"crVersion,omitempty"`
-	Pause                 bool                `json:"pause,omitempty"`
-	SecretsName           string              `json:"secretsName,omitempty"`
-	VaultSecretName       string              `json:"vaultSecretName,omitempty"`
-	SSLSecretName         string              `json:"sslSecretName,omitempty"`
-	SSLInternalSecretName string              `json:"sslInternalSecretName,omitempty"`
-	TLS                   *TLSSpec            `json:"tls,omitempty"`
-	PXC                   *PodSpec            `json:"pxc,omitempty"`
-	ProxySQL              *PodSpec            `json:"proxysql,omitempty"`
-	HAProxy               *PodSpec            `json:"haproxy,omitempty"`
-	PMM                   *PMMSpec            `json:"pmm,omitempty"`
-	Backup                *PXCScheduledBackup `json:"backup,omitempty"`
-	UpdateStrategy        string              `json:"updateStrategy,omitempty"`
-	UpgradeOptions        UpgradeOptions      `json:"upgradeOptions,omitempty"`
-	AllowUnsafeConfig     bool                `json:"allowUnsafeConfigurations,omitempty"`
+	Platform              string                      `json:"platform,omitempty"`
+	CRVersion             string                      `json:"crVersion,omitempty"`
+	Pause                 bool                        `json:"pause,omitempty"`
+	SecretsName           string                      `json:"secretsName,omitempty"`
+	VaultSecretName       string                      `json:"vaultSecretName,omitempty"`
+	SSLSecretName         string                      `json:"sslSecretName,omitempty"`
+	SSLInternalSecretName string                      `json:"sslInternalSecretName,omitempty"`
+	TLS                   *TLSSpec                    `json:"tls,omitempty"`
+	PXC                   *PodSpec                    `json:"pxc,omitempty"`
+	ProxySQL              *PodSpec                    `json:"proxysql,omitempty"`
+	HAProxy               *PodSpec                    `json:"haproxy,omitempty"`
+	PMM                   *PMMSpec                    `json:"pmm,omitempty"`
+	Backup                *PXCScheduledBackup         `json:"backup,omitempty"`
+	UpdateStrategy        string                      `json:"updateStrategy,omitempty"`
+	UpgradeOptions        *commontypes.UpgradeOptions `json:"upgradeOptions,omitempty"`
+	AllowUnsafeConfig     bool                        `json:"allowUnsafeConfigurations,omitempty"`
 }
 
 // TLSSpec holds cluster's TLS specs.
 type TLSSpec struct {
 	SANs       []string         `json:"SANs,omitempty"`
 	IssuerConf *ObjectReference `json:"issuerConf,omitempty"`
-}
-
-// UpgradeOptions holds configuration options to handle automatic upgrades.
-type UpgradeOptions struct {
-	VersionServiceEndpoint string `json:"versionServiceEndpoint,omitempty"`
-	Apply                  string `json:"apply,omitempty"`
-	Schedule               string `json:"schedule,omitempty"`
 }
 
 // PXCScheduledBackup holds the config for cluster scheduled backups.
@@ -130,6 +124,26 @@ type PerconaXtraDBCluster struct {
 
 	Spec   PerconaXtraDBClusterSpec   `json:"spec,omitempty"`
 	Status PerconaXtraDBClusterStatus `json:"status,omitempty"`
+}
+
+func (p *PerconaXtraDBCluster) IsReady() bool {
+	return p.Status.Status == AppStateReady
+}
+
+func (p *PerconaXtraDBCluster) IsChanging() bool {
+	return p.Status.Status == AppStateInit
+}
+
+func (p *PerconaXtraDBCluster) SetUpgradeOptions(upgradeOptions *commontypes.UpgradeOptions) {
+	p.Spec.UpgradeOptions = upgradeOptions
+}
+
+func (p *PerconaXtraDBCluster) GetImage() string {
+	return p.Spec.PXC.Image
+}
+
+func (p *PerconaXtraDBCluster) GetName() string {
+	return p.Name
 }
 
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.

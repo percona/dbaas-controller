@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/commontypes"
+
 	"github.com/AlekSi/pointer"
 	"github.com/avast/retry-go"
 	"github.com/hashicorp/go-version"
@@ -47,6 +49,15 @@ const (
 	perconaXtraDBClusterKind = ClusterKind("PerconaXtraDBCluster")
 	perconaServerMongoDBKind = ClusterKind("PerconaServerMongoDB")
 )
+
+type DatabaseCluster interface {
+	IsReady() bool
+	IsChanging() bool
+	SetUpgradeOptions(*commontypes.UpgradeOptions)
+	// GetImage returns image of database software used.
+	GetImage() string
+	GetName() string
+}
 
 // ClusterState represents XtraDB cluster CR state.
 type ClusterState int32
@@ -185,15 +196,15 @@ type PMM struct {
 
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
 type XtraDBParams struct {
-	Name     string
-	Size     int32
-	Suspend  bool
-	Resume   bool
-	PXC      *PXC
-	ProxySQL *ProxySQL
-	PMM      *PMM
-	HAProxy  *HAProxy
-	Expose   bool
+	Name              string
+	Size              int32
+	Suspend           bool
+	Resume            bool
+	PXC               *PXC
+	ProxySQL          *ProxySQL
+	PMM               *PMM
+	HAProxy           *HAProxy
+	Expose            bool
 	VersionServiceURL string
 }
 
@@ -438,8 +449,8 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
 		},
 		Spec: pxc.PerconaXtraDBClusterSpec{
-			UpdateStrategy: updateStrategySmartUpdate
-			UpgradeOptions: &pxc.UpgradeOptions{
+			UpdateStrategy: updateStrategySmartUpdate,
+			UpgradeOptions: &commontypes.UpgradeOptions{
 				VersionServiceEndpoint: params.VersionServiceURL,
 			},
 			CRVersion:         pxcCRVersion,
@@ -547,11 +558,20 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 		return errors.New("can't update both proxies, only one should be in use")
 	}
 
-	var cluster pxc.PerconaXtraDBCluster
-	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
-	if err != nil {
-		return err
+	getCluster := func(ctx context.Context, k *kubectl.KubeCtl) (*pxc.PerconaXtraDBCluster, error) {
+		var cluster pxc.PerconaXtraDBCluster
+		err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
+		if err != nil {
+			return nil, err
+		}
+		return &cluster, nil
 	}
+	getDatabaseCluster := func(ctx context.Context, k *kubectl.KubeCtl) (DatabaseCluster, error) {
+		cluster, err := getCluster(ctx, k)
+		return DatabaseCluster(cluster), err
+	}
+
+	cluster, err := getCluster(ctx, c.kubeCtl)
 
 	// This is to prevent concurrent updates
 	if cluster.Status.PXC.Status != pxc.AppStateReady {
@@ -584,6 +604,13 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	if params.HAProxy != nil {
 		cluster.Spec.HAProxy.Resources = c.updateComputeResources(params.HAProxy.ComputeResources, cluster.Spec.HAProxy.Resources)
+	}
+
+	if params.PXC.Image != "" {
+		err = c.addTriggersForUpgrade(ctx, getDatabaseCluster, cluster, params.PXC.Image)
+		if err != nil {
+			return err
+		}
 	}
 
 	return c.kubeCtl.Apply(ctx, &cluster)
@@ -910,8 +937,8 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			Finalizers: []string{"delete-psmdb-pvc"},
 		},
 		Spec: psmdb.PerconaServerMongoDBSpec{
-			UpdateStrategy: updateStrategySmartUpdate
-			UpgradeOptions: &pxc.UpgradeOptions{
+			UpdateStrategy: updateStrategySmartUpdate,
+			UpgradeOptions: &commontypes.UpgradeOptions{
 				VersionServiceEndpoint: params.VersionServiceURL,
 			},
 			CRVersion: psmdbCRVersion,
@@ -1049,17 +1076,25 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 // UpdatePSMDBCluster changes size, stops, resumes or upgrades provided percona server for mongodb cluster.
 func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
-	var cluster psmdb.PerconaServerMongoDB
-	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), params.Name, &cluster)
-	if err != nil {
-		return errors.Wrap(err, "UpdatePSMDBCluster get error")
+	getCluster := func(ctx context.Context, k *kubectl.KubeCtl) (*psmdb.PerconaServerMongoDB, error) {
+		var cluster psmdb.PerconaServerMongoDB
+		err := k.Get(ctx, string(perconaServerMongoDBKind), params.Name, &cluster)
+		if err != nil {
+			return nil, errors.Wrap(err, "UpdatePSMDBCluster get error")
+		}
+		return &cluster, nil
 	}
+	getDatabaseCluster := func(ctx context.Context, k *kubectl.KubeCtl) (DatabaseCluster, error) {
+		cluster, err := getCluster(ctx, k)
+		return DatabaseCluster(cluster), err
+	}
+
+	cluster, err := getCluster(ctx, c.kubeCtl)
 
 	// This is to prevent concurrent updates
 	if cluster.Status.Status != psmdb.AppStateReady {
 		return errors.Wrapf(ErrPSMDBClusterNotReady, "state is %v", cluster.Status.Status) //nolint:wrapcheck
 	}
-
 	if params.Size > 0 {
 		cluster.Spec.Replsets[0].Size = params.Size
 	}
@@ -1074,20 +1109,11 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	if params.Replicaset != nil {
 		cluster.Spec.Replsets[0].Resources = c.updateComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
 	}
-	if req.Params.Image != "" {
-		// Check the image is the same.
-		newImageAndTag := strings.Split(params.Image, ":")
-		if len(imageAndTag) != 2 {
-			return nil, status.Error(codes.InvalidArgument, "image has to have version tag")
+	if params.Image != "" {
+		err = c.addTriggersForUpgrade(ctx, getDatabaseCluster, cluster, params.Image)
+		if err != nil {
+			return err
 		}
-		currentImageAndTag := strings.Split(cluster.Spec.Image, ":")
-		if currentImageAndTag[0] != newImageAndTag[0] {
-			return errors.Errorf("Expected image is %q, %q was given", currentImageAndTag[0], newImageAndTag[0])
-		}
-
-		versionToUpgradeTo := newImageAndTag[1]
-		c.upgradePSMDBCluster(ctx)
-		// TODO: c.patchtheclusterwithautoupdateandstorethat(version)
 	}
 
 	return c.kubeCtl.Apply(ctx, cluster)
@@ -1100,31 +1126,91 @@ const (
 	SmartUpdateDisabled         = "Disabled"
 )
 
-// upgradePSMDBCluster applies upgradeOptions and updateStrategy fields into CR. It tells the operator how to execute
-// PSMDB cluster upgrade to given version.
-func (c *K8sClient) upgradePSMDBCluster(ctx context.Context, cluster *psmdb.PerconaServerMongoDB, version string) error {
-	cluster.Spec.UpdateStrategy = updateStrategySmartUpdate
-	cluster.Spec.UpgradeOptions = &psmdb.UpgradeOptions{
-		Apply:    version,
-		Schedule: cronScheduleForSmartUpgrade,
+type getClusterFunc func(ctx context.Context, k *kubectl.KubeCtl) (DatabaseCluster, error)
+
+// addTriggersForUpgrade stores triggers into cluster CRs that are needed for cluster upgrade execution.
+// The cluster is upgraded to version supplied in image tag. It starts goroutine that waits for upgrade to be done.
+// Then it removes stored triggers.
+func (c *K8sClient) addTriggersForUpgrade(ctx context.Context, getCluster getClusterFunc, cluster DatabaseCluster, newImage string) error {
+	// Check the image is the same.
+	newImageAndTag := strings.Split(newImage, ":")
+	if len(newImageAndTag) != 2 {
+		return errors.New("image has to have version tag")
+	}
+	currentImageAndTag := strings.Split(cluster.GetImage(), ":")
+	if currentImageAndTag[0] != newImageAndTag[0] {
+		return errors.Errorf("expected image is %q, %q was given", currentImageAndTag[0], newImageAndTag[0])
 	}
 
-	go func(kubeconfig, clusterName string) {
-		waitForClusterToBeChanging()
-		waitFroClusterToBeReady()
-		// Disable SmartUpdate when cluster is ready -> is upgraded.
-		cluster.Spec.UpgradeOptions.Apply = SmartUpdateDisabled
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-		defer cancel()
-		k := kubectl.NewKubeCtl(ctx, kubeconfig)
-		defer k.Cleanup()
-		k.Apply(ctx, cluster)
-	}(c.kubectl.GetKubeconfig(), cluster.Name)
+	// Change CR for upgrade to be triggered.
+	cluster.SetUpgradeOptions(&commontypes.UpgradeOptions{
+		Apply:    newImageAndTag[1], // the new image tag is the version we want to upgrade to.
+		Schedule: cronScheduleForSmartUpgrade,
+	})
 
-	// STORE THIS INTO append(c.ongoingUpgrades, struct{kubeconfig, type, name}
-	//     protect this with mutex
+	// We need to disable the upgrade trigger after the upgrade is done.
+	// Kubeconfig is needed because K8sClient's kubectl is Cleanup-ed when this runs.
+	go func(kubeconfig string, cluster DatabaseCluster) {
+		isChanging := func(cluster DatabaseCluster) bool {
+			return cluster.IsChanging()
+		}
+		isReady := func(cluster DatabaseCluster) bool {
+			return cluster.IsReady()
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+		defer cancel()
+
+		k, err := kubectl.NewKubeCtl(ctx, kubeconfig)
+		if err != nil {
+			c.l.Errorf("failed to create kubectl to disable SmartUpdate: %v", err)
+			return
+		}
+		defer k.Cleanup()
+
+		err = waitForClusterCondition(ctx, k, getCluster, isChanging)
+		if err != nil {
+			c.l.Warnf("failed wait for cluster %q upgrade to begin: %v", cluster.GetName(), err)
+		}
+
+		err = waitForClusterCondition(ctx, k, getCluster, isReady)
+		if err != nil {
+			c.l.Errorf("failed to wait for cluster %q to be ready after upgrade: %v", cluster.GetName(), err)
+			return
+		}
+
+		// Disable SmartUpdate when cluster is ready -> cluster is upgraded.
+		cluster.SetUpgradeOptions(&commontypes.UpgradeOptions{
+			Apply: SmartUpdateDisabled,
+		})
+
+		err = k.Apply(ctx, cluster)
+		if err != nil {
+			c.l.Errorf("failed to disable SmartUpdate: %v", err)
+			return
+		}
+	}(c.kubeCtl.GetKubeconfig(), cluster)
 
 	return nil
+}
+
+// waitForClusterCondition waits until given done returns true.
+func waitForClusterCondition(ctx context.Context, k *kubectl.KubeCtl, get getClusterFunc, done func(cluster DatabaseCluster) bool) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		time.Sleep(5 * time.Second)
+		cluster, err := get(ctx, k)
+		if err != nil {
+			return errors.Wrap(err, "failed to get database cluster")
+		}
+		if done(cluster) {
+			return nil
+		}
+	}
 }
 
 // DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
