@@ -62,22 +62,31 @@ type ShardingSpec struct {
 	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
 }
 
+// UpgradeOptions specify how and to what version we update.
+type UpgradeOptions struct {
+	Apply                  string `json:"apply,omitempty"`
+	VersionServiceEndpoint string `json:"versionServiceEndpoint,omitempty"`
+	Schedule               string `json:"schedule,omitempty"`
+}
+
 // PerconaServerMongoDBSpec defines the desired state of PerconaServerMongoDB.
 type PerconaServerMongoDBSpec struct {
-	CRVersion               string         `json:"crVersion,omitempty"`
-	Pause                   bool           `json:"pause,omitempty"`
-	UnsafeConf              bool           `json:"allowUnsafeConfigurations"`
-	RunUID                  int64          `json:"runUid,omitempty"`
-	Platform                *platform      `json:"platform,omitempty"`
-	Image                   string         `json:"image,omitempty"`
-	Mongod                  *MongodSpec    `json:"mongod,omitempty"`
-	Replsets                []*ReplsetSpec `json:"replsets,omitempty"`
-	Secrets                 *SecretsSpec   `json:"secrets,omitempty"`
-	Backup                  BackupSpec     `json:"backup,omitempty"`
-	PMM                     PmmSpec        `json:"pmm,omitempty"`
-	SchedulerName           string         `json:"schedulerName,omitempty"`
-	ClusterServiceDNSSuffix string         `json:"clusterServiceDNSSuffix,omitempty"`
-	Sharding                *ShardingSpec  `json:"sharding,omitempty"`
+	UpdateStrategy          string          `json:"updateStrategy,omitempty"`
+	UpgradeOptions          *UpgradeOptions `json:"upgradeOptions,omitempty"`
+	CRVersion               string          `json:"crVersion,omitempty"`
+	Pause                   bool            `json:"pause,omitempty"`
+	UnsafeConf              bool            `json:"allowUnsafeConfigurations"`
+	RunUID                  int64           `json:"runUid,omitempty"`
+	Platform                *platform       `json:"platform,omitempty"`
+	Image                   string          `json:"image,omitempty"`
+	Mongod                  *MongodSpec     `json:"mongod,omitempty"`
+	Replsets                []*ReplsetSpec  `json:"replsets,omitempty"`
+	Secrets                 *SecretsSpec    `json:"secrets,omitempty"`
+	Backup                  BackupSpec      `json:"backup,omitempty"`
+	PMM                     PmmSpec         `json:"pmm,omitempty"`
+	SchedulerName           string          `json:"schedulerName,omitempty"`
+	ClusterServiceDNSSuffix string          `json:"clusterServiceDNSSuffix,omitempty"`
+	Sharding                *ShardingSpec   `json:"sharding,omitempty"`
 }
 
 type replsetMemberStatus struct {

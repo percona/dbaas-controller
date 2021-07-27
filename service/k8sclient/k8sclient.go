@@ -194,6 +194,7 @@ type XtraDBParams struct {
 	PMM      *PMM
 	HAProxy  *HAProxy
 	Expose   bool
+	VersionServiceURL string
 }
 
 // Cluster contains common information related to cluster.
@@ -203,14 +204,15 @@ type Cluster struct {
 
 // PSMDBParams contains all parameters required to create or update percona server for mongodb cluster.
 type PSMDBParams struct {
-	Name       string
-	Image      string
-	Size       int32
-	Suspend    bool
-	Resume     bool
-	Replicaset *Replicaset
-	PMM        *PMM
-	Expose     bool
+	Name              string
+	Image             string
+	Size              int32
+	Suspend           bool
+	Resume            bool
+	Replicaset        *Replicaset
+	PMM               *PMM
+	Expose            bool
+	VersionServiceURL string
 }
 
 type appStatus struct {
@@ -436,6 +438,10 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
 		},
 		Spec: pxc.PerconaXtraDBClusterSpec{
+			UpdateStrategy: updateStrategySmartUpdate
+			UpgradeOptions: &pxc.UpgradeOptions{
+				VersionServiceEndpoint: params.VersionServiceURL,
+			},
 			CRVersion:         pxcCRVersion,
 			AllowUnsafeConfig: true,
 			SecretsName:       secretName,
@@ -904,6 +910,10 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			Finalizers: []string{"delete-psmdb-pvc"},
 		},
 		Spec: psmdb.PerconaServerMongoDBSpec{
+			UpdateStrategy: updateStrategySmartUpdate
+			UpgradeOptions: &pxc.UpgradeOptions{
+				VersionServiceEndpoint: params.VersionServiceURL,
+			},
 			CRVersion: psmdbCRVersion,
 			Image:     psmdbImage,
 			Secrets: &psmdb.SecretsSpec{
@@ -1037,7 +1047,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	return c.kubeCtl.Apply(ctx, res)
 }
 
-// UpdatePSMDBCluster changes size of provided percona server for mongodb cluster.
+// UpdatePSMDBCluster changes size, stops, resumes or upgrades provided percona server for mongodb cluster.
 func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
 	var cluster psmdb.PerconaServerMongoDB
 	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), params.Name, &cluster)
@@ -1064,8 +1074,57 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	if params.Replicaset != nil {
 		cluster.Spec.Replsets[0].Resources = c.updateComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
 	}
+	if req.Params.Image != "" {
+		// Check the image is the same.
+		newImageAndTag := strings.Split(params.Image, ":")
+		if len(imageAndTag) != 2 {
+			return nil, status.Error(codes.InvalidArgument, "image has to have version tag")
+		}
+		currentImageAndTag := strings.Split(cluster.Spec.Image, ":")
+		if currentImageAndTag[0] != newImageAndTag[0] {
+			return errors.Errorf("Expected image is %q, %q was given", currentImageAndTag[0], newImageAndTag[0])
+		}
+
+		versionToUpgradeTo := newImageAndTag[1]
+		c.upgradePSMDBCluster(ctx)
+		// TODO: c.patchtheclusterwithautoupdateandstorethat(version)
+	}
 
 	return c.kubeCtl.Apply(ctx, cluster)
+}
+
+const (
+	updateStrategySmartUpdate = "SmartUpdate"
+	// Operators can't upgrade database version without given schedule. This ensures the upgrade is ran.
+	cronScheduleForSmartUpgrade = "* * * * *"
+	SmartUpdateDisabled         = "Disabled"
+)
+
+// upgradePSMDBCluster applies upgradeOptions and updateStrategy fields into CR. It tells the operator how to execute
+// PSMDB cluster upgrade to given version.
+func (c *K8sClient) upgradePSMDBCluster(ctx context.Context, cluster *psmdb.PerconaServerMongoDB, version string) error {
+	cluster.Spec.UpdateStrategy = updateStrategySmartUpdate
+	cluster.Spec.UpgradeOptions = &psmdb.UpgradeOptions{
+		Apply:    version,
+		Schedule: cronScheduleForSmartUpgrade,
+	}
+
+	go func(kubeconfig, clusterName string) {
+		waitForClusterToBeChanging()
+		waitFroClusterToBeReady()
+		// Disable SmartUpdate when cluster is ready -> is upgraded.
+		cluster.Spec.UpgradeOptions.Apply = SmartUpdateDisabled
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+		defer cancel()
+		k := kubectl.NewKubeCtl(ctx, kubeconfig)
+		defer k.Cleanup()
+		k.Apply(ctx, cluster)
+	}(c.kubectl.GetKubeconfig(), cluster.Name)
+
+	// STORE THIS INTO append(c.ongoingUpgrades, struct{kubeconfig, type, name}
+	//     protect this with mutex
+
+	return nil
 }
 
 // DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.

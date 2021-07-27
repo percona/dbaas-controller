@@ -45,6 +45,7 @@ const (
 type KubeCtl struct {
 	l              logger.Logger
 	cmd            []string
+	kubeconfig     string
 	kubeconfigPath string
 }
 
@@ -78,6 +79,7 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 
 	k := &KubeCtl{
 		l:              l,
+		kubeconfig:     kubeconfig,
 		kubeconfigPath: kubeconfigPath,
 	}
 
@@ -96,6 +98,10 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 	cmd = append(cmd, fmt.Sprintf("--kubeconfig=%s", kubeconfigPath))
 	k.cmd = cmd
 	return k, nil
+}
+
+func (k *KubeCtl) GetKubeconfig() string {
+	return k.kubeconfig
 }
 
 func saveKubeconfig(kubeconfig string) (string, error) {

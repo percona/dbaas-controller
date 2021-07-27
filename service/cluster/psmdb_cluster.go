@@ -18,6 +18,7 @@ package cluster
 
 import (
 	"context"
+	"strings"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
@@ -129,7 +130,8 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 		Replicaset: &k8sclient.Replicaset{
 			DiskSize: convertors.BytesToStr(req.Params.Replicaset.DiskSize),
 		},
-		Expose: req.Expose,
+		Expose:            req.Expose,
+		VersionServiceURL: req.Params.VersionServiceUrl,
 	}
 
 	if req.Pmm != nil {
@@ -181,6 +183,8 @@ func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *contr
 				}
 			}
 		}
+
+		params.Image = req.Params.Image
 	}
 
 	err = client.UpdatePSMDBCluster(ctx, params)
