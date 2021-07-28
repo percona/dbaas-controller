@@ -60,6 +60,11 @@ func (z *ZapLogger) WithField(key string, value interface{}) Logger {
 	return &ZapLogger{l: z.l.With(key, value)}
 }
 
+// SetLevel sets log level.
+func (z *ZapLogger) SetLevel(level Level) {
+	// TODO: implement it.
+}
+
 func (z *ZapLogger) Debug(args ...interface{}) { z.l.Debug(args...) } //nolint:golint
 func (z *ZapLogger) Info(args ...interface{})  { z.l.Info(args...) }  //nolint:golint
 func (z *ZapLogger) Warn(args ...interface{})  { z.l.Warn(args...) }  //nolint:golint
