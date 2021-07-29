@@ -27,8 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/commontypes"
-
 	"github.com/AlekSi/pointer"
 	"github.com/avast/retry-go"
 	"github.com/hashicorp/go-version"
@@ -36,6 +34,7 @@ import (
 
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/commontypes"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/monitoring"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
