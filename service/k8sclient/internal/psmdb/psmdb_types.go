@@ -42,8 +42,9 @@ func (p *PerconaServerMongoDB) IsChanging() bool {
 	return p.Status.Status == AppStatePending || p.Status.Status == AppStateInit
 }
 
-func (p *PerconaServerMongoDB) SetUpgradeOptions(upgradeOptions *commontypes.UpgradeOptions) {
-	p.Spec.UpgradeOptions = upgradeOptions
+func (p *PerconaServerMongoDB) SetUpgradeOptions(newVersion string, cronSchedule string) {
+	p.Spec.UpgradeOptions.Apply = newVersion
+	p.Spec.UpgradeOptions.Schedule = cronSchedule
 }
 
 func (p *PerconaServerMongoDB) GetImage() string {

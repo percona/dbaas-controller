@@ -54,7 +54,7 @@ const (
 type DatabaseCluster interface {
 	IsReady() bool
 	IsChanging() bool
-	SetUpgradeOptions(*commontypes.UpgradeOptions)
+	SetUpgradeOptions(newVersion string, cronSchedule string)
 	// GetImage returns image of database software used.
 	GetImage() string
 	GetName() string
@@ -574,6 +574,9 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	cluster, err := getCluster(ctx, c.kubeCtl)
+	if err != nil {
+		return err
+	}
 
 	// This is to prevent concurrent updates
 	if cluster.Status.PXC.Status != pxc.AppStateReady {
@@ -1092,6 +1095,9 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 
 	cluster, err := getCluster(ctx, c.kubeCtl)
+	if err != nil {
+		return err
+	}
 
 	// This is to prevent concurrent updates
 	if cluster.Status.Status != psmdb.AppStateReady {
@@ -1143,12 +1149,12 @@ func (c *K8sClient) addTriggersForUpgrade(ctx context.Context, getCluster getClu
 	if currentImageAndTag[0] != newImageAndTag[0] {
 		return errors.Errorf("expected image is %q, %q was given", currentImageAndTag[0], newImageAndTag[0])
 	}
+	if currentImageAndTag[1] == newImageAndTag[1] {
+		return errors.Errorf("version %q is already in use, can't upgrade to it", newImageAndTag[1])
+	}
 
 	// Change CR for upgrade to be triggered.
-	cluster.SetUpgradeOptions(&commontypes.UpgradeOptions{
-		Apply:    newImageAndTag[1], // the new image tag is the version we want to upgrade to.
-		Schedule: cronScheduleForSmartUpgrade,
-	})
+	cluster.SetUpgradeOptions(newImageAndTag[1], cronScheduleForSmartUpgrade)
 
 	// We need to disable the upgrade trigger after the upgrade is done.
 	// Kubeconfig is needed because K8sClient's kubectl is Cleanup-ed when this runs.
@@ -1182,9 +1188,7 @@ func (c *K8sClient) addTriggersForUpgrade(ctx context.Context, getCluster getClu
 		}
 
 		// Disable SmartUpdate when cluster is ready -> cluster is upgraded.
-		cluster.SetUpgradeOptions(&commontypes.UpgradeOptions{
-			Apply: SmartUpdateDisabled,
-		})
+		cluster.SetUpgradeOptions(SmartUpdateDisabled, "")
 
 		err = k.Apply(ctx, cluster)
 		if err != nil {

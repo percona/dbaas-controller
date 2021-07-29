@@ -134,8 +134,9 @@ func (p *PerconaXtraDBCluster) IsChanging() bool {
 	return p.Status.Status == AppStateInit
 }
 
-func (p *PerconaXtraDBCluster) SetUpgradeOptions(upgradeOptions *commontypes.UpgradeOptions) {
-	p.Spec.UpgradeOptions = upgradeOptions
+func (p *PerconaXtraDBCluster) SetUpgradeOptions(newVersion string, cronSchedule string) {
+	p.Spec.UpgradeOptions.Apply = newVersion
+	p.Spec.UpgradeOptions.Schedule = cronSchedule
 }
 
 func (p *PerconaXtraDBCluster) GetImage() string {
