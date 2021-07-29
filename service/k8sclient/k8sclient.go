@@ -562,7 +562,7 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	getCluster := func(ctx context.Context, k *kubectl.KubeCtl) (*pxc.PerconaXtraDBCluster, error) {
 		var cluster pxc.PerconaXtraDBCluster
-		err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
+		err := k.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
 		if err != nil {
 			return nil, err
 		}
