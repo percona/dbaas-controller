@@ -224,6 +224,11 @@ func (k *KubeCtl) Apply(ctx context.Context, res interface{}) error {
 	return err
 }
 
+func (k *KubeCtl) Patch(ctx context.Context, resourceType, resourceName string, res interface{}) error {
+	_, err := run(ctx, k.cmd, []string{"patch", resourceType, resourceName, "--type", "merge", "-f", "-"}, res)
+	return err
+}
+
 // Delete executes `kubectl delete` with given resource.
 func (k *KubeCtl) Delete(ctx context.Context, res interface{}) error {
 	_, err := run(ctx, k.cmd, []string{"delete", "-f", "-"}, res)
