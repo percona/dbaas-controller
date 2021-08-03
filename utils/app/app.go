@@ -33,15 +33,12 @@ type Flags struct {
 	GRPCAddr string
 	// Debug listen address
 	DebugAddr string
-<<<<<<< HEAD
 	// PXCOperatorURLTemplate exists for user to fetch Kubernetes manifests when running DBaaS on air-gapped cluster.
 	PXCOperatorURLTemplate string
 	// PSMDBOperatorURLTemplate exists for user to fetch Kubernetes manifests when running DBaaS on air-gapped cluster.
 	PSMDBOperatorURLTemplate string
-=======
 	// Debug enabled.
 	LogDebug bool
->>>>>>> origin/main
 }
 
 // SetupOpts contains options required for app.
