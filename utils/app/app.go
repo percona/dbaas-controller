@@ -33,10 +33,15 @@ type Flags struct {
 	GRPCAddr string
 	// Debug listen address
 	DebugAddr string
+<<<<<<< HEAD
 	// PXCOperatorURLTemplate exists for user to fetch Kubernetes manifests when running DBaaS on air-gapped cluster.
 	PXCOperatorURLTemplate string
 	// PSMDBOperatorURLTemplate exists for user to fetch Kubernetes manifests when running DBaaS on air-gapped cluster.
 	PSMDBOperatorURLTemplate string
+=======
+	// Debug enabled.
+	LogDebug bool
+>>>>>>> origin/main
 }
 
 // SetupOpts contains options required for app.
@@ -74,5 +79,8 @@ func Setup(opts *SetupOpts) (*Flags, error) {
 	).Default(
 		"https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v%s/deploy/%s",
 	).StringVar(&flags.PSMDBOperatorURLTemplate)
+
+	kingpin.Flag("debug", "Enable debug").Envar("PMM_DEBUG").BoolVar(&flags.LogDebug)
+
 	return &flags, nil
 }

@@ -128,3 +128,23 @@ func (k KubernetesClusterService) GetResources(ctx context.Context, req *control
 		},
 	}, nil
 }
+
+// StartMonitoring sets up victoria metrics operator to monitor kubernetes cluster.
+func (k KubernetesClusterService) StartMonitoring(ctx context.Context, req *controllerv1beta1.StartMonitoringRequest) (*controllerv1beta1.StartMonitoringResponse, error) {
+	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
+	}
+	defer k8sClient.Cleanup() //nolint:errcheck
+
+	err = k8sClient.CreateVMOperator(ctx, &k8sclient.PMM{
+		PublicAddress: req.Pmm.PublicAddress,
+		Login:         req.Pmm.Login,
+		Password:      req.Pmm.Password,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return new(controllerv1beta1.StartMonitoringResponse), nil
+}

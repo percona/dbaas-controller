@@ -53,6 +53,9 @@ func main() {
 	ctx := app.Context()
 	l := logger.Get(ctx).WithField("component", "main")
 	defer l.Sync() //nolint:errcheck
+	if flags.LogDebug {
+		l.SetLevel(logger.DebugLevel)
+	}
 
 	l.Infof("Starting...")
 

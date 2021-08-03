@@ -23,16 +23,17 @@ jobs:
         go-version:
           - 1.16.x
         kubernetes_version:
+          # We recommend this version of kubernetes in docs.
+          - 1.20.1
           # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
-          - 1.15.11
-          - 1.16.8
+          - 1.20.7
         build_tags: [""]
         os: [ubuntu-latest]
         may-fail: [false]
 
         include:
           - go-version: tip
-            kubernetes_version: 1.16.8
+            kubernetes_version: 1.20.7
             build_tags: ""
             os: ubuntu-latest
             may-fail: true
@@ -203,7 +204,8 @@ jobs:
       # no `-mod=readonly` to test PRs made by @dependabot;
       # `git diff --exit-code` step below still checks what we need
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
-
+      # Set DELETE_NAMESPACE to false when you want to debug in EKS cluster after job is done.
+      DELETE_NAMESPACE: true
     steps:
       - name: Set up Go release
         if: matrix.go-version != 'tip'
@@ -291,11 +293,12 @@ jobs:
            export RANDOM_STRING=$(cat /proc/sys/kernel/random/uuid)
            export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
            make eks-setup-test-namespace NAMESPACE="${NAMESPACE}"
+           echo "::set-output name=done::1"
         env:
            BASE64_KUBECONFIG: ${{secrets.BASE64_KUBECONFIG}}
 
       - name: Run tests
-        if: steps.setupenv.outputs.exit_code == 0
+        if: steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1'
         run: |
           go clean -testcache
           make test-crosscover
@@ -309,7 +312,7 @@ jobs:
           fail_ci_if_error: false
       
       - name: Report Kubernetes resources count and state
-        if: steps.setupenv.outputs.exit_code == 0
+        if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1'
         run: |
           echo "Kubernetes resources counts:"
           echo "Namespaces: $(kubectl get ns | tail +2 | wc -l)"
@@ -319,8 +322,9 @@ jobs:
           kubectl describe pods
 
       - name: Delete the test namespace
-        if: steps.setupenv.outputs.exit_code == 0
+        if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1' && env.DELETE_NAMESPACE
         run: |
+          make eks-cleanup-namespace
           make eks-delete-operators
           make eks-delete-current-namespace
 
