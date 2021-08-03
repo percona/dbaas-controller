@@ -125,6 +125,20 @@ func IsContainerInState(containerStatuses []ContainerStatus, state ContainerStat
 	return false
 }
 
+type DeploymentTemplate struct {
+	Spec PodSpec `json:"spec,omitempty"`
+}
+
+type DeploymentSpec struct {
+	Template DeploymentTemplate `json:"template,omitempty"`
+}
+
+type Deployment struct {
+	TypeMeta
+	ObjectMeta
+	Spec DeploymentSpec `json:"spec,omitempty"`
+}
+
 // PodStatus holds pod status.
 type PodStatus struct {
 	// ContainerStatuses holds statuses of regular containers.

@@ -115,7 +115,6 @@ const (
 const (
 	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
-	operatorManifestsURLTemplate         = "%s/percona/%s/v%s/deploy/bundle.yaml"
 )
 
 // Operator represents kubernetes operator.
@@ -1696,18 +1695,17 @@ func (c *K8sClient) getAPIVersionForPXCOperator(version string) string {
 	return fmt.Sprintf(pxcAPIVersionTemplate, strings.ReplaceAll(version, ".", "-"))
 }
 
-func (c *K8sClient) InstallOperator(ctx context.Context, version string, manifestsURLTemplate string) error {
-	manifestsURL := fmt.Sprintf(manifestsURLTemplate, version)
-	req, err := http.NewRequestWithContext(ctx, "GET", manifestsURL, nil)
+func (c *K8sClient) fetchOperatorManifest(ctx context.Context, manifestURL string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", manifestURL, nil)
 	if err != nil {
-		return errors.Wrap(err, "failed to fetch operator manifests")
+		return nil, errors.Wrap(err, "failed to fetch operator manifests")
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "failed to fetch operator manifests")
+		return nil, errors.Wrap(err, "failed to fetch operator manifests")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return errors.Errorf("failed to fetch operator manifests, http request ended with status %q", resp.Status)
+		return nil, errors.Errorf("failed to fetch operator manifests, http request ended with status %q", resp.Status)
 	}
 	defer func() {
 		err := resp.Body.Close()
@@ -1715,9 +1713,50 @@ func (c *K8sClient) InstallOperator(ctx context.Context, version string, manifes
 			c.l.Errorf("failed to close response's body: %v", err)
 		}
 	}()
-	file, err := ioutil.ReadAll(resp.Body)
+	return ioutil.ReadAll(resp.Body)
+}
+
+func (c *K8sClient) InstallOperator(ctx context.Context, version string, manifestsURLTemplate string) error {
+	bundleURL := fmt.Sprintf(manifestsURLTemplate, version, "bundle.yaml")
+	bundle, err := c.fetchOperatorManifest(ctx, bundleURL)
 	if err != nil {
-		return errors.Wrap(err, "failed to fetch operator manifests")
+		return errors.Wrap(err, "failed to install operator")
 	}
-	return c.kubeCtl.Apply(ctx, file)
+	return c.kubeCtl.Apply(ctx, bundle)
+}
+
+func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName, manifestsURLTemplate string) error {
+	files := []string{"crd.yaml", "rbac.yaml"}
+	for _, file := range files {
+		manifestURL := fmt.Sprintf(manifestsURLTemplate, version, file)
+		manifest, err := c.fetchOperatorManifest(ctx, manifestURL)
+		if err != nil {
+			return errors.Wrap(err, "failed to update operator")
+		}
+		err = c.kubeCtl.Apply(ctx, manifest)
+		if err != nil {
+			return errors.Wrap(err, "failed to update operator")
+		}
+	}
+	// Change image in deployment
+	var deployment common.Deployment
+	err := c.kubeCtl.Get(ctx, "deployment", deploymentName, &deployment)
+	if err != nil {
+		return errors.Wrap(err, "failed to get operator deployment")
+	}
+	containerIndex := -1
+	for i, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == deploymentName {
+			containerIndex = i
+		}
+	}
+	if containerIndex < 0 {
+		return errors.Errorf("container with name %q not found inside operator deployment", deploymentName)
+	}
+	imageAndTag := strings.Split(deployment.Spec.Template.Spec.Containers[containerIndex].Image, ":")
+	if len(imageAndTag) != 2 {
+		return errors.Errorf("container image %q does not have any tag", deployment.Spec.Template.Spec.Containers[containerIndex].Image)
+	}
+	deployment.Spec.Template.Spec.Containers[containerIndex].Image = imageAndTag[0] + ":" + version
+	return c.kubeCtl.Apply(ctx, deployment)
 }

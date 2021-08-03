@@ -27,8 +27,10 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
+const xtradbOperatorDeploymentName = "percona-xtradb-cluster-operator"
+
 type XtraDBOperatorService struct {
-	p                   *message.Printer
+	p                    *message.Printer
 	manifestsURLTemplate string
 }
 
@@ -44,9 +46,22 @@ func (x XtraDBOperatorService) InstallXtraDBOperator(ctx context.Context, req *c
 	}
 	defer client.Cleanup() //nolint:errcheck
 
+	// Try to get operator versions to see if we should upgrade or install.
+	operators, err := client.CheckOperators(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if operators.XtradbOperatorVersion != "" {
+		err = client.UpdateOperator(ctx, req.Version, xtradbOperatorDeploymentName, x.manifestsURLTemplate)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		return new(controllerv1beta1.InstallXtraDBOperatorResponse), nil
+	}
+
 	err = client.InstallOperator(ctx, req.Version, x.manifestsURLTemplate)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return new(controllerv1beta1.InstallXtraDBOperatorResponse), nil

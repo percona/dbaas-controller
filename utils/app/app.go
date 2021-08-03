@@ -64,15 +64,15 @@ func Setup(opts *SetupOpts) (*Flags, error) {
 	kingpin.Flag("debug.addr", "Debug listen address").Default(":20203").StringVar(&flags.DebugAddr)
 	kingpin.Flag(
 		"pxc.operator.url.template",
-		"URL template for fetching yaml manifests for Percona Kubernetes Operator for PXC. Place '%s' into URL where version should be placed.",
+		"URL template for fetching yaml manifests for Percona Kubernetes Operator for PXC. Place first '%s' into your URL where version should be placed and second '%s' for the yaml file.",
 	).Default(
-		"https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/v%s/deploy/bundle.yaml",
+		"https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/v%s/deploy/%s",
 	).StringVar(&flags.PXCOperatorURLTemplate)
 	kingpin.Flag(
 		"psmdb.operator.url.template",
-		"URL template for fetching yaml manifests for Percona Kubernetes Operator for PSMDB. Place '%s' into URL where version should be placed.",
+		"URL template for fetching yaml manifests for Percona Kubernetes Operator for PSMDB. Place first '%s' into your URL where version should be placed and second '%s' for the yaml file.",
 	).Default(
-		"https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v%s/deploy/bundle.yaml",
+		"https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v%s/deploy/%s",
 	).StringVar(&flags.PSMDBOperatorURLTemplate)
 	return &flags, nil
 }
