@@ -225,7 +225,7 @@ func (k *KubeCtl) Apply(ctx context.Context, res interface{}) error {
 }
 
 func (k *KubeCtl) Patch(ctx context.Context, resourceType, resourceName string, res interface{}) error {
-	_, err := run(ctx, k.cmd, []string{"patch", resourceType, resourceName, "--type", "merge", "-f", "-"}, res)
+	_, err := run(ctx, k.cmd, []string{"patch", resourceType, resourceName, "--typemerge", "-f", "-"}, res)
 	return err
 }
 
