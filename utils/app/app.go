@@ -47,10 +47,10 @@ type SetupOpts struct {
 }
 
 const (
-	// DefaultPXCOperatorURLTemplate is a URL template pointing at bundle.yaml needed to install PXC operator.
-	DefaultPXCOperatorURLTemplate = "https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/v%s/deploy/bundle.yaml"
-	// DefaultPSMDBOperatorURLTemplate is a URL template pointing at bundle.yaml needed to install PSMDB operator.
-	DefaultPSMDBOperatorURLTemplate = "https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v%s/deploy/bundle.yaml"
+	// DefaultPXCOperatorURLTemplate is a URL template pointing at files needed to install/upgrade PXC operator.
+	DefaultPXCOperatorURLTemplate = "https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/v%s/deploy/%s"
+	// DefaultPSMDBOperatorURLTemplate is a URL template pointing at files needed to install/upgrade PSMDB operator.
+	DefaultPSMDBOperatorURLTemplate = "https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v%s/deploy/%s"
 )
 
 // Setup initialize app flags for cli.

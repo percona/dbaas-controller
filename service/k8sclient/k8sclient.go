@@ -1723,6 +1723,7 @@ func (c *K8sClient) fetchOperatorManifest(ctx context.Context, manifestURL strin
 	return ioutil.ReadAll(resp.Body)
 }
 
+// ApplyOperator applies bundle.yaml which installs CRDs, RBAC and operator's deployment.
 func (c *K8sClient) ApplyOperator(ctx context.Context, version string, manifestsURLTemplate string) error {
 	bundleURL := fmt.Sprintf(manifestsURLTemplate, version, "bundle.yaml")
 	bundle, err := c.fetchOperatorManifest(ctx, bundleURL)
