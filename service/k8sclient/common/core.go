@@ -169,6 +169,12 @@ type Secret struct {
 	// data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
 	Data map[string][]byte `json:"data,omitempty"`
 
+	// stringData allows specifying non-binary secret data in string form.
+	// It is provided as a write-only input field for convenience.
+	// All keys and values are merged into the data field on write, overwriting any existing values.
+	// The stringData field is never output when reading from the API.
+	StringData map[string][]byte `json:"stringData,omitempty"`
+
 	// Used to facilitate programmatic handling of secret data.
 	Type SecretType `json:"type,omitempty"`
 }

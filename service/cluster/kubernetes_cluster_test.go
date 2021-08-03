@@ -32,6 +32,7 @@ import (
 func TestKubernetesClusterServiceCheckConnection(t *testing.T) {
 	t.Parallel()
 	t.Run("Wrong kube config", func(t *testing.T) {
+		t.Parallel()
 		i18nPrinter := message.NewPrinter(language.English)
 		k := NewKubernetesClusterService(i18nPrinter)
 		kubeConfig := `{

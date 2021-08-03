@@ -25,9 +25,10 @@ import (
 
 func TestDebugServer(t *testing.T) {
 	t.Run("InvalidAddr", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			RunDebugServer(context.Background(), &RunDebugServerOpts{
-				Addr: "invalid.port:99999",
+				Addr: "invalid.port:999999",
 			})
 		})
 	})
