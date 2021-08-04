@@ -1341,7 +1341,7 @@ func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 	}, nil
 }
 
-// getLatestOperatorVersion returns installed operators API version.
+// getLatestOperatorAPIVersion returns latest installed operator API version.
 // It checks for all API versions supported by the operator and based on the latest API version in the list
 // figures out the version. Returns empty string if operator API is not installed.
 func (c *K8sClient) getLatestOperatorAPIVersion(installedVersions []string, apiPrefix string) string {
@@ -1711,15 +1711,15 @@ func (c *K8sClient) fetchOperatorManifest(ctx context.Context, manifestURL strin
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch operator manifests")
 	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("failed to fetch operator manifests, http request ended with status %q", resp.Status)
-	}
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
 			c.l.Errorf("failed to close response's body: %v", err)
 		}
 	}()
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.Errorf("failed to fetch operator manifests, http request ended with status %q", resp.Status)
+	}
 	return ioutil.ReadAll(resp.Body)
 }
 
@@ -1778,6 +1778,7 @@ func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVers
 	return nil
 }
 
+// UpdateOperator updates images inside operator deployment and also applies new CRDs and RBAC.
 func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName, manifestsURLTemplate string) error {
 	files := []string{"crd.yaml", "rbac.yaml"}
 	for _, file := range files {
@@ -1791,7 +1792,7 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 			return errors.Wrap(err, "failed to update operator")
 		}
 	}
-	// Change image in deployment
+	// Change image inside operator deployment.
 	var deployment common.Deployment
 	err := c.kubeCtl.Get(ctx, "deployment", deploymentName, &deployment)
 	if err != nil {
