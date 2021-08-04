@@ -1723,6 +1723,7 @@ func (c *K8sClient) fetchOperatorManifest(ctx context.Context, manifestURL strin
 	return ioutil.ReadAll(resp.Body)
 }
 
+// InstallOperator applies bundle.yaml.
 func (c *K8sClient) InstallOperator(ctx context.Context, version string, manifestsURLTemplate string) error {
 	bundleURL := fmt.Sprintf(manifestsURLTemplate, version, "bundle.yaml")
 	bundle, err := c.fetchOperatorManifest(ctx, bundleURL)
@@ -1732,6 +1733,7 @@ func (c *K8sClient) InstallOperator(ctx context.Context, version string, manifes
 	return c.kubeCtl.Apply(ctx, bundle)
 }
 
+// UpdateOperator updates images inside operator deployment and also applies new CRDs and RBAC.
 func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName, manifestsURLTemplate string) error {
 	files := []string{"crd.yaml", "rbac.yaml"}
 	for _, file := range files {
