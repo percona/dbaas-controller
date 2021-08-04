@@ -48,7 +48,7 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 	defer k8Client.Cleanup() //nolint:errcheck
 
 	resp := &controllerv1beta1.CheckKubernetesClusterConnectionResponse{
-		Operators: &controllerv1beta1.Operators{},
+		Operators: new(controllerv1beta1.Operators),
 		Status:    controllerv1beta1.KubernetesClusterStatus_KUBERNETES_CLUSTER_STATUS_OK,
 	}
 
