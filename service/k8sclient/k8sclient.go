@@ -1767,7 +1767,7 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 		return errors.Errorf("container image %q does not have any tag", deployment.Spec.Template.Spec.Containers[containerIndex].Image)
 	}
 	deployment.Spec.Template.Spec.Containers[containerIndex].Image = imageAndTag[0] + ":" + version
-	return c.kubeCtl.Apply(ctx, deployment)
+	return c.kubeCtl.Patch(ctx, deployment)
 }
 
 func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
