@@ -230,7 +230,7 @@ func (k *KubeCtl) Patch(ctx context.Context, resourceType, resourceName string, 
 	if err != nil {
 		return err
 	}
-	_, err = run(ctx, k.cmd, []string{"patch", resourceType, resourceName, "--type", "merge", "--patch", string(patch)}, nil)
+	_, err = run(ctx, k.cmd, []string{"patch", resourceType, resourceName, "--patch", string(patch)}, nil)
 	return err
 }
 
