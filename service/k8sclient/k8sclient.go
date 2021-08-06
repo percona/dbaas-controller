@@ -441,13 +441,13 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			Name:       params.Name,
 			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
 		},
-		Spec: pxc.PerconaXtraDBClusterSpec{
+		Spec: &pxc.PerconaXtraDBClusterSpec{
 			CRVersion:         operators.XtradbOperatorVersion,
 			AllowUnsafeConfig: true,
 			SecretsName:       secretName,
 
 			PXC: &pxc.PodSpec{
-				Size:            params.Size,
+				Size:            &params.Size,
 				Resources:       c.setComputeResources(params.PXC.ComputeResources),
 				Image:           pxcImage,
 				ImagePullPolicy: pullPolicy,
@@ -528,7 +528,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	podSpec.Enabled = true
 	podSpec.ImagePullPolicy = pullPolicy
-	podSpec.Size = params.Size
+	podSpec.Size = &params.Size
 	podSpec.Affinity = &pxc.PodAffinity{
 		TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 	}
@@ -566,11 +566,11 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	if params.Size > 0 {
-		cluster.Spec.PXC.Size = params.Size
+		cluster.Spec.PXC.Size = &params.Size
 		if cluster.Spec.ProxySQL != nil {
-			cluster.Spec.ProxySQL.Size = params.Size
+			cluster.Spec.ProxySQL.Size = &params.Size
 		} else {
-			cluster.Spec.HAProxy.Size = params.Size
+			cluster.Spec.HAProxy.Size = &params.Size
 		}
 	}
 
@@ -738,7 +738,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 	for i, cluster := range list.Items {
 		val := XtraDBCluster{
 			Name:    cluster.Name,
-			Size:    cluster.Spec.PXC.Size,
+			Size:    *cluster.Spec.PXC.Size,
 			State:   getPXCState(cluster.Status.Status),
 			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
@@ -915,7 +915,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			Name:       params.Name,
 			Finalizers: []string{"delete-psmdb-pvc"},
 		},
-		Spec: psmdb.PerconaServerMongoDBSpec{
+		Spec: &psmdb.PerconaServerMongoDBSpec{
 			CRVersion: operators.PsmdbOperatorVersion,
 			Image:     psmdbImage,
 			Secrets: &psmdb.SecretsSpec{
@@ -1013,11 +1013,11 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 				},
 			},
 
-			PMM: psmdb.PmmSpec{
+			PMM: &psmdb.PmmSpec{
 				Enabled: false,
 			},
 
-			Backup: psmdb.BackupSpec{
+			Backup: &psmdb.BackupSpec{
 				Enabled:            true,
 				Image:              fmt.Sprintf(psmdbBackupImageTemplate, operators.PsmdbOperatorVersion),
 				ServiceAccountName: "percona-server-mongodb-operator",
@@ -1029,7 +1029,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	}
 	if params.PMM != nil {
-		res.Spec.PMM = psmdb.PmmSpec{
+		res.Spec.PMM = &psmdb.PmmSpec{
 			Enabled:    true,
 			ServerHost: params.PMM.PublicAddress,
 			Image:      pmmClientImage,
@@ -1743,10 +1743,16 @@ func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVe
 	}
 
 	for _, cluster := range list.Items {
-		cluster.Spec.CRVersion = newVersion
-		cluster.Spec.Image = strings.Replace(cluster.Spec.Image, oldVersion, newVersion, 1)
-		cluster.Spec.Backup.Image = strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1)
-		if err := c.kubeCtl.Apply(ctx, cluster); err != nil {
+		clusterPatch := &psmdb.PerconaServerMongoDB{
+			Spec: &psmdb.PerconaServerMongoDBSpec{
+				CRVersion: newVersion,
+				Image:     strings.Replace(cluster.Spec.Image, oldVersion, newVersion, 1),
+				Backup: &psmdb.BackupSpec{
+					Image: strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1),
+				},
+			},
+		}
+		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaservermongodb", cluster.Name, clusterPatch); err != nil {
 			return err
 		}
 	}
@@ -1763,15 +1769,29 @@ func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVers
 	}
 
 	for _, cluster := range list.Items {
-		cluster.Spec.CRVersion = newVersion
-		cluster.Spec.PXC.Image = strings.Replace(cluster.Spec.PXC.Image, oldVersion, newVersion, 1)
-		cluster.Spec.Backup.Image = strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1)
-		if cluster.Spec.HAProxy != nil {
-			cluster.Spec.HAProxy.Image = strings.Replace(cluster.Spec.HAProxy.Image, oldVersion, newVersion, 1)
-		} else {
-			cluster.Spec.ProxySQL.Image = strings.Replace(cluster.Spec.ProxySQL.Image, oldVersion, newVersion, 1)
+		clusterPatch := &pxc.PerconaXtraDBCluster{
+			Spec: &pxc.PerconaXtraDBClusterSpec{
+				CRVersion: newVersion,
+				PXC: &pxc.PodSpec{
+					Image: strings.Replace(cluster.Spec.PXC.Image, oldVersion, newVersion, 1),
+				},
+				Backup: &pxc.PXCScheduledBackup{
+					Image: strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1),
+				},
+			},
 		}
-		if err := c.kubeCtl.Apply(ctx, cluster); err != nil {
+
+		if cluster.Spec.HAProxy != nil {
+			clusterPatch.Spec.HAProxy = &pxc.PodSpec{
+				Image: strings.Replace(cluster.Spec.HAProxy.Image, oldVersion, newVersion, 1),
+			}
+		} else {
+			cluster.Spec.ProxySQL = &pxc.PodSpec{
+				Image: strings.Replace(cluster.Spec.ProxySQL.Image, oldVersion, newVersion, 1),
+			}
+		}
+
+		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaxtradbcluster", cluster.Name, clusterPatch); err != nil {
 			return err
 		}
 	}
@@ -1812,7 +1832,7 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 		return errors.Errorf("container image %q does not have any tag", deployment.Spec.Template.Spec.Containers[containerIndex].Image)
 	}
 	deployment.Spec.Template.Spec.Containers[containerIndex].Image = imageAndTag[0] + ":" + version
-	return c.kubeCtl.Patch(ctx, "deployment", deploymentName, deployment)
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeStrategic, "deployment", deploymentName, deployment)
 }
 
 func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {

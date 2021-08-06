@@ -29,8 +29,8 @@ type PerconaServerMongoDB struct {
 	common.TypeMeta   // anonymous for embedding
 	common.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   PerconaServerMongoDBSpec   `json:"spec,omitempty"`
-	Status perconaServerMongoDBStatus `json:"status,omitempty"`
+	Spec   *PerconaServerMongoDBSpec   `json:"spec,omitempty"`
+	Status *perconaServerMongoDBStatus `json:"status,omitempty"`
 }
 
 // PerconaServerMongoDBList holds a list of PSMDB objects.
@@ -73,8 +73,8 @@ type PerconaServerMongoDBSpec struct {
 	Mongod                  *MongodSpec    `json:"mongod,omitempty"`
 	Replsets                []*ReplsetSpec `json:"replsets,omitempty"`
 	Secrets                 *SecretsSpec   `json:"secrets,omitempty"`
-	Backup                  BackupSpec     `json:"backup,omitempty"`
-	PMM                     PmmSpec        `json:"pmm,omitempty"`
+	Backup                  *BackupSpec    `json:"backup,omitempty"`
+	PMM                     *PmmSpec       `json:"pmm,omitempty"`
 	SchedulerName           string         `json:"schedulerName,omitempty"`
 	ClusterServiceDNSSuffix string         `json:"clusterServiceDNSSuffix,omitempty"`
 	Sharding                *ShardingSpec  `json:"sharding,omitempty"`

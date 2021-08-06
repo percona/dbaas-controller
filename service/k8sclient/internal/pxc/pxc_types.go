@@ -37,7 +37,7 @@ type PerconaXtraDBClusterSpec struct { //nolint:maligned
 	PMM                   *PMMSpec            `json:"pmm,omitempty"`
 	Backup                *PXCScheduledBackup `json:"backup,omitempty"`
 	UpdateStrategy        string              `json:"updateStrategy,omitempty"`
-	UpgradeOptions        UpgradeOptions      `json:"upgradeOptions,omitempty"`
+	UpgradeOptions        *UpgradeOptions     `json:"upgradeOptions,omitempty"`
 	AllowUnsafeConfig     bool                `json:"allowUnsafeConfigurations,omitempty"`
 }
 
@@ -128,8 +128,8 @@ type PerconaXtraDBCluster struct {
 	common.TypeMeta   // anonymous for embedding
 	common.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   PerconaXtraDBClusterSpec   `json:"spec,omitempty"`
-	Status PerconaXtraDBClusterStatus `json:"status,omitempty"`
+	Spec   *PerconaXtraDBClusterSpec   `json:"spec,omitempty"`
+	Status *PerconaXtraDBClusterStatus `json:"status,omitempty"`
 }
 
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
@@ -143,7 +143,7 @@ type PerconaXtraDBClusterList struct {
 type PodSpec struct { //nolint:maligned
 	Enabled                       bool                            `json:"enabled,omitempty"`
 	Pause                         bool                            `json:"pause,omitempty"`
-	Size                          int32                           `json:"size,omitempty"`
+	Size                          *int32                          `json:"size,omitempty"`
 	Image                         string                          `json:"image,omitempty"`
 	Resources                     *common.PodResources            `json:"resources,omitempty"`
 	SidecarResources              *common.PodResources            `json:"sidecarResources,omitempty"`
