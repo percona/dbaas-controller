@@ -30,7 +30,7 @@ type PerconaServerMongoDB struct {
 	common.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   *PerconaServerMongoDBSpec   `json:"spec,omitempty"`
-	Status *perconaServerMongoDBStatus `json:"status,omitempty"`
+	Status *PerconaServerMongoDBStatus `json:"status,omitempty"`
 }
 
 // PerconaServerMongoDBList holds a list of PSMDB objects.
@@ -118,8 +118,8 @@ const (
 	AppStateError AppState = "error"
 )
 
-// perconaServerMongoDBStatus defines the observed state of PerconaServerMongoDB.
-type perconaServerMongoDBStatus struct {
+// PerconaServerMongoDBStatus defines the observed state of PerconaServerMongoDB.
+type PerconaServerMongoDBStatus struct {
 	Status             AppState                  `json:"state,omitempty"`
 	Message            string                    `json:"message,omitempty"`
 	Conditions         []clusterCondition        `json:"conditions,omitempty"`
