@@ -34,7 +34,6 @@ import (
 
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/commontypes"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/monitoring"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
@@ -50,15 +49,6 @@ const (
 	perconaXtraDBClusterKind = ClusterKind("PerconaXtraDBCluster")
 	perconaServerMongoDBKind = ClusterKind("PerconaServerMongoDB")
 )
-
-type DatabaseCluster interface {
-	IsReady() bool
-	IsChanging() bool
-	SetUpgradeOptions(newVersion string, cronSchedule string)
-	// GetImage returns image of database software used.
-	GetImage() string
-	GetName() string
-}
 
 // ClusterState represents XtraDB cluster CR state.
 type ClusterState int32
@@ -450,9 +440,9 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			Name:       params.Name,
 			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
 		},
-		Spec: pxc.PerconaXtraDBClusterSpec{
+		Spec: &pxc.PerconaXtraDBClusterSpec{
 			UpdateStrategy: updateStrategySmartUpdate,
-			UpgradeOptions: &commontypes.UpgradeOptions{
+			UpgradeOptions: &common.UpgradeOptions{
 				VersionServiceEndpoint: params.VersionServiceURL,
 			},
 			CRVersion:         pxcCRVersion,
@@ -460,7 +450,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			SecretsName:       secretName,
 
 			PXC: &pxc.PodSpec{
-				Size:            params.Size,
+				Size:            &params.Size,
 				Resources:       c.setComputeResources(params.PXC.ComputeResources),
 				Image:           pxcImage,
 				ImagePullPolicy: pullPolicy,
@@ -541,7 +531,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	podSpec.Enabled = true
 	podSpec.ImagePullPolicy = pullPolicy
-	podSpec.Size = params.Size
+	podSpec.Size = &params.Size
 	podSpec.Affinity = &pxc.PodAffinity{
 		TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 	}
@@ -568,9 +558,9 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 		}
 		return &cluster, nil
 	}
-	getDatabaseCluster := func(ctx context.Context, k *kubectl.KubeCtl) (DatabaseCluster, error) {
+	getDatabaseCluster := func(ctx context.Context, k *kubectl.KubeCtl) (common.DatabaseCluster, error) {
 		cluster, err := getCluster(ctx, k)
-		return DatabaseCluster(cluster), err
+		return common.DatabaseCluster(cluster), err
 	}
 
 	cluster, err := getCluster(ctx, c.kubeCtl)
@@ -591,11 +581,11 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	if params.Size > 0 {
-		cluster.Spec.PXC.Size = params.Size
+		cluster.Spec.PXC.Size = &params.Size
 		if cluster.Spec.ProxySQL != nil {
-			cluster.Spec.ProxySQL.Size = params.Size
+			cluster.Spec.ProxySQL.Size = &params.Size
 		} else {
-			cluster.Spec.HAProxy.Size = params.Size
+			cluster.Spec.HAProxy.Size = &params.Size
 		}
 	}
 
@@ -612,13 +602,13 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	if params.PXC.Image != "" {
-		err = c.addTriggersForUpgrade(ctx, getDatabaseCluster, cluster, params.PXC.Image)
+		err = c.addUpgradeTriggers(ctx, getDatabaseCluster, cluster, params.PXC.Image)
 		if err != nil {
 			return err
 		}
 	}
 
-	return c.kubeCtl.Apply(ctx, &cluster)
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(cluster).GetCRDName(), common.DatabaseCluster(cluster).GetName(), cluster)
 }
 
 // DeleteXtraDBCluster deletes Percona XtraDB cluster with provided name.
@@ -770,7 +760,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 	for i, cluster := range list.Items {
 		val := XtraDBCluster{
 			Name:    cluster.Name,
-			Size:    cluster.Spec.PXC.Size,
+			Size:    *cluster.Spec.PXC.Size,
 			State:   getPXCState(cluster.Status.Status),
 			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
@@ -941,9 +931,9 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			Name:       params.Name,
 			Finalizers: []string{"delete-psmdb-pvc"},
 		},
-		Spec: psmdb.PerconaServerMongoDBSpec{
+		Spec: &psmdb.PerconaServerMongoDBSpec{
 			UpdateStrategy: updateStrategySmartUpdate,
-			UpgradeOptions: &commontypes.UpgradeOptions{
+			UpgradeOptions: &common.UpgradeOptions{
 				VersionServiceEndpoint: params.VersionServiceURL,
 			},
 			CRVersion: psmdbCRVersion,
@@ -1040,11 +1030,11 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 				},
 			},
 
-			PMM: psmdb.PmmSpec{
+			PMM: &psmdb.PmmSpec{
 				Enabled: false,
 			},
 
-			Backup: psmdb.BackupSpec{
+			Backup: &psmdb.BackupSpec{
 				Enabled:            true,
 				Image:              psmdbBackupImage,
 				ServiceAccountName: "percona-server-mongodb-operator",
@@ -1056,7 +1046,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	}
 	if params.PMM != nil {
-		res.Spec.PMM = psmdb.PmmSpec{
+		res.Spec.PMM = &psmdb.PmmSpec{
 			Enabled:    true,
 			ServerHost: params.PMM.PublicAddress,
 			Image:      pmmClientImage,
@@ -1089,9 +1079,9 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		}
 		return &cluster, nil
 	}
-	getDatabaseCluster := func(ctx context.Context, k *kubectl.KubeCtl) (DatabaseCluster, error) {
+	getDatabaseCluster := func(ctx context.Context, k *kubectl.KubeCtl) (common.DatabaseCluster, error) {
 		cluster, err := getCluster(ctx, k)
-		return DatabaseCluster(cluster), err
+		return common.DatabaseCluster(cluster), err
 	}
 
 	cluster, err := getCluster(ctx, c.kubeCtl)
@@ -1118,13 +1108,13 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		cluster.Spec.Replsets[0].Resources = c.updateComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
 	}
 	if params.Image != "" {
-		err = c.addTriggersForUpgrade(ctx, getDatabaseCluster, cluster, params.Image)
+		// We want to update the cluster.
+		err = c.addUpgradeTriggers(ctx, getDatabaseCluster, cluster, params.Image)
 		if err != nil {
 			return err
 		}
 	}
-
-	return c.kubeCtl.Apply(ctx, cluster)
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(cluster).GetCRDName(), common.DatabaseCluster(cluster).GetName(), cluster)
 }
 
 const (
@@ -1134,12 +1124,16 @@ const (
 	SmartUpdateDisabled         = "Disabled"
 )
 
-type getClusterFunc func(ctx context.Context, k *kubectl.KubeCtl) (DatabaseCluster, error)
+func removeUpgradeTriggers(ctx context.Context, k *kubectl.KubeCtl) {
+	//TODO
+}
 
-// addTriggersForUpgrade stores triggers into cluster CRs that are needed for cluster upgrade execution.
+type getClusterFunc func(ctx context.Context, k *kubectl.KubeCtl) (common.DatabaseCluster, error)
+
+// addUpgradeTriggers stores triggers into cluster CRs that are needed for cluster upgrade execution.
 // The cluster is upgraded to version supplied in image tag. It starts goroutine that waits for upgrade to be done.
 // Then it removes stored triggers.
-func (c *K8sClient) addTriggersForUpgrade(ctx context.Context, getCluster getClusterFunc, cluster DatabaseCluster, newImage string) error {
+func (c *K8sClient) addUpgradeTriggers(ctx context.Context, getCluster getClusterFunc, cluster common.DatabaseCluster, newImage string) error {
 	// Check the image is the same.
 	newImageAndTag := strings.Split(newImage, ":")
 	if len(newImageAndTag) != 2 {
@@ -1157,13 +1151,13 @@ func (c *K8sClient) addTriggersForUpgrade(ctx context.Context, getCluster getClu
 	cluster.SetUpgradeOptions(newImageAndTag[1], cronScheduleForSmartUpgrade)
 
 	// We need to disable the upgrade trigger after the upgrade is done.
-	// Kubeconfig is needed because K8sClient's kubectl is Cleanup-ed when this runs.
-	go func(kubeconfig string, cluster DatabaseCluster) {
-		isChanging := func(cluster DatabaseCluster) bool {
-			return cluster.IsChanging()
+	// We need to store kubeconfig because K8sClient's kubectl is Cleanup-ed when a request is done.
+	go func(kubeconfig string, cluster common.DatabaseCluster) {
+		isNotChanging := func(cluster common.DatabaseCluster) bool {
+			return !cluster.IsChanging()
 		}
-		isReady := func(cluster DatabaseCluster) bool {
-			return cluster.IsReady()
+		isChanging := func(cluster common.DatabaseCluster) bool {
+			return cluster.IsChanging()
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
@@ -1176,39 +1170,45 @@ func (c *K8sClient) addTriggersForUpgrade(ctx context.Context, getCluster getClu
 		}
 		defer k.Cleanup()
 
+		removeUpgradeTriggers := func() {
+			// Disable SmartUpdate when cluster is ready -> cluster is upgraded.
+			clusterpatch := cluster.NewEmptyCluster()
+			clusterpatch.SetUpgradeOptions(SmartUpdateDisabled, "")
+			c.l.Infof("disabling SmartUpdate for cluster %v/%v", cluster.GetCRDName(), cluster.GetName())
+			err = k.Patch(ctx, kubectl.PatchTypeMerge, cluster.GetCRDName(), cluster.GetName(), cluster)
+			if err != nil {
+				c.l.Errorf("failed to disable SmartUpdate: %v", err)
+			}
+		}
+
 		err = waitForClusterCondition(ctx, k, getCluster, isChanging)
 		if err != nil {
-			c.l.Warnf("failed wait for cluster %q upgrade to begin: %v", cluster.GetName(), err)
-		}
-
-		err = waitForClusterCondition(ctx, k, getCluster, isReady)
-		if err != nil {
-			c.l.Errorf("failed to wait for cluster %q to be ready after upgrade: %v", cluster.GetName(), err)
+			removeUpgradeTriggers()
+			c.l.Warnf("failed wait for cluster %v/%v upgrade to begin: %v", cluster.GetCRDName(), cluster.GetName(), err)
 			return
 		}
 
-		// Disable SmartUpdate when cluster is ready -> cluster is upgraded.
-		cluster.SetUpgradeOptions(SmartUpdateDisabled, "")
-
-		err = k.Apply(ctx, cluster)
+		err = waitForClusterCondition(ctx, k, getCluster, isNotChanging)
 		if err != nil {
-			c.l.Errorf("failed to disable SmartUpdate: %v", err)
+			removeUpgradeTriggers()
+			c.l.Errorf("failed to wait for cluster %v/%v upgrade to finish: %v", cluster.GetCRDName(), cluster.GetName(), err)
 			return
 		}
+		removeUpgradeTriggers()
 	}(c.kubeCtl.GetKubeconfig(), cluster)
 
 	return nil
 }
 
 // waitForClusterCondition waits until given done returns true.
-func waitForClusterCondition(ctx context.Context, k *kubectl.KubeCtl, get getClusterFunc, done func(cluster DatabaseCluster) bool) error {
+func waitForClusterCondition(ctx context.Context, k *kubectl.KubeCtl, get getClusterFunc, done func(cluster common.DatabaseCluster) bool) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
 		cluster, err := get(ctx, k)
 		if err != nil {
 			return errors.Wrap(err, "failed to get database cluster")

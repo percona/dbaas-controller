@@ -41,6 +41,19 @@ const (
 	defaultDevEnvKubectl    = "minikube kubectl --"
 )
 
+// PatchType tells what kind of patch we want to perform.
+// See https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/.
+type PatchType string
+
+const (
+	// PatchTypeStrategic patches based on it's tags defined. Some are replaced, some are extended.
+	PatchTypeStrategic PatchType = "strategic"
+	// PatchTypeMerge indicates we want to replace entire parts of resource.
+	PatchTypeMerge PatchType = "merge"
+	// PatchTypeJSON is a series of operations representing the patch. See https://erosb.github.io/post/json-patch-vs-merge-patch/.
+	PatchTypeJSON PatchType = "json"
+)
+
 // KubeCtl wraps kubectl CLI with version selection and kubeconfig handling.
 type KubeCtl struct {
 	l              logger.Logger
@@ -222,6 +235,16 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 	}
 
 	return json.Unmarshal(stdout, res)
+}
+
+// Patch executes `kubectl patch` on given resource.
+func (k *KubeCtl) Patch(ctx context.Context, patchType PatchType, resourceType, resourceName string, res interface{}) error {
+	patch, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+	_, err = run(ctx, k.cmd, []string{"patch", resourceType, resourceName, "--type", string(patchType), "--patch", string(patch)}, nil)
+	return err
 }
 
 // Apply executes `kubectl apply` with given resource.

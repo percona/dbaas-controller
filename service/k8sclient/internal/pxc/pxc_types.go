@@ -19,27 +19,26 @@ package pxc
 
 import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/commontypes"
 )
 
 // PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
 type PerconaXtraDBClusterSpec struct { //nolint:maligned
-	Platform              string                      `json:"platform,omitempty"`
-	CRVersion             string                      `json:"crVersion,omitempty"`
-	Pause                 bool                        `json:"pause,omitempty"`
-	SecretsName           string                      `json:"secretsName,omitempty"`
-	VaultSecretName       string                      `json:"vaultSecretName,omitempty"`
-	SSLSecretName         string                      `json:"sslSecretName,omitempty"`
-	SSLInternalSecretName string                      `json:"sslInternalSecretName,omitempty"`
-	TLS                   *TLSSpec                    `json:"tls,omitempty"`
-	PXC                   *PodSpec                    `json:"pxc,omitempty"`
-	ProxySQL              *PodSpec                    `json:"proxysql,omitempty"`
-	HAProxy               *PodSpec                    `json:"haproxy,omitempty"`
-	PMM                   *PMMSpec                    `json:"pmm,omitempty"`
-	Backup                *PXCScheduledBackup         `json:"backup,omitempty"`
-	UpdateStrategy        string                      `json:"updateStrategy,omitempty"`
-	UpgradeOptions        *commontypes.UpgradeOptions `json:"upgradeOptions,omitempty"`
-	AllowUnsafeConfig     bool                        `json:"allowUnsafeConfigurations,omitempty"`
+	Platform              string                 `json:"platform,omitempty"`
+	CRVersion             string                 `json:"crVersion,omitempty"`
+	Pause                 bool                   `json:"pause,omitempty"`
+	SecretsName           string                 `json:"secretsName,omitempty"`
+	VaultSecretName       string                 `json:"vaultSecretName,omitempty"`
+	SSLSecretName         string                 `json:"sslSecretName,omitempty"`
+	SSLInternalSecretName string                 `json:"sslInternalSecretName,omitempty"`
+	TLS                   *TLSSpec               `json:"tls,omitempty"`
+	PXC                   *PodSpec               `json:"pxc,omitempty"`
+	ProxySQL              *PodSpec               `json:"proxysql,omitempty"`
+	HAProxy               *PodSpec               `json:"haproxy,omitempty"`
+	PMM                   *PMMSpec               `json:"pmm,omitempty"`
+	Backup                *PXCScheduledBackup    `json:"backup,omitempty"`
+	UpdateStrategy        string                 `json:"updateStrategy,omitempty"`
+	UpgradeOptions        *common.UpgradeOptions `json:"upgradeOptions,omitempty"`
+	AllowUnsafeConfig     bool                   `json:"allowUnsafeConfigurations,omitempty"`
 }
 
 // TLSSpec holds cluster's TLS specs.
@@ -122,29 +121,51 @@ type PerconaXtraDBCluster struct {
 	common.TypeMeta   // anonymous for embedding
 	common.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   PerconaXtraDBClusterSpec   `json:"spec,omitempty"`
-	Status PerconaXtraDBClusterStatus `json:"status,omitempty"`
+	Spec   *PerconaXtraDBClusterSpec   `json:"spec,omitempty"`
+	Status *PerconaXtraDBClusterStatus `json:"status,omitempty"`
 }
 
+// IsReady returns true if cluster is in state ready.
 func (p *PerconaXtraDBCluster) IsReady() bool {
 	return p.Status.Status == AppStateReady
 }
 
+// IsChanging returns true if cluster is changing.
 func (p *PerconaXtraDBCluster) IsChanging() bool {
-	return p.Status.Status == AppStateInit
+	// Error is included to partially mitigate https://jira.percona.com/browse/K8SPXC-858
+	return p.Status.Status == AppStateInit || p.Status.Status == AppStateError
 }
 
+// SetUpgradeOptions sets given version and schedule into cluster type specific CR.
 func (p *PerconaXtraDBCluster) SetUpgradeOptions(newVersion string, cronSchedule string) {
+	if p.Spec == nil {
+		p.Spec = &PerconaXtraDBClusterSpec{}
+	}
+	if p.Spec.UpgradeOptions == nil {
+		p.Spec.UpgradeOptions = &common.UpgradeOptions{}
+	}
 	p.Spec.UpgradeOptions.Apply = newVersion
 	p.Spec.UpgradeOptions.Schedule = cronSchedule
 }
 
+// GetImage returns image of database software used.
 func (p *PerconaXtraDBCluster) GetImage() string {
 	return p.Spec.PXC.Image
 }
 
+// GetName returns name of the cluster.
 func (p *PerconaXtraDBCluster) GetName() string {
 	return p.Name
+}
+
+// GetCRDName returns name of Custom Resource Definition -> cluster's kind.
+func (p *PerconaXtraDBCluster) GetCRDName() string {
+	return "perconaxtradbcluster"
+}
+
+// NewEmptyCluster returns empty cluster for purposes of patching the cluster.
+func (p *PerconaXtraDBCluster) NewEmptyCluster() common.DatabaseCluster {
+	return &PerconaXtraDBCluster{}
 }
 
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
@@ -158,7 +179,7 @@ type PerconaXtraDBClusterList struct {
 type PodSpec struct { //nolint:maligned
 	Enabled                       bool                            `json:"enabled,omitempty"`
 	Pause                         bool                            `json:"pause,omitempty"`
-	Size                          int32                           `json:"size,omitempty"`
+	Size                          *int32                          `json:"size,omitempty"`
 	Image                         string                          `json:"image,omitempty"`
 	Resources                     *common.PodResources            `json:"resources,omitempty"`
 	SidecarResources              *common.PodResources            `json:"sidecarResources,omitempty"`
