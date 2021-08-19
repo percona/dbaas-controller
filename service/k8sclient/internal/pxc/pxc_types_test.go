@@ -125,6 +125,7 @@ const expected = `
 
 func TestPXCTypesMarshal(t *testing.T) {
 	t.Parallel()
+	size := int32(3)
 	t.Run("check inline marshal", func(t *testing.T) {
 		t.Parallel()
 		res := &PerconaXtraDBCluster{
@@ -135,11 +136,11 @@ func TestPXCTypesMarshal(t *testing.T) {
 			ObjectMeta: common.ObjectMeta{
 				Name: "test-pxc",
 			},
-			Spec: PerconaXtraDBClusterSpec{
+			Spec: &PerconaXtraDBClusterSpec{
 				AllowUnsafeConfig: true,
 				SecretsName:       "my-cluster-secrets",
 				PXC: &PodSpec{
-					Size: 3,
+					Size: &size,
 					Resources: &common.PodResources{
 						Limits: &common.ResourcesList{
 							CPU:    "500m",
@@ -161,7 +162,7 @@ func TestPXCTypesMarshal(t *testing.T) {
 					},
 				},
 				ProxySQL: &PodSpec{
-					Size: 3,
+					Size: &size,
 					Resources: &common.PodResources{
 						Limits: &common.ResourcesList{
 							CPU:    "500m",

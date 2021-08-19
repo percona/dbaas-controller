@@ -133,7 +133,7 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 			ObjectMeta: common.ObjectMeta{
 				Name: "test-psmdb",
 			},
-			Spec: PerconaServerMongoDBSpec{
+			Spec: &PerconaServerMongoDBSpec{
 				CRVersion: "1.8.0",
 				Image:     "percona/percona-server-mongodb-operator:1.4.0-mongod4.2",
 				Secrets: &SecretsSpec{
@@ -211,11 +211,11 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 					},
 				},
 
-				PMM: PmmSpec{
+				PMM: &PmmSpec{
 					Enabled: false,
 				},
 
-				Backup: BackupSpec{
+				Backup: &BackupSpec{
 					Enabled:            true,
 					Image:              "percona/percona-server-mongodb-operator:1.4.0-backup",
 					ServiceAccountName: "percona-server-mongodb-operator",
