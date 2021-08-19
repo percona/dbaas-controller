@@ -210,4 +210,8 @@ type DatabaseCluster interface {
 	GetCRDName() string
 	// NewEmptyCluster returns empty cluster for purposes of patching the cluster.
 	NewEmptyCluster() DatabaseCluster
+	// GetDatabaseContainerName returns container name that actually runs the database.
+	GetDatabaseContainerName() string
+	// GetDatabasePodLabels return list of labels to get pods where database is running.
+	GetDatabasePodLabels() []string
 }

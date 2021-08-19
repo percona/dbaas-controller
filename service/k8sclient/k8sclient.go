@@ -1124,9 +1124,9 @@ const (
 	SmartUpdateDisabled         = "Disabled"
 )
 
-func removeUpgradeTriggers(ctx context.Context, k *kubectl.KubeCtl) {
-	//TODO
-}
+// func removeUpgradeTriggers(ctx context.Context, k *kubectl.KubeCtl) {
+//TODO
+// }
 
 type getClusterFunc func(ctx context.Context, k *kubectl.KubeCtl) (common.DatabaseCluster, error)
 
@@ -1153,47 +1153,101 @@ func (c *K8sClient) addUpgradeTriggers(ctx context.Context, getCluster getCluste
 	// We need to disable the upgrade trigger after the upgrade is done.
 	// We need to store kubeconfig because K8sClient's kubectl is Cleanup-ed when a request is done.
 	go func(kubeconfig string, cluster common.DatabaseCluster) {
-		isNotChanging := func(cluster common.DatabaseCluster) bool {
-			return !cluster.IsChanging()
-		}
-		isChanging := func(cluster common.DatabaseCluster) bool {
-			return cluster.IsChanging()
-		}
-
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
 		defer cancel()
 
-		k, err := kubectl.NewKubeCtl(ctx, kubeconfig)
+		client, err := New(ctx, kubeconfig)
 		if err != nil {
-			c.l.Errorf("failed to create kubectl to disable SmartUpdate: %v", err)
+			c.l.Errorf("failed to disable SmartUpdate: %v", err)
 			return
 		}
-		defer k.Cleanup()
+		defer client.Cleanup()
 
 		removeUpgradeTriggers := func() {
 			// Disable SmartUpdate when cluster is ready -> cluster is upgraded.
 			clusterpatch := cluster.NewEmptyCluster()
 			clusterpatch.SetUpgradeOptions(SmartUpdateDisabled, "")
 			c.l.Infof("disabling SmartUpdate for cluster %v/%v", cluster.GetCRDName(), cluster.GetName())
-			err = k.Patch(ctx, kubectl.PatchTypeMerge, cluster.GetCRDName(), cluster.GetName(), cluster)
+			err = client.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, cluster.GetCRDName(), cluster.GetName(), clusterpatch)
 			if err != nil {
 				c.l.Errorf("failed to disable SmartUpdate: %v", err)
 			}
 		}
 
-		err = waitForClusterCondition(ctx, k, getCluster, isChanging)
+		crVersionAndPodsVersionMatches := func(ctx context.Context, pods *common.PodList, cluster common.DatabaseCluster) bool {
+			crImage := cluster.GetImage()
+			images := make(map[string]struct{})
+			conatinerName := cluster.GetDatabaseContainerName()
+			for _, p := range pods.Items {
+				image, err := p.GetContainerImage(conatinerName)
+				if err != nil {
+					c.l.Errorf("failed to check pods for container image: %v", err)
+					return false
+				}
+				images[image] = struct{}{}
+			}
+			_, ok := images[crImage]
+			return len(images) == 1 && ok
+		}
+		allClusterPodsReady := func(pods *common.PodList) bool {
+			for _, p := range pods.Items {
+				if !p.IsReady() {
+					return false
+				}
+			}
+			return true
+		}
+		type upgradeConditionFunc func(bool, bool) bool
+		waitForUpgradeCondition := func(ctx context.Context, onWaitingDoneMessage string, done upgradeConditionFunc) error {
+			for {
+				time.Sleep(2 * time.Second)
+				c.l.Info("waitForUpgradeCondition looping")
+				cluster, err := getCluster(ctx, client.kubeCtl)
+				if err != nil {
+					if errors.Is(err, context.DeadlineExceeded) {
+						removeUpgradeTriggers()
+						c.l.Info("waitForUpgradeCondition dedline exceeded")
+						return err
+					}
+					continue
+				}
+				c.l.Info("cluster got")
+				labels := cluster.GetDatabasePodLabels()
+				pods, err := client.GetPods(ctx, labels...)
+				if err != nil {
+					c.l.Errorf("failed to get pods: %v", err)
+					continue
+				}
+				match := crVersionAndPodsVersionMatches(ctx, pods, cluster)
+				c.l.Infof("------ match %v, all pods rady %v", match, allClusterPodsReady(pods))
+				if done(match, allClusterPodsReady(pods)) {
+					c.l.Infof(onWaitingDoneMessage, cluster.GetCRDName(), cluster.GetName())
+					break
+				}
+			}
+			return nil
+		}
+
+		err = waitForUpgradeCondition(ctx, "upgrade of cluster %v/%v has started",
+			func(versionsMatch bool, podsReady bool) bool {
+				return !versionsMatch && !podsReady
+			},
+		)
 		if err != nil {
-			removeUpgradeTriggers()
-			c.l.Warnf("failed wait for cluster %v/%v upgrade to begin: %v", cluster.GetCRDName(), cluster.GetName(), err)
+			c.l.Errorf("failed to wait for cluster %v/%v upgrade to start", cluster.GetCRDName(), cluster.GetName())
 			return
 		}
 
-		err = waitForClusterCondition(ctx, k, getCluster, isNotChanging)
+		err = waitForUpgradeCondition(ctx, "upgrade of cluster %v/%v is done",
+			func(versionsMatch bool, podsReady bool) bool {
+				return versionsMatch && podsReady
+			},
+		)
 		if err != nil {
-			removeUpgradeTriggers()
-			c.l.Errorf("failed to wait for cluster %v/%v upgrade to finish: %v", cluster.GetCRDName(), cluster.GetName(), err)
+			c.l.Errorf("failed to wait for cluster %v/%v upgrade to finish", cluster.GetCRDName(), cluster.GetName())
 			return
 		}
+
 		removeUpgradeTriggers()
 	}(c.kubeCtl.GetKubeconfig(), cluster)
 
@@ -1527,6 +1581,8 @@ func sumVolumesSize(pvs *common.PersistentVolumeList) (sum uint64, err error) {
 	}
 	return
 }
+
+// TODO USE CHECK.PERCONA.COM INSTEAD OF CHECK.PERCONA/VERSIONS/V1 FOR INITAL VALUE OF VERSION SERVICE ENDPOINT
 
 // GetPersistentVolumes returns list of persistent volumes.
 func (c *K8sClient) GetPersistentVolumes(ctx context.Context) (*common.PersistentVolumeList, error) {

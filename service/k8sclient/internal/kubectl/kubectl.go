@@ -243,6 +243,7 @@ func (k *KubeCtl) Patch(ctx context.Context, patchType PatchType, resourceType, 
 	if err != nil {
 		return err
 	}
+	k.l.Info("Patch: %v", string(patch))
 	_, err = run(ctx, k.cmd, []string{"patch", resourceType, resourceName, "--type", string(patchType), "--patch", string(patch)}, nil)
 	return err
 }

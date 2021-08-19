@@ -16,6 +16,10 @@
 
 package common
 
+import (
+	"github.com/pkg/errors"
+)
+
 // Extracted from https://pkg.go.dev/k8s.io/api/core/v1
 
 // HostPathVolumeSource represents a host path mapped into a pod.
@@ -38,6 +42,7 @@ type EmptyDirVolumeSource struct{}
 // ContainerStatus contains container's status.
 type ContainerStatus struct {
 	Name  string              `json:"name,omitempty"`
+	Ready bool                `json:"ready,omitempty"`
 	State map[string]struct{} `json:"state,omitempty"`
 }
 
@@ -154,6 +159,25 @@ type Pod struct {
 
 	// PodStatus contains status of the pod.
 	Status PodStatus `json:"status,omitempty"`
+}
+
+// GetContainerImage returns image of container that has the same name as the name by given.
+func (p *Pod) GetContainerImage(containerName string) (string, error) {
+	for _, c := range p.Spec.Containers {
+		if c.Name == containerName {
+			return c.Image, nil
+		}
+	}
+	return "", errors.Errorf("container %q not found inside pod %q", containerName, p.Name)
+}
+
+func (p *Pod) IsReady() bool {
+	for _, status := range p.Status.ContainerStatuses {
+		if !status.Ready {
+			return false
+		}
+	}
+	return true
 }
 
 // Secret holds secret data of a certain type. The total bytes of the values in

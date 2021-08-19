@@ -168,6 +168,14 @@ func (p *PerconaXtraDBCluster) NewEmptyCluster() common.DatabaseCluster {
 	return &PerconaXtraDBCluster{}
 }
 
+func (p *PerconaXtraDBCluster) GetDatabaseContainerName() string {
+	return "pxc"
+}
+
+func (p *PerconaXtraDBCluster) GetDatabasePodLabels() []string {
+	return []string{"-lapp.kubernetes.io/instance=" + p.Name, "-lapp.kubernetes.io/component=pxc"}
+}
+
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
 type PerconaXtraDBClusterList struct {
 	common.TypeMeta // anonymous for embedding

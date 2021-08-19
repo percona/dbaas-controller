@@ -74,6 +74,14 @@ func (p *PerconaServerMongoDB) NewEmptyCluster() common.DatabaseCluster {
 	return &PerconaServerMongoDB{}
 }
 
+func (p *PerconaServerMongoDB) GetDatabaseContainerName() string {
+	return "mongo"
+}
+
+func (p *PerconaServerMongoDB) GetDatabasePodLabels() []string {
+	return []string{"-lapp.kubernetes.io/instance=" + p.Name, "-lapp.kubernetes.io/component=mongos"}
+}
+
 // PerconaServerMongoDBList holds a list of PSMDB objects.
 type PerconaServerMongoDBList struct {
 	common.TypeMeta // anonymous for embedding
