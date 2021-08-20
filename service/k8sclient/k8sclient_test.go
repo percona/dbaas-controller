@@ -65,36 +65,35 @@ func TestK8sClient(t *testing.T) {
 
 	l := logger.Get(ctx)
 
-	t.Run("Install operators", func(t *testing.T) { //nolint:paralleltest
-		err = client.InstallXtraDBOperator(ctx)
-		require.NoError(t, err)
+	// Install operators before starting any subtests.
+	err = client.InstallXtraDBOperator(ctx)
+	require.NoError(t, err)
 
-		err = client.InstallPSMDBOperator(ctx)
-		require.NoError(t, err)
+	err = client.InstallPSMDBOperator(ctx)
+	require.NoError(t, err)
 
-		for i := 0; i < 5; i++ {
-			_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-xtradb-cluster-operator"}, nil) //nolint:paralleltest
-			if err == nil {
-				break
-			}
-			time.Sleep(3 * time.Second)
+	for i := 0; i < 5; i++ {
+		_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-xtradb-cluster-operator"}, nil)
+		if err == nil {
+			break
 		}
-		require.NoError(t, err)
-		var res interface{}
-		err = client.kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", &res)
-		require.NoError(t, err)
+		time.Sleep(3 * time.Second)
+	}
+	require.NoError(t, err)
+	var res interface{}
+	err = client.kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", &res)
+	require.NoError(t, err)
 
-		for i := 0; i < 5; i++ {
-			_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil) //nolint:paralleltest
-			if err == nil {
-				break
-			}
-			time.Sleep(3 * time.Second)
+	for i := 0; i < 5; i++ {
+		_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil)
+		if err == nil {
+			break
 		}
-		require.NoError(t, err)
-		err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
-		require.NoError(t, err)
-	})
+		time.Sleep(3 * time.Second)
+	}
+	require.NoError(t, err)
+	err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
+	require.NoError(t, err)
 
 	t.Run("Get non-existing clusters", func(t *testing.T) {
 		t.Parallel()

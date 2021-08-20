@@ -22,15 +22,14 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"reflect"
 	"strings"
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"github.com/avast/retry-go"
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
@@ -84,10 +83,10 @@ const (
 	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
 	pxcInternalSecretTmpl   = "internal-%s"
 
-	psmdbCRVersion      = "1.8.0"
-	psmdbBackupImage    = "percona/percona-server-mongodb-operator:1.8.0-backup"
+	psmdbCRVersion      = "1.9.0"
+	psmdbBackupImage    = "percona/percona-server-mongodb-operator:1.9.0-backup"
 	psmdbDefaultImage   = "percona/percona-server-mongodb:4.2.8-8"
-	psmdbAPIVersion     = "psmdb.percona.com/v1-8-0"
+	psmdbAPIVersion     = "psmdb.percona.com/v1-9-0"
 	psmdbSecretNameTmpl = "dbaas-%s-psmdb-secrets"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
@@ -334,8 +333,9 @@ var (
 
 // K8sClient is a client for Kubernetes.
 type K8sClient struct {
-	kubeCtl *kubectl.KubeCtl
-	l       logger.Logger
+	kubeCtl    *kubectl.KubeCtl
+	l          logger.Logger
+	kubeconfig string
 }
 
 // CountReadyPods returns number of pods that are ready and belong to the
@@ -365,8 +365,9 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 		return nil, err
 	}
 	return &K8sClient{
-		kubeCtl: kubeCtl,
-		l:       l,
+		kubeCtl:    kubeCtl,
+		l:          l,
+		kubeconfig: kubeconfig,
 	}, nil
 }
 
@@ -953,6 +954,9 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 					EnableEncryption:     pointer.ToBool(true),
 					EncryptionKeySecret:  fmt.Sprintf("%s-mongodb-encryption-key", params.Name),
 					EncryptionCipherMode: psmdb.MongodChiperModeCBC,
+				},
+				SetParameter: &psmdb.MongodSpecSetParameter{
+					TTLMonitorSleepSecs: 60,
 				},
 				Storage: &psmdb.MongodSpecStorage{
 					Engine: psmdb.StorageEngineWiredTiger,
@@ -1832,13 +1836,27 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType Kubern
 		if err != nil {
 			return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes")
 		}
+		clientConfig, err := clientcmd.NewClientConfigFromBytes([]byte(c.kubeconfig))
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to build kubeconfig out of given path")
+		}
+		config, err := clientConfig.ClientConfig()
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to build kubeconfig out of given path")
+		}
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to build client out of submited kubeconfig")
+		}
 		for _, node := range nodes {
-			method := "GET"
-			endpoint := fmt.Sprintf("/v1/nodes/%s/proxy/stats/summary", node.Name)
-			summary := new(common.NodeSummary)
-			err = c.doAPIRequest(ctx, method, endpoint, &summary)
+			var summary common.NodeSummary
+			request := clientset.CoreV1().RESTClient().Get().Resource("nodes").Name(node.Name).SubResource("proxy").Suffix("stats/summary")
+			responseRawArrayOfBytes, err := request.DoRaw(context.Background())
 			if err != nil {
-				return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes summary")
+				return 0, errors.Wrap(err, "failed to get stats from node")
+			}
+			if err := json.Unmarshal(responseRawArrayOfBytes, &summary); err != nil {
+				return 0, errors.Wrap(err, "failed to unmarshal response from kubernetes API")
 			}
 			consumedBytes += summary.Node.FileSystem.UsedBytes
 		}
@@ -1852,51 +1870,6 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType Kubern
 	}
 
 	return 0, nil
-}
-
-// doAPIRequest starts kubectl proxy, does the request described using given endpoint and method,
-// unmarshals the result into the variable out and stops kubectl proxy.
-func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, out interface{}) error {
-	if reflect.ValueOf(out).Kind() != reflect.Ptr {
-		return errors.New("output expected to be pointer")
-	}
-
-	port, err := c.kubeCtl.RunProxy(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err := c.kubeCtl.StopProxy(port)
-		if err != nil {
-			c.l.Error(err)
-		}
-	}()
-
-	client := http.Client{
-		Timeout: time.Second * 5,
-		Transport: &http.Transport{
-			MaxIdleConns:    1,
-			IdleConnTimeout: 10 * time.Second,
-		},
-	}
-	req, err := http.NewRequestWithContext(ctx, method, "http://localhost:"+port+"/api"+endpoint, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to create Kubernetes API request")
-	}
-	var resp *http.Response
-	err = retry.Do(
-		func() error {
-			resp, err = client.Do(req)
-			return err
-		},
-		retry.Context(ctx),
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to do Kubernetes API request")
-	}
-
-	defer resp.Body.Close() //nolint:errcheck
-	return json.NewDecoder(resp.Body).Decode(out)
 }
 
 func (c *K8sClient) InstallXtraDBOperator(ctx context.Context) error {
