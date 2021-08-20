@@ -1186,7 +1186,7 @@ func (c *K8sClient) addUpgradeTriggers(ctx context.Context, getCluster getCluste
 				for _, containerName := range conatinerNames {
 					image, err := p.GetContainerImage(containerName)
 					if err != nil {
-						c.l.Warnf("failed to check pods for container image: %v", err)
+						c.l.Debugf("failed to check pods for container image: %v", err)
 						continue
 					}
 					images[image] = struct{}{}
@@ -1233,6 +1233,8 @@ func (c *K8sClient) addUpgradeTriggers(ctx context.Context, getCluster getCluste
 			}
 			return nil
 		}
+
+		// TODO SHOW TOTAL AND CURRENT STEP TO PODS THAT HAVE THE SAME VERSION AS THE CR.
 
 		err = waitForUpgradeCondition(ctx, "upgrade of cluster %v/%v has started",
 			func(versionsMatch bool, podsReady bool) bool {
