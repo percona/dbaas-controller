@@ -168,8 +168,8 @@ func (p *PerconaXtraDBCluster) NewEmptyCluster() common.DatabaseCluster {
 	return &PerconaXtraDBCluster{}
 }
 
-func (p *PerconaXtraDBCluster) GetDatabaseContainerName() string {
-	return "pxc"
+func (p *PerconaXtraDBCluster) GetDatabaseContainersName() []string {
+	return []string{"pxc"}
 }
 
 func (p *PerconaXtraDBCluster) GetDatabasePodLabels() []string {

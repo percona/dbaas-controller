@@ -1178,17 +1178,19 @@ func (c *K8sClient) addUpgradeTriggers(ctx context.Context, getCluster getCluste
 			}
 		}
 
-		crVersionAndPodsVersionMatches := func(ctx context.Context, pods *common.PodList, cluster common.DatabaseCluster) bool {
+		crVersionAndPodsVersionMatch := func(ctx context.Context, pods *common.PodList, cluster common.DatabaseCluster) bool {
 			crImage := cluster.GetImage()
 			images := make(map[string]struct{})
-			conatinerName := cluster.GetDatabaseContainerName()
+			conatinerNames := cluster.GetDatabaseContainersName()
 			for _, p := range pods.Items {
-				image, err := p.GetContainerImage(conatinerName)
-				if err != nil {
-					c.l.Errorf("failed to check pods for container image: %v", err)
-					return false
+				for _, containerName := range conatinerNames {
+					image, err := p.GetContainerImage(containerName)
+					if err != nil {
+						c.l.Warnf("failed to check pods for container image: %v", err)
+						continue
+					}
+					images[image] = struct{}{}
 				}
-				images[image] = struct{}{}
 			}
 			_, ok := images[crImage]
 			return len(images) == 1 && ok
@@ -1222,7 +1224,7 @@ func (c *K8sClient) addUpgradeTriggers(ctx context.Context, getCluster getCluste
 					c.l.Errorf("failed to get pods: %v", err)
 					continue
 				}
-				match := crVersionAndPodsVersionMatches(ctx, pods, cluster)
+				match := crVersionAndPodsVersionMatch(ctx, pods, cluster)
 				c.l.Infof("------ match %v, all pods rady %v", match, allClusterPodsReady(pods))
 				if done(match, allClusterPodsReady(pods)) {
 					c.l.Infof(onWaitingDoneMessage, cluster.GetCRDName(), cluster.GetName())
