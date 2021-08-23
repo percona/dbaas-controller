@@ -33,12 +33,13 @@ import (
 var (
 	// psmdbStatesMap matches psmdb app states to cluster states.
 	psmdbStatesMap = map[k8sclient.ClusterState]controllerv1beta1.PSMDBClusterState{
-		k8sclient.ClusterStateInvalid:  controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
-		k8sclient.ClusterStateChanging: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
-		k8sclient.ClusterStateReady:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
-		k8sclient.ClusterStateFailed:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
-		k8sclient.ClusterStateDeleting: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
-		k8sclient.ClusterStatePaused:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
+		k8sclient.ClusterStateInvalid:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
+		k8sclient.ClusterStateChanging:  controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
+		k8sclient.ClusterStateReady:     controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
+		k8sclient.ClusterStateFailed:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
+		k8sclient.ClusterStateDeleting:  controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
+		k8sclient.ClusterStatePaused:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
+		k8sclient.ClusterStateUpgrading: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_UPGRADING,
 	}
 )
 

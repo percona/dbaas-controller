@@ -65,6 +65,8 @@ const (
 	ClusterStateDeleting ClusterState = 4
 	// ClusterStatePaused represents a paused cluster state (status.state.ready and spec.pause.true).
 	ClusterStatePaused ClusterState = 5
+	// ClusterStateUpgrading represents a state of a cluster that is undergoing an upgrade.
+	ClusterStateUpgrading ClusterState = 6
 )
 
 const (
@@ -762,7 +764,6 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 		val := XtraDBCluster{
 			Name:    cluster.Name,
 			Size:    *cluster.Spec.PXC.Size,
-			State:   getPXCState(cluster.Status.Status),
 			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
 				Image:            cluster.Spec.PXC.Image,
@@ -794,6 +795,17 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 			val.Exposed = cluster.Spec.HAProxy.ServiceType != "" &&
 				cluster.Spec.HAProxy.ServiceType != common.ServiceTypeClusterIP
 		}
+
+		if cluster.Spec.UpgradeOptions != nil {
+			if _, err := version.NewVersion(cluster.Spec.UpgradeOptions.Apply); err == nil {
+				val.State = ClusterStateUpgrading
+			} else {
+				val.State = getPXCState(cluster.Status.Status)
+			}
+		} else {
+			val.State = getPXCState(cluster.Status.Status)
+		}
+
 		res[i] = val
 	}
 	return res, nil
@@ -1388,7 +1400,6 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 		val := PSMDBCluster{
 			Name:    cluster.Name,
 			Size:    cluster.Spec.Replsets[0].Size,
-			State:   getReplicasetStatus(cluster),
 			Pause:   cluster.Spec.Pause,
 			Message: message,
 			Replicaset: &Replicaset{
@@ -1398,6 +1409,16 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 			Image:         cluster.Spec.Image,
 			DetailedState: status,
 			Exposed:       cluster.Spec.Sharding.Mongos.Expose.Enabled,
+		}
+
+		if cluster.Spec.UpgradeOptions != nil {
+			if _, err := version.NewVersion(cluster.Spec.UpgradeOptions.Apply); err == nil {
+				val.State = ClusterStateUpgrading
+			} else {
+				val.State = getReplicasetStatus(cluster)
+			}
+		} else {
+			val.State = getReplicasetStatus(cluster)
 		}
 
 		res[i] = val
