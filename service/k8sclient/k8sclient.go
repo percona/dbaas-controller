@@ -667,7 +667,7 @@ func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
 	}
-	if cluster.Status.Status != pxc.AppStateReady {
+	if cluster.Status == nil || cluster.Status.Status != pxc.AppStateReady {
 		return nil, errors.Wrap(ErrXtraDBClusterNotReady,
 			fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
 		)
@@ -1344,7 +1344,7 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
-	if cluster.Status.Status != psmdb.AppStateReady {
+	if cluster.Status == nil || cluster.Status.Status != psmdb.AppStateReady {
 		return nil, errors.Wrap(ErrPSMDBClusterNotReady, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
 
