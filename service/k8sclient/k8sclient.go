@@ -1106,8 +1106,8 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 
 	// This is to prevent concurrent updates
-	if cluster.Status.Status != psmdb.AppStateReady {
-		return errors.Wrapf(ErrPSMDBClusterNotReady, "state is %v", cluster.Status.Status) //nolint:wrapcheck
+	if cluster.Status == nil || cluster.Status.Status != psmdb.AppStateReady {
+		return errors.Wrap(ErrPSMDBClusterNotReady, "cluster is not in ready state") //nolint:wrapcheck
 	}
 	if params.Size > 0 {
 		cluster.Spec.Replsets[0].Size = params.Size
@@ -1382,20 +1382,24 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
-		message := cluster.Status.Message
-		conditions := cluster.Status.Conditions
-		if message == "" && len(conditions) > 0 {
-			message = conditions[len(conditions)-1].Message
-		}
+		var message string
+		var status []appStatus
+		if cluster.Status != nil {
+			message = cluster.Status.Message
+			conditions := cluster.Status.Conditions
+			if message == "" && len(conditions) > 0 {
+				message = conditions[len(conditions)-1].Message
+			}
 
-		status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
-		for _, rs := range cluster.Status.Replsets {
-			status = append(status, appStatus{rs.Size, rs.Ready})
+			status = make([]appStatus, 0, len(cluster.Status.Replsets)+1)
+			for _, rs := range cluster.Status.Replsets {
+				status = append(status, appStatus{rs.Size, rs.Ready})
+			}
+			status = append(status, appStatus{
+				size:  cluster.Status.Mongos.Size,
+				ready: cluster.Status.Mongos.Ready,
+			})
 		}
-		status = append(status, appStatus{
-			size:  cluster.Status.Mongos.Size,
-			ready: cluster.Status.Mongos.Ready,
-		})
 
 		val := PSMDBCluster{
 			Name:    cluster.Name,
@@ -1433,6 +1437,9 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
   replicaset list of members.
 */
 func getReplicasetStatus(cluster psmdb.PerconaServerMongoDB) ClusterState {
+	if cluster.Status == nil {
+		return ClusterStateInvalid
+	}
 	if strings.ToLower(string(cluster.Status.Status)) != string(psmdb.AppStateError) {
 		return psmdbStatesMap[cluster.Status.Status]
 	}

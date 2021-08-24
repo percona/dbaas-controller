@@ -376,6 +376,47 @@ func TestK8sClient(t *testing.T) {
 		l.Info("PSMDB Cluster is deleted")
 	})
 
+	t.Run("Upgrade PSMDB", func(t *testing.T) {
+		t.Parallel()
+		name := "test-upgrade-psmdb"
+		_ = client.DeletePSMDBCluster(ctx, name)
+
+		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster == nil
+		})
+
+		err := client.CreatePSMDBCluster(ctx, &PSMDBParams{
+			Name:       name,
+			Size:       3,
+			Replicaset: &Replicaset{DiskSize: "1000000000"},
+			PMM:        pmm,
+			Image:      "percona/percona-server-mongodb:4.4.5-7",
+		})
+		require.NoError(t, err)
+
+		l.Infof("PSMDB Cluster %q has been created", name)
+
+		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+		time.Sleep(time.Second * 30) // give cluster time to settle, because it's not stable on deployment
+
+		err = client.UpdatePSMDBCluster(ctx, &PSMDBParams{
+			Image: "percona/percona-server-mongodb:4.4.6-8",
+		})
+		require.NoError(t, err)
+
+		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateUpgrading
+		})
+		l.Infof("upgrade of PSMDB cluster %q has begun", name)
+
+		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+		l.Infof("PSMDB Cluster %q has been upgraded", name)
+	})
+
 	t.Run("CheckOperators", func(t *testing.T) {
 		t.Parallel()
 		operators, err := client.CheckOperators(ctx)
