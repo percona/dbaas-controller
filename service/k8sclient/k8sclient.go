@@ -796,14 +796,18 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 				cluster.Spec.HAProxy.ServiceType != common.ServiceTypeClusterIP
 		}
 
-		if cluster.Spec.UpgradeOptions != nil {
-			if _, err := version.NewVersion(cluster.Spec.UpgradeOptions.Apply); err == nil {
-				val.State = ClusterStateUpgrading
+		if cluster.Status != nil {
+			if cluster.Spec.UpgradeOptions != nil {
+				if _, err := version.NewVersion(cluster.Spec.UpgradeOptions.Apply); err == nil {
+					val.State = ClusterStateUpgrading
+				} else {
+					val.State = getPXCState(cluster.Status.Status)
+				}
 			} else {
 				val.State = getPXCState(cluster.Status.Status)
 			}
 		} else {
-			val.State = getPXCState(cluster.Status.Status)
+			val.State = ClusterStateInvalid
 		}
 
 		res[i] = val
@@ -1414,15 +1418,18 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 			DetailedState: status,
 			Exposed:       cluster.Spec.Sharding.Mongos.Expose.Enabled,
 		}
-
-		if cluster.Spec.UpgradeOptions != nil {
-			if _, err := version.NewVersion(cluster.Spec.UpgradeOptions.Apply); err == nil {
-				val.State = ClusterStateUpgrading
+		if cluster.Status != nil {
+			if cluster.Spec.UpgradeOptions != nil {
+				if _, err := version.NewVersion(cluster.Spec.UpgradeOptions.Apply); err == nil {
+					val.State = ClusterStateUpgrading
+				} else {
+					val.State = psmdbStatesMap[cluster.Status.Status]
+				}
 			} else {
 				val.State = getReplicasetStatus(cluster)
 			}
 		} else {
-			val.State = getReplicasetStatus(cluster)
+			val.State = ClusterStateInvalid
 		}
 
 		res[i] = val

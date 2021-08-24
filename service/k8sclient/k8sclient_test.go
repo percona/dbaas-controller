@@ -386,11 +386,12 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		err := client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name:       name,
-			Size:       3,
-			Replicaset: &Replicaset{DiskSize: "1000000000"},
-			PMM:        pmm,
-			Image:      "percona/percona-server-mongodb:4.4.5-7",
+			Name:              name,
+			Size:              3,
+			Replicaset:        &Replicaset{DiskSize: "1000000000"},
+			PMM:               pmm,
+			Image:             "percona/percona-server-mongodb:4.4.5-7",
+			VersionServiceURL: "https://check.percona.com",
 		})
 		require.NoError(t, err)
 
@@ -402,7 +403,12 @@ func TestK8sClient(t *testing.T) {
 		time.Sleep(time.Second * 30) // give cluster time to settle, because it's not stable on deployment
 
 		err = client.UpdatePSMDBCluster(ctx, &PSMDBParams{
-			Image: "percona/percona-server-mongodb:4.4.6-8",
+			Name:              name,
+			Size:              3,
+			Replicaset:        &Replicaset{DiskSize: "1000000000"},
+			PMM:               pmm,
+			Image:             "percona/percona-server-mongodb:4.4.6-8",
+			VersionServiceURL: "https://check.percona.com",
 		})
 		require.NoError(t, err)
 
