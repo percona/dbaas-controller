@@ -778,6 +778,21 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 				{size: cluster.Status.PXC.Size, ready: cluster.Status.PXC.Ready},
 			},
 		}
+
+		if cluster.Status != nil {
+			if cluster.Spec.UpgradeOptions != nil {
+				if _, err := version.NewVersion(cluster.Spec.UpgradeOptions.Apply); err == nil {
+					val.State = ClusterStateUpgrading
+				} else {
+					val.State = getPXCState(cluster.Status.Status)
+				}
+			} else {
+				val.State = getPXCState(cluster.Status.Status)
+			}
+		} else {
+			val.State = ClusterStateInvalid
+		}
+
 		if cluster.Spec.ProxySQL != nil {
 			val.ProxySQL = &ProxySQL{
 				DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
@@ -794,20 +809,6 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 			}
 			val.Exposed = cluster.Spec.HAProxy.ServiceType != "" &&
 				cluster.Spec.HAProxy.ServiceType != common.ServiceTypeClusterIP
-		}
-
-		if cluster.Status != nil {
-			if cluster.Spec.UpgradeOptions != nil {
-				if _, err := version.NewVersion(cluster.Spec.UpgradeOptions.Apply); err == nil {
-					val.State = ClusterStateUpgrading
-				} else {
-					val.State = getPXCState(cluster.Status.Status)
-				}
-			} else {
-				val.State = getPXCState(cluster.Status.Status)
-			}
-		} else {
-			val.State = ClusterStateInvalid
 		}
 
 		res[i] = val
@@ -1233,7 +1234,6 @@ func (c *K8sClient) addUpgradeTriggers(ctx context.Context, getCluster getCluste
 					}
 					continue
 				}
-				c.l.Info("cluster got")
 				labels := cluster.GetDatabasePodLabels()
 				pods, err := client.GetPods(ctx, labels...)
 				if err != nil {
