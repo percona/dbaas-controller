@@ -125,31 +125,19 @@ type PerconaXtraDBCluster struct {
 	Status *PerconaXtraDBClusterStatus `json:"status,omitempty"`
 }
 
-// IsReady returns true if cluster is in state ready.
-func (p *PerconaXtraDBCluster) IsReady() bool {
-	return p.Status.Status == AppStateReady
-}
-
-// IsChanging returns true if cluster is changing.
-func (p *PerconaXtraDBCluster) IsChanging() bool {
-	// Error is included to partially mitigate https://jira.percona.com/browse/K8SPXC-858
-	return p.Status.Status == AppStateInit || p.Status.Status == AppStateError
-}
-
-// SetUpgradeOptions sets given version and schedule into cluster type specific CR.
-func (p *PerconaXtraDBCluster) SetUpgradeOptions(newVersion string, cronSchedule string) {
+// SetDatabaseImage sets database image to appropriate image field.
+func (p *PerconaXtraDBCluster) SetDatabaseImage(image string) {
 	if p.Spec == nil {
 		p.Spec = &PerconaXtraDBClusterSpec{}
 	}
-	if p.Spec.UpgradeOptions == nil {
-		p.Spec.UpgradeOptions = &common.UpgradeOptions{}
+	if p.Spec.PXC == nil {
+		p.Spec.PXC = &PodSpec{}
 	}
-	p.Spec.UpgradeOptions.Apply = newVersion
-	p.Spec.UpgradeOptions.Schedule = cronSchedule
+	p.Spec.PXC.Image = image
 }
 
-// GetImage returns image of database software used.
-func (p *PerconaXtraDBCluster) GetImage() string {
+// DatabaseImage returns image of database software used.
+func (p *PerconaXtraDBCluster) DatabaseImage() string {
 	return p.Spec.PXC.Image
 }
 
@@ -159,8 +147,8 @@ func (p *PerconaXtraDBCluster) GetName() string {
 }
 
 // GetCRDName returns name of Custom Resource Definition -> cluster's kind.
-func (p *PerconaXtraDBCluster) GetCRDName() string {
-	return "perconaxtradbcluster"
+func (p *PerconaXtraDBCluster) CRDName() string {
+	return "perconaxtradbcluster" // TODO use const for this
 }
 
 // NewEmptyCluster returns empty cluster for purposes of patching the cluster.
@@ -168,11 +156,13 @@ func (p *PerconaXtraDBCluster) NewEmptyCluster() common.DatabaseCluster {
 	return &PerconaXtraDBCluster{}
 }
 
-func (p *PerconaXtraDBCluster) GetDatabaseContainersName() []string {
+// DatabaseContainerNames returns container names that actually run the database.
+func (p *PerconaXtraDBCluster) DatabaseContainerNames() []string {
 	return []string{"pxc"}
 }
 
-func (p *PerconaXtraDBCluster) GetDatabasePodLabels() []string {
+// DatabasePodLabels return list of labels to get pods where database is running.
+func (p *PerconaXtraDBCluster) DatabasePodLabels() []string {
 	return []string{"-lapp.kubernetes.io/instance=" + p.Name, "-lapp.kubernetes.io/component=pxc"}
 }
 

@@ -196,22 +196,18 @@ type UpgradeOptions struct {
 
 // Abstraction of database cluster.
 type DatabaseCluster interface {
-	// IsReady returns true if cluster is in state ready.
-	IsReady() bool
-	// IsChanging returns true if cluster is changing.
-	IsChanging() bool
-	// SetUpgradeOptions sets given version and schedule into cluster type specific CR.
-	SetUpgradeOptions(newVersion string, cronSchedule string)
+	// SetDatabaseImage sets database image to appropriate image field.
+	SetDatabaseImage(name string)
 	// GetImage returns image of database software used.
-	GetImage() string
+	DatabaseImage() string
 	// GetName returns name of the cluster.
 	GetName() string
 	// GetCRDName returns name of Custom Resource Definition -> cluster's kind.
-	GetCRDName() string
+	CRDName() string
 	// NewEmptyCluster returns empty cluster for purposes of patching the cluster.
 	NewEmptyCluster() DatabaseCluster
-	// GetDatabaseContainersName returns container names that actually run the database.
-	GetDatabaseContainersName() []string
-	// GetDatabasePodLabels return list of labels to get pods where database is running.
-	GetDatabasePodLabels() []string
+	// DatabaseContainerNames returns container names that actually run the database.
+	DatabaseContainerNames() []string
+	// DatabasePodLabels return list of labels to get pods where database is running.
+	DatabasePodLabels() []string
 }

@@ -161,8 +161,8 @@ type Pod struct {
 	Status PodStatus `json:"status,omitempty"`
 }
 
-// GetContainerImage returns image of container that has the same name as the name by given.
-func (p *Pod) GetContainerImage(containerName string) (string, error) {
+// ContainerImage returns image of container that has the same name as the name by given.
+func (p *Pod) ContainerImage(containerName string) (string, error) {
 	for _, c := range p.Spec.Containers {
 		if c.Name == containerName {
 			return c.Image, nil

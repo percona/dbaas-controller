@@ -54,8 +54,16 @@ func (p *PerconaServerMongoDB) SetUpgradeOptions(newVersion string, cronSchedule
 	p.Spec.UpgradeOptions.Schedule = cronSchedule
 }
 
-// GetImage returns image of database software used.
-func (p *PerconaServerMongoDB) GetImage() string {
+// SetDatabaseImage sets database image to appropriate image field.
+func (p *PerconaServerMongoDB) SetDatabaseImage(image string) {
+	if p.Spec == nil {
+		p.Spec = &PerconaServerMongoDBSpec{}
+	}
+	p.Spec.Image = image
+}
+
+// DatabaseImage returns image of database software used.
+func (p *PerconaServerMongoDB) DatabaseImage() string {
 	return p.Spec.Image
 }
 
@@ -64,9 +72,9 @@ func (p *PerconaServerMongoDB) GetName() string {
 	return p.Name
 }
 
-// GetCRDName returns name of Custom Resource Definition -> cluster's kind.
-func (p *PerconaServerMongoDB) GetCRDName() string {
-	return "perconaservermongodb"
+// CRDName returns name of Custom Resource Definition -> cluster's kind.
+func (p *PerconaServerMongoDB) CRDName() string {
+	return "perconaservermongodb" // TODO change this to const
 }
 
 // NewEmptyCluster returns empty cluster for purposes of patching the cluster.
@@ -74,11 +82,13 @@ func (p *PerconaServerMongoDB) NewEmptyCluster() common.DatabaseCluster {
 	return &PerconaServerMongoDB{}
 }
 
-func (p *PerconaServerMongoDB) GetDatabaseContainersName() []string {
+// DatabaseContainerNames returns container names that actually run the database.
+func (p *PerconaServerMongoDB) DatabaseContainerNames() []string {
 	return []string{"mongos", "mongod"}
 }
 
-func (p *PerconaServerMongoDB) GetDatabasePodLabels() []string {
+// DatabasePodLabels return list of labels to get pods where database is running.
+func (p *PerconaServerMongoDB) DatabasePodLabels() []string {
 	return []string{"-lapp.kubernetes.io/instance=" + p.Name, "-lapp.kubernetes.io/part-of=percona-server-mongodb"}
 }
 
