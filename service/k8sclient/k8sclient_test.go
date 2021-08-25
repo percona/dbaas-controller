@@ -251,6 +251,65 @@ func TestK8sClient(t *testing.T) {
 		l.Info("XtraDB Cluster is deleted")
 	})
 
+	t.Run("Upgrade Xtradb", func(t *testing.T) {
+		t.Parallel()
+		name := "test-upgrade-xtradb"
+		_ = client.DeleteXtraDBCluster(ctx, name)
+
+		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+			return cluster == nil
+		})
+
+		err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
+			Name: name,
+			Size: 1,
+			PXC: &PXC{
+				DiskSize: "1000000000",
+				Image:    "percona/percona-xtradb-cluster:8.0.20-11.1",
+			},
+			ProxySQL:          &ProxySQL{DiskSize: "1000000000"},
+			PMM:               pmm,
+			VersionServiceURL: "https://check.percona.com",
+		})
+		require.NoError(t, err)
+
+		l.Info("XtraDB Cluster is created")
+
+		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+		t.Log("we got here!")
+		err = client.UpdateXtraDBCluster(ctx, &XtraDBParams{
+			Name: name,
+			Size: 1,
+			PXC: &PXC{
+				DiskSize: "1000000000",
+				Image:    "percona/percona-xtradb-cluster:8.0.20-11.2",
+			},
+			ProxySQL:          &ProxySQL{DiskSize: "1000000000"},
+			PMM:               pmm,
+			VersionServiceURL: "https://check.percona.com",
+		})
+		require.NoError(t, err)
+		t.Log("we requested the update!")
+		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+			t.Log("waiting for the upgrade to be done")
+			return cluster != nil && cluster.State == ClusterStateUpgrading
+		})
+		l.Infof("upgrade of XtraDB cluster %q has begun", name)
+
+		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+		l.Infof("XtraDB cluster %q has been upgraded", name)
+
+		cluster, err := getXtraDBCluster(ctx, client, name)
+		require.NoError(t, err)
+		assert.Equal(t, "percona/percona-xtradb-cluster:8.0.20-11.2", cluster.PXC.Image)
+
+		_ = client.DeleteXtraDBCluster(ctx, name)
+	})
+
 	t.Run("Create XtraDB with HAProxy", func(t *testing.T) {
 		t.Parallel()
 		clusterName := "test-pxc-haproxy"
@@ -377,7 +436,7 @@ func TestK8sClient(t *testing.T) {
 	})
 
 	t.Run("Upgrade PSMDB", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel() DON'T use parallel to psmdb clusters, they are sensitive to noisy neighbours.
 		name := "test-upgrade-psmdb"
 		_ = client.DeletePSMDBCluster(ctx, name)
 
@@ -421,6 +480,12 @@ func TestK8sClient(t *testing.T) {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
 		l.Infof("PSMDB Cluster %q has been upgraded", name)
+
+		cluster, err := getPSMDBCluster(ctx, client, name)
+		require.NoError(t, err)
+		assert.Equal(t, "percona/percona-server-mongodb:4.4.6-8", cluster.Image)
+
+		_ = client.DeletePSMDBCluster(ctx, name)
 	})
 
 	t.Run("CheckOperators", func(t *testing.T) {

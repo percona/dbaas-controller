@@ -1423,7 +1423,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 				if _, err := version.NewVersion(cluster.Spec.UpgradeOptions.Apply); err == nil {
 					val.State = ClusterStateUpgrading
 				} else {
-					val.State = psmdbStatesMap[cluster.Status.Status]
+					val.State = getReplicasetStatus(cluster)
 				}
 			} else {
 				val.State = getReplicasetStatus(cluster)
