@@ -739,22 +739,25 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 	res := make([]XtraDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
 		val := XtraDBCluster{
-			Name:    cluster.Name,
-			Size:    *cluster.Spec.PXC.Size,
-			Message: strings.Join(cluster.Status.Messages, ";"),
+			Name: cluster.Name,
+			Size: *cluster.Spec.PXC.Size,
 			PXC: &PXC{
 				Image:            cluster.Spec.PXC.Image,
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
 			},
 			Pause: cluster.Spec.Pause,
-			DetailedState: []appStatus{
+		}
+		if cluster.Status != nil {
+			val.DetailedState = []appStatus{
 				{size: cluster.Status.PMM.Size, ready: cluster.Status.PMM.Ready},
 				{size: cluster.Status.HAProxy.Size, ready: cluster.Status.HAProxy.Ready},
 				{size: cluster.Status.ProxySQL.Size, ready: cluster.Status.ProxySQL.Ready},
 				{size: cluster.Status.PXC.Size, ready: cluster.Status.PXC.Ready},
-			},
+			}
+			val.Message = strings.Join(cluster.Status.Messages, ";")
 		}
+
 		databaseCluster := common.DatabaseCluster(&cluster)
 		match, err := c.crVersionMatchesPodsVersion(ctx, databaseCluster.DatabasePodLabels(), databaseCluster.DatabaseContainerNames(), databaseCluster.DatabaseImage())
 		if err != nil {
