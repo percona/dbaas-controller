@@ -278,7 +278,6 @@ func TestK8sClient(t *testing.T) {
 		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
-		t.Log("we got here!")
 		err = client.UpdateXtraDBCluster(ctx, &XtraDBParams{
 			Name: name,
 			Size: 1,
@@ -291,9 +290,7 @@ func TestK8sClient(t *testing.T) {
 			VersionServiceURL: "https://check.percona.com",
 		})
 		require.NoError(t, err)
-		t.Log("we requested the update!")
 		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
-			t.Log("waiting for the upgrade to be done")
 			return cluster != nil && cluster.State == ClusterStateUpgrading
 		})
 		l.Infof("upgrade of XtraDB cluster %q has begun", name)
@@ -691,7 +688,6 @@ func TestGetAllClusterResources(t *testing.T) {
 	cpuMillis, memoryBytes, storageBytes, err := client.GetAllClusterResources(ctx, clusterType, volumes)
 	require.NoError(t, err)
 	// We check 1 CPU because it is hard to imagine somebody running cluster with less CPU allocatable.
-	t.Log("nodes is", len(nodes))
 	assert.GreaterOrEqual(
 		t, cpuMillis, uint64(len(nodes)*1000),
 		"expected to have at lease 1 CPU per node available to be allocated by pods",
