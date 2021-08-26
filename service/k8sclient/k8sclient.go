@@ -571,6 +571,12 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	if params.PXC != nil {
 		cluster.Spec.PXC.Resources = c.updateComputeResources(params.PXC.ComputeResources, cluster.Spec.PXC.Resources)
+		if params.PXC.Image != "" {
+			err = c.changeImageInCluster(&cluster, params.PXC.Image)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	if params.ProxySQL != nil {
@@ -579,13 +585,6 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	if params.HAProxy != nil {
 		cluster.Spec.HAProxy.Resources = c.updateComputeResources(params.HAProxy.ComputeResources, cluster.Spec.HAProxy.Resources)
-	}
-
-	if params.PXC.Image != "" {
-		err = c.changeImageInCluster(&cluster, params.PXC.Image)
-		if err != nil {
-			return err
-		}
 	}
 
 	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(&cluster).CRDName(), common.DatabaseCluster(&cluster).GetName(), cluster)

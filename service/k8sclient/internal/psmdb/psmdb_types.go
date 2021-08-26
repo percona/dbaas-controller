@@ -62,7 +62,7 @@ func (p *PerconaServerMongoDB) CRDName() string {
 
 // NewEmptyCluster returns empty cluster for purposes of patching the cluster.
 func (p *PerconaServerMongoDB) NewEmptyCluster() common.DatabaseCluster {
-	return &PerconaServerMongoDB{}
+	return new(PerconaServerMongoDB)
 }
 
 // DatabaseContainerNames returns container names that actually run the database.
