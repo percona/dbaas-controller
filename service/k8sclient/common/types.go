@@ -194,7 +194,10 @@ type UpgradeOptions struct {
 	Schedule               string `json:"schedule,omitempty"`
 }
 
-// Abstraction of database cluster.
+// ClusterKind is a kind of a cluster.
+type ClusterKind string
+
+// DatabaseCluster is an abstraction of database cluster.
 type DatabaseCluster interface {
 	// SetDatabaseImage sets database image to appropriate image field.
 	SetDatabaseImage(name string)

@@ -41,9 +41,6 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
-// ClusterKind is a kind of a cluster.
-type ClusterKind string
-
 // ClusterState represents XtraDB cluster CR state.
 type ClusterState int32
 
@@ -758,10 +755,12 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 				{size: cluster.Status.PXC.Size, ready: cluster.Status.PXC.Ready},
 			},
 		}
-
-		match, err := c.crVersionAndPodsVersionMatch(ctx, common.DatabaseCluster(&cluster))
+		databaseCluster := common.DatabaseCluster(&cluster)
+		match, err := c.crVersionMatchesPodsVersion(ctx, databaseCluster.DatabasePodLabels(), databaseCluster.DatabaseContainerNames(), databaseCluster.DatabaseImage())
 		if err != nil {
 			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.Name, err)
+			val.State = ClusterStateInvalid
+			res[i] = val
 			continue
 		}
 
@@ -770,8 +769,6 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 		} else {
 			val.State = getPXCState(cluster.Status)
 		}
-
-		c.l.Infof("val.State == ClusterStateReady -> %v, it's %v", val.State == ClusterStateReady, val.State)
 
 		if cluster.Spec.ProxySQL != nil {
 			val.ProxySQL = &ProxySQL{
@@ -1207,18 +1204,14 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 	return credentials, nil
 }
 
-func (c *K8sClient) crVersionAndPodsVersionMatch(ctx context.Context, cluster common.DatabaseCluster) (bool, error) {
-	labels := cluster.DatabasePodLabels()
-	pods, err := c.GetPods(ctx, labels...)
+func (c *K8sClient) crVersionMatchesPodsVersion(ctx context.Context, podLables, databaseContainerNames []string, crImage string) (bool, error) {
+	pods, err := c.GetPods(ctx, podLables...)
 	if err != nil {
 		return false, err
 	}
-	c.l.Infof("crVersionAndPodsVersionMatch: got %d pods", len(pods.Items))
-	crImage := cluster.DatabaseImage()
 	images := make(map[string]struct{})
-	conatinerNames := cluster.DatabaseContainerNames()
 	for _, p := range pods.Items {
-		for _, containerName := range conatinerNames {
+		for _, containerName := range databaseContainerNames {
 			image, err := p.ContainerImage(containerName)
 			if err != nil {
 				c.l.Debugf("failed to check pods for container image: %v", err)
@@ -1227,8 +1220,6 @@ func (c *K8sClient) crVersionAndPodsVersionMatch(ctx context.Context, cluster co
 			images[image] = struct{}{}
 		}
 	}
-	c.l.Infof("crVersionAndPodsVersionMatch: images found %v", images)
-	c.l.Infof("crVersionAndPodsVersionMatch: crImage %v", crImage)
 	_, ok := images[crImage]
 	return len(images) == 1 && ok, nil
 }
@@ -1276,9 +1267,12 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 			Exposed:       cluster.Spec.Sharding.Mongos.Expose.Enabled,
 		}
 
-		match, err := c.crVersionAndPodsVersionMatch(ctx, common.DatabaseCluster(&cluster))
+		databaseCluster := common.DatabaseCluster(&cluster)
+		match, err := c.crVersionMatchesPodsVersion(ctx, databaseCluster.DatabasePodLabels(), databaseCluster.DatabaseContainerNames(), databaseCluster.DatabaseImage())
 		if err != nil {
 			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.Name, err)
+			val.State = ClusterStateInvalid
+			res[i] = val
 			continue
 		}
 

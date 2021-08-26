@@ -171,15 +171,6 @@ func (p *Pod) ContainerImage(containerName string) (string, error) {
 	return "", errors.Errorf("container %q not found inside pod %q", containerName, p.Name)
 }
 
-func (p *Pod) IsReady() bool {
-	for _, status := range p.Status.ContainerStatuses {
-		if !status.Ready {
-			return false
-		}
-	}
-	return true
-}
-
 // Secret holds secret data of a certain type. The total bytes of the values in
 // the Data field must be less than 1024 * 1024 bytes.
 type Secret struct {

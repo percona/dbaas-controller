@@ -25,7 +25,7 @@ const (
 	// AffinityOff turn off affinity.
 	AffinityOff = "none"
 	// PerconaServerMongoDBKind is a name of CRD for mongodb clusters.
-	PerconaServerMongoDBKind = ClusterKind("PerconaServerMongoDB")
+	PerconaServerMongoDBKind = common.ClusterKind("PerconaServerMongoDB")
 )
 
 // PerconaServerMongoDB is the Schema for the perconaservermongodbs API.
@@ -78,7 +78,7 @@ func (p *PerconaServerMongoDB) GetName() string {
 
 // CRDName returns name of Custom Resource Definition -> cluster's kind.
 func (p *PerconaServerMongoDB) CRDName() string {
-	return PerconaServerMongoDBKind
+	return string(PerconaServerMongoDBKind)
 }
 
 // NewEmptyCluster returns empty cluster for purposes of patching the cluster.
