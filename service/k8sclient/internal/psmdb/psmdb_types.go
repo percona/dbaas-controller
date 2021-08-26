@@ -21,8 +21,12 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
-// AffinityOff turn off affinity.
-const AffinityOff = "none"
+const (
+	// AffinityOff turn off affinity.
+	AffinityOff = "none"
+	// PerconaServerMongoDBKind is a name of CRD for mongodb clusters.
+	PerconaServerMongoDBKind = ClusterKind("PerconaServerMongoDB")
+)
 
 // PerconaServerMongoDB is the Schema for the perconaservermongodbs API.
 type PerconaServerMongoDB struct {
@@ -74,7 +78,7 @@ func (p *PerconaServerMongoDB) GetName() string {
 
 // CRDName returns name of Custom Resource Definition -> cluster's kind.
 func (p *PerconaServerMongoDB) CRDName() string {
-	return "perconaservermongodb" // TODO change this to const
+	return PerconaServerMongoDBKind
 }
 
 // NewEmptyCluster returns empty cluster for purposes of patching the cluster.

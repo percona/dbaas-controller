@@ -21,6 +21,11 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
+const (
+	// PerconaXtraDBClusterKind is a name of CRD for Percona XtraDB Cluster.
+	PerconaXtraDBClusterKind = ClusterKind("PerconaXtraDBCluster")
+)
+
 // PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
 type PerconaXtraDBClusterSpec struct { //nolint:maligned
 	Platform              string                 `json:"platform,omitempty"`
@@ -146,9 +151,9 @@ func (p *PerconaXtraDBCluster) GetName() string {
 	return p.Name
 }
 
-// GetCRDName returns name of Custom Resource Definition -> cluster's kind.
+// CRDName returns name of Custom Resource Definition -> cluster's kind.
 func (p *PerconaXtraDBCluster) CRDName() string {
-	return "perconaxtradbcluster" // TODO use const for this
+	return PerconaXtraDBClusterKind
 }
 
 // NewEmptyCluster returns empty cluster for purposes of patching the cluster.
