@@ -25,7 +25,7 @@ const (
 	// AffinityOff turn off affinity.
 	AffinityOff = "none"
 	// PerconaServerMongoDBKind is a name of CRD for mongodb clusters.
-	PerconaServerMongoDBKind = common.ClusterKind("PerconaServerMongoDB")
+	PerconaServerMongoDBKind common.ClusterKind = common.ClusterKind("PerconaServerMongoDB")
 )
 
 // PerconaServerMongoDB is the Schema for the perconaservermongodbs API.
@@ -37,31 +37,10 @@ type PerconaServerMongoDB struct {
 	Status *PerconaServerMongoDBStatus `json:"status,omitempty"`
 }
 
-func (p *PerconaServerMongoDB) IsReady() bool {
-	return p.Status.Status == AppStateReady
-}
-
-// IsChanging returns true if cluster is changing.
-func (p *PerconaServerMongoDB) IsChanging() bool {
-	return p.Status.Status == AppStatePending || p.Status.Status == AppStateInit
-}
-
-// SetUpgradeOptions sets given version and schedule into cluster type specific CR.
-func (p *PerconaServerMongoDB) SetUpgradeOptions(newVersion string, cronSchedule string) {
-	if p.Spec == nil {
-		p.Spec = &PerconaServerMongoDBSpec{}
-	}
-	if p.Spec.UpgradeOptions == nil {
-		p.Spec.UpgradeOptions = &common.UpgradeOptions{}
-	}
-	p.Spec.UpgradeOptions.Apply = newVersion
-	p.Spec.UpgradeOptions.Schedule = cronSchedule
-}
-
 // SetDatabaseImage sets database image to appropriate image field.
 func (p *PerconaServerMongoDB) SetDatabaseImage(image string) {
 	if p.Spec == nil {
-		p.Spec = &PerconaServerMongoDBSpec{}
+		p.Spec = new(PerconaServerMongoDBSpec)
 	}
 	p.Spec.Image = image
 }

@@ -23,7 +23,7 @@ import (
 
 const (
 	// PerconaXtraDBClusterKind is a name of CRD for Percona XtraDB Cluster.
-	PerconaXtraDBClusterKind = common.ClusterKind("PerconaXtraDBCluster")
+	PerconaXtraDBClusterKind common.ClusterKind = common.ClusterKind("PerconaXtraDBCluster")
 )
 
 // PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
@@ -133,10 +133,10 @@ type PerconaXtraDBCluster struct {
 // SetDatabaseImage sets database image to appropriate image field.
 func (p *PerconaXtraDBCluster) SetDatabaseImage(image string) {
 	if p.Spec == nil {
-		p.Spec = &PerconaXtraDBClusterSpec{}
+		p.Spec = new(PerconaXtraDBClusterSpec)
 	}
 	if p.Spec.PXC == nil {
-		p.Spec.PXC = &PodSpec{}
+		p.Spec.PXC = new(PodSpec)
 	}
 	p.Spec.PXC.Image = image
 }
@@ -158,7 +158,7 @@ func (p *PerconaXtraDBCluster) CRDName() string {
 
 // NewEmptyCluster returns empty cluster for purposes of patching the cluster.
 func (p *PerconaXtraDBCluster) NewEmptyCluster() common.DatabaseCluster {
-	return &PerconaXtraDBCluster{}
+	return new(PerconaXtraDBCluster)
 }
 
 // DatabaseContainerNames returns container names that actually run the database.
