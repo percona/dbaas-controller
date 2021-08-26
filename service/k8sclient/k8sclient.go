@@ -582,7 +582,7 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	if params.PXC.Image != "" {
-		err = c.changeImageInCluster(ctx, &cluster, params.PXC.Image)
+		err = c.changeImageInCluster(&cluster, params.PXC.Image)
 		if err != nil {
 			return err
 		}
@@ -1095,7 +1095,7 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 	if params.Image != "" {
 		// We want to upgrade the cluster.
-		err = c.changeImageInCluster(ctx, &cluster, params.Image)
+		err = c.changeImageInCluster(&cluster, params.Image)
 		if err != nil {
 			return err
 		}
@@ -1107,7 +1107,7 @@ const (
 	updateStrategyRollingUpdate = "RollingUpdate"
 )
 
-func (c *K8sClient) changeImageInCluster(ctx context.Context, cluster common.DatabaseCluster, newImage string) error {
+func (c *K8sClient) changeImageInCluster(cluster common.DatabaseCluster, newImage string) error {
 	// Check the image is the same.
 	newImageAndTag := strings.Split(newImage, ":")
 	if len(newImageAndTag) != 2 {
