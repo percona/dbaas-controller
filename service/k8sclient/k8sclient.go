@@ -29,9 +29,10 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"github.com/avast/retry-go"
 	"github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
@@ -321,9 +322,10 @@ var (
 
 // K8sClient is a client for Kubernetes.
 type K8sClient struct {
-	kubeCtl *kubectl.KubeCtl
-	l       logger.Logger
-	client  *http.Client
+	kubeCtl    *kubectl.KubeCtl
+	l          logger.Logger
+	kubeconfig string
+  client  *http.Client
 }
 
 // CountReadyPods returns number of pods that are ready and belong to the
@@ -362,6 +364,7 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 				IdleConnTimeout: 10 * time.Second,
 			},
 		},
+		kubeconfig: kubeconfig,
 	}, nil
 }
 
@@ -1624,7 +1627,9 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 	return cpuMillis, memoryBytes, nil
 }
 
-// GetConsumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
+// GetCon
+
+sumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
 func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType KubernetesClusterType, volumes *common.PersistentVolumeList) (consumedBytes uint64, err error) {
 	switch clusterType {
 	case MinikubeClusterType:
@@ -1632,13 +1637,27 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType Kubern
 		if err != nil {
 			return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes")
 		}
+		clientConfig, err := clientcmd.NewClientConfigFromBytes([]byte(c.kubeconfig))
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to build kubeconfig out of given path")
+		}
+		config, err := clientConfig.ClientConfig()
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to build kubeconfig out of given path")
+		}
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to build client out of submited kubeconfig")
+		}
 		for _, node := range nodes {
-			method := "GET"
-			endpoint := fmt.Sprintf("/v1/nodes/%s/proxy/stats/summary", node.Name)
-			summary := new(common.NodeSummary)
-			err = c.doAPIRequest(ctx, method, endpoint, &summary)
+			var summary common.NodeSummary
+			request := clientset.CoreV1().RESTClient().Get().Resource("nodes").Name(node.Name).SubResource("proxy").Suffix("stats/summary")
+			responseRawArrayOfBytes, err := request.DoRaw(context.Background())
 			if err != nil {
-				return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes summary")
+				return 0, errors.Wrap(err, "failed to get stats from node")
+			}
+			if err := json.Unmarshal(responseRawArrayOfBytes, &summary); err != nil {
+				return 0, errors.Wrap(err, "failed to unmarshal response from kubernetes API")
 			}
 			consumedBytes += summary.Node.FileSystem.UsedBytes
 		}
