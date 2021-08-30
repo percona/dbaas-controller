@@ -29,6 +29,7 @@ import (
 	"testing"
 	"time"
 
+	goversion "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -65,11 +66,10 @@ func TestK8sClient(t *testing.T) {
 
 	l := logger.Get(ctx)
 
-	// Install operators before starting any subtests.
-	err = client.InstallXtraDBOperator(ctx)
+	err = client.InstallOperator(ctx, "1.8.0", "https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/v%s/deploy/%s")
 	require.NoError(t, err)
 
-	err = client.InstallPSMDBOperator(ctx)
+	err = client.InstallOperator(ctx, "1.8.0", "https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v%s/deploy/%s")
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
@@ -380,17 +380,11 @@ func TestK8sClient(t *testing.T) {
 		t.Parallel()
 		operators, err := client.CheckOperators(ctx)
 		require.NoError(t, err)
-		assert.Equal(t, &Operators{
-			Xtradb: Operator{
-				Status:  OperatorStatusOK,
-				Version: pxcCRVersion,
-			},
-			Psmdb: Operator{
-				Status:  OperatorStatusOK,
-				Version: psmdbCRVersion,
-			},
-		}, operators,
-		)
+		require.NotNil(t, operators)
+		_, err = goversion.NewVersion(operators.PsmdbOperatorVersion)
+		require.NoError(t, err)
+		_, err = goversion.NewVersion(operators.XtradbOperatorVersion)
+		require.NoError(t, err)
 	})
 }
 

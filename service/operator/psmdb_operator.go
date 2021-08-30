@@ -28,13 +28,16 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
+const psmdbOperatorDeploymentName = "percona-server-mongodb-operator"
+
 type PSMDBOperatorService struct {
-	p *message.Printer
+	p                    *message.Printer
+	manifestsURLTemplate string
 }
 
 // NewPSMDBOperatorService returns new PSMDBOperatorService instance.
-func NewPSMDBOperatorService(p *message.Printer) *PSMDBOperatorService {
-	return &PSMDBOperatorService{p: p}
+func NewPSMDBOperatorService(p *message.Printer, url string) *PSMDBOperatorService {
+	return &PSMDBOperatorService{p: p, manifestsURLTemplate: url}
 }
 
 func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *controllerv1beta1.InstallPSMDBOperatorRequest) (*controllerv1beta1.InstallPSMDBOperatorResponse, error) {
@@ -44,9 +47,22 @@ func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *con
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	err = client.InstallPSMDBOperator(ctx)
+	// Try to get operator versions to see if we should upgrade or install.
+	operators, err := client.CheckOperators(ctx)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if operators.PsmdbOperatorVersion != "" {
+		err = client.UpdateOperator(ctx, req.Version, psmdbOperatorDeploymentName, x.manifestsURLTemplate)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		return new(controllerv1beta1.InstallPSMDBOperatorResponse), nil
+	}
+
+	err = client.InstallOperator(ctx, req.Version, x.manifestsURLTemplate)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return new(controllerv1beta1.InstallPSMDBOperatorResponse), nil

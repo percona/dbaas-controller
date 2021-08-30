@@ -29,12 +29,6 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
-var operatorStatusesMap = map[k8sclient.OperatorStatus]controllerv1beta1.OperatorsStatus{
-	k8sclient.OperatorStatusOK:           controllerv1beta1.OperatorsStatus_OPERATORS_STATUS_OK,
-	k8sclient.OperatorStatusUnsupported:  controllerv1beta1.OperatorsStatus_OPERATORS_STATUS_UNSUPPORTED,
-	k8sclient.OperatorStatusNotInstalled: controllerv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED,
-}
-
 // KubernetesClusterService implements methods of gRPC server and other business logic related to kubernetes clusters.
 type KubernetesClusterService struct {
 	p *message.Printer
@@ -54,11 +48,8 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 	defer k8Client.Cleanup() //nolint:errcheck
 
 	resp := &controllerv1beta1.CheckKubernetesClusterConnectionResponse{
-		Operators: &controllerv1beta1.Operators{
-			Xtradb: new(controllerv1beta1.Operator),
-			Psmdb:  new(controllerv1beta1.Operator),
-		},
-		Status: controllerv1beta1.KubernetesClusterStatus_KUBERNETES_CLUSTER_STATUS_OK,
+		Operators: new(controllerv1beta1.Operators),
+		Status:    controllerv1beta1.KubernetesClusterStatus_KUBERNETES_CLUSTER_STATUS_OK,
 	}
 
 	l := logger.Get(ctx)
@@ -70,14 +61,8 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 		return resp, nil
 	}
 
-	resp.Operators.Xtradb = &controllerv1beta1.Operator{
-		Status:  operatorStatusesMap[operators.Xtradb.Status],
-		Version: operators.Xtradb.Version,
-	}
-	resp.Operators.Psmdb = &controllerv1beta1.Operator{
-		Status:  operatorStatusesMap[operators.Psmdb.Status],
-		Version: operators.Psmdb.Version,
-	}
+	resp.Operators.XtradbOperatorVersion = operators.XtradbOperatorVersion
+	resp.Operators.PsmdbOperatorVersion = operators.PsmdbOperatorVersion
 
 	return resp, nil
 }
