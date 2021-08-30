@@ -644,7 +644,7 @@ func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
 	}
-	if cluster.Status.Status != pxc.AppStateReady {
+	if cluster.Status == nil || cluster.Status.Status != pxc.AppStateReady {
 		return nil, errors.Wrap(ErrXtraDBClusterNotReady,
 			fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
 		)
@@ -741,7 +741,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 		val := XtraDBCluster{
 			Name:    cluster.Name,
 			Size:    *cluster.Spec.PXC.Size,
-			State:   getPXCState(cluster.Status.Status),
+			State:   getPXCState(cluster.Status),
 			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
@@ -777,8 +777,11 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 	return res, nil
 }
 
-func getPXCState(state pxc.AppState) ClusterState {
-	clusterState, ok := pxcStatesMap[state]
+func getPXCState(status *pxc.PerconaXtraDBClusterStatus) ClusterState {
+	if status == nil {
+		return ClusterStateInvalid
+	}
+	clusterState, ok := pxcStatesMap[status.Status]
 	if !ok {
 		l := logger.Get(context.Background())
 		l = l.WithField("component", "K8sClient")
@@ -1137,7 +1140,7 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
-	if cluster.Status.Status != psmdb.AppStateReady {
+	if cluster.Status == nil || cluster.Status.Status != psmdb.AppStateReady {
 		return nil, errors.Wrap(ErrPSMDBClusterNotReady, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
 
@@ -1175,33 +1178,36 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
-		message := cluster.Status.Message
-		conditions := cluster.Status.Conditions
-		if message == "" && len(conditions) > 0 {
-			message = conditions[len(conditions)-1].Message
-		}
-
-		status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
-		for _, rs := range cluster.Status.Replsets {
-			status = append(status, appStatus{rs.Size, rs.Ready})
-		}
-		status = append(status, appStatus{
-			size:  cluster.Status.Mongos.Size,
-			ready: cluster.Status.Mongos.Ready,
-		})
 
 		val := PSMDBCluster{
-			Name:    cluster.Name,
-			Size:    cluster.Spec.Replsets[0].Size,
-			State:   getReplicasetStatus(cluster),
-			Pause:   cluster.Spec.Pause,
-			Message: message,
+			Name:  cluster.Name,
+			Size:  cluster.Spec.Replsets[0].Size,
+			State: getReplicasetStatus(cluster),
+			Pause: cluster.Spec.Pause,
 			Replicaset: &Replicaset{
 				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
-			DetailedState: status,
-			Exposed:       cluster.Spec.Sharding.Mongos.Expose.Enabled,
+			Exposed: cluster.Spec.Sharding.Mongos.Expose.Enabled,
+		}
+
+		if cluster.Status != nil {
+			message := cluster.Status.Message
+			conditions := cluster.Status.Conditions
+			if message == "" && len(conditions) > 0 {
+				message = conditions[len(conditions)-1].Message
+			}
+
+			status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
+			for _, rs := range cluster.Status.Replsets {
+				status = append(status, appStatus{rs.Size, rs.Ready})
+			}
+			status = append(status, appStatus{
+				size:  cluster.Status.Mongos.Size,
+				ready: cluster.Status.Mongos.Ready,
+			})
+			val.DetailedState = status
+			val.Message = message
 		}
 
 		res[i] = val
@@ -1216,6 +1222,9 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
   replicaset list of members.
 */
 func getReplicasetStatus(cluster psmdb.PerconaServerMongoDB) ClusterState {
+	if cluster.Status == nil {
+		return ClusterStateInvalid
+	}
 	if strings.ToLower(string(cluster.Status.Status)) != string(psmdb.AppStateError) {
 		return psmdbStatesMap[cluster.Status.Status]
 	}

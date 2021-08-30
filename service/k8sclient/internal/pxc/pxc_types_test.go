@@ -110,7 +110,6 @@ const expected = `
             },
             "serviceAccountName": "percona-xtradb-cluster-operator"
         },
-        "upgradeOptions": {},
         "allowUnsafeConfigurations": true
     }
 }
