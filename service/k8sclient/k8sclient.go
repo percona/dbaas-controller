@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 	"strings"
 	"time"
 
@@ -1627,9 +1626,7 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 	return cpuMillis, memoryBytes, nil
 }
 
-// GetCon
-
-sumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
+// GetConsumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
 func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType KubernetesClusterType, volumes *common.PersistentVolumeList) (consumedBytes uint64, err error) {
 	switch clusterType {
 	case MinikubeClusterType:
@@ -1671,46 +1668,6 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType Kubern
 	}
 
 	return 0, nil
-}
-
-// doAPIRequest starts kubectl proxy, does the request described using given endpoint and method,
-// unmarshals the result into the variable out and stops kubectl proxy.
-func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, out interface{}) error {
-	if reflect.ValueOf(out).Kind() != reflect.Ptr {
-		return errors.New("output expected to be pointer")
-	}
-
-	port, err := c.kubeCtl.RunProxy(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err := c.kubeCtl.StopProxy(port)
-		if err != nil {
-			c.l.Error(err)
-		}
-	}()
-
-	req, err := http.NewRequestWithContext(ctx, method, "http://localhost:"+port+"/api"+endpoint, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to create Kubernetes API request")
-	}
-	var resp *http.Response
-	err = retry.Do(
-		func() error {
-			resp, err = c.client.Do(req)
-			if err != nil {
-				return err
-			}
-			defer resp.Body.Close() //nolint:errcheck
-			return json.NewDecoder(resp.Body).Decode(out)
-		},
-		retry.Context(ctx),
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to fetch results from Kubernetes API")
-	}
-	return nil
 }
 
 func (c *K8sClient) getAPIVersionForPSMDBOperator(version string) string {
