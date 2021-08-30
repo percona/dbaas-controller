@@ -114,9 +114,6 @@ const expected = `
             "serviceAccountName": "percona-server-mongodb-operator"
         },
         "pmm": {}
-    },
-    "status": {
-    	"mongos": {}
     }
 }
 `

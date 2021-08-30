@@ -112,13 +112,6 @@ const expected = `
         },
         "upgradeOptions": {},
         "allowUnsafeConfigurations": true
-    },
-    "status": {
-        "pxc": {},
-        "proxysql": {},
-        "haproxy": {},
-        "backup": {},
-        "pmm": {}
     }
 }
 `
