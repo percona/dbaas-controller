@@ -324,7 +324,7 @@ type K8sClient struct {
 	kubeCtl    *kubectl.KubeCtl
 	l          logger.Logger
 	kubeconfig string
-  client  *http.Client
+	client     *http.Client
 }
 
 // CountReadyPods returns number of pods that are ready and belong to the
