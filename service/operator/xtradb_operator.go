@@ -51,17 +51,24 @@ func (x XtraDBOperatorService) InstallXtraDBOperator(ctx context.Context, req *c
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	// NOTE: This does not handle corner case when user has deployed database clusters and operator is no longer installed.
 	if operators.XtradbOperatorVersion != "" {
 		err = client.UpdateOperator(ctx, req.Version, xtradbOperatorDeploymentName, x.manifestsURLTemplate)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+		err = client.PatchAllPXCClusters(ctx, operators.XtradbOperatorVersion, req.Version)
+		if err != nil {
+			return nil, err
+		}
+
 		return new(controllerv1beta1.InstallXtraDBOperatorResponse), nil
 	}
 
-	err = client.InstallOperator(ctx, req.Version, x.manifestsURLTemplate)
+	err = client.ApplyOperator(ctx, req.Version, x.manifestsURLTemplate)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
 	return new(controllerv1beta1.InstallXtraDBOperatorResponse), nil

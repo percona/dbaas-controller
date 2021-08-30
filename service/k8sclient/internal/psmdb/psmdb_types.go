@@ -29,8 +29,8 @@ type PerconaServerMongoDB struct {
 	common.TypeMeta   // anonymous for embedding
 	common.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   PerconaServerMongoDBSpec   `json:"spec,omitempty"`
-	Status perconaServerMongoDBStatus `json:"status,omitempty"`
+	Spec   *PerconaServerMongoDBSpec   `json:"spec,omitempty"`
+	Status *PerconaServerMongoDBStatus `json:"status,omitempty"`
 }
 
 // PerconaServerMongoDBList holds a list of PSMDB objects.
@@ -73,8 +73,8 @@ type PerconaServerMongoDBSpec struct {
 	Mongod                  *MongodSpec    `json:"mongod,omitempty"`
 	Replsets                []*ReplsetSpec `json:"replsets,omitempty"`
 	Secrets                 *SecretsSpec   `json:"secrets,omitempty"`
-	Backup                  BackupSpec     `json:"backup,omitempty"`
-	PMM                     PmmSpec        `json:"pmm,omitempty"`
+	Backup                  *BackupSpec    `json:"backup,omitempty"`
+	PMM                     *PmmSpec       `json:"pmm,omitempty"`
 	SchedulerName           string         `json:"schedulerName,omitempty"`
 	ClusterServiceDNSSuffix string         `json:"clusterServiceDNSSuffix,omitempty"`
 	Sharding                *ShardingSpec  `json:"sharding,omitempty"`
@@ -118,8 +118,8 @@ const (
 	AppStateError AppState = "error"
 )
 
-// perconaServerMongoDBStatus defines the observed state of PerconaServerMongoDB.
-type perconaServerMongoDBStatus struct {
+// PerconaServerMongoDBStatus defines the observed state of PerconaServerMongoDB.
+type PerconaServerMongoDBStatus struct {
 	Status             AppState                  `json:"state,omitempty"`
 	Message            string                    `json:"message,omitempty"`
 	Conditions         []clusterCondition        `json:"conditions,omitempty"`

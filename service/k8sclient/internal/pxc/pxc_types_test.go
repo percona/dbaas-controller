@@ -110,15 +110,7 @@ const expected = `
             },
             "serviceAccountName": "percona-xtradb-cluster-operator"
         },
-        "upgradeOptions": {},
         "allowUnsafeConfigurations": true
-    },
-    "status": {
-        "pxc": {},
-        "proxysql": {},
-        "haproxy": {},
-        "backup": {},
-        "pmm": {}
     }
 }
 `
@@ -127,6 +119,7 @@ func TestPXCTypesMarshal(t *testing.T) {
 	t.Parallel()
 	t.Run("check inline marshal", func(t *testing.T) {
 		t.Parallel()
+		var size int32 = 3
 		res := &PerconaXtraDBCluster{
 			TypeMeta: common.TypeMeta{
 				APIVersion: "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0",
@@ -135,11 +128,11 @@ func TestPXCTypesMarshal(t *testing.T) {
 			ObjectMeta: common.ObjectMeta{
 				Name: "test-pxc",
 			},
-			Spec: PerconaXtraDBClusterSpec{
+			Spec: &PerconaXtraDBClusterSpec{
 				AllowUnsafeConfig: true,
 				SecretsName:       "my-cluster-secrets",
 				PXC: &PodSpec{
-					Size: 3,
+					Size: &size,
 					Resources: &common.PodResources{
 						Limits: &common.ResourcesList{
 							CPU:    "500m",
@@ -161,7 +154,7 @@ func TestPXCTypesMarshal(t *testing.T) {
 					},
 				},
 				ProxySQL: &PodSpec{
-					Size: 3,
+					Size: &size,
 					Resources: &common.PodResources{
 						Limits: &common.ResourcesList{
 							CPU:    "500m",

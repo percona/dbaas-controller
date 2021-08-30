@@ -66,10 +66,10 @@ func TestK8sClient(t *testing.T) {
 
 	l := logger.Get(ctx)
 
-	err = client.InstallOperator(ctx, "1.8.0", "https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/v%s/deploy/%s")
+	err = client.ApplyOperator(ctx, "1.8.0", app.DefaultPXCOperatorURLTemplate)
 	require.NoError(t, err)
 
-	err = client.InstallOperator(ctx, "1.8.0", "https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v%s/deploy/%s")
+	err = client.ApplyOperator(ctx, "1.8.0", app.DefaultPSMDBOperatorURLTemplate)
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {

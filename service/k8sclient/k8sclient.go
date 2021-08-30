@@ -443,13 +443,13 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			Name:       params.Name,
 			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
 		},
-		Spec: pxc.PerconaXtraDBClusterSpec{
+		Spec: &pxc.PerconaXtraDBClusterSpec{
 			CRVersion:         operators.XtradbOperatorVersion,
 			AllowUnsafeConfig: true,
 			SecretsName:       secretName,
 
 			PXC: &pxc.PodSpec{
-				Size:            params.Size,
+				Size:            &params.Size,
 				Resources:       c.setComputeResources(params.PXC.ComputeResources),
 				Image:           pxcImage,
 				ImagePullPolicy: pullPolicy,
@@ -530,7 +530,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	podSpec.Enabled = true
 	podSpec.ImagePullPolicy = pullPolicy
-	podSpec.Size = params.Size
+	podSpec.Size = &params.Size
 	podSpec.Affinity = &pxc.PodAffinity{
 		TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 	}
@@ -568,11 +568,11 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	if params.Size > 0 {
-		cluster.Spec.PXC.Size = params.Size
+		cluster.Spec.PXC.Size = &params.Size
 		if cluster.Spec.ProxySQL != nil {
-			cluster.Spec.ProxySQL.Size = params.Size
+			cluster.Spec.ProxySQL.Size = &params.Size
 		} else {
-			cluster.Spec.HAProxy.Size = params.Size
+			cluster.Spec.HAProxy.Size = &params.Size
 		}
 	}
 
@@ -644,7 +644,7 @@ func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
 	}
-	if cluster.Status.Status != pxc.AppStateReady {
+	if cluster.Status == nil || cluster.Status.Status != pxc.AppStateReady {
 		return nil, errors.Wrap(ErrXtraDBClusterNotReady,
 			fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
 		)
@@ -740,8 +740,8 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 	for i, cluster := range list.Items {
 		val := XtraDBCluster{
 			Name:    cluster.Name,
-			Size:    cluster.Spec.PXC.Size,
-			State:   getPXCState(cluster.Status.Status),
+			Size:    *cluster.Spec.PXC.Size,
+			State:   getPXCState(cluster.Status),
 			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
@@ -777,8 +777,11 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 	return res, nil
 }
 
-func getPXCState(state pxc.AppState) ClusterState {
-	clusterState, ok := pxcStatesMap[state]
+func getPXCState(status *pxc.PerconaXtraDBClusterStatus) ClusterState {
+	if status == nil {
+		return ClusterStateInvalid
+	}
+	clusterState, ok := pxcStatesMap[status.Status]
 	if !ok {
 		l := logger.Get(context.Background())
 		l = l.WithField("component", "K8sClient")
@@ -917,7 +920,8 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			Name:       params.Name,
 			Finalizers: []string{"delete-psmdb-pvc"},
 		},
-		Spec: psmdb.PerconaServerMongoDBSpec{
+
+		Spec: &psmdb.PerconaServerMongoDBSpec{
 			CRVersion: operators.PsmdbOperatorVersion,
 			Image:     psmdbImage,
 			Secrets: &psmdb.SecretsSpec{
@@ -1015,11 +1019,11 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 				},
 			},
 
-			PMM: psmdb.PmmSpec{
+			PMM: &psmdb.PmmSpec{
 				Enabled: false,
 			},
 
-			Backup: psmdb.BackupSpec{
+			Backup: &psmdb.BackupSpec{
 				Enabled:            true,
 				Image:              fmt.Sprintf(psmdbBackupImageTemplate, operators.PsmdbOperatorVersion),
 				ServiceAccountName: "percona-server-mongodb-operator",
@@ -1031,7 +1035,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	}
 	if params.PMM != nil {
-		res.Spec.PMM = psmdb.PmmSpec{
+		res.Spec.PMM = &psmdb.PmmSpec{
 			Enabled:    true,
 			ServerHost: params.PMM.PublicAddress,
 			Image:      pmmClientImage,
@@ -1136,7 +1140,7 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
-	if cluster.Status.Status != psmdb.AppStateReady {
+	if cluster.Status == nil || cluster.Status.Status != psmdb.AppStateReady {
 		return nil, errors.Wrap(ErrPSMDBClusterNotReady, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
 
@@ -1174,33 +1178,36 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
-		message := cluster.Status.Message
-		conditions := cluster.Status.Conditions
-		if message == "" && len(conditions) > 0 {
-			message = conditions[len(conditions)-1].Message
-		}
-
-		status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
-		for _, rs := range cluster.Status.Replsets {
-			status = append(status, appStatus{rs.Size, rs.Ready})
-		}
-		status = append(status, appStatus{
-			size:  cluster.Status.Mongos.Size,
-			ready: cluster.Status.Mongos.Ready,
-		})
 
 		val := PSMDBCluster{
-			Name:    cluster.Name,
-			Size:    cluster.Spec.Replsets[0].Size,
-			State:   getReplicasetStatus(cluster),
-			Pause:   cluster.Spec.Pause,
-			Message: message,
+			Name:  cluster.Name,
+			Size:  cluster.Spec.Replsets[0].Size,
+			State: getReplicasetStatus(cluster),
+			Pause: cluster.Spec.Pause,
 			Replicaset: &Replicaset{
 				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
-			DetailedState: status,
-			Exposed:       cluster.Spec.Sharding.Mongos.Expose.Enabled,
+			Exposed: cluster.Spec.Sharding.Mongos.Expose.Enabled,
+		}
+
+		if cluster.Status != nil {
+			message := cluster.Status.Message
+			conditions := cluster.Status.Conditions
+			if message == "" && len(conditions) > 0 {
+				message = conditions[len(conditions)-1].Message
+			}
+
+			status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
+			for _, rs := range cluster.Status.Replsets {
+				status = append(status, appStatus{rs.Size, rs.Ready})
+			}
+			status = append(status, appStatus{
+				size:  cluster.Status.Mongos.Size,
+				ready: cluster.Status.Mongos.Ready,
+			})
+			val.DetailedState = status
+			val.Message = message
 		}
 
 		res[i] = val
@@ -1215,6 +1222,9 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
   replicaset list of members.
 */
 func getReplicasetStatus(cluster psmdb.PerconaServerMongoDB) ClusterState {
+	if cluster.Status == nil {
+		return ClusterStateInvalid
+	}
 	if strings.ToLower(string(cluster.Status.Status)) != string(psmdb.AppStateError) {
 		return psmdbStatesMap[cluster.Status.Status]
 	}
@@ -1699,14 +1709,79 @@ func (c *K8sClient) fetchOperatorManifest(ctx context.Context, manifestURL strin
 	return ioutil.ReadAll(resp.Body)
 }
 
-// InstallOperator applies bundle.yaml.
-func (c *K8sClient) InstallOperator(ctx context.Context, version string, manifestsURLTemplate string) error {
+// ApplyOperator applies bundle.yaml which installs CRDs, RBAC and operator's deployment.
+func (c *K8sClient) ApplyOperator(ctx context.Context, version string, manifestsURLTemplate string) error {
 	bundleURL := fmt.Sprintf(manifestsURLTemplate, version, "bundle.yaml")
 	bundle, err := c.fetchOperatorManifest(ctx, bundleURL)
 	if err != nil {
 		return errors.Wrap(err, "failed to install operator")
 	}
 	return c.kubeCtl.Apply(ctx, bundle)
+}
+
+// PatchAllPSMDBClusters replaces images versions and CrVersion after update of the operator to match version
+// of the installed operator.
+func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVersion string) error {
+	var list psmdb.PerconaServerMongoDBList
+	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), "", &list)
+	if err != nil {
+		return errors.Wrap(err, "couldn't get percona server MongoDB clusters")
+	}
+
+	for _, cluster := range list.Items {
+		clusterPatch := &psmdb.PerconaServerMongoDB{
+			Spec: &psmdb.PerconaServerMongoDBSpec{
+				CRVersion: newVersion,
+				Image:     strings.Replace(cluster.Spec.Image, oldVersion, newVersion, 1),
+				Backup: &psmdb.BackupSpec{
+					Image: strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1),
+				},
+			},
+		}
+		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaservermongodb", cluster.Name, clusterPatch); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// PatchAllPXCClusters replaces the image versions and crVersion after update of the operator to match version
+// of the installed operator.
+func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVersion string) error {
+	var list pxc.PerconaXtraDBClusterList
+	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), "", &list)
+	if err != nil {
+		return errors.Wrap(err, "couldn't get percona Xtradb clusters")
+	}
+
+	for _, cluster := range list.Items {
+		clusterPatch := &pxc.PerconaXtraDBCluster{
+			Spec: &pxc.PerconaXtraDBClusterSpec{
+				CRVersion: newVersion,
+				PXC: &pxc.PodSpec{
+					Image: strings.Replace(cluster.Spec.PXC.Image, oldVersion, newVersion, 1),
+				},
+				Backup: &pxc.PXCScheduledBackup{
+					Image: strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1),
+				},
+			},
+		}
+
+		if cluster.Spec.HAProxy != nil {
+			clusterPatch.Spec.HAProxy = &pxc.PodSpec{
+				Image: strings.Replace(cluster.Spec.HAProxy.Image, oldVersion, newVersion, 1),
+			}
+		} else {
+			cluster.Spec.ProxySQL = &pxc.PodSpec{
+				Image: strings.Replace(cluster.Spec.ProxySQL.Image, oldVersion, newVersion, 1),
+			}
+		}
+
+		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaxtradbcluster", cluster.Name, clusterPatch); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // UpdateOperator updates images inside operator deployment and also applies new CRDs and RBAC.
@@ -1743,7 +1818,7 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 		return errors.Errorf("container image %q does not have any tag", deployment.Spec.Template.Spec.Containers[containerIndex].Image)
 	}
 	deployment.Spec.Template.Spec.Containers[containerIndex].Image = imageAndTag[0] + ":" + version
-	return c.kubeCtl.Patch(ctx, "deployment", deploymentName, deployment)
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeStrategic, "deployment", deploymentName, deployment)
 }
 
 func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
