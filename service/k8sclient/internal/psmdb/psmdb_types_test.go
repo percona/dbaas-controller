@@ -114,15 +114,14 @@ const expected = `
             "serviceAccountName": "percona-server-mongodb-operator"
         },
         "pmm": {}
-    },
-    "status": {
-    	"mongos": {}
     }
 }
 `
 
 func TestPSMDBTypesMarshal(t *testing.T) {
+	t.Parallel()
 	t.Run("check inline marshal", func(t *testing.T) {
+		t.Parallel()
 		res := &PerconaServerMongoDB{
 			TypeMeta: common.TypeMeta{
 				APIVersion: "psmdb.percona.com/v1-4-0",
@@ -131,7 +130,7 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 			ObjectMeta: common.ObjectMeta{
 				Name: "test-psmdb",
 			},
-			Spec: PerconaServerMongoDBSpec{
+			Spec: &PerconaServerMongoDBSpec{
 				CRVersion: "1.8.0",
 				Image:     "percona/percona-server-mongodb-operator:1.4.0-mongod4.2",
 				Secrets: &SecretsSpec{
@@ -209,11 +208,11 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 					},
 				},
 
-				PMM: PmmSpec{
+				PMM: &PmmSpec{
 					Enabled: false,
 				},
 
-				Backup: BackupSpec{
+				Backup: &BackupSpec{
 					Enabled:            true,
 					Image:              "percona/percona-server-mongodb-operator:1.4.0-backup",
 					ServiceAccountName: "percona-server-mongodb-operator",

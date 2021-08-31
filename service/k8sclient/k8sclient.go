@@ -19,22 +19,25 @@ package k8sclient
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
-	"reflect"
 	"strings"
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"github.com/avast/retry-go"
 	goversion "github.com/hashicorp/go-version"
 	pmmversion "github.com/percona/pmm/version"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/monitoring"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/utils/convertors"
@@ -71,31 +74,32 @@ const (
 	k8sAPIVersion     = "v1"
 	k8sMetaKindSecret = "Secret"
 
-	pxcCRVersion            = "1.8.0"
-	pxcBackupImage          = "percona/percona-xtradb-cluster-operator:1.8.0-pxc8.0-backup"
-	pxcDefaultImage         = "percona/percona-xtradb-cluster:8.0.20-11.1"
-	pxcBackupStorageName    = "pxc-backup-storage-%s"
-	pxcAPIVersion           = "pxc.percona.com/v1-8-0"
-	pxcProxySQLDefaultImage = "percona/percona-xtradb-cluster-operator:1.8.0-proxysql"
-	pxcHAProxyDefaultImage  = "percona/percona-xtradb-cluster-operator:1.8.0-haproxy"
-	pxcSecretNameTmpl       = "dbaas-%s-pxc-secrets"
-	pxcInternalSecretTmpl   = "internal-%s"
+	pxcBackupImageTemplate          = "percona/percona-xtradb-cluster-operator:%s-pxc8.0-backup"
+	pxcDefaultImage                 = "percona/percona-xtradb-cluster:8.0.20-11.1"
+	pxcBackupStorageName            = "pxc-backup-storage-%s"
+	pxcAPINamespace                 = "pxc.percona.com"
+	pxcAPIVersionTemplate           = pxcAPINamespace + "/v%s"
+	pxcProxySQLDefaultImageTemplate = "percona/percona-xtradb-cluster-operator:%s-proxysql"
+	pxcHAProxyDefaultImageTemplate  = "percona/percona-xtradb-cluster-operator:%s-haproxy"
+	pxcSecretNameTmpl               = "dbaas-%s-pxc-secrets"
+	pxcInternalSecretTmpl           = "internal-%s"
 
-	psmdbCRVersion      = "1.8.0"
-	psmdbBackupImage    = "percona/percona-server-mongodb-operator:1.8.0-backup"
-	psmdbDefaultImage   = "percona/percona-server-mongodb:4.2.8-8"
-	psmdbAPIVersion     = "psmdb.percona.com/v1-8-0"
-	psmdbSecretNameTmpl = "dbaas-%s-psmdb-secrets"
+	psmdbBackupImageTemplate = "percona/percona-server-mongodb-operator:%s-backup"
+	psmdbDefaultImage        = "percona/percona-server-mongodb:4.2.8-8"
+	psmdbAPINamespace        = "psmdb.percona.com"
+	psmdbAPIVersionTemplate  = psmdbAPINamespace + "/v%s"
+	psmdbSecretNameTmpl      = "dbaas-%s-psmdb-secrets"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
 	pullPolicy              = common.PullIfNotPresent
 )
 
-type kubernetesClusterType uint8
+// KubernetesClusterType represents kubernetes cluster type(eg: EKS, Minikube).
+type KubernetesClusterType uint8
 
 const (
-	clusterTypeUnknown kubernetesClusterType = iota
+	clusterTypeUnknown KubernetesClusterType = iota
 	// AmazonEKSClusterType represents EKS cluster type.
 	AmazonEKSClusterType
 	// MinikubeClusterType represents minikube Kubernetes cluster.
@@ -111,18 +115,6 @@ const (
 	ContainerStateWaiting ContainerState = "waiting"
 )
 
-// OperatorStatus represents status of operator.
-type OperatorStatus int32
-
-const (
-	// OperatorStatusOK represents that operators are installed and have supported API version.
-	OperatorStatusOK OperatorStatus = 1
-	// OperatorStatusUnsupported represents that operators are installed, but doesn't have supported API version.
-	OperatorStatusUnsupported OperatorStatus = 2
-	// OperatorStatusNotInstalled represents that operators are not installed.
-	OperatorStatusNotInstalled OperatorStatus = 3
-)
-
 const (
 	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
 	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
@@ -130,14 +122,15 @@ const (
 
 // Operator represents kubernetes operator.
 type Operator struct {
-	Status  OperatorStatus
+	// If version is empty, operator is not installed.
 	Version string
 }
 
-// Operators contains statuses of operators.
+// Operators contains versions of installed operators.
+// If version is empty, operator is not installed.
 type Operators struct {
-	Xtradb Operator
-	Psmdb  Operator
+	XtradbOperatorVersion string
+	PsmdbOperatorVersion  string
 }
 
 // ComputeResources represents container computer resources requests or limits.
@@ -329,8 +322,10 @@ var pmmClientImage string
 
 // K8sClient is a client for Kubernetes.
 type K8sClient struct {
-	kubeCtl *kubectl.KubeCtl
-	l       logger.Logger
+	kubeCtl    *kubectl.KubeCtl
+	l          logger.Logger
+	kubeconfig string
+	client     *http.Client
 }
 
 func init() {
@@ -383,6 +378,14 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	return &K8sClient{
 		kubeCtl: kubeCtl,
 		l:       l,
+		client: &http.Client{
+			Timeout: time.Second * 5,
+			Transport: &http.Transport{
+				MaxIdleConns:    1,
+				IdleConnTimeout: 10 * time.Second,
+			},
+		},
+		kubeconfig: kubeconfig,
 	}, nil
 }
 
@@ -442,6 +445,12 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	storageName := fmt.Sprintf(pxcBackupStorageName, params.Name)
+
+	operators, err := c.CheckOperators(ctx)
+	if err != nil {
+		return err
+	}
+
 	pxcImage := pxcDefaultImage
 	if params.PXC.Image != "" {
 		pxcImage = params.PXC.Image
@@ -449,20 +458,20 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
-			APIVersion: pxcAPIVersion,
+			APIVersion: c.getAPIVersionForPXCOperator(operators.XtradbOperatorVersion),
 			Kind:       string(perconaXtraDBClusterKind),
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name:       params.Name,
 			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
 		},
-		Spec: pxc.PerconaXtraDBClusterSpec{
-			CRVersion:         pxcCRVersion,
+		Spec: &pxc.PerconaXtraDBClusterSpec{
+			CRVersion:         operators.XtradbOperatorVersion,
 			AllowUnsafeConfig: true,
 			SecretsName:       secretName,
 
 			PXC: &pxc.PodSpec{
-				Size:            params.Size,
+				Size:            &params.Size,
 				Resources:       c.setComputeResources(params.PXC.ComputeResources),
 				Image:           pxcImage,
 				ImagePullPolicy: pullPolicy,
@@ -480,7 +489,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 			},
 
 			Backup: &pxc.PXCScheduledBackup{
-				Image: pxcBackupImage,
+				Image: fmt.Sprintf(pxcBackupImageTemplate, operators.XtradbOperatorVersion),
 				Schedule: []pxc.PXCScheduledBackupSchedule{{
 					Name:        "test",
 					Schedule:    "*/30 * * * *",
@@ -518,7 +527,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	if params.ProxySQL != nil {
 		res.Spec.ProxySQL = new(pxc.PodSpec)
 		podSpec = res.Spec.ProxySQL
-		podSpec.Image = pxcProxySQLDefaultImage
+		podSpec.Image = fmt.Sprintf(pxcProxySQLDefaultImageTemplate, operators.XtradbOperatorVersion)
 		if params.ProxySQL.Image != "" {
 			podSpec.Image = params.ProxySQL.Image
 		}
@@ -527,7 +536,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	} else {
 		res.Spec.HAProxy = new(pxc.PodSpec)
 		podSpec = res.Spec.HAProxy
-		podSpec.Image = pxcHAProxyDefaultImage
+		podSpec.Image = fmt.Sprintf(pxcHAProxyDefaultImageTemplate, operators.XtradbOperatorVersion)
 		if params.HAProxy.Image != "" {
 			podSpec.Image = params.HAProxy.Image
 		}
@@ -543,7 +552,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	podSpec.Enabled = true
 	podSpec.ImagePullPolicy = pullPolicy
-	podSpec.Size = params.Size
+	podSpec.Size = &params.Size
 	podSpec.Affinity = &pxc.PodAffinity{
 		TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 	}
@@ -581,11 +590,11 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	if params.Size > 0 {
-		cluster.Spec.PXC.Size = params.Size
+		cluster.Spec.PXC.Size = &params.Size
 		if cluster.Spec.ProxySQL != nil {
-			cluster.Spec.ProxySQL.Size = params.Size
+			cluster.Spec.ProxySQL.Size = &params.Size
 		} else {
-			cluster.Spec.HAProxy.Size = params.Size
+			cluster.Spec.HAProxy.Size = &params.Size
 		}
 	}
 
@@ -608,7 +617,7 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error {
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
-			APIVersion: pxcAPIVersion,
+			APIVersion: pxcAPINamespace + "/v1",
 			Kind:       string(perconaXtraDBClusterKind),
 		},
 		ObjectMeta: common.ObjectMeta{
@@ -657,7 +666,7 @@ func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
 	}
-	if cluster.Status.Status != pxc.AppStateReady {
+	if cluster.Status == nil || cluster.Status.Status != pxc.AppStateReady {
 		return nil, errors.Wrap(ErrXtraDBClusterNotReady,
 			fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
 		)
@@ -696,7 +705,7 @@ func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) 
 }
 
 // GetKubernetesClusterType returns k8s cluster type based on storage class.
-func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) kubernetesClusterType {
+func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) KubernetesClusterType {
 	sc, err := c.getStorageClass(ctx)
 	if err != nil {
 		c.l.Error(errors.Wrap(err, "failed to get k8s cluster type"))
@@ -753,8 +762,8 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 	for i, cluster := range list.Items {
 		val := XtraDBCluster{
 			Name:    cluster.Name,
-			Size:    cluster.Spec.PXC.Size,
-			State:   getPXCState(cluster.Status.Status),
+			Size:    *cluster.Spec.PXC.Size,
+			State:   getPXCState(cluster.Status),
 			Message: strings.Join(cluster.Status.Messages, ";"),
 			PXC: &PXC{
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
@@ -790,8 +799,11 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 	return res, nil
 }
 
-func getPXCState(state pxc.AppState) ClusterState {
-	clusterState, ok := pxcStatesMap[state]
+func getPXCState(status *pxc.PerconaXtraDBClusterStatus) ClusterState {
+	if status == nil {
+		return ClusterStateInvalid
+	}
+	clusterState, ok := pxcStatesMap[status.Status]
 	if !ok {
 		l := logger.Get(context.Background())
 		l = l.WithField("component", "K8sClient")
@@ -910,21 +922,29 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		// > (the Operator will be unable to spread the cluster on several nodes)
 		affinity.TopologyKey = pointer.ToString(psmdb.AffinityOff)
 	}
+
+	operators, err := c.CheckOperators(ctx)
+	if err != nil {
+		return err
+	}
+
 	psmdbImage := psmdbDefaultImage
 	if params.Image != "" {
 		psmdbImage = params.Image
 	}
+
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
-			APIVersion: psmdbAPIVersion,
+			APIVersion: c.getAPIVersionForPSMDBOperator(operators.PsmdbOperatorVersion),
 			Kind:       string(perconaServerMongoDBKind),
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name:       params.Name,
 			Finalizers: []string{"delete-psmdb-pvc"},
 		},
-		Spec: psmdb.PerconaServerMongoDBSpec{
-			CRVersion: psmdbCRVersion,
+
+		Spec: &psmdb.PerconaServerMongoDBSpec{
+			CRVersion: operators.PsmdbOperatorVersion,
 			Image:     psmdbImage,
 			Secrets: &psmdb.SecretsSpec{
 				Users: secretName,
@@ -941,6 +961,9 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 					EnableEncryption:     pointer.ToBool(true),
 					EncryptionKeySecret:  fmt.Sprintf("%s-mongodb-encryption-key", params.Name),
 					EncryptionCipherMode: psmdb.MongodChiperModeCBC,
+				},
+				SetParameter: &psmdb.MongodSpecSetParameter{
+					TTLMonitorSleepSecs: 60,
 				},
 				Storage: &psmdb.MongodSpecStorage{
 					Engine: psmdb.StorageEngineWiredTiger,
@@ -1018,13 +1041,13 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 				},
 			},
 
-			PMM: psmdb.PmmSpec{
+			PMM: &psmdb.PmmSpec{
 				Enabled: false,
 			},
 
-			Backup: psmdb.BackupSpec{
+			Backup: &psmdb.BackupSpec{
 				Enabled:            true,
-				Image:              psmdbBackupImage,
+				Image:              fmt.Sprintf(psmdbBackupImageTemplate, operators.PsmdbOperatorVersion),
 				ServiceAccountName: "percona-server-mongodb-operator",
 			},
 		},
@@ -1034,7 +1057,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	}
 	if params.PMM != nil {
-		res.Spec.PMM = psmdb.PmmSpec{
+		res.Spec.PMM = &psmdb.PmmSpec{
 			Enabled:    true,
 			ServerHost: params.PMM.PublicAddress,
 			Image:      pmmClientImage,
@@ -1092,7 +1115,7 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
-			APIVersion: psmdbAPIVersion,
+			APIVersion: psmdbAPINamespace + "/v1",
 			Kind:       string(perconaServerMongoDBKind),
 		},
 		ObjectMeta: common.ObjectMeta{
@@ -1109,7 +1132,7 @@ func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
 		c.l.Errorf("cannot delete secret for %s: %v", name, err)
 	}
 
-	psmdbInternalSecrets := []string{"internal-%s-users", "%s-ssl", "%s-ssl-internal", "%-mongodb-keyfile", "%s-mongodb-encryption-key"}
+	psmdbInternalSecrets := []string{"internal-%s-users", "%s-ssl", "%s-ssl-internal", "%s-mongodb-keyfile", "%s-mongodb-encryption-key"}
 
 	for _, secretTmpl := range psmdbInternalSecrets {
 		err = c.deleteSecret(ctx, fmt.Sprintf(secretTmpl, name))
@@ -1139,7 +1162,7 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
-	if cluster.Status.Status != psmdb.AppStateReady {
+	if cluster.Status == nil || cluster.Status.Status != psmdb.AppStateReady {
 		return nil, errors.Wrap(ErrPSMDBClusterNotReady, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
 
@@ -1177,33 +1200,36 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
-		message := cluster.Status.Message
-		conditions := cluster.Status.Conditions
-		if message == "" && len(conditions) > 0 {
-			message = conditions[len(conditions)-1].Message
-		}
-
-		status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
-		for _, rs := range cluster.Status.Replsets {
-			status = append(status, appStatus{rs.Size, rs.Ready})
-		}
-		status = append(status, appStatus{
-			size:  cluster.Status.Mongos.Size,
-			ready: cluster.Status.Mongos.Ready,
-		})
 
 		val := PSMDBCluster{
-			Name:    cluster.Name,
-			Size:    cluster.Spec.Replsets[0].Size,
-			State:   getReplicasetStatus(cluster),
-			Pause:   cluster.Spec.Pause,
-			Message: message,
+			Name:  cluster.Name,
+			Size:  cluster.Spec.Replsets[0].Size,
+			State: getReplicasetStatus(cluster),
+			Pause: cluster.Spec.Pause,
 			Replicaset: &Replicaset{
 				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
-			DetailedState: status,
-			Exposed:       cluster.Spec.Sharding.Mongos.Expose.Enabled,
+			Exposed: cluster.Spec.Sharding.Mongos.Expose.Enabled,
+		}
+
+		if cluster.Status != nil {
+			message := cluster.Status.Message
+			conditions := cluster.Status.Conditions
+			if message == "" && len(conditions) > 0 {
+				message = conditions[len(conditions)-1].Message
+			}
+
+			status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
+			for _, rs := range cluster.Status.Replsets {
+				status = append(status, appStatus{rs.Size, rs.Ready})
+			}
+			status = append(status, appStatus{
+				size:  cluster.Status.Mongos.Size,
+				ready: cluster.Status.Mongos.Ready,
+			})
+			val.DetailedState = status
+			val.Message = message
 		}
 
 		res[i] = val
@@ -1218,6 +1244,9 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
   replicaset list of members.
 */
 func getReplicasetStatus(cluster psmdb.PerconaServerMongoDB) ClusterState {
+	if cluster.Status == nil {
+		return ClusterStateInvalid
+	}
 	if strings.ToLower(string(cluster.Status.Status)) != string(psmdb.AppStateError) {
 		return psmdbStatesMap[cluster.Status.Status]
 	}
@@ -1331,7 +1360,7 @@ func (c *K8sClient) volumeSpec(diskSize string) *common.VolumeSpec {
 	}
 }
 
-// CheckOperators checks if operator installed and have required API version.
+// CheckOperators checks installed operator API version.
 func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 	output, err := c.kubeCtl.Run(ctx, []string{"api-versions"}, "")
 	if err != nil {
@@ -1341,30 +1370,22 @@ func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 	apiVersions := strings.Split(string(output), "\n")
 
 	return &Operators{
-		Xtradb: c.checkOperatorStatus(apiVersions, pxcAPIVersion),
-		Psmdb:  c.checkOperatorStatus(apiVersions, psmdbAPIVersion),
+		XtradbOperatorVersion: c.getLatestOperatorAPIVersion(apiVersions, pxcAPINamespace),
+		PsmdbOperatorVersion:  c.getLatestOperatorAPIVersion(apiVersions, psmdbAPINamespace),
 	}, nil
 }
 
-// checkOperatorStatus returns if operator is installed and operators version.
+// getLatestOperatorAPIVersion returns latest installed operator API version.
 // It checks for all API versions supported by the operator and based on the latest API version in the list
-// figures out which version of operator is installed.
-func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIVersion string) (operator Operator) {
-	apiNamespace := strings.Split(expectedAPIVersion, "/")[0]
-	operator.Status = OperatorStatusNotInstalled
+// figures out the version. Returns empty string if operator API is not installed.
+func (c *K8sClient) getLatestOperatorAPIVersion(installedVersions []string, apiPrefix string) string {
 	lastVersion, _ := goversion.NewVersion("v0.0.0")
+	zeroVersion := lastVersion
 	for _, apiVersion := range installedVersions {
-		if !strings.HasPrefix(apiVersion, apiNamespace) {
+		if !strings.HasPrefix(apiVersion, apiPrefix) {
 			continue
 		}
-		if apiVersion == expectedAPIVersion {
-			operator.Status = OperatorStatusOK
-		}
-		if operator.Status == OperatorStatusNotInstalled {
-			operator.Status = OperatorStatusUnsupported
-		}
 		v := strings.Split(apiVersion, "/")[1]
-
 		versionParts := strings.Split(v, "-")
 		if len(versionParts) != 3 {
 			continue
@@ -1372,16 +1393,17 @@ func (c *K8sClient) checkOperatorStatus(installedVersions []string, expectedAPIV
 		v = strings.Join(versionParts, ".")
 		newVersion, err := goversion.NewVersion(v)
 		if err != nil {
-			c.l.Warn("can't parse version %s: %s", v, err)
+			c.l.Warnf("can't parse version %s: %s", v, err)
 			continue
 		}
-		if newVersion.LessThanOrEqual(lastVersion) {
-			continue
+		if newVersion.GreaterThan(lastVersion) {
+			lastVersion = newVersion
 		}
-		lastVersion = newVersion
-		operator.Version = lastVersion.String()
 	}
-	return operator
+	if lastVersion != zeroVersion { // comparing pointers
+		return lastVersion.String()
+	}
+	return ""
 }
 
 // sumVolumesSize returns sum of persistent volumes storage size in bytes.
@@ -1502,7 +1524,7 @@ func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
 }
 
 // GetAllClusterResources goes through all cluster nodes and sums their allocatable resources.
-func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType kubernetesClusterType, volumes *common.PersistentVolumeList) (
+func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType KubernetesClusterType, volumes *common.PersistentVolumeList) (
 	cpuMillis uint64, memoryBytes uint64, diskSizeBytes uint64, err error,
 ) {
 	nodes, err := c.getWorkerNodes(ctx)
@@ -1637,20 +1659,34 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 }
 
 // GetConsumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
-func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType kubernetesClusterType, volumes *common.PersistentVolumeList) (consumedBytes uint64, err error) {
+func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType KubernetesClusterType, volumes *common.PersistentVolumeList) (consumedBytes uint64, err error) {
 	switch clusterType {
 	case MinikubeClusterType:
 		nodes, err := c.getWorkerNodes(ctx)
 		if err != nil {
 			return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes")
 		}
+		clientConfig, err := clientcmd.NewClientConfigFromBytes([]byte(c.kubeconfig))
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to build kubeconfig out of given path")
+		}
+		config, err := clientConfig.ClientConfig()
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to build kubeconfig out of given path")
+		}
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to build client out of submited kubeconfig")
+		}
 		for _, node := range nodes {
-			method := "GET"
-			endpoint := fmt.Sprintf("/v1/nodes/%s/proxy/stats/summary", node.Name)
-			summary := new(common.NodeSummary)
-			err = c.doAPIRequest(ctx, method, endpoint, &summary)
+			var summary common.NodeSummary
+			request := clientset.CoreV1().RESTClient().Get().Resource("nodes").Name(node.Name).SubResource("proxy").Suffix("stats/summary")
+			responseRawArrayOfBytes, err := request.DoRaw(context.Background())
 			if err != nil {
-				return 0, errors.Wrap(err, "can't compute consumed disk size: failed to get worker nodes summary")
+				return 0, errors.Wrap(err, "failed to get stats from node")
+			}
+			if err := json.Unmarshal(responseRawArrayOfBytes, &summary); err != nil {
+				return 0, errors.Wrap(err, "failed to unmarshal response from kubernetes API")
 			}
 			consumedBytes += summary.Node.FileSystem.UsedBytes
 		}
@@ -1666,63 +1702,237 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType kubern
 	return 0, nil
 }
 
-// doAPIRequest starts kubectl proxy, does the request described using given endpoint and method,
-// unmarshals the result into the variable out and stops kubectl proxy.
-func (c *K8sClient) doAPIRequest(ctx context.Context, method, endpoint string, out interface{}) error {
-	if reflect.ValueOf(out).Kind() != reflect.Ptr {
-		return errors.New("output expected to be pointer")
-	}
+func (c *K8sClient) getAPIVersionForPSMDBOperator(version string) string {
+	return fmt.Sprintf(psmdbAPIVersionTemplate, strings.ReplaceAll(version, ".", "-"))
+}
 
-	port, err := c.kubeCtl.RunProxy(ctx)
+func (c *K8sClient) getAPIVersionForPXCOperator(version string) string {
+	return fmt.Sprintf(pxcAPIVersionTemplate, strings.ReplaceAll(version, ".", "-"))
+}
+
+func (c *K8sClient) fetchOperatorManifest(ctx context.Context, manifestURL string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", manifestURL, nil)
 	if err != nil {
-		return err
+		return nil, errors.Wrap(err, "failed to fetch operator manifests")
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch operator manifests")
 	}
 	defer func() {
-		err := c.kubeCtl.StopProxy(port)
+		err := resp.Body.Close()
 		if err != nil {
-			c.l.Error(err)
+			c.l.Errorf("failed to close response's body: %v", err)
 		}
 	}()
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.Errorf("failed to fetch operator manifests, http request ended with status %q", resp.Status)
+	}
+	return ioutil.ReadAll(resp.Body)
+}
 
-	client := http.Client{
-		Timeout: time.Second * 5,
-		Transport: &http.Transport{
-			MaxIdleConns:    1,
-			IdleConnTimeout: 10 * time.Second,
-		},
-	}
-	req, err := http.NewRequestWithContext(ctx, method, "http://localhost:"+port+"/api"+endpoint, nil)
+// ApplyOperator applies bundle.yaml which installs CRDs, RBAC and operator's deployment.
+func (c *K8sClient) ApplyOperator(ctx context.Context, version string, manifestsURLTemplate string) error {
+	bundleURL := fmt.Sprintf(manifestsURLTemplate, version, "bundle.yaml")
+	bundle, err := c.fetchOperatorManifest(ctx, bundleURL)
 	if err != nil {
-		return errors.Wrap(err, "failed to create Kubernetes API request")
+		return errors.Wrap(err, "failed to install operator")
 	}
-	var resp *http.Response
-	err = retry.Do(
-		func() error {
-			resp, err = client.Do(req)
+	return c.kubeCtl.Apply(ctx, bundle)
+}
+
+// PatchAllPSMDBClusters replaces images versions and CrVersion after update of the operator to match version
+// of the installed operator.
+func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVersion string) error {
+	var list psmdb.PerconaServerMongoDBList
+	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), "", &list)
+	if err != nil {
+		return errors.Wrap(err, "couldn't get percona server MongoDB clusters")
+	}
+
+	for _, cluster := range list.Items {
+		clusterPatch := &psmdb.PerconaServerMongoDB{
+			Spec: &psmdb.PerconaServerMongoDBSpec{
+				CRVersion: newVersion,
+				Image:     strings.Replace(cluster.Spec.Image, oldVersion, newVersion, 1),
+				Backup: &psmdb.BackupSpec{
+					Image: strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1),
+				},
+			},
+		}
+		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaservermongodb", cluster.Name, clusterPatch); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// PatchAllPXCClusters replaces the image versions and crVersion after update of the operator to match version
+// of the installed operator.
+func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVersion string) error {
+	var list pxc.PerconaXtraDBClusterList
+	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), "", &list)
+	if err != nil {
+		return errors.Wrap(err, "couldn't get percona Xtradb clusters")
+	}
+
+	for _, cluster := range list.Items {
+		clusterPatch := &pxc.PerconaXtraDBCluster{
+			Spec: &pxc.PerconaXtraDBClusterSpec{
+				CRVersion: newVersion,
+				PXC: &pxc.PodSpec{
+					Image: strings.Replace(cluster.Spec.PXC.Image, oldVersion, newVersion, 1),
+				},
+				Backup: &pxc.PXCScheduledBackup{
+					Image: strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1),
+				},
+			},
+		}
+
+		if cluster.Spec.HAProxy != nil {
+			clusterPatch.Spec.HAProxy = &pxc.PodSpec{
+				Image: strings.Replace(cluster.Spec.HAProxy.Image, oldVersion, newVersion, 1),
+			}
+		} else {
+			cluster.Spec.ProxySQL = &pxc.PodSpec{
+				Image: strings.Replace(cluster.Spec.ProxySQL.Image, oldVersion, newVersion, 1),
+			}
+		}
+
+		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaxtradbcluster", cluster.Name, clusterPatch); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// UpdateOperator updates images inside operator deployment and also applies new CRDs and RBAC.
+func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName, manifestsURLTemplate string) error {
+	files := []string{"crd.yaml", "rbac.yaml"}
+	for _, file := range files {
+		manifestURL := fmt.Sprintf(manifestsURLTemplate, version, file)
+		manifest, err := c.fetchOperatorManifest(ctx, manifestURL)
+		if err != nil {
+			return errors.Wrap(err, "failed to update operator")
+		}
+		err = c.kubeCtl.Apply(ctx, manifest)
+		if err != nil {
+			return errors.Wrap(err, "failed to update operator")
+		}
+	}
+	// Change image inside operator deployment.
+	var deployment common.Deployment
+	err := c.kubeCtl.Get(ctx, "deployment", deploymentName, &deployment)
+	if err != nil {
+		return errors.Wrap(err, "failed to get operator deployment")
+	}
+	containerIndex := -1
+	for i, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == deploymentName {
+			containerIndex = i
+		}
+	}
+	if containerIndex < 0 {
+		return errors.Errorf("container with name %q not found inside operator deployment", deploymentName)
+	}
+	imageAndTag := strings.Split(deployment.Spec.Template.Spec.Containers[containerIndex].Image, ":")
+	if len(imageAndTag) != 2 {
+		return errors.Errorf("container image %q does not have any tag", deployment.Spec.Template.Spec.Containers[containerIndex].Image)
+	}
+	deployment.Spec.Template.Spec.Containers[containerIndex].Image = imageAndTag[0] + ":" + version
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeStrategic, "deployment", deploymentName, deployment)
+}
+
+func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
+	files := []string{
+		"deploy/victoriametrics/crds/crd.yaml",
+		"deploy/victoriametrics/operator/manager.yaml",
+		"deploy/victoriametrics/operator/rbac.yaml",
+		"deploy/victoriametrics/crs/vmagent_rbac.yaml",
+		"deploy/victoriametrics/crs/vmnodescrape.yaml",
+		"deploy/victoriametrics/crs/vmpodscrape.yaml",
+	}
+	for _, path := range files {
+		file, err := dbaascontroller.DeployDir.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		err = c.kubeCtl.Apply(ctx, file)
+		if err != nil {
+			return err
+		}
+	}
+
+	randomCrypto, err := rand.Prime(rand.Reader, 64)
+	if err != nil {
+		return err
+	}
+
+	secretName := fmt.Sprintf("victoria-metrics-operator-%d", randomCrypto)
+	err = c.CreateSecret(ctx, secretName, map[string][]byte{
+		"username": []byte(params.Login),
+		"password": []byte(params.Password),
+	})
+	if err != nil {
+		return err
+	}
+
+	vmagent := vmAgentSpec(params, secretName)
+	return c.kubeCtl.Apply(ctx, vmagent)
+}
+
+func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
+	return monitoring.VMAgent{
+		TypeMeta: common.TypeMeta{
+			Kind:       "VMAgent",
+			APIVersion: "operator.victoriametrics.com/v1beta1",
 		},
-		retry.Context(ctx),
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to do Kubernetes API request")
+		ObjectMeta: common.ObjectMeta{
+			Name: "pmm-vmagent-" + secretName,
+		},
+		Spec: monitoring.VMAgentSpec{
+			ServiceScrapeNamespaceSelector: new(common.LabelSelector),
+			ServiceScrapeSelector:          new(common.LabelSelector),
+			PodScrapeNamespaceSelector:     new(common.LabelSelector),
+			PodScrapeSelector:              new(common.LabelSelector),
+			ProbeSelector:                  new(common.LabelSelector),
+			ProbeNamespaceSelector:         new(common.LabelSelector),
+			StaticScrapeSelector:           new(common.LabelSelector),
+			StaticScrapeNamespaceSelector:  new(common.LabelSelector),
+			ReplicaCount:                   1,
+			Resources: &common.PodResources{
+				Requests: &common.ResourcesList{
+					CPU:    "250m",
+					Memory: "350Mi",
+				},
+				Limits: &common.ResourcesList{
+					CPU:    "500m",
+					Memory: "850Mi",
+				},
+			},
+			AdditionalArgs: map[string]string{
+				"memory.allowedPercent": "40",
+			},
+			RemoteWrite: []monitoring.VMAgentRemoteWriteSpec{
+				{
+					URL:       fmt.Sprintf("%s/victoriametrics/api/v1/write", params.PublicAddress),
+					TLSConfig: &monitoring.TLSConfig{InsecureSkipVerify: true},
+					BasicAuth: &monitoring.BasicAuth{
+						Username: common.SecretKeySelector{
+							LocalObjectReference: common.LocalObjectReference{
+								Name: secretName,
+							},
+							Key: "username",
+						},
+						Password: common.SecretKeySelector{
+							LocalObjectReference: common.LocalObjectReference{
+								Name: secretName,
+							},
+							Key: "password",
+						},
+					},
+				},
+			},
+		},
 	}
-
-	defer resp.Body.Close() //nolint:errcheck
-	return json.NewDecoder(resp.Body).Decode(out)
-}
-
-func (c *K8sClient) InstallXtraDBOperator(ctx context.Context) error {
-	file, err := dbaascontroller.DeployDir.ReadFile("deploy/pxc-operator.yaml")
-	if err != nil {
-		return err
-	}
-	return c.kubeCtl.Apply(ctx, file)
-}
-
-func (c *K8sClient) InstallPSMDBOperator(ctx context.Context) error {
-	file, err := dbaascontroller.DeployDir.ReadFile("deploy/psmdb-operator.yaml")
-	if err != nil {
-		return err
-	}
-	return c.kubeCtl.Apply(ctx, file)
 }

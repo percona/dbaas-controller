@@ -53,6 +53,9 @@ func main() {
 	ctx := app.Context()
 	l := logger.Get(ctx).WithField("component", "main")
 	defer l.Sync() //nolint:errcheck
+	if flags.LogDebug {
+		l.SetLevel(logger.DebugLevel)
+	}
 
 	l.Infof("Starting...")
 
@@ -71,8 +74,8 @@ func main() {
 	controllerv1beta1.RegisterPSMDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewPSMDBClusterService(i18nPrinter))
 	controllerv1beta1.RegisterKubernetesClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewKubernetesClusterService(i18nPrinter))
 	controllerv1beta1.RegisterLogsAPIServer(gRPCServer.GetUnderlyingServer(), logs.NewService(i18nPrinter))
-	controllerv1beta1.RegisterXtraDBOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewXtraDBOperatorService(i18nPrinter))
-	controllerv1beta1.RegisterPSMDBOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewPSMDBOperatorService(i18nPrinter))
+	controllerv1beta1.RegisterXtraDBOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewXtraDBOperatorService(i18nPrinter, flags.PXCOperatorURLTemplate))
+	controllerv1beta1.RegisterPSMDBOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewPSMDBOperatorService(i18nPrinter, flags.PSMDBOperatorURLTemplate))
 
 	go servers.RunDebugServer(ctx, &servers.RunDebugServerOpts{
 		Addr: flags.DebugAddr,

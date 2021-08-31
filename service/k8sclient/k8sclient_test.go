@@ -17,9 +17,11 @@
 package k8sclient
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -27,6 +29,7 @@ import (
 	"testing"
 	"time"
 
+	goversion "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -63,36 +66,34 @@ func TestK8sClient(t *testing.T) {
 
 	l := logger.Get(ctx)
 
-	t.Run("Install operators", func(t *testing.T) { //nolint:paralleltest
-		err = client.InstallXtraDBOperator(ctx)
-		require.NoError(t, err)
+	err = client.ApplyOperator(ctx, "1.8.0", app.DefaultPXCOperatorURLTemplate)
+	require.NoError(t, err)
 
-		err = client.InstallPSMDBOperator(ctx)
-		require.NoError(t, err)
+	err = client.ApplyOperator(ctx, "1.8.0", app.DefaultPSMDBOperatorURLTemplate)
+	require.NoError(t, err)
 
-		for i := 0; i < 5; i++ {
-			_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-xtradb-cluster-operator"}, nil) //nolint:paralleltest
-			if err == nil {
-				break
-			}
-			time.Sleep(3 * time.Second)
+	for i := 0; i < 5; i++ {
+		_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-xtradb-cluster-operator"}, nil)
+		if err == nil {
+			break
 		}
-		require.NoError(t, err)
-		var res interface{}
-		err = client.kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", &res)
-		require.NoError(t, err)
+		time.Sleep(3 * time.Second)
+	}
+	require.NoError(t, err)
+	var res interface{}
+	err = client.kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", &res)
+	require.NoError(t, err)
 
-		for i := 0; i < 5; i++ {
-			_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil) //nolint:paralleltest
-			if err == nil {
-				break
-			}
-			time.Sleep(3 * time.Second)
+	for i := 0; i < 5; i++ {
+		_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil)
+		if err == nil {
+			break
 		}
-		require.NoError(t, err)
-		err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
-		require.NoError(t, err)
-	})
+		time.Sleep(3 * time.Second)
+	}
+	require.NoError(t, err)
+	err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
+	require.NoError(t, err)
 
 	t.Run("Get non-existing clusters", func(t *testing.T) {
 		t.Parallel()
@@ -379,17 +380,11 @@ func TestK8sClient(t *testing.T) {
 		t.Parallel()
 		operators, err := client.CheckOperators(ctx)
 		require.NoError(t, err)
-		assert.Equal(t, &Operators{
-			Xtradb: Operator{
-				Status:  OperatorStatusOK,
-				Version: pxcCRVersion,
-			},
-			Psmdb: Operator{
-				Status:  OperatorStatusOK,
-				Version: psmdbCRVersion,
-			},
-		}, operators,
-		)
+		require.NotNil(t, operators)
+		_, err = goversion.NewVersion(operators.PsmdbOperatorVersion)
+		require.NoError(t, err)
+		_, err = goversion.NewVersion(operators.XtradbOperatorVersion)
+		require.NoError(t, err)
 	})
 }
 
@@ -595,4 +590,68 @@ func TestGetAllClusterResources(t *testing.T) {
 		t, storageBytes, uint64(len(nodes))*1000*1000*1000*4,
 		"expected to have at lease 4GB of storage per node.",
 	)
+}
+
+func TestVMAgentSpec(t *testing.T) {
+	t.Parallel()
+	expected := `{
+  "kind": "VMAgent",
+  "apiVersion": "operator.victoriametrics.com/v1beta1",
+  "metadata": {
+    "name": "pmm-vmagent-rws-basic-auth"
+  },
+  "spec": {
+    "serviceScrapeNamespaceSelector": {},
+    "serviceScrapeSelector": {},
+    "podScrapeNamespaceSelector": {},
+    "podScrapeSelector": {},
+    "probeSelector": {},
+    "probeNamespaceSelector": {},
+    "staticScrapeSelector": {},
+    "staticScrapeNamespaceSelector": {},
+    "replicaCount": 1,
+    "resources": {
+      "requests": {
+        "memory": "350Mi",
+        "cpu": "250m"
+      },
+      "limits": {
+        "memory": "850Mi",
+        "cpu": "500m"
+      }
+    },
+    "additionalArgs": {
+      "memory.allowedPercent": "40"
+    },
+    "remoteWrite": [
+      {
+        "url": "http://vmsingle-example-vmsingle-pvc.default.svc:8429/victoriametrics/api/v1/write",
+        "basicAuth": {
+          "username": {
+            "name": "rws-basic-auth",
+            "key": "username"
+          },
+          "password": {
+            "name": "rws-basic-auth",
+            "key": "password"
+          }
+        },
+        "tlsConfig": {
+          "insecureSkipVerify": true
+        }
+      }
+    ]
+  }
+}
+`
+	spec := vmAgentSpec(
+		&PMM{PublicAddress: "http://vmsingle-example-vmsingle-pvc.default.svc:8429"},
+		"rws-basic-auth",
+	)
+	var inBuf bytes.Buffer
+	e := json.NewEncoder(&inBuf)
+	e.SetIndent("", "  ")
+	err := e.Encode(spec)
+	require.NoError(t, err)
+	assert.Equal(t, expected, inBuf.String())
 }

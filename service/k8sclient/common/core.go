@@ -125,6 +125,25 @@ func IsContainerInState(containerStatuses []ContainerStatus, state ContainerStat
 	return false
 }
 
+// DeploymentTemplate is a template for creating pods.
+type DeploymentTemplate struct {
+	ObjectMeta `json:"metadata,omitempty"`
+	Spec       PodSpec `json:"spec,omitempty"`
+}
+
+// DeploymentSpec details deployment specification.
+type DeploymentSpec struct {
+	Selector LabelSelector      `json:"selector,omitempty"`
+	Template DeploymentTemplate `json:"template,omitempty"`
+}
+
+// Deployment is a higher abstraction based on pods. It's basically a group of pods.
+type Deployment struct {
+	TypeMeta
+	ObjectMeta `json:"metadata,omitempty"`
+	Spec       DeploymentSpec `json:"spec,omitempty"`
+}
+
 // PodStatus holds pod status.
 type PodStatus struct {
 	// ContainerStatuses holds statuses of regular containers.
@@ -168,6 +187,12 @@ type Secret struct {
 	// base64 encoded string, representing the arbitrary (possibly non-string)
 	// data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
 	Data map[string][]byte `json:"data,omitempty"`
+
+	// stringData allows specifying non-binary secret data in string form.
+	// It is provided as a write-only input field for convenience.
+	// All keys and values are merged into the data field on write, overwriting any existing values.
+	// The stringData field is never output when reading from the API.
+	StringData map[string][]byte `json:"stringData,omitempty"`
 
 	// Used to facilitate programmatic handling of secret data.
 	Type SecretType `json:"type,omitempty"`

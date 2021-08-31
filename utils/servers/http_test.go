@@ -25,6 +25,7 @@ import (
 
 func TestHTTPServer(t *testing.T) {
 	t.Run("InvalidAddr", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			RunHTTPServer(context.Background(), &RunHTTPServerOpts{
 				Addr: "invalid.port:99999",
