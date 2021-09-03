@@ -28,7 +28,8 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"github.com/hashicorp/go-version"
+	goversion "github.com/hashicorp/go-version"
+	pmmversion "github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -70,8 +71,6 @@ const (
 )
 
 const (
-	pmmClientImage = "perconalab/pmm-client:dev-latest"
-
 	k8sAPIVersion     = "v1"
 	k8sMetaKindSecret = "Secret"
 
@@ -319,12 +318,35 @@ var (
 	ErrNotFound error = errors.New("resource was not found in Kubernetes cluster")
 )
 
+var pmmClientImage string
+
 // K8sClient is a client for Kubernetes.
 type K8sClient struct {
 	kubeCtl    *kubectl.KubeCtl
 	l          logger.Logger
 	kubeconfig string
 	client     *http.Client
+}
+
+func init() {
+	if pmmversion.PMMVersion == "" {
+		// Prevent panicing on local development builds.
+		pmmClientImage = "perconalab/pmm-client:dev-latest"
+		return
+	}
+
+	v, err := goversion.NewVersion(pmmversion.PMMVersion)
+	if err != nil {
+		panic("failed to decide what version of pmm-client to use: " + err.Error())
+	}
+
+	if v.Core().String() == v.String() {
+		// Production version contains only major.minor.patch ...
+		pmmClientImage = "percona/pmm-client:2"
+	} else {
+		// ... development version contains also commit.
+		pmmClientImage = "perconalab/pmm-client:dev-latest"
+	}
 }
 
 // CountReadyPods returns number of pods that are ready and belong to the
@@ -1357,7 +1379,7 @@ func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 // It checks for all API versions supported by the operator and based on the latest API version in the list
 // figures out the version. Returns empty string if operator API is not installed.
 func (c *K8sClient) getLatestOperatorAPIVersion(installedVersions []string, apiPrefix string) string {
-	lastVersion, _ := version.NewVersion("v0.0.0")
+	lastVersion, _ := goversion.NewVersion("v0.0.0")
 	zeroVersion := lastVersion
 	for _, apiVersion := range installedVersions {
 		if !strings.HasPrefix(apiVersion, apiPrefix) {
@@ -1369,7 +1391,7 @@ func (c *K8sClient) getLatestOperatorAPIVersion(installedVersions []string, apiP
 			continue
 		}
 		v = strings.Join(versionParts, ".")
-		newVersion, err := version.NewVersion(v)
+		newVersion, err := goversion.NewVersion(v)
 		if err != nil {
 			c.l.Warnf("can't parse version %s: %s", v, err)
 			continue
