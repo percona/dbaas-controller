@@ -249,6 +249,19 @@ func (k *KubeCtl) Apply(ctx context.Context, res interface{}) error {
 	return err
 }
 
+// Patch executes `kubectl patch` on given resource.
+func (k *KubeCtl) Patch(ctx context.Context, patchType PatchType, resourceType, resourceName string, res interface{}) error {
+	patch, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+	if patchType == "" {
+		patchType = PatchTypeStrategic
+	}
+	_, err = run(ctx, k.cmd, []string{"patch", resourceType, resourceName, "--type", string(patchType), "--patch", string(patch)}, nil)
+	return err
+}
+
 // Delete executes `kubectl delete` with given resource.
 func (k *KubeCtl) Delete(ctx context.Context, res interface{}) error {
 	_, err := run(ctx, k.cmd, []string{"delete", "-f", "-"}, res)
@@ -269,7 +282,9 @@ func (k *KubeCtl) Run(ctx context.Context, args []string, stdin interface{}) ([]
 func run(ctx context.Context, kubectlCmd []string, args []string, stdin interface{}) ([]byte, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "kubectl")
-	args = append(kubectlCmd, args...)
+	cmds := make([]string, len(kubectlCmd))
+	copy(cmds, kubectlCmd)
+	args = append(cmds, args...)
 	argsString := strings.Join(args, " ")
 
 	var inBuf bytes.Buffer

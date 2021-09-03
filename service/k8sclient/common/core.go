@@ -130,6 +130,25 @@ func IsContainerInState(containerStatuses []ContainerStatus, state ContainerStat
 	return false
 }
 
+// DeploymentTemplate is a template for creating pods.
+type DeploymentTemplate struct {
+	ObjectMeta `json:"metadata,omitempty"`
+	Spec       PodSpec `json:"spec,omitempty"`
+}
+
+// DeploymentSpec details deployment specification.
+type DeploymentSpec struct {
+	Selector LabelSelector      `json:"selector,omitempty"`
+	Template DeploymentTemplate `json:"template,omitempty"`
+}
+
+// Deployment is a higher abstraction based on pods. It's basically a group of pods.
+type Deployment struct {
+	TypeMeta
+	ObjectMeta `json:"metadata,omitempty"`
+	Spec       DeploymentSpec `json:"spec,omitempty"`
+}
+
 // PodStatus holds pod status.
 type PodStatus struct {
 	// ContainerStatuses holds statuses of regular containers.

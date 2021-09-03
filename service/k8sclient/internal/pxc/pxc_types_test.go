@@ -123,6 +123,7 @@ func TestPXCTypesMarshal(t *testing.T) {
 	size := int32(3)
 	t.Run("check inline marshal", func(t *testing.T) {
 		t.Parallel()
+		var size int32 = 3
 		res := &PerconaXtraDBCluster{
 			TypeMeta: common.TypeMeta{
 				APIVersion: "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0",
