@@ -1281,6 +1281,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
 			Exposed: cluster.Spec.Sharding.Mongos.Expose.Enabled,
+			Image:   cluster.Spec.Image,
 		}
 
 		if cluster.Status != nil {
