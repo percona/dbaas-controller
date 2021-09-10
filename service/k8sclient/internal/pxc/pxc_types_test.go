@@ -120,7 +120,6 @@ const expected = `
 
 func TestPXCTypesMarshal(t *testing.T) {
 	t.Parallel()
-	size := int32(3)
 	t.Run("check inline marshal", func(t *testing.T) {
 		t.Parallel()
 		var size int32 = 3
