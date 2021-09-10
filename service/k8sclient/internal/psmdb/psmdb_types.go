@@ -113,7 +113,6 @@ type UpgradeOptions struct {
 
 // PerconaServerMongoDBSpec defines the desired state of PerconaServerMongoDB.
 type PerconaServerMongoDBSpec struct {
-<<<<<<< HEAD
 	UpdateStrategy          string                 `json:"updateStrategy,omitempty"`
 	UpgradeOptions          *common.UpgradeOptions `json:"upgradeOptions,omitempty"`
 	CRVersion               string                 `json:"crVersion,omitempty"`
@@ -130,22 +129,6 @@ type PerconaServerMongoDBSpec struct {
 	SchedulerName           string                 `json:"schedulerName,omitempty"`
 	ClusterServiceDNSSuffix string                 `json:"clusterServiceDNSSuffix,omitempty"`
 	Sharding                *ShardingSpec          `json:"sharding,omitempty"`
-=======
-	CRVersion               string         `json:"crVersion,omitempty"`
-	Pause                   bool           `json:"pause,omitempty"`
-	UnsafeConf              bool           `json:"allowUnsafeConfigurations"`
-	RunUID                  int64          `json:"runUid,omitempty"`
-	Platform                *platform      `json:"platform,omitempty"`
-	Image                   string         `json:"image,omitempty"`
-	Mongod                  *MongodSpec    `json:"mongod,omitempty"`
-	Replsets                []*ReplsetSpec `json:"replsets,omitempty"`
-	Secrets                 *SecretsSpec   `json:"secrets,omitempty"`
-	Backup                  *BackupSpec    `json:"backup,omitempty"`
-	PMM                     *PmmSpec       `json:"pmm,omitempty"`
-	SchedulerName           string         `json:"schedulerName,omitempty"`
-	ClusterServiceDNSSuffix string         `json:"clusterServiceDNSSuffix,omitempty"`
-	Sharding                *ShardingSpec  `json:"sharding,omitempty"`
->>>>>>> origin/main
 }
 
 type replsetMemberStatus struct {
@@ -186,11 +169,7 @@ const (
 	AppStateError AppState = "error"
 )
 
-<<<<<<< HEAD
-// perconaServerMongoDBStatus defines the observed state of PerconaServerMongoDB.
-=======
 // PerconaServerMongoDBStatus defines the observed state of PerconaServerMongoDB.
->>>>>>> origin/main
 type PerconaServerMongoDBStatus struct {
 	Status             AppState                  `json:"state,omitempty"`
 	Message            string                    `json:"message,omitempty"`

@@ -233,16 +233,6 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 	return json.Unmarshal(stdout, res)
 }
 
-// Patch executes `kubectl patch` on given resource.
-func (k *KubeCtl) Patch(ctx context.Context, patchType PatchType, resourceType, resourceName string, res interface{}) error {
-	patch, err := json.Marshal(res)
-	if err != nil {
-		return err
-	}
-	_, err = run(ctx, k.cmd, []string{"patch", resourceType, resourceName, "--type", string(patchType), "--patch", string(patch)}, nil)
-	return err
-}
-
 // Apply executes `kubectl apply` with given resource.
 func (k *KubeCtl) Apply(ctx context.Context, res interface{}) error {
 	_, err := run(ctx, k.cmd, []string{"apply", "-f", "-"}, res)

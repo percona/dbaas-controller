@@ -1830,7 +1830,7 @@ func (c *K8sClient) ApplyOperator(ctx context.Context, version string, manifests
 // of the installed operator.
 func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVersion string) error {
 	var list psmdb.PerconaServerMongoDBList
-	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), "", &list)
+	err := c.kubeCtl.Get(ctx, string(psmdb.PerconaServerMongoDBKind), "", &list)
 	if err != nil {
 		return errors.Wrap(err, "couldn't get percona server MongoDB clusters")
 	}
@@ -1856,7 +1856,7 @@ func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVe
 // of the installed operator.
 func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVersion string) error {
 	var list pxc.PerconaXtraDBClusterList
-	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), "", &list)
+	err := c.kubeCtl.Get(ctx, string(pxc.PerconaXtraDBClusterKind), "", &list)
 	if err != nil {
 		return errors.Wrap(err, "couldn't get percona Xtradb clusters")
 	}
