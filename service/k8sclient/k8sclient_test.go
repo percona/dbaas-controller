@@ -351,6 +351,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
+			t.Parallel()
 			err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
 				Name:              name,
 				Size:              1,
