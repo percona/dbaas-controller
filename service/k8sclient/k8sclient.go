@@ -598,7 +598,8 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	if params.PXC != nil {
 		cluster.Spec.PXC.Resources = c.updateComputeResources(params.PXC.ComputeResources, cluster.Spec.PXC.Resources)
-		if params.PXC.Image != "" {
+		if params.PXC.Image != cluster.Spec.PXC.Image {
+			// Let's upgrade the cluster.
 			err = c.changeImageInCluster(&cluster, params.PXC.Image)
 			if err != nil {
 				return err
@@ -1129,7 +1130,7 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	if params.Replicaset != nil {
 		cluster.Spec.Replsets[0].Resources = c.updateComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
 	}
-	if params.Image != "" {
+	if params.Image != cluster.Spec.Image {
 		// We want to upgrade the cluster.
 		err = c.changeImageInCluster(&cluster, params.Image)
 		if err != nil {
@@ -1154,7 +1155,7 @@ func (c *K8sClient) changeImageInCluster(cluster common.DatabaseCluster, newImag
 		return errors.Errorf("expected image is %q, %q was given", currentImageAndTag[0], newImageAndTag[0])
 	}
 	if currentImageAndTag[1] == newImageAndTag[1] {
-		return errors.Errorf("failed to change image: the image %q is already in use", newImage)
+		return errors.Errorf("failed to change image: the database version %q is already in use", newImageAndTag[1])
 	}
 
 	cluster.SetDatabaseImage(newImage)
