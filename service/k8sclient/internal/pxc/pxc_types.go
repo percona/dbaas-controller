@@ -23,7 +23,7 @@ import (
 
 const (
 	// PerconaXtraDBClusterKind is a name of CRD for Percona XtraDB Cluster.
-	PerconaXtraDBClusterKind common.ClusterKind = common.ClusterKind("PerconaXtraDBCluster")
+	PerconaXtraDBClusterKind = "PerconaXtraDBCluster"
 )
 
 // PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
@@ -154,11 +154,6 @@ func (p *PerconaXtraDBCluster) GetName() string {
 // CRDName returns name of Custom Resource Definition -> cluster's kind.
 func (p *PerconaXtraDBCluster) CRDName() string {
 	return string(PerconaXtraDBClusterKind)
-}
-
-// NewEmptyCluster returns empty cluster for purposes of patching the cluster.
-func (p *PerconaXtraDBCluster) NewEmptyCluster() common.DatabaseCluster {
-	return new(PerconaXtraDBCluster)
 }
 
 // DatabaseContainerNames returns container names that actually run the database.

@@ -194,9 +194,6 @@ type UpgradeOptions struct {
 	Schedule               string `json:"schedule,omitempty"`
 }
 
-// ClusterKind is a kind of a cluster.
-type ClusterKind string
-
 // DatabaseCluster is an abstraction of database cluster.
 type DatabaseCluster interface {
 	// SetDatabaseImage sets database image to appropriate image field.
@@ -207,8 +204,6 @@ type DatabaseCluster interface {
 	GetName() string
 	// GetCRDName returns name of Custom Resource Definition -> cluster's kind.
 	CRDName() string
-	// NewEmptyCluster returns empty cluster for purposes of patching the cluster.
-	NewEmptyCluster() DatabaseCluster
 	// DatabaseContainerNames returns container names that actually run the database.
 	DatabaseContainerNames() []string
 	// DatabasePodLabels return list of labels to get pods where database is running.
