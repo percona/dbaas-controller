@@ -413,8 +413,9 @@ func TestK8sClient(t *testing.T) {
 		l.Info("PSMDB Cluster is restarted")
 
 		err = client.UpdatePSMDBCluster(ctx, &PSMDBParams{
-			Name: name,
-			Size: 5,
+			Name:  name,
+			Size:  5,
+			Image: "percona/percona-server-mongodb:4.4.6-8",
 		})
 		require.NoError(t, err)
 		l.Info("PSMDB Cluster is updated")
