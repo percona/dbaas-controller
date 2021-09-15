@@ -66,7 +66,7 @@ const (
 	ClusterStateReady ClusterState = 3
 	// ClusterStateDeleting represents a cluster which are in deleting state (deleting).
 	ClusterStateDeleting ClusterState = 4
-	// ClusterStatePaused represents a paused cluster state (status.state.ready and spec.pause.true).
+	// ClusterStatePaused represents a paused cluster state.
 	ClusterStatePaused ClusterState = 5
 )
 
@@ -297,6 +297,7 @@ var pxcStatesMap = map[pxc.AppState]ClusterState{ //nolint:gochecknoglobals
 	pxc.AppStateInit:    ClusterStateChanging,
 	pxc.AppStateReady:   ClusterStateReady,
 	pxc.AppStateError:   ClusterStateFailed,
+	pxc.AppStatePaused:  ClusterStatePaused,
 }
 
 // psmdbStatesMap matches psmdb app states to cluster states.
