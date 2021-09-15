@@ -578,14 +578,17 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 		return err
 	}
 
+	// Only if cluster is paused, allow resuming it. All other modifications are forbinden.
+	if params.Resume && cluster.Status.Status == pxc.AppStatePaused {
+		cluster.Spec.Pause = false
+		return c.kubeCtl.Apply(ctx, &cluster)
+	}
+
 	// This is to prevent concurrent updates
 	if cluster.Status.PXC.Status != pxc.AppStateReady {
 		return errors.Wrapf(ErrXtraDBClusterNotReady, "state is %v", cluster.Status.Status) //nolint:wrapcheck
 	}
 
-	if params.Resume {
-		cluster.Spec.Pause = false
-	}
 	if params.Suspend {
 		cluster.Spec.Pause = true
 	}
