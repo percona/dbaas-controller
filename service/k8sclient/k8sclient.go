@@ -1242,7 +1242,7 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 }
 
 func (c *K8sClient) crVersionMatchesPodsVersion(ctx context.Context, podLables, databaseContainerNames []string, crImage string) (bool, error) {
-	pods, err := c.GetPods(ctx, podLables...)
+	pods, err := c.GetPods(ctx, "-l"+strings.Join(podLables, ","))
 	if err != nil {
 		return false, err
 	}
@@ -1520,7 +1520,7 @@ func (c *K8sClient) GetPersistentVolumes(ctx context.Context) (*common.Persisten
 }
 
 // GetPods returns list of pods based on given filters. Filters are args to
-// kubectl command. For example "-lyour-label=value", "-ntest-namespace".
+// kubectl command. For example "-lyour-label=value,next-label=value", "-ntest-namespace".
 func (c *K8sClient) GetPods(ctx context.Context, filters ...string) (*common.PodList, error) {
 	list := new(common.PodList)
 	args := []string{"get", "pods"}
@@ -1711,6 +1711,7 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...s
 		namespaces = []string{"--all-namespaces"}
 	} else {
 		for i := 0; i < len(namespaces); i++ {
+			// FIXME: This does not work, GetPods gets only pods from the last namespace.
 			namespaces[i] = "-n" + namespaces[i]
 		}
 	}

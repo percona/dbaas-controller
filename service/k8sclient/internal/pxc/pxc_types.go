@@ -163,7 +163,7 @@ func (p *PerconaXtraDBCluster) DatabaseContainerNames() []string {
 
 // DatabasePodLabels return list of labels to get pods where database is running.
 func (p *PerconaXtraDBCluster) DatabasePodLabels() []string {
-	return []string{"-lapp.kubernetes.io/instance=" + p.Name, "-lapp.kubernetes.io/component=pxc"}
+	return []string{"app.kubernetes.io/instance=" + p.Name, "app.kubernetes.io/component=pxc"}
 }
 
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.

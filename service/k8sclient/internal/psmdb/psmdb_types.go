@@ -67,7 +67,7 @@ func (p *PerconaServerMongoDB) DatabaseContainerNames() []string {
 
 // DatabasePodLabels return list of labels to get pods where database is running.
 func (p *PerconaServerMongoDB) DatabasePodLabels() []string {
-	return []string{"-lapp.kubernetes.io/instance=" + p.Name, "-lapp.kubernetes.io/part-of=percona-server-mongodb"}
+	return []string{"app.kubernetes.io/instance=" + p.Name, "app.kubernetes.io/part-of=percona-server-mongodb"}
 }
 
 // PerconaServerMongoDBList holds a list of PSMDB objects.
