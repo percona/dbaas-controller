@@ -1701,22 +1701,19 @@ func getResources(resources common.ResourceList) (cpuMillis uint64, memoryBytes 
 	return cpuMillis, memoryBytes, nil
 }
 
-// GetConsumedCPUAndMemory returns consumed CPU and Memory in given namespace. If namespaces
-// is empty slice, it tries to get them from all namespaces.
-func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...string) (
+// GetConsumedCPUAndMemory returns consumed CPU and Memory in given namespace. If namespace
+// is empty, it tries to get them from all namespaces.
+func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespace string) (
 	cpuMillis uint64, memoryBytes uint64, err error,
 ) {
 	// Get CPU and Memory Requests of Pods' containers.
-	if len(namespaces) == 0 {
-		namespaces = []string{"--all-namespaces"}
+	if namespace == "" {
+		namespace = "--all-namespaces"
 	} else {
-		for i := 0; i < len(namespaces); i++ {
-			// FIXME: This does not work, GetPods gets only pods from the last namespace.
-			namespaces[i] = "-n" + namespaces[i]
-		}
+		namespace = "-n" + namespace
 	}
 
-	pods, err := c.GetPods(ctx, namespaces...)
+	pods, err := c.GetPods(ctx, namespace)
 	if err != nil {
 		return 0, 0, errors.Wrap(err, "failed to get consumed resources")
 	}

@@ -89,7 +89,7 @@ func (k KubernetesClusterService) GetResources(ctx context.Context, req *control
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	consumedCPUMillis, consumedMemoryBytes, err := k8sClient.GetConsumedCPUAndMemory(ctx)
+	consumedCPUMillis, consumedMemoryBytes, err := k8sClient.GetConsumedCPUAndMemory(ctx, "")
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
