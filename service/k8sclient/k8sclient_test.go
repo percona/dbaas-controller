@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -95,7 +96,7 @@ type VersionServiceResponse struct {
 	Versions []Version `json:"versions"`
 }
 
-var errNoVersionsFound = errors.New("no versions to compare current version with found")
+var errNoVersionsFound error = errors.New("no versions to compare current version with found")
 
 func latest(m map[string]componentVersion) (*goversion.Version, error) {
 	if len(m) == 0 {
@@ -149,7 +150,12 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
