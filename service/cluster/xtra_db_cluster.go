@@ -142,8 +142,12 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			Exposed: cluster.Exposed,
 		}
 
-		if cluster.State == k8sclient.ClusterStateReady && cluster.Pause {
-			res.Clusters[i].State = controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED
+		if cluster.State == k8sclient.ClusterStatePaused {
+			if cluster.Pause {
+				res.Clusters[i].State = controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED
+			} else {
+				res.Clusters[i].State = controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING
+			}
 		}
 	}
 
