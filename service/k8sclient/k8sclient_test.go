@@ -61,28 +61,11 @@ func NewVersionServiceClient(url string) *VersionServiceClient {
 type componentsParams struct {
 	product        string
 	productVersion string
-	dbVersion      string
-}
-
-// componentVersion contains info about exact component version.
-type componentVersion struct {
-	ImagePath string `json:"imagePath"`
-	ImageHash string `json:"imageHash"`
-	Status    string `json:"status"`
-	Critical  bool   `json:"critical"`
 }
 
 type matrix struct {
-	Mongod        map[string]componentVersion `json:"mongod"`
-	Pxc           map[string]componentVersion `json:"pxc"`
-	Pmm           map[string]componentVersion `json:"pmm"`
-	Proxysql      map[string]componentVersion `json:"proxysql"`
-	Haproxy       map[string]componentVersion `json:"haproxy"`
-	Backup        map[string]componentVersion `json:"backup"`
-	Operator      map[string]componentVersion `json:"operator"`
-	LogCollector  map[string]componentVersion `json:"logCollector"`
-	PXCOperator   map[string]componentVersion `json:"pxcOperator,omitempty"`
-	PSMDBOperator map[string]componentVersion `json:"psmdbOperator,omitempty"`
+	PXCOperator   map[string]interface{} `json:"pxcOperator,omitempty"`
+	PSMDBOperator map[string]interface{} `json:"psmdbOperator,omitempty"`
 }
 
 type Version struct {
@@ -98,7 +81,7 @@ type VersionServiceResponse struct {
 
 var errNoVersionsFound error = errors.New("no versions to compare current version with found")
 
-func latest(m map[string]componentVersion) (*goversion.Version, error) {
+func latest(m map[string]interface{}) (*goversion.Version, error) {
 	if len(m) == 0 {
 		return nil, errNoVersionsFound
 	}
@@ -137,9 +120,6 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	paths := []string{c.url, params.product}
 	if params.productVersion != "" {
 		paths = append(paths, params.productVersion)
-		if params.dbVersion != "" {
-			paths = append(paths, params.dbVersion)
-		}
 	}
 	url := strings.Join(paths, "/")
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
