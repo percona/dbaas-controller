@@ -61,7 +61,7 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 		return resp, nil
 	}
 
-	resp.Operators.XtradbOperatorVersion = operators.XtradbOperatorVersion
+	resp.Operators.PxcOperatorVersion = operators.PXCOperatorVersion
 	resp.Operators.PsmdbOperatorVersion = operators.PsmdbOperatorVersion
 
 	return resp, nil

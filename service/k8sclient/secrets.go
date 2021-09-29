@@ -53,7 +53,7 @@ func generatePassword(n int) (string, error) {
 	return string(b), nil
 }
 
-func generateXtraDBPasswords() (map[string][]byte, error) {
+func generatePXCPasswords() (map[string][]byte, error) {
 	// secrets represents stringData part of
 	// https://github.com/percona/percona-xtradb-cluster-operator/blob/main/deploy/secrets.yaml.
 	secrets := map[string][]byte{

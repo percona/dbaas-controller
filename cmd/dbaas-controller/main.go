@@ -70,11 +70,11 @@ func main() {
 	}
 
 	i18nPrinter := message.NewPrinter(language.English)
-	controllerv1beta1.RegisterXtraDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewXtraDBClusterService(i18nPrinter))
+	controllerv1beta1.RegisterPXCClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewPXCClusterService(i18nPrinter))
 	controllerv1beta1.RegisterPSMDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewPSMDBClusterService(i18nPrinter))
 	controllerv1beta1.RegisterKubernetesClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewKubernetesClusterService(i18nPrinter))
 	controllerv1beta1.RegisterLogsAPIServer(gRPCServer.GetUnderlyingServer(), logs.NewService(i18nPrinter))
-	controllerv1beta1.RegisterXtraDBOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewXtraDBOperatorService(i18nPrinter, flags.PXCOperatorURLTemplate))
+	controllerv1beta1.RegisterPXCOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewPXCOperatorService(i18nPrinter, flags.PXCOperatorURLTemplate))
 	controllerv1beta1.RegisterPSMDBOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewPSMDBOperatorService(i18nPrinter, flags.PSMDBOperatorURLTemplate))
 
 	go servers.RunDebugServer(ctx, &servers.RunDebugServerOpts{
