@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -118,12 +119,16 @@ func latestProduct(s []Version) (*goversion.Version, error) {
 
 // Matrix calls version service with given params and returns components matrix.
 func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error) {
-	paths := []string{c.url, params.product}
+	baseURL, err := url.Parse(c.url)
+	if err != nil {
+		return nil, err
+	}
+	paths := []string{baseURL.Path, params.product}
 	if params.productVersion != "" {
 		paths = append(paths, params.productVersion)
 	}
-	url := path.Join(paths...)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	baseURL.Path = path.Join(paths...)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
