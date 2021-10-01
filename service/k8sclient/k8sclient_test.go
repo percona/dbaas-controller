@@ -27,6 +27,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -121,8 +122,8 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	if params.productVersion != "" {
 		paths = append(paths, params.productVersion)
 	}
-	url := strings.Join(paths, "/")
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	url := path.Join(paths...)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +134,7 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("failed to close response body: %v", err)
 		}
 	}()
 	body, err := ioutil.ReadAll(resp.Body)
@@ -172,7 +173,10 @@ func (c *VersionServiceClient) LatestOperatorVersion(ctx context.Context, pmmVer
 		return nil, nil, err
 	}
 	latestPXCOperator, err := latest(pmmVersionDeps.Matrix.PXCOperator)
-	return latestPXCOperator, latestPSMDBOperator, err
+	if err != nil {
+		return nil, nil, err
+	}
+	return latestPXCOperator, latestPSMDBOperator, nil
 }
 
 const (
