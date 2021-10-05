@@ -24,7 +24,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -38,6 +42,147 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
+
+// VersionServiceClient represents a client for Version Service API.
+type VersionServiceClient struct {
+	url  string
+	http *http.Client
+}
+
+// NewVersionServiceClient creates a new client for given version service URL.
+func NewVersionServiceClient(url string) *VersionServiceClient {
+	return &VersionServiceClient{
+		url: url,
+		http: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+	}
+}
+
+// componentsParams contains params to filter components in version service API.
+type componentsParams struct {
+	product        string
+	productVersion string
+}
+
+type matrix struct {
+	PXCOperator   map[string]interface{} `json:"pxcOperator,omitempty"`
+	PSMDBOperator map[string]interface{} `json:"psmdbOperator,omitempty"`
+}
+
+type Version struct {
+	Product        string `json:"product"`
+	ProductVersion string `json:"operator"`
+	Matrix         matrix `json:"matrix"`
+}
+
+// VersionServiceResponse represents response from version service API.
+type VersionServiceResponse struct {
+	Versions []Version `json:"versions"`
+}
+
+var errNoVersionsFound error = errors.New("no versions to compare current version with found")
+
+func latest(m map[string]interface{}) (*goversion.Version, error) {
+	if len(m) == 0 {
+		return nil, errNoVersionsFound
+	}
+	latest := goversion.Must(goversion.NewVersion("0.0.0"))
+	for version := range m {
+		parsedVersion, err := goversion.NewVersion(version)
+		if err != nil {
+			return nil, err
+		}
+		if parsedVersion.GreaterThan(latest) {
+			latest = parsedVersion
+		}
+	}
+	return latest, nil
+}
+
+func latestProduct(s []Version) (*goversion.Version, error) {
+	if len(s) == 0 {
+		return nil, errNoVersionsFound
+	}
+	latest := goversion.Must(goversion.NewVersion("0.0.0"))
+	for _, version := range s {
+		parsedVersion, err := goversion.NewVersion(version.ProductVersion)
+		if err != nil {
+			return nil, err
+		}
+		if parsedVersion.GreaterThan(latest) {
+			latest = parsedVersion
+		}
+	}
+	return latest, nil
+}
+
+// Matrix calls version service with given params and returns components matrix.
+func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error) {
+	baseURL, err := url.Parse(c.url)
+	if err != nil {
+		return nil, err
+	}
+	paths := []string{baseURL.Path, params.product}
+	if params.productVersion != "" {
+		paths = append(paths, params.productVersion)
+	}
+	baseURL.Path = path.Join(paths...)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Printf("failed to close response body: %v", err)
+		}
+	}()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var vsResponse VersionServiceResponse
+	err = json.Unmarshal(body, &vsResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vsResponse, nil
+}
+
+// LatestOperatorVersion return latest PXC and PSMDB operators for given PMM version.
+func (c *VersionServiceClient) LatestOperatorVersion(ctx context.Context, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
+	if pmmVersion == "" {
+		return nil, nil, errors.New("given PMM version is empty")
+	}
+	params := componentsParams{
+		product:        "pmm-server",
+		productVersion: pmmVersion,
+	}
+	resp, err := c.Matrix(ctx, params)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(resp.Versions) != 1 {
+		return nil, nil, nil // no deps for the PMM version passed to c.Matrix
+	}
+	pmmVersionDeps := resp.Versions[0]
+	latestPSMDBOperator, err := latest(pmmVersionDeps.Matrix.PSMDBOperator)
+	if err != nil {
+		return nil, nil, err
+	}
+	latestPXCOperator, err := latest(pmmVersionDeps.Matrix.PXCOperator)
+	if err != nil {
+		return nil, nil, err
+	}
+	return latestPXCOperator, latestPSMDBOperator, nil
+}
 
 const (
 	consumedResourcesTestPodsManifestPath string = "../../deploy/test-pods.yaml"
@@ -66,10 +211,18 @@ func TestK8sClient(t *testing.T) {
 
 	l := logger.Get(ctx)
 
-	err = client.ApplyOperator(ctx, "1.8.0", app.DefaultPXCOperatorURLTemplate)
+	versionService := NewVersionServiceClient("https://check-dev.percona.com/versions/v1")
+	pmmVersions, err := versionService.Matrix(ctx, componentsParams{product: "pmm-server"})
+	require.NoError(t, err)
+	latestPMMVersion, err := latestProduct(pmmVersions.Versions)
+	require.NoError(t, err)
+	pxc, psmdb, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
 	require.NoError(t, err)
 
-	err = client.ApplyOperator(ctx, "1.8.0", app.DefaultPSMDBOperatorURLTemplate)
+	err = client.ApplyOperator(ctx, pxc.String(), app.DefaultPXCOperatorURLTemplate)
+	require.NoError(t, err)
+
+	err = client.ApplyOperator(ctx, psmdb.String(), app.DefaultPSMDBOperatorURLTemplate)
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
