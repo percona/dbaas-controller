@@ -21,8 +21,12 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
-// AffinityOff turn off affinity.
-const AffinityOff = "none"
+const (
+	// AffinityOff turn off affinity.
+	AffinityOff = "none"
+	// PerconaServerMongoDBKind is a name of CRD for mongodb clusters.
+	PerconaServerMongoDBKind = "PerconaServerMongoDB"
+)
 
 // PerconaServerMongoDB is the Schema for the perconaservermongodbs API.
 type PerconaServerMongoDB struct {
@@ -31,6 +35,39 @@ type PerconaServerMongoDB struct {
 
 	Spec   *PerconaServerMongoDBSpec   `json:"spec,omitempty"`
 	Status *PerconaServerMongoDBStatus `json:"status,omitempty"`
+}
+
+// SetDatabaseImage sets database image to appropriate image field.
+func (p *PerconaServerMongoDB) SetDatabaseImage(image string) {
+	if p.Spec == nil {
+		p.Spec = new(PerconaServerMongoDBSpec)
+	}
+	p.Spec.Image = image
+}
+
+// DatabaseImage returns image of database software used.
+func (p *PerconaServerMongoDB) DatabaseImage() string {
+	return p.Spec.Image
+}
+
+// GetName returns name of the cluster.
+func (p *PerconaServerMongoDB) GetName() string {
+	return p.Name
+}
+
+// CRDName returns name of Custom Resource Definition -> cluster's kind.
+func (p *PerconaServerMongoDB) CRDName() string {
+	return string(PerconaServerMongoDBKind)
+}
+
+// DatabaseContainerNames returns container names that actually run the database.
+func (p *PerconaServerMongoDB) DatabaseContainerNames() []string {
+	return []string{"mongos", "mongod"}
+}
+
+// DatabasePodLabels return list of labels to get pods where database is running.
+func (p *PerconaServerMongoDB) DatabasePodLabels() []string {
+	return []string{"app.kubernetes.io/instance=" + p.Name, "app.kubernetes.io/part-of=percona-server-mongodb"}
 }
 
 // PerconaServerMongoDBList holds a list of PSMDB objects.
@@ -62,22 +99,31 @@ type ShardingSpec struct {
 	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
 }
 
+// UpgradeOptions specify how and to what version we update.
+type UpgradeOptions struct {
+	Apply                  string `json:"apply,omitempty"`
+	VersionServiceEndpoint string `json:"versionServiceEndpoint,omitempty"`
+	Schedule               string `json:"schedule,omitempty"`
+}
+
 // PerconaServerMongoDBSpec defines the desired state of PerconaServerMongoDB.
 type PerconaServerMongoDBSpec struct {
-	CRVersion               string         `json:"crVersion,omitempty"`
-	Pause                   bool           `json:"pause,omitempty"`
-	UnsafeConf              bool           `json:"allowUnsafeConfigurations"`
-	RunUID                  int64          `json:"runUid,omitempty"`
-	Platform                *platform      `json:"platform,omitempty"`
-	Image                   string         `json:"image,omitempty"`
-	Mongod                  *MongodSpec    `json:"mongod,omitempty"`
-	Replsets                []*ReplsetSpec `json:"replsets,omitempty"`
-	Secrets                 *SecretsSpec   `json:"secrets,omitempty"`
-	Backup                  *BackupSpec    `json:"backup,omitempty"`
-	PMM                     *PmmSpec       `json:"pmm,omitempty"`
-	SchedulerName           string         `json:"schedulerName,omitempty"`
-	ClusterServiceDNSSuffix string         `json:"clusterServiceDNSSuffix,omitempty"`
-	Sharding                *ShardingSpec  `json:"sharding,omitempty"`
+	UpdateStrategy          string                 `json:"updateStrategy,omitempty"`
+	UpgradeOptions          *common.UpgradeOptions `json:"upgradeOptions,omitempty"`
+	CRVersion               string                 `json:"crVersion,omitempty"`
+	Pause                   bool                   `json:"pause,omitempty"`
+	UnsafeConf              bool                   `json:"allowUnsafeConfigurations"`
+	RunUID                  int64                  `json:"runUid,omitempty"`
+	Platform                *platform              `json:"platform,omitempty"`
+	Image                   string                 `json:"image,omitempty"`
+	Mongod                  *MongodSpec            `json:"mongod,omitempty"`
+	Replsets                []*ReplsetSpec         `json:"replsets,omitempty"`
+	Secrets                 *SecretsSpec           `json:"secrets,omitempty"`
+	Backup                  *BackupSpec            `json:"backup,omitempty"`
+	PMM                     *PmmSpec               `json:"pmm,omitempty"`
+	SchedulerName           string                 `json:"schedulerName,omitempty"`
+	ClusterServiceDNSSuffix string                 `json:"clusterServiceDNSSuffix,omitempty"`
+	Sharding                *ShardingSpec          `json:"sharding,omitempty"`
 }
 
 type replsetMemberStatus struct {

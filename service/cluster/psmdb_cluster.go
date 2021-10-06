@@ -33,12 +33,13 @@ import (
 var (
 	// psmdbStatesMap matches psmdb app states to cluster states.
 	psmdbStatesMap = map[k8sclient.ClusterState]controllerv1beta1.PSMDBClusterState{
-		k8sclient.ClusterStateInvalid:  controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
-		k8sclient.ClusterStateChanging: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
-		k8sclient.ClusterStateReady:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
-		k8sclient.ClusterStateFailed:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
-		k8sclient.ClusterStateDeleting: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
-		k8sclient.ClusterStatePaused:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
+		k8sclient.ClusterStateInvalid:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
+		k8sclient.ClusterStateChanging:  controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
+		k8sclient.ClusterStateReady:     controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
+		k8sclient.ClusterStateFailed:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
+		k8sclient.ClusterStateDeleting:  controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
+		k8sclient.ClusterStatePaused:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
+		k8sclient.ClusterStateUpgrading: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_UPGRADING,
 	}
 )
 
@@ -74,6 +75,7 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		params := &controllerv1beta1.PSMDBClusterParams{
+			Image:       cluster.Image,
 			ClusterSize: cluster.Size,
 			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
 				DiskSize: int64(diskSizeBytes),
@@ -128,7 +130,8 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 		Replicaset: &k8sclient.Replicaset{
 			DiskSize: convertors.BytesToStr(req.Params.Replicaset.DiskSize),
 		},
-		Expose: req.Expose,
+		Expose:            req.Expose,
+		VersionServiceURL: req.Params.VersionServiceUrl,
 	}
 
 	if req.Pmm != nil {
@@ -180,6 +183,8 @@ func (s *PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *contr
 				}
 			}
 		}
+
+		params.Image = req.Params.Image
 	}
 
 	err = client.UpdatePSMDBCluster(ctx, params)

@@ -58,6 +58,7 @@ const (
 type KubeCtl struct {
 	l              logger.Logger
 	cmd            []string
+	kubeconfig     string
 	kubeconfigPath string
 }
 
@@ -91,6 +92,7 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 
 	k := &KubeCtl{
 		l:              l,
+		kubeconfig:     kubeconfig,
 		kubeconfigPath: kubeconfigPath,
 	}
 

@@ -31,6 +31,8 @@ import (
 )
 
 func TestNewKubeCtl(t *testing.T) {
+	t.Parallel()
+
 	ctx := app.Context()
 
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -99,6 +101,7 @@ const kubernetsVersions = `
 `
 
 func TestSelectCorrectKubectlVersions(t *testing.T) {
+	t.Parallel()
 	t.Run("basic", func(t *testing.T) {
 		got, err := selectCorrectKubectlVersions([]byte(kubernetsVersions))
 		require.NoError(t, err)
@@ -118,6 +121,7 @@ func TestSelectCorrectKubectlVersions(t *testing.T) {
 }
 
 func TestGetKubectlCmd(t *testing.T) {
+	t.Parallel()
 	t.Run("basic", func(t *testing.T) {
 		ctx := context.TODO()
 		defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
@@ -131,6 +135,7 @@ func TestGetKubectlCmd(t *testing.T) {
 }
 
 func TestLookupCorrectKubectlCmd(t *testing.T) {
+	t.Parallel()
 	defaultKubectl, err := lookupCorrectKubectlCmd(nil, []string{defaultPmmServerKubectl, defaultDevEnvKubectl})
 	require.NoError(t, err)
 	t.Run("basic", func(t *testing.T) {

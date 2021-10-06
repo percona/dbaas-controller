@@ -21,37 +21,35 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
+const (
+	// PerconaXtraDBClusterKind is a name of CRD for Percona XtraDB Cluster.
+	PerconaXtraDBClusterKind = "PerconaXtraDBCluster"
+)
+
 // PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
 type PerconaXtraDBClusterSpec struct { //nolint:maligned
-	Platform              string              `json:"platform,omitempty"`
-	CRVersion             string              `json:"crVersion,omitempty"`
-	Pause                 bool                `json:"pause,omitempty"`
-	SecretsName           string              `json:"secretsName,omitempty"`
-	VaultSecretName       string              `json:"vaultSecretName,omitempty"`
-	SSLSecretName         string              `json:"sslSecretName,omitempty"`
-	SSLInternalSecretName string              `json:"sslInternalSecretName,omitempty"`
-	TLS                   *TLSSpec            `json:"tls,omitempty"`
-	PXC                   *PodSpec            `json:"pxc,omitempty"`
-	ProxySQL              *PodSpec            `json:"proxysql,omitempty"`
-	HAProxy               *PodSpec            `json:"haproxy,omitempty"`
-	PMM                   *PMMSpec            `json:"pmm,omitempty"`
-	Backup                *PXCScheduledBackup `json:"backup,omitempty"`
-	UpdateStrategy        string              `json:"updateStrategy,omitempty"`
-	UpgradeOptions        *UpgradeOptions     `json:"upgradeOptions,omitempty"`
-	AllowUnsafeConfig     bool                `json:"allowUnsafeConfigurations,omitempty"`
+	Platform              string                 `json:"platform,omitempty"`
+	CRVersion             string                 `json:"crVersion,omitempty"`
+	Pause                 bool                   `json:"pause,omitempty"`
+	SecretsName           string                 `json:"secretsName,omitempty"`
+	VaultSecretName       string                 `json:"vaultSecretName,omitempty"`
+	SSLSecretName         string                 `json:"sslSecretName,omitempty"`
+	SSLInternalSecretName string                 `json:"sslInternalSecretName,omitempty"`
+	TLS                   *TLSSpec               `json:"tls,omitempty"`
+	PXC                   *PodSpec               `json:"pxc,omitempty"`
+	ProxySQL              *PodSpec               `json:"proxysql,omitempty"`
+	HAProxy               *PodSpec               `json:"haproxy,omitempty"`
+	PMM                   *PMMSpec               `json:"pmm,omitempty"`
+	Backup                *PXCScheduledBackup    `json:"backup,omitempty"`
+	UpdateStrategy        string                 `json:"updateStrategy,omitempty"`
+	UpgradeOptions        *common.UpgradeOptions `json:"upgradeOptions,omitempty"`
+	AllowUnsafeConfig     bool                   `json:"allowUnsafeConfigurations,omitempty"`
 }
 
 // TLSSpec holds cluster's TLS specs.
 type TLSSpec struct {
 	SANs       []string         `json:"SANs,omitempty"`
 	IssuerConf *ObjectReference `json:"issuerConf,omitempty"`
-}
-
-// UpgradeOptions holds configuration options to handle automatic upgrades.
-type UpgradeOptions struct {
-	VersionServiceEndpoint string `json:"versionServiceEndpoint,omitempty"`
-	Apply                  string `json:"apply,omitempty"`
-	Schedule               string `json:"schedule,omitempty"`
 }
 
 // PXCScheduledBackup holds the config for cluster scheduled backups.
@@ -132,6 +130,42 @@ type PerconaXtraDBCluster struct {
 
 	Spec   *PerconaXtraDBClusterSpec   `json:"spec,omitempty"`
 	Status *PerconaXtraDBClusterStatus `json:"status,omitempty"`
+}
+
+// SetDatabaseImage sets database image to appropriate image field.
+func (p *PerconaXtraDBCluster) SetDatabaseImage(image string) {
+	if p.Spec == nil {
+		p.Spec = new(PerconaXtraDBClusterSpec)
+	}
+	if p.Spec.PXC == nil {
+		p.Spec.PXC = new(PodSpec)
+	}
+	p.Spec.PXC.Image = image
+}
+
+// DatabaseImage returns image of database software used.
+func (p *PerconaXtraDBCluster) DatabaseImage() string {
+	return p.Spec.PXC.Image
+}
+
+// GetName returns name of the cluster.
+func (p *PerconaXtraDBCluster) GetName() string {
+	return p.Name
+}
+
+// CRDName returns name of Custom Resource Definition -> cluster's kind.
+func (p *PerconaXtraDBCluster) CRDName() string {
+	return string(PerconaXtraDBClusterKind)
+}
+
+// DatabaseContainerNames returns container names that actually run the database.
+func (p *PerconaXtraDBCluster) DatabaseContainerNames() []string {
+	return []string{"pxc"}
+}
+
+// DatabasePodLabels return list of labels to get pods where database is running.
+func (p *PerconaXtraDBCluster) DatabasePodLabels() []string {
+	return []string{"app.kubernetes.io/instance=" + p.Name, "app.kubernetes.io/component=pxc"}
 }
 
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.

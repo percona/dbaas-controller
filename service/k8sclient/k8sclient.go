@@ -44,14 +44,6 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
-// ClusterKind is a kind of a cluster.
-type ClusterKind string
-
-const (
-	perconaXtraDBClusterKind = ClusterKind("PerconaXtraDBCluster")
-	perconaServerMongoDBKind = ClusterKind("PerconaServerMongoDB")
-)
-
 // ClusterState represents XtraDB cluster CR state.
 type ClusterState int32
 
@@ -68,6 +60,8 @@ const (
 	ClusterStateDeleting ClusterState = 4
 	// ClusterStatePaused represents a paused cluster state.
 	ClusterStatePaused ClusterState = 5
+	// ClusterStateUpgrading represents a state of a cluster that is undergoing an upgrade.
+	ClusterStateUpgrading ClusterState = 6
 )
 
 const (
@@ -177,15 +171,16 @@ type PMM struct {
 
 // XtraDBParams contains all parameters required to create or update Percona XtraDB cluster.
 type XtraDBParams struct {
-	Name     string
-	Size     int32
-	Suspend  bool
-	Resume   bool
-	PXC      *PXC
-	ProxySQL *ProxySQL
-	PMM      *PMM
-	HAProxy  *HAProxy
-	Expose   bool
+	Name              string
+	Size              int32
+	Suspend           bool
+	Resume            bool
+	PXC               *PXC
+	ProxySQL          *ProxySQL
+	PMM               *PMM
+	HAProxy           *HAProxy
+	Expose            bool
+	VersionServiceURL string
 }
 
 // Cluster contains common information related to cluster.
@@ -195,14 +190,15 @@ type Cluster struct {
 
 // PSMDBParams contains all parameters required to create or update percona server for mongodb cluster.
 type PSMDBParams struct {
-	Name       string
-	Image      string
-	Size       int32
-	Suspend    bool
-	Resume     bool
-	Replicaset *Replicaset
-	PMM        *PMM
-	Expose     bool
+	Name              string
+	Image             string
+	Size              int32
+	Suspend           bool
+	Resume            bool
+	Replicaset        *Replicaset
+	PMM               *PMM
+	Expose            bool
+	VersionServiceURL string
 }
 
 type appStatus struct {
@@ -237,6 +233,7 @@ type PSMDBCluster struct {
 	Replicaset    *Replicaset
 	DetailedState DetailedState
 	Exposed       bool
+	Image         string
 }
 
 // PSMDBCredentials represents PSMDB connection credentials.
@@ -434,7 +431,7 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	var cluster pxc.PerconaXtraDBCluster
-	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
+	err := c.kubeCtl.Get(ctx, pxc.PerconaXtraDBClusterKind, params.Name, &cluster)
 	if err == nil {
 		return fmt.Errorf(clusterWithSameNameExistsErrTemplate, params.Name)
 	}
@@ -460,13 +457,14 @@ func (c *K8sClient) CreateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
 			APIVersion: c.getAPIVersionForPXCOperator(operators.XtradbOperatorVersion),
-			Kind:       string(perconaXtraDBClusterKind),
+			Kind:       pxc.PerconaXtraDBClusterKind,
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name:       params.Name,
 			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
 		},
 		Spec: &pxc.PerconaXtraDBClusterSpec{
+			UpdateStrategy:    updateStrategyRollingUpdate,
 			CRVersion:         operators.XtradbOperatorVersion,
 			AllowUnsafeConfig: true,
 			SecretsName:       secretName,
@@ -573,7 +571,7 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 	}
 
 	var cluster pxc.PerconaXtraDBCluster
-	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
+	err := c.kubeCtl.Get(ctx, pxc.PerconaXtraDBClusterKind, params.Name, &cluster)
 	if err != nil {
 		return err
 	}
@@ -604,6 +602,13 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	if params.PXC != nil {
 		cluster.Spec.PXC.Resources = c.updateComputeResources(params.PXC.ComputeResources, cluster.Spec.PXC.Resources)
+		if params.PXC.Image != cluster.Spec.PXC.Image {
+			// Let's upgrade the cluster.
+			err = c.changeImageInCluster(&cluster, params.PXC.Image)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	if params.ProxySQL != nil {
@@ -614,7 +619,7 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 		cluster.Spec.HAProxy.Resources = c.updateComputeResources(params.HAProxy.ComputeResources, cluster.Spec.HAProxy.Resources)
 	}
 
-	return c.kubeCtl.Apply(ctx, &cluster)
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(&cluster).CRDName(), common.DatabaseCluster(&cluster).GetName(), cluster)
 }
 
 // DeleteXtraDBCluster deletes Percona XtraDB cluster with provided name.
@@ -622,7 +627,7 @@ func (c *K8sClient) DeleteXtraDBCluster(ctx context.Context, name string) error 
 	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
 			APIVersion: pxcAPINamespace + "/v1",
-			Kind:       string(perconaXtraDBClusterKind),
+			Kind:       pxc.PerconaXtraDBClusterKind,
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name: name,
@@ -663,7 +668,7 @@ func (c *K8sClient) deleteSecret(ctx context.Context, secretName string) error {
 // GetXtraDBClusterCredentials returns an XtraDB cluster credentials.
 func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string) (*XtraDBCredentials, error) {
 	var cluster pxc.PerconaXtraDBCluster
-	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), name, &cluster)
+	err := c.kubeCtl.Get(ctx, pxc.PerconaXtraDBClusterKind, name, &cluster)
 	if err != nil {
 		if errors.Is(err, kubectl.ErrNotFound) {
 			return nil, errors.Wrap(ErrNotFound, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
@@ -757,7 +762,7 @@ func (c *K8sClient) RestartXtraDBCluster(ctx context.Context, name string) error
 // getPerconaXtraDBClusters returns Percona XtraDB clusters.
 func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBCluster, error) {
 	var list pxc.PerconaXtraDBClusterList
-	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), "", &list)
+	err := c.kubeCtl.Get(ctx, pxc.PerconaXtraDBClusterKind, "", &list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get Percona XtraDB clusters")
 	}
@@ -765,22 +770,41 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]XtraDBClust
 	res := make([]XtraDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
 		val := XtraDBCluster{
-			Name:    cluster.Name,
-			Size:    *cluster.Spec.PXC.Size,
-			State:   getPXCState(cluster.Status),
-			Message: strings.Join(cluster.Status.Messages, ";"),
+			Name:  cluster.Name,
+			Size:  *cluster.Spec.PXC.Size,
+			State: getPXCState(cluster.Status),
 			PXC: &PXC{
+				Image:            cluster.Spec.PXC.Image,
 				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
 			},
 			Pause: cluster.Spec.Pause,
-			DetailedState: []appStatus{
+		}
+		if cluster.Status != nil {
+			val.DetailedState = []appStatus{
 				{size: cluster.Status.PMM.Size, ready: cluster.Status.PMM.Ready},
 				{size: cluster.Status.HAProxy.Size, ready: cluster.Status.HAProxy.Ready},
 				{size: cluster.Status.ProxySQL.Size, ready: cluster.Status.ProxySQL.Ready},
 				{size: cluster.Status.PXC.Size, ready: cluster.Status.PXC.Ready},
-			},
+			}
+			val.Message = strings.Join(cluster.Status.Messages, ";")
 		}
+
+		databaseCluster := common.DatabaseCluster(&cluster)
+		match, err := c.crVersionMatchesPodsVersion(ctx, databaseCluster.DatabasePodLabels(), databaseCluster.DatabaseContainerNames(), databaseCluster.DatabaseImage())
+		if err != nil {
+			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.Name, err)
+			val.State = ClusterStateInvalid
+			res[i] = val
+			continue
+		}
+
+		if !match {
+			val.State = ClusterStateUpgrading
+		} else {
+			val.State = getPXCState(cluster.Status)
+		}
+
 		if cluster.Spec.ProxySQL != nil {
 			val.ProxySQL = &ProxySQL{
 				DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
@@ -893,7 +917,7 @@ func (c *K8sClient) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, erro
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
 	var cluster psmdb.PerconaServerMongoDB
-	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), params.Name, &cluster)
+	err := c.kubeCtl.Get(ctx, psmdb.PerconaServerMongoDBKind, params.Name, &cluster)
 	if err == nil {
 		return fmt.Errorf(clusterWithSameNameExistsErrTemplate, params.Name)
 	}
@@ -940,16 +964,16 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
 			APIVersion: c.getAPIVersionForPSMDBOperator(operators.PsmdbOperatorVersion),
-			Kind:       string(perconaServerMongoDBKind),
+			Kind:       psmdb.PerconaServerMongoDBKind,
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name:       params.Name,
 			Finalizers: []string{"delete-psmdb-pvc"},
 		},
-
 		Spec: &psmdb.PerconaServerMongoDBSpec{
-			CRVersion: operators.PsmdbOperatorVersion,
-			Image:     psmdbImage,
+			UpdateStrategy: updateStrategyRollingUpdate,
+			CRVersion:      operators.PsmdbOperatorVersion,
+			Image:          psmdbImage,
 			Secrets: &psmdb.SecretsSpec{
 				Users: secretName,
 			},
@@ -1084,19 +1108,18 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	return c.kubeCtl.Apply(ctx, res)
 }
 
-// UpdatePSMDBCluster changes size of provided percona server for mongodb cluster.
+// UpdatePSMDBCluster changes size, stops, resumes or upgrades provided percona server for mongodb cluster.
 func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
 	var cluster psmdb.PerconaServerMongoDB
-	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), params.Name, &cluster)
+	err := c.kubeCtl.Get(ctx, psmdb.PerconaServerMongoDBKind, params.Name, &cluster)
 	if err != nil {
-		return errors.Wrap(err, "UpdatePSMDBCluster get error")
+		return err
 	}
 
 	// This is to prevent concurrent updates
-	if cluster.Status.Status != psmdb.AppStateReady {
-		return errors.Wrapf(ErrPSMDBClusterNotReady, "state is %v", cluster.Status.Status) //nolint:wrapcheck
+	if cluster.Status == nil || cluster.Status.Status != psmdb.AppStateReady {
+		return errors.Wrap(ErrPSMDBClusterNotReady, "cluster is not in ready state") //nolint:wrapcheck
 	}
-
 	if params.Size > 0 {
 		cluster.Spec.Replsets[0].Size = params.Size
 	}
@@ -1111,8 +1134,36 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	if params.Replicaset != nil {
 		cluster.Spec.Replsets[0].Resources = c.updateComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
 	}
+	if params.Image != cluster.Spec.Image {
+		// We want to upgrade the cluster.
+		err = c.changeImageInCluster(&cluster, params.Image)
+		if err != nil {
+			return err
+		}
+	}
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(&cluster).CRDName(), common.DatabaseCluster(&cluster).GetName(), cluster)
+}
 
-	return c.kubeCtl.Apply(ctx, cluster)
+const (
+	updateStrategyRollingUpdate = "RollingUpdate"
+)
+
+func (c *K8sClient) changeImageInCluster(cluster common.DatabaseCluster, newImage string) error {
+	// Check that only tag changed.
+	newImageAndTag := strings.Split(newImage, ":")
+	if len(newImageAndTag) != 2 {
+		return errors.New("image has to have version tag")
+	}
+	currentImageAndTag := strings.Split(cluster.DatabaseImage(), ":")
+	if currentImageAndTag[0] != newImageAndTag[0] {
+		return errors.Errorf("expected image is %q, %q was given", currentImageAndTag[0], newImageAndTag[0])
+	}
+	if currentImageAndTag[1] == newImageAndTag[1] {
+		return errors.Errorf("failed to change image: the database version %q is already in use", newImageAndTag[1])
+	}
+
+	cluster.SetDatabaseImage(newImage)
+	return nil
 }
 
 // DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
@@ -1120,7 +1171,7 @@ func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
 			APIVersion: psmdbAPINamespace + "/v1",
-			Kind:       string(perconaServerMongoDBKind),
+			Kind:       psmdb.PerconaServerMongoDBKind,
 		},
 		ObjectMeta: common.ObjectMeta{
 			Name: name,
@@ -1159,7 +1210,7 @@ func (c *K8sClient) RestartPSMDBCluster(ctx context.Context, name string) error 
 // GetPSMDBClusterCredentials returns a PSMDB cluster.
 func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string) (*PSMDBCredentials, error) {
 	var cluster psmdb.PerconaServerMongoDB
-	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), name, &cluster)
+	err := c.kubeCtl.Get(ctx, psmdb.PerconaServerMongoDBKind, name, &cluster)
 	if err != nil {
 		if errors.Is(err, kubectl.ErrNotFound) {
 			return nil, errors.Wrap(ErrNotFound, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
@@ -1194,17 +1245,40 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 	return credentials, nil
 }
 
+func (c *K8sClient) crVersionMatchesPodsVersion(ctx context.Context, podLables, databaseContainerNames []string, crImage string) (bool, error) {
+	pods, err := c.GetPods(ctx, "-l"+strings.Join(podLables, ","))
+	if err != nil {
+		return false, err
+	}
+	if len(pods.Items) == 0 {
+		// Avoid stating it versions don't match when there are no pods to check.
+		return true, nil
+	}
+	images := make(map[string]struct{})
+	for _, p := range pods.Items {
+		for _, containerName := range databaseContainerNames {
+			image, err := p.ContainerImage(containerName)
+			if err != nil {
+				c.l.Debugf("failed to check pods for container image: %v", err)
+				continue
+			}
+			images[image] = struct{}{}
+		}
+	}
+	_, ok := images[crImage]
+	return len(images) == 1 && ok, nil
+}
+
 // getPSMDBClusters returns Percona Server for MongoDB clusters.
 func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error) {
 	var list psmdb.PerconaServerMongoDBList
-	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), "", &list)
+	err := c.kubeCtl.Get(ctx, psmdb.PerconaServerMongoDBKind, "", &list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get percona server MongoDB clusters")
 	}
 
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
-
 		val := PSMDBCluster{
 			Name:  cluster.Name,
 			Size:  cluster.Spec.Replsets[0].Size,
@@ -1215,6 +1289,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
 			Exposed: cluster.Spec.Sharding.Mongos.Expose.Enabled,
+			Image:   cluster.Spec.Image,
 		}
 
 		if cluster.Status != nil {
@@ -1234,6 +1309,21 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 			})
 			val.DetailedState = status
 			val.Message = message
+		}
+
+		databaseCluster := common.DatabaseCluster(&cluster)
+		match, err := c.crVersionMatchesPodsVersion(ctx, databaseCluster.DatabasePodLabels(), databaseCluster.DatabaseContainerNames(), databaseCluster.DatabaseImage())
+		if err != nil {
+			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.Name, err)
+			val.State = ClusterStateInvalid
+			res[i] = val
+			continue
+		}
+
+		if !match {
+			val.State = ClusterStateUpgrading
+		} else {
+			val.State = getReplicasetStatus(cluster)
 		}
 
 		res[i] = val
@@ -1438,7 +1528,7 @@ func (c *K8sClient) GetPersistentVolumes(ctx context.Context) (*common.Persisten
 }
 
 // GetPods returns list of pods based on given filters. Filters are args to
-// kubectl command. For example "-lyour-label=value", "-ntest-namespace".
+// kubectl command. For example "-lyour-label=value,next-label=value", "-ntest-namespace".
 func (c *K8sClient) GetPods(ctx context.Context, filters ...string) (*common.PodList, error) {
 	list := new(common.PodList)
 	args := []string{"get", "pods"}
@@ -1619,21 +1709,19 @@ func getResources(resources common.ResourceList) (cpuMillis uint64, memoryBytes 
 	return cpuMillis, memoryBytes, nil
 }
 
-// GetConsumedCPUAndMemory returns consumed CPU and Memory in given namespace. If namespaces
-// is empty slice, it tries to get them from all namespaces.
-func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespaces ...string) (
+// GetConsumedCPUAndMemory returns consumed CPU and Memory in given namespace. If namespace
+// is empty, it tries to get them from all namespaces.
+func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespace string) (
 	cpuMillis uint64, memoryBytes uint64, err error,
 ) {
 	// Get CPU and Memory Requests of Pods' containers.
-	if len(namespaces) == 0 {
-		namespaces = []string{"--all-namespaces"}
+	if namespace == "" {
+		namespace = "--all-namespaces"
 	} else {
-		for i := 0; i < len(namespaces); i++ {
-			namespaces[i] = "-n" + namespaces[i]
-		}
+		namespace = "-n" + namespace
 	}
 
-	pods, err := c.GetPods(ctx, namespaces...)
+	pods, err := c.GetPods(ctx, namespace)
 	if err != nil {
 		return 0, 0, errors.Wrap(err, "failed to get consumed resources")
 	}
@@ -1749,7 +1837,7 @@ func (c *K8sClient) ApplyOperator(ctx context.Context, version string, manifests
 // of the installed operator.
 func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVersion string) error {
 	var list psmdb.PerconaServerMongoDBList
-	err := c.kubeCtl.Get(ctx, string(perconaServerMongoDBKind), "", &list)
+	err := c.kubeCtl.Get(ctx, psmdb.PerconaServerMongoDBKind, "", &list)
 	if err != nil {
 		return errors.Wrap(err, "couldn't get percona server MongoDB clusters")
 	}
@@ -1775,7 +1863,7 @@ func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVe
 // of the installed operator.
 func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVersion string) error {
 	var list pxc.PerconaXtraDBClusterList
-	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), "", &list)
+	err := c.kubeCtl.Get(ctx, pxc.PerconaXtraDBClusterKind, "", &list)
 	if err != nil {
 		return errors.Wrap(err, "couldn't get percona Xtradb clusters")
 	}

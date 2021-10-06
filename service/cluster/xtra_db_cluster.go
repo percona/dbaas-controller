@@ -33,11 +33,12 @@ import (
 //nolint:gochecknoglobals
 // pxcStatesMap matches pxc app states to cluster states.
 var pxcStatesMap = map[k8sclient.ClusterState]controllerv1beta1.XtraDBClusterState{
-	k8sclient.ClusterStateInvalid:  controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_INVALID,
-	k8sclient.ClusterStateChanging: controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING,
-	k8sclient.ClusterStateReady:    controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY,
-	k8sclient.ClusterStateFailed:   controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_FAILED,
-	k8sclient.ClusterStateDeleting: controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_DELETING,
+	k8sclient.ClusterStateInvalid:   controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_INVALID,
+	k8sclient.ClusterStateChanging:  controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING,
+	k8sclient.ClusterStateReady:     controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY,
+	k8sclient.ClusterStateFailed:    controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_FAILED,
+	k8sclient.ClusterStateDeleting:  controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_DELETING,
+	k8sclient.ClusterStateUpgrading: controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_UPGRADING,
 }
 
 // XtraDBClusterService implements methods of gRPC server and other business logic related to XtraDB clusters.
@@ -95,6 +96,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			ClusterSize: cluster.Size,
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
 				DiskSize: int64(pxcDiskSize),
+				Image:    cluster.PXC.Image,
 			},
 		}
 
@@ -170,7 +172,8 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 			ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
 			DiskSize:         convertors.BytesToStr(req.Params.Pxc.DiskSize),
 		},
-		Expose: req.Expose,
+		Expose:            req.Expose,
+		VersionServiceURL: req.Params.VersionServiceUrl,
 	}
 	if req.Params.Proxysql != nil {
 		params.ProxySQL = &k8sclient.ProxySQL{
@@ -228,12 +231,15 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 		Resume:  req.Params.Resume,
 	}
 
-	if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
-		if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
-			params.PXC = &k8sclient.PXC{
-				ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
+	if req.Params.Pxc != nil {
+		if req.Params.Pxc.ComputeResources != nil {
+			if req.Params.Pxc.ComputeResources.CpuM > 0 || req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
+				params.PXC = &k8sclient.PXC{
+					ComputeResources: computeResources(req.Params.Pxc.ComputeResources),
+				}
 			}
 		}
+		params.PXC.Image = req.Params.Pxc.Image
 	}
 
 	if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {

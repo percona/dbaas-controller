@@ -18,7 +18,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-version v1.3.0
-	github.com/percona-platform/dbaas-api v0.0.0-20210830094230-60d2a17b710c
+	github.com/percona-platform/dbaas-api v0.0.0-20211006103141-a68316e565d2
 	github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871
 	github.com/percona/pmm v2.15.1-0.20210318204615-bbf8e9314afd+incompatible
 	github.com/pkg/errors v0.9.1
@@ -27,7 +27,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.16.0
 	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
-	golang.org/x/text v0.3.6
+	golang.org/x/text v0.3.7
 	google.golang.org/grpc v1.38.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
