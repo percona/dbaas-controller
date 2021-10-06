@@ -1250,6 +1250,10 @@ func (c *K8sClient) crVersionMatchesPodsVersion(ctx context.Context, podLables, 
 	if err != nil {
 		return false, err
 	}
+	if len(pods.Items) == 0 {
+		// Avoid stating it versions don't match when there are no pods to check.
+		return true, nil
+	}
 	images := make(map[string]struct{})
 	for _, p := range pods.Items {
 		for _, containerName := range databaseContainerNames {

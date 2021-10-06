@@ -286,6 +286,13 @@ func TestK8sClient(t *testing.T) {
 		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
 			return cluster != nil
 		})
+
+		t.Run("Make sure XtraDB cluster is in changing state right after creation", func(t *testing.T) {
+			cluster, err := getXtraDBCluster(ctx, client, name)
+			require.NoError(t, err)
+			assert.Equal(t, ClusterStateChanging, cluster.State)
+		})
+
 		t.Run("Get credentials of cluster that is not Ready", func(t *testing.T) {
 			_, err := client.GetXtraDBClusterCredentials(ctx, name)
 			assert.EqualError(t, errors.Cause(err), ErrXtraDBClusterNotReady.Error())
@@ -496,6 +503,12 @@ func TestK8sClient(t *testing.T) {
 
 		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
 			return cluster != nil
+		})
+
+		t.Run("Make sure PSMDB cluster is in changing state right after creation", func(t *testing.T) {
+			cluster, err := getPSMDBCluster(ctx, client, name)
+			require.NoError(t, err)
+			assert.Equal(t, ClusterStateChanging, cluster.State)
 		})
 
 		t.Run("Get credentials of cluster that is not Ready", func(t *testing.T) {
