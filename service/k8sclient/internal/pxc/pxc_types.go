@@ -21,8 +21,8 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
-// PerconaPXCClusterSpec defines the desired state of PerconaPXCCluster.
-type PerconaPXCClusterSpec struct { //nolint:maligned
+// PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
+type PerconaXtraDBClusterSpec struct { //nolint:maligned
 	Platform              string              `json:"platform,omitempty"`
 	CRVersion             string              `json:"crVersion,omitempty"`
 	Pause                 bool                `json:"pause,omitempty"`
@@ -87,7 +87,7 @@ const (
 	AppStatePaused AppState = "paused"
 )
 
-// PerconaXtraDBClusterStatus defines the observed state of PerconaPXCCluster.
+// PerconaXtraDBClusterStatus defines the observed state of PerconaXtraDBCluster.
 type PerconaXtraDBClusterStatus struct {
 	PXC                AppStatus          `json:"pxc,omitempty"`
 	ProxySQL           AppStatus          `json:"proxysql,omitempty"`
@@ -125,20 +125,20 @@ type AppStatus struct {
 	Image   string   `json:"image,omitempty"`
 }
 
-// PerconaPXCCluster is the Schema for the perconaxtradbclusters API.
-type PerconaPXCCluster struct {
+// PerconaXtraDBCluster is the Schema for the perconaxtradbclusters API.
+type PerconaXtraDBCluster struct {
 	common.TypeMeta   // anonymous for embedding
 	common.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   *PerconaPXCClusterSpec      `json:"spec,omitempty"`
+	Spec   *PerconaXtraDBClusterSpec   `json:"spec,omitempty"`
 	Status *PerconaXtraDBClusterStatus `json:"status,omitempty"`
 }
 
-// PerconaXtraDBClusterList contains a list of PerconaPXCCluster.
+// PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
 type PerconaXtraDBClusterList struct {
 	common.TypeMeta // anonymous for embedding
 
-	Items []PerconaPXCCluster `json:"items"`
+	Items []PerconaXtraDBCluster `json:"items"`
 }
 
 // PodSpec hold pod's exported fields representing the pod configuration.

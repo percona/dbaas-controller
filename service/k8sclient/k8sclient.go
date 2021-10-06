@@ -48,7 +48,7 @@ import (
 type ClusterKind string
 
 const (
-	perconaXtraDBClusterKind = ClusterKind("PerconaPXCCluster")
+	perconaXtraDBClusterKind = ClusterKind("PerconaXtraDBCluster")
 	perconaServerMongoDBKind = ClusterKind("PerconaServerMongoDB")
 )
 
@@ -433,7 +433,7 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 		return errors.New("pxc cluster must have one and only one proxy type defined")
 	}
 
-	var cluster pxc.PerconaPXCCluster
+	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
 	if err == nil {
 		return fmt.Errorf(clusterWithSameNameExistsErrTemplate, params.Name)
@@ -457,7 +457,7 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 		pxcImage = params.PXC.Image
 	}
 
-	res := &pxc.PerconaPXCCluster{
+	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
 			APIVersion: c.getAPIVersionForPXCOperator(operators.PXCOperatorVersion),
 			Kind:       string(perconaXtraDBClusterKind),
@@ -466,7 +466,7 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 			Name:       params.Name,
 			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
 		},
-		Spec: &pxc.PerconaPXCClusterSpec{
+		Spec: &pxc.PerconaXtraDBClusterSpec{
 			CRVersion:         operators.PXCOperatorVersion,
 			AllowUnsafeConfig: true,
 			SecretsName:       secretName,
@@ -572,7 +572,7 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 		return errors.New("can't update both proxies, only one should be in use")
 	}
 
-	var cluster pxc.PerconaPXCCluster
+	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), params.Name, &cluster)
 	if err != nil {
 		return err
@@ -619,7 +619,7 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 
 // DeletePXCCluster deletes Percona XtraDB cluster with provided name.
 func (c *K8sClient) DeletePXCCluster(ctx context.Context, name string) error {
-	res := &pxc.PerconaPXCCluster{
+	res := &pxc.PerconaXtraDBCluster{
 		TypeMeta: common.TypeMeta{
 			APIVersion: pxcAPINamespace + "/v1",
 			Kind:       string(perconaXtraDBClusterKind),
@@ -662,7 +662,7 @@ func (c *K8sClient) deleteSecret(ctx context.Context, secretName string) error {
 
 // GetPXCClusterCredentials returns an PXC cluster credentials.
 func (c *K8sClient) GetPXCClusterCredentials(ctx context.Context, name string) (*PXCCredentials, error) {
-	var cluster pxc.PerconaPXCCluster
+	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, string(perconaXtraDBClusterKind), name, &cluster)
 	if err != nil {
 		if errors.Is(err, kubectl.ErrNotFound) {
@@ -1781,8 +1781,8 @@ func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVers
 	}
 
 	for _, cluster := range list.Items {
-		clusterPatch := &pxc.PerconaPXCCluster{
-			Spec: &pxc.PerconaPXCClusterSpec{
+		clusterPatch := &pxc.PerconaXtraDBCluster{
+			Spec: &pxc.PerconaXtraDBClusterSpec{
 				CRVersion: newVersion,
 				PXC: &pxc.PodSpec{
 					Image: strings.Replace(cluster.Spec.PXC.Image, oldVersion, newVersion, 1),

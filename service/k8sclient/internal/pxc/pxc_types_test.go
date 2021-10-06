@@ -28,7 +28,7 @@ import (
 
 const expected = `
 {
-	"kind": "PerconaPXCCluster",
+	"kind": "PerconaXtraDBCluster",
     "apiVersion": "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0",
     "metadata": {
         "name": "test-pxc"
@@ -120,15 +120,15 @@ func TestPXCTypesMarshal(t *testing.T) {
 	t.Run("check inline marshal", func(t *testing.T) {
 		t.Parallel()
 		var size int32 = 3
-		res := &PerconaPXCCluster{
+		res := &PerconaXtraDBCluster{
 			TypeMeta: common.TypeMeta{
 				APIVersion: "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0",
-				Kind:       "PerconaPXCCluster",
+				Kind:       "PerconaXtraDBCluster",
 			},
 			ObjectMeta: common.ObjectMeta{
 				Name: "test-pxc",
 			},
-			Spec: &PerconaPXCClusterSpec{
+			Spec: &PerconaXtraDBClusterSpec{
 				AllowUnsafeConfig: true,
 				SecretsName:       "my-cluster-secrets",
 				PXC: &PodSpec{
