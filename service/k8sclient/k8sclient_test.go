@@ -284,7 +284,7 @@ func TestK8sClient(t *testing.T) {
 		l.Info("XtraDB Cluster is created")
 
 		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
-			return cluster != nil
+			return cluster != nil && cluster.State != ClusterStateInvalid
 		})
 
 		t.Run("Make sure XtraDB cluster is in changing state right after creation", func(t *testing.T) {
@@ -502,7 +502,7 @@ func TestK8sClient(t *testing.T) {
 		l.Info("PSMDB Cluster is created")
 
 		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
-			return cluster != nil
+			return cluster != nil && cluster.State != ClusterStateInvalid
 		})
 
 		t.Run("Make sure PSMDB cluster is in changing state right after creation", func(t *testing.T) {
