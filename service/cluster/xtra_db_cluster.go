@@ -39,6 +39,7 @@ var pxcStatesMap = map[k8sclient.ClusterState]controllerv1beta1.XtraDBClusterSta
 	k8sclient.ClusterStateFailed:    controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_FAILED,
 	k8sclient.ClusterStateDeleting:  controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_DELETING,
 	k8sclient.ClusterStateUpgrading: controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_UPGRADING,
+	k8sclient.ClusterStatePaused:    controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED,
 }
 
 // XtraDBClusterService implements methods of gRPC server and other business logic related to XtraDB clusters.
@@ -142,14 +143,6 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			},
 			Params:  params,
 			Exposed: cluster.Exposed,
-		}
-
-		if cluster.State == k8sclient.ClusterStatePaused {
-			if cluster.Pause {
-				res.Clusters[i].State = controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED
-			} else {
-				res.Clusters[i].State = controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING
-			}
 		}
 	}
 

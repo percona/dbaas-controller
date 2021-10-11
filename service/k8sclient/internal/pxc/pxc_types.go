@@ -83,6 +83,8 @@ const (
 	AppStateError AppState = "error"
 	// AppStatePaused means cluster is paused.
 	AppStatePaused AppState = "paused"
+	// AppStatePaused means cluster is stopping. Available only in the operator >= 1.9.0.
+	AppStateStopping AppState = "stopping"
 )
 
 // PerconaXtraDBClusterStatus defines the observed state of PerconaXtraDBCluster.
