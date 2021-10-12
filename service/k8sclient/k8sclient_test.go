@@ -1001,7 +1001,7 @@ func TestGetPXCState(t *testing.T) {
 		},
 	}
 	for i, test := range testCases {
-		clusterState := c.getPXCState(test.cluster, func(*pxc.PerconaXtraDBCluster) (bool, error) {
+		clusterState := c.getPXCState(ctx, test.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
 			return test.crAndPodsVersionMatches, test.matchingError
 		})
 		assert.Equalf(t, test.expectedState, clusterState, "test with id %d failed", i)
