@@ -33,14 +33,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
-
 	goversion "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
@@ -891,9 +890,9 @@ func TestGetPXCState(t *testing.T) {
 	c, _ := New(ctx, "")
 	type getPXCStateTestCase struct {
 		cluster                 *pxc.PerconaXtraDBCluster
-		crAndPodsVersionMatches bool
 		matchingError           error
 		expectedState           ClusterState
+		crAndPodsVersionMatches bool
 	}
 	testCases := []getPXCStateTestCase{
 		{expectedState: ClusterStateInvalid},
