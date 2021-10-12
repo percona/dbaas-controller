@@ -1000,6 +1000,17 @@ func TestGetPXCState(t *testing.T) {
 			matchingError:           errors.New("example error"),
 			expectedState:           ClusterStateInvalid,
 		},
+		{
+			// Not implemented state of the cluster.
+			cluster: &pxc.PerconaXtraDBCluster{
+				Spec: &pxc.PerconaXtraDBClusterSpec{
+					Pause: false,
+				},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: "notimplemented"},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
 	}
 	for i, test := range testCases {
 		clusterState := c.getPXCState(ctx, test.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
