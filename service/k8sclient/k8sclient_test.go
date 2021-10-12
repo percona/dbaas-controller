@@ -885,6 +885,7 @@ func TestVMAgentSpec(t *testing.T) {
 }
 
 func TestGetPXCState(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	c, _ := New(ctx, "")
