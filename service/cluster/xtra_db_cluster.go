@@ -291,7 +291,7 @@ func (s XtraDBClusterService) GetXtraDBClusterCredentials(ctx context.Context, r
 
 	cluster, err := client.GetXtraDBClusterCredentials(ctx, req.Name)
 	if err != nil {
-		if errors.Is(err, k8sclient.ErrXtraDBClusterNotReady) {
+		if errors.Is(err, k8sclient.ErrClusterStateUnexpected) {
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		} else if errors.Is(err, k8sclient.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())

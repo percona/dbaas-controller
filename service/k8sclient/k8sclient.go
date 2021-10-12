@@ -308,8 +308,8 @@ var psmdbStatesMap = map[psmdb.AppState]ClusterState{ //nolint:gochecknoglobals
 }
 
 var (
-	// ErrXtraDBClusterNotReady The PXC cluster is not in ready state.
-	ErrXtraDBClusterNotReady = errors.New("XtraDB cluster is not ready")
+	// ErrClusterStateUnexpected The PXC cluster is not in desired stated.
+	ErrClusterStateUnexpected = errors.New("XtraDB cluster state was not expected")
 	// ErrPSMDBClusterNotReady The PSMDB cluster is not ready.
 	ErrPSMDBClusterNotReady = errors.New("PSMDB cluster is not ready")
 	// ErrNotFound should be returned when referenced resource does not exist
@@ -587,7 +587,7 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	// This is to prevent concurrent updates
 	if clusterState != ClusterStateReady {
-		return errors.Wrapf(ErrXtraDBClusterNotReady, "state is %v", clusterState) //nolint:wrapcheck
+		return errors.Wrapf(ErrClusterStateUnexpected, "state is %v", clusterState) //nolint:wrapcheck
 	}
 
 	if params.Suspend {
@@ -680,8 +680,8 @@ func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string
 	}
 
 	clusterState := c.getPXCState(ctx, &cluster, c.crVersionMatchesPodsVersion)
-	if clusterState != ClusterStateReady {
-		return nil, errors.Wrap(ErrXtraDBClusterNotReady,
+	if clusterState != ClusterStateReady && clusterState != ClusterStateChanging {
+		return nil, errors.Wrap(ErrClusterStateUnexpected,
 			fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
 		)
 	}

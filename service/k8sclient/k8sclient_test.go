@@ -297,7 +297,7 @@ func TestK8sClient(t *testing.T) {
 
 		t.Run("Get credentials of cluster that is not Ready", func(t *testing.T) {
 			_, err := client.GetXtraDBClusterCredentials(ctx, name)
-			assert.EqualError(t, errors.Cause(err), ErrXtraDBClusterNotReady.Error())
+			assert.EqualError(t, errors.Cause(err), ErrClusterStateUnexpected.Error())
 		})
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
