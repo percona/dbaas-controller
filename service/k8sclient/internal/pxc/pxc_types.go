@@ -28,8 +28,9 @@ const (
 
 // PerconaXtraDBClusterSpec defines the desired state of PerconaXtraDBCluster.
 type PerconaXtraDBClusterSpec struct { //nolint:maligned
-	Platform              string                 `json:"platform,omitempty"`
-	CRVersion             string                 `json:"crVersion,omitempty"`
+	Platform  string `json:"platform,omitempty"`
+	CRVersion string `json:"crVersion,omitempty"`
+	// Pause tells whether cluster is paused. Don't include omitempty in json tag, it can cause cluster to be stuck in Paused status.
 	Pause                 bool                   `json:"pause"`
 	SecretsName           string                 `json:"secretsName,omitempty"`
 	VaultSecretName       string                 `json:"vaultSecretName,omitempty"`
