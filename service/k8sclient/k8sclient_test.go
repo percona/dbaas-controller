@@ -889,14 +889,14 @@ func TestGetPXCState(t *testing.T) {
 	defer cancel()
 	c, _ := New(ctx, "")
 	type getPXCStateTestCase struct {
-		cluster                 *pxc.PerconaXtraDBCluster
 		matchingError           error
+		cluster                 *pxc.PerconaXtraDBCluster
 		expectedState           ClusterState
 		crAndPodsVersionMatches bool
 	}
 	testCases := []getPXCStateTestCase{
 		{expectedState: ClusterStateInvalid},
-		{cluster: &pxc.PerconaXtraDBCluster{}, expectedState: ClusterStateInvalid},
+		{cluster: new(pxc.PerconaXtraDBCluster), expectedState: ClusterStateInvalid},
 		// Initializing.
 		{
 			cluster: &pxc.PerconaXtraDBCluster{
