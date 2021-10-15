@@ -30,7 +30,7 @@ const (
 type PerconaXtraDBClusterSpec struct { //nolint:maligned
 	Platform              string                 `json:"platform,omitempty"`
 	CRVersion             string                 `json:"crVersion,omitempty"`
-	Pause                 bool                   `json:"pause,omitempty"`
+	Pause                 bool                   `json:"pause"`
 	SecretsName           string                 `json:"secretsName,omitempty"`
 	VaultSecretName       string                 `json:"vaultSecretName,omitempty"`
 	SSLSecretName         string                 `json:"sslSecretName,omitempty"`
