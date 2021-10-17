@@ -110,6 +110,9 @@ const expected = `
             },
             "serviceAccountName": "percona-xtradb-cluster-operator"
         },
+        "upgradeOptions": {
+        	"versionServiceEndpoint": "https://check.percona.com"
+        },
         "allowUnsafeConfigurations": true
     }
 }
@@ -131,6 +134,9 @@ func TestPXCTypesMarshal(t *testing.T) {
 			Spec: &PerconaXtraDBClusterSpec{
 				AllowUnsafeConfig: true,
 				SecretsName:       "my-cluster-secrets",
+				UpgradeOptions: &common.UpgradeOptions{
+					VersionServiceEndpoint: "https://check.percona.com",
+				},
 				PXC: &PodSpec{
 					Size: &size,
 					Resources: &common.PodResources{

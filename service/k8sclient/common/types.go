@@ -186,3 +186,26 @@ type SecretKeySelector struct {
 	// Specify whether the Secret or its key must be defined
 	Optional *bool `json:"optional,omitempty"`
 }
+
+// UpgradeOptions holds configuration options to handle automatic upgrades.
+type UpgradeOptions struct {
+	VersionServiceEndpoint string `json:"versionServiceEndpoint,omitempty"`
+	Apply                  string `json:"apply,omitempty"`
+	Schedule               string `json:"schedule,omitempty"`
+}
+
+// DatabaseCluster is an abstraction of database cluster.
+type DatabaseCluster interface {
+	// SetDatabaseImage sets database image to appropriate image field.
+	SetDatabaseImage(name string)
+	// GetImage returns image of database software used.
+	DatabaseImage() string
+	// GetName returns name of the cluster.
+	GetName() string
+	// GetCRDName returns name of Custom Resource Definition -> cluster's kind.
+	CRDName() string
+	// DatabaseContainerNames returns container names that actually run the database.
+	DatabaseContainerNames() []string
+	// DatabasePodLabels return list of labels to get pods where database is running.
+	DatabasePodLabels() []string
+}
