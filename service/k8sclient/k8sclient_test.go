@@ -287,8 +287,8 @@ func TestK8sClient(t *testing.T) {
 			return cluster != nil && cluster.State != ClusterStateInvalid
 		})
 
-		t.Run("Make sure XtraDB cluster is in changing state right after creation", func(t *testing.T) {
-			cluster, err := getXtraDBCluster(ctx, client, name)
+		t.Run("Make sure PXC cluster is in changing state right after creation", func(t *testing.T) {
+			cluster, err := getPXCCluster(ctx, client, name)
 			require.NoError(t, err)
 			assert.Equal(t, ClusterStateChanging, cluster.State)
 		})
@@ -381,7 +381,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("Upgrade Xtradb", func(t *testing.T) {
-			err = client.UpdateXtraDBCluster(ctx, &XtraDBParams{
+			err = client.UpdatePXCCluster(ctx, &PXCParams{
 				Name: name,
 				Size: 1,
 				PXC: &PXC{
@@ -393,17 +393,17 @@ func TestK8sClient(t *testing.T) {
 				VersionServiceURL: "https://check.percona.com",
 			})
 			require.NoError(t, err)
-			assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+			assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 				return cluster != nil && cluster.State == ClusterStateUpgrading
 			})
-			l.Infof("upgrade of XtraDB cluster %q has begun", name)
+			l.Infof("upgrade of PXC cluster %q has begun", name)
 
-			assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+			assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 				return cluster != nil && cluster.State == ClusterStateReady
 			})
-			l.Infof("XtraDB cluster %q has been upgraded", name)
+			l.Infof("PXC cluster %q has been upgraded", name)
 
-			cluster, err := getXtraDBCluster(ctx, client, name)
+			cluster, err := getPXCCluster(ctx, client, name)
 			require.NoError(t, err)
 			assert.Equal(t, "percona/percona-xtradb-cluster:8.0.20-11.2", cluster.PXC.Image)
 		})
