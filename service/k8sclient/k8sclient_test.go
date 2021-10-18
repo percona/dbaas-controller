@@ -420,7 +420,6 @@ func TestK8sClient(t *testing.T) {
 			Size: 3,
 		})
 		require.NoError(t, err)
-		l.Info("XtraDB Cluster is updated")
 
 		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
 			if cluster != nil && cluster.State == ClusterStateReady {
@@ -429,6 +428,7 @@ func TestK8sClient(t *testing.T) {
 			}
 			return false
 		})
+		l.Info("XtraDB Cluster is updated")
 
 		err = client.DeleteXtraDBCluster(ctx, name)
 		require.NoError(t, err)
