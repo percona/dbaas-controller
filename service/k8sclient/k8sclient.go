@@ -1319,7 +1319,10 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 
 		match, err := c.crVersionMatchesPodsVersion(ctx, &cluster)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to check if PSMDB cluster is upgrading")
+			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.Name, err)
+			val.State = ClusterStateInvalid
+			res[i] = val
+			continue
 		}
 		if match {
 			val.State = getReplicasetStatus(cluster)
