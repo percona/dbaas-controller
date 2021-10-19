@@ -308,8 +308,8 @@ var psmdbStatesMap = map[psmdb.AppState]ClusterState{ //nolint:gochecknoglobals
 }
 
 var (
-	// ErrClusterStateUnexpected The PXC cluster is not in desired stated.
-	ErrClusterStateUnexpected = errors.New("XtraDB cluster state was not expected")
+	// ErrClusterStateUnexpected The PXC cluster is not in desired state.
+	ErrClusterStateUnexpected = errors.New("XtraDB cluster state is not expected")
 	// ErrPSMDBClusterNotReady The PSMDB cluster is not ready.
 	ErrPSMDBClusterNotReady = errors.New("PSMDB cluster is not ready")
 	// ErrNotFound should be returned when referenced resource does not exist
@@ -581,13 +581,14 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	// Only if cluster is paused, allow resuming it. All other modifications are forbinden.
 	if params.Resume && clusterState == ClusterStatePaused {
+		c.l.Info("-------> cluster is paused")
 		cluster.Spec.Pause = false
 		return c.kubeCtl.Apply(ctx, &cluster)
 	}
 
 	// This is to prevent concurrent updates
 	if clusterState != ClusterStateReady {
-		return errors.Wrapf(ErrClusterStateUnexpected, "state is %v", clusterState) //nolint:wrapcheck
+		return errors.Wrapf(ErrClusterStateUnexpected, "state is %v, required state is %v", clusterState, ClusterStateReady) //nolint:wrapcheck
 	}
 
 	if params.Suspend {
@@ -681,8 +682,14 @@ func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string
 
 	clusterState := c.getPXCState(ctx, &cluster, c.crVersionMatchesPodsVersion)
 	if clusterState != ClusterStateReady && clusterState != ClusterStateChanging {
-		return nil, errors.Wrap(ErrClusterStateUnexpected,
-			fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
+		return nil, errors.Wrapf(
+			errors.Wrap(ErrClusterStateUnexpected,
+				fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
+			),
+			"cluster state is state %v, %v or %v is expected",
+			clusterState,
+			ClusterStateReady,
+			ClusterStateChanging,
 		)
 	}
 
