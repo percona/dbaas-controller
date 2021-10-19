@@ -581,7 +581,6 @@ func (c *K8sClient) UpdateXtraDBCluster(ctx context.Context, params *XtraDBParam
 
 	// Only if cluster is paused, allow resuming it. All other modifications are forbinden.
 	if params.Resume && clusterState == ClusterStatePaused {
-		c.l.Info("-------> cluster is paused")
 		cluster.Spec.Pause = false
 		return c.kubeCtl.Apply(ctx, &cluster)
 	}
