@@ -1017,7 +1017,7 @@ func TestGetPXCState(t *testing.T) {
 			clusterState := c.getPXCState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
 				return tt.crAndPodsVersionMatches, tt.matchingError
 			})
-			assert.Equalf(t, tt.expectedState, clusterState, "test with id %d failed", i)
+			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
 		})
 	}
 }
