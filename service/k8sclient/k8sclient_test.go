@@ -39,6 +39,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
@@ -293,11 +294,6 @@ func TestK8sClient(t *testing.T) {
 			assert.Equal(t, ClusterStateChanging, cluster.State)
 		})
 
-		t.Run("Get credentials of cluster that is not Ready", func(t *testing.T) {
-			_, err := client.GetXtraDBClusterCredentials(ctx, name)
-			assert.EqualError(t, errors.Cause(err), ErrXtraDBClusterNotReady.Error())
-		})
-
 		t.Run("Create cluster with the same name", func(t *testing.T) {
 			err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
 				Name:     name,
@@ -424,7 +420,6 @@ func TestK8sClient(t *testing.T) {
 			Size: 3,
 		})
 		require.NoError(t, err)
-		l.Info("XtraDB Cluster is updated")
 
 		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
 			if cluster != nil && cluster.State == ClusterStateReady {
@@ -433,6 +428,7 @@ func TestK8sClient(t *testing.T) {
 			}
 			return false
 		})
+		l.Info("XtraDB Cluster is updated")
 
 		err = client.DeleteXtraDBCluster(ctx, name)
 		require.NoError(t, err)
@@ -880,4 +876,148 @@ func TestVMAgentSpec(t *testing.T) {
 	err := e.Encode(spec)
 	require.NoError(t, err)
 	assert.Equal(t, expected, inBuf.String())
+}
+
+func TestGetPXCState(t *testing.T) {
+	t.Parallel()
+	type getPXCStateTestCase struct {
+		matchingError           error
+		cluster                 *pxc.PerconaXtraDBCluster
+		expectedState           ClusterState
+		crAndPodsVersionMatches bool
+	}
+	testCases := []getPXCStateTestCase{
+		{
+			expectedState: ClusterStateInvalid,
+		},
+		{
+			cluster:       new(pxc.PerconaXtraDBCluster),
+			expectedState: ClusterStateInvalid,
+		},
+		// Initializing.
+		{
+			cluster: &pxc.PerconaXtraDBCluster{
+				Spec: &pxc.PerconaXtraDBClusterSpec{
+					Pause: false,
+				},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+		// Ready.
+		{
+			cluster: &pxc.PerconaXtraDBCluster{
+				Spec: &pxc.PerconaXtraDBClusterSpec{
+					Pause: false,
+				},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateReady},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateReady,
+		},
+		// Pausing related states.
+		{
+			// Cluster is being paused, pxc operator <= 1.8.0.
+			cluster: &pxc.PerconaXtraDBCluster{
+				Spec: &pxc.PerconaXtraDBClusterSpec{
+					Pause: true,
+				},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+		{
+			// Cluster is being paused, pxc operator >= 1.9.0.
+			cluster: &pxc.PerconaXtraDBCluster{
+				Spec: &pxc.PerconaXtraDBClusterSpec{
+					Pause: true,
+				},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateStopping},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+		{
+			// Cluster is paused = no cluster pods.
+			cluster: &pxc.PerconaXtraDBCluster{
+				Spec: &pxc.PerconaXtraDBClusterSpec{
+					Pause: true,
+				},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateReady},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStatePaused,
+		},
+		{
+			// Cluster is paused = no cluster pods.
+			cluster: &pxc.PerconaXtraDBCluster{
+				Spec: &pxc.PerconaXtraDBClusterSpec{
+					Pause: true,
+				},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStatePaused},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStatePaused,
+		},
+		{
+			// Cluster just got instructed to resume.
+			cluster: &pxc.PerconaXtraDBCluster{
+				Spec: &pxc.PerconaXtraDBClusterSpec{
+					Pause: false,
+				},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+		// Upgrading.
+		{
+			// No failure during checking cr and pods version.
+			cluster: &pxc.PerconaXtraDBCluster{
+				Spec: &pxc.PerconaXtraDBClusterSpec{
+					Pause: false,
+				},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+			},
+			crAndPodsVersionMatches: false,
+			expectedState:           ClusterStateUpgrading,
+		},
+		{
+			// Checking cr and pods version failed.
+			cluster: &pxc.PerconaXtraDBCluster{
+				Spec: &pxc.PerconaXtraDBClusterSpec{
+					Pause: false,
+				},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+			},
+			crAndPodsVersionMatches: false,
+			matchingError:           errors.New("example error"),
+			expectedState:           ClusterStateInvalid,
+		},
+		{
+			// Not implemented state of the cluster.
+			cluster: &pxc.PerconaXtraDBCluster{
+				Spec: &pxc.PerconaXtraDBClusterSpec{
+					Pause: false,
+				},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: "notimplemented"},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+	}
+	ctx := context.Background()
+	c, _ := New(ctx, "")
+	for i, test := range testCases {
+		tt := test
+		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
+			t.Parallel()
+			clusterState := c.getPXCState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
+				return tt.crAndPodsVersionMatches, tt.matchingError
+			})
+			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
+		})
+	}
 }

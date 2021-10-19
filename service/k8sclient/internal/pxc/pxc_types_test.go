@@ -79,6 +79,7 @@ const expected = `
                 "antiAffinityTopologyKey": "none"
             }
         },
+        "pause": false,
         "pmm": {},
         "backup": {
             "image": "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0-backup",
