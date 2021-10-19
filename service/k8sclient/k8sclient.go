@@ -693,13 +693,12 @@ func (c *K8sClient) GetXtraDBClusterCredentials(ctx context.Context, name string
 		)
 	}
 
-	password := ""
 	var secret common.Secret
 	err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(pxcSecretNameTmpl, name), &secret)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get XtraDb cluster secrets")
 	}
-	password = string(secret.Data["root"])
+	password := string(secret.Data["root"])
 
 	credentials := &XtraDBCredentials{
 		Host:     cluster.Status.Host,
