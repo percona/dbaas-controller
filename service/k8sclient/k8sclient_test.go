@@ -880,9 +880,6 @@ func TestVMAgentSpec(t *testing.T) {
 
 func TestGetPXCState(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	c, _ := New(ctx, "")
 	type getPXCStateTestCase struct {
 		matchingError           error
 		cluster                 *pxc.PerconaXtraDBCluster
@@ -890,8 +887,13 @@ func TestGetPXCState(t *testing.T) {
 		crAndPodsVersionMatches bool
 	}
 	testCases := []getPXCStateTestCase{
-		{expectedState: ClusterStateInvalid},
-		{cluster: new(pxc.PerconaXtraDBCluster), expectedState: ClusterStateInvalid},
+		{
+			expectedState: ClusterStateInvalid,
+		},
+		{
+			cluster:       new(pxc.PerconaXtraDBCluster),
+			expectedState: ClusterStateInvalid,
+		},
 		// Initializing.
 		{
 			cluster: &pxc.PerconaXtraDBCluster{
@@ -1006,10 +1008,16 @@ func TestGetPXCState(t *testing.T) {
 			expectedState:           ClusterStateChanging,
 		},
 	}
+	ctx := context.Background()
+	c, _ := New(ctx, "")
 	for i, test := range testCases {
-		clusterState := c.getPXCState(ctx, test.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
-			return test.crAndPodsVersionMatches, test.matchingError
+		tt := test
+		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
+			t.Parallel()
+			clusterState := c.getPXCState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
+				return tt.crAndPodsVersionMatches, tt.matchingError
+			})
+			assert.Equalf(t, tt.expectedState, clusterState, "test with id %d failed", i)
 		})
-		assert.Equalf(t, test.expectedState, clusterState, "test with id %d failed", i)
 	}
 }
