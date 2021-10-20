@@ -29,20 +29,6 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/convertors"
 )
 
-//nolint:gochecknoglobals
-var (
-	// psmdbStatesMap matches psmdb app states to cluster states.
-	psmdbStatesMap = map[k8sclient.ClusterState]controllerv1beta1.PSMDBClusterState{
-		k8sclient.ClusterStateInvalid:   controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
-		k8sclient.ClusterStateChanging:  controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
-		k8sclient.ClusterStateReady:     controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
-		k8sclient.ClusterStateFailed:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
-		k8sclient.ClusterStateDeleting:  controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
-		k8sclient.ClusterStatePaused:    controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
-		k8sclient.ClusterStateUpgrading: controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_UPGRADING,
-	}
-)
-
 // PSMDBClusterService implements methods of gRPC server and other business logic related to PSMDB clusters.
 type PSMDBClusterService struct {
 	p *message.Printer
@@ -97,7 +83,7 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 		}
 		res.Clusters[i] = &controllerv1beta1.ListPSMDBClustersResponse_Cluster{
 			Name:  cluster.Name,
-			State: psmdbStatesMap[cluster.State],
+			State: dbClusterStatesMap[cluster.State],
 			Operation: &controllerv1beta1.RunningOperation{
 				FinishedSteps: cluster.DetailedState.CountReadyPods(),
 				TotalSteps:    cluster.DetailedState.CountAllPods(),
@@ -108,7 +94,7 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 		}
 
 		if cluster.State == k8sclient.ClusterStateReady && cluster.Pause {
-			res.Clusters[i].State = controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED
+			res.Clusters[i].State = controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED
 		}
 	}
 

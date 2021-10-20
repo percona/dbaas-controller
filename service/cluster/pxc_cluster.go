@@ -31,14 +31,15 @@ import (
 )
 
 //nolint:gochecknoglobals
-// pxcStatesMap matches pxc app states to cluster states.
-var pxcStatesMap = map[k8sclient.ClusterState]controllerv1beta1.PXCClusterState{
-	k8sclient.ClusterStateInvalid:   controllerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_INVALID,
-	k8sclient.ClusterStateChanging:  controllerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_CHANGING,
-	k8sclient.ClusterStateReady:     controllerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_READY,
-	k8sclient.ClusterStateFailed:    controllerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_FAILED,
-	k8sclient.ClusterStateDeleting:  controllerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_DELETING,
-	k8sclient.ClusterStateUpgrading: controllerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_UPGRADING,
+// dbClusterStatesMap matches pxc app states to cluster states.
+var dbClusterStatesMap = map[k8sclient.ClusterState]controllerv1beta1.DBClusterState{
+	k8sclient.ClusterStateInvalid:   controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_INVALID,
+	k8sclient.ClusterStateChanging:  controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING,
+	k8sclient.ClusterStateReady:     controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_READY,
+	k8sclient.ClusterStateFailed:    controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_FAILED,
+	k8sclient.ClusterStateDeleting:  controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_DELETING,
+	k8sclient.ClusterStatePaused:    controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED,
+	k8sclient.ClusterStateUpgrading: controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_UPGRADING,
 }
 
 // PXCClusterService implements methods of gRPC server and other business logic related to PXC clusters.
@@ -134,7 +135,7 @@ func (s *PXCClusterService) ListPXCClusters(ctx context.Context, req *controller
 
 		res.Clusters[i] = &controllerv1beta1.ListPXCClustersResponse_Cluster{
 			Name:  cluster.Name,
-			State: pxcStatesMap[cluster.State],
+			State: dbClusterStatesMap[cluster.State],
 			Operation: &controllerv1beta1.RunningOperation{
 				FinishedSteps: cluster.DetailedState.CountReadyPods(),
 				TotalSteps:    cluster.DetailedState.CountAllPods(),
@@ -146,9 +147,9 @@ func (s *PXCClusterService) ListPXCClusters(ctx context.Context, req *controller
 
 		if cluster.State == k8sclient.ClusterStatePaused {
 			if cluster.Pause {
-				res.Clusters[i].State = controllerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_PAUSED
+				res.Clusters[i].State = controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED
 			} else {
-				res.Clusters[i].State = controllerv1beta1.PXCClusterState_PXC_CLUSTER_STATE_CHANGING
+				res.Clusters[i].State = controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING
 			}
 		}
 	}
