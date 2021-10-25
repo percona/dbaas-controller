@@ -62,7 +62,7 @@ spec:
       - name: pmm-init
         image: docker.io/percona/pmm-server:2
         # init container runs full ansible container prepare jobs could take ~2min
-        command: ['sh', '-c', "[ \"$(ls -A /srv)\" ] && echo 'Init is not needed, /srv is not empty' || ( echo 'Init: /srv is empty preparing...'; ansible-playbook -vvv -i 'localhost,' -c local /opt/ansible/pmm2-docker/main.yml; ansible-playbook -vvv -i 'localhost,' -c local /opt/ansible/pmm2/post-build-actions.yml; echo 'Init: complete, /srv prepared' )"]
+        command: ['sh', '-c', "[ \"$(ls -A /srv)\" ] && echo 'Init is not needed, /srv is not empty' || ( echo 'Init: /srv is empty preparing...'; ansible-playbook -vvv -i 'localhost,' -c local /opt/ansible/pmm2-docker/main.yml; ansible-playbook -vvv -i 'localhost,' -c local /opt/ansible/pmm2/post-build-actions.yml; ansible localhost -m include_role -a name=nginx --playbook-dir /usr/share/pmm-update/ansible/playbook/tasks/; echo 'Init: complete, /srv prepared' )"]
         volumeMounts:
         - name: pmm-volume
           mountPath: "/srv"
