@@ -144,14 +144,6 @@ func (s *PXCClusterService) ListPXCClusters(ctx context.Context, req *controller
 			Params:  params,
 			Exposed: cluster.Exposed,
 		}
-
-		if cluster.State == k8sclient.ClusterStatePaused {
-			if cluster.Pause {
-				res.Clusters[i].State = controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED
-			} else {
-				res.Clusters[i].State = controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING
-			}
-		}
 	}
 
 	return res, nil
@@ -299,7 +291,7 @@ func (s PXCClusterService) GetPXCClusterCredentials(ctx context.Context, req *co
 
 	cluster, err := client.GetPXCClusterCredentials(ctx, req.Name)
 	if err != nil {
-		if errors.Is(err, k8sclient.ErrPXCClusterNotReady) {
+		if errors.Is(err, k8sclient.ErrPXCClusterStateUnexpected) {
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		} else if errors.Is(err, k8sclient.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
