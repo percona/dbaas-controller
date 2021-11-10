@@ -44,8 +44,8 @@ var (
 	// PMM Server Params.
 	PMMServerParams *dbaasClient.PMMParams
 
-	// XtraDBClusterAPIClient contains client for dbaas-controller API related to XtraDB clusters.
-	XtraDBClusterAPIClient dbaasClient.XtraDBClusterAPIClient
+	// PXCClusterAPIClient contains client for dbaas-controller API related to XtraDB clusters.
+	PXCClusterAPIClient dbaasClient.PXCClusterAPIClient
 
 	// PSMDBClusterAPIClient contains client for dbaas-controller API related to PSMDB clusters.
 	PSMDBClusterAPIClient dbaasClient.PSMDBClusterAPIClient
@@ -131,7 +131,7 @@ func init() {
 	if err != nil {
 		logrus.Fatalf("failed to dial server: %s", err)
 	}
-	XtraDBClusterAPIClient = dbaasClient.NewXtraDBClusterAPIClient(cc)
+	PXCClusterAPIClient = dbaasClient.NewPXCClusterAPIClient(cc)
 	PSMDBClusterAPIClient = dbaasClient.NewPSMDBClusterAPIClient(cc)
 	KubernetesClusterAPIClient = dbaasClient.NewKubernetesClusterAPIClient(cc)
 	LogsAPIClient = dbaasClient.NewLogsAPIClient(cc)

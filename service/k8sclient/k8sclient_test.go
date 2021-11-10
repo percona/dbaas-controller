@@ -253,14 +253,14 @@ func TestK8sClient(t *testing.T) {
 		t.Parallel()
 		_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdb")
 		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
-		_, err = client.GetPXCClusterCredentials(ctx, "871f766d43f8e-xtradb")
+		_, err = client.GetPXCClusterCredentials(ctx, "871f766d43f8e-pxc")
 		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
 	})
 
 	var pmm *PMM
 	t.Run("PXC", func(t *testing.T) {
 		t.Parallel()
-		name := "test-cluster-xtradb"
+		name := "test-cluster-pxc"
 		_ = client.DeletePXCCluster(ctx, name)
 
 		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
@@ -376,7 +376,7 @@ func TestK8sClient(t *testing.T) {
 			}
 		})
 
-		t.Run("Upgrade Xtradb", func(t *testing.T) {
+		t.Run("Upgrade PXC", func(t *testing.T) {
 			err = client.UpdatePXCCluster(ctx, &PXCParams{
 				Name: name,
 				Size: 1,

@@ -42,9 +42,9 @@ func AssertGRPCErrorRE(tb testing.TB, expectedCode codes.Code, expectedMessageRE
 	assert.Regexp(tb, expectedMessageRE, s.Message(), "gRPC status message does not match")
 }
 
-func WaitForClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.XtraDBClusterState) error {
+func WaitForClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.DBClusterState) error {
 	for {
-		clusters, err := XtraDBClusterAPIClient.ListXtraDBClusters(Context, &controllerv1beta1.ListXtraDBClustersRequest{
+		clusters, err := PXCClusterAPIClient.ListPXCClusters(Context, &controllerv1beta1.ListPXCClustersRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: kubeconfig,
 			},

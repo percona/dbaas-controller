@@ -41,6 +41,8 @@ github.com/mwitkow/go-proto-validators v0.3.2 h1:qRlmpTzm2pstMKKzTdvwPCF5QfBNURS
 github.com/mwitkow/go-proto-validators v0.3.2/go.mod h1:ej0Qp0qMgHN/KtDyUt+Q1/tA7a5VarXUOUxD+oeD30w=
 github.com/percona-platform/dbaas-api v0.0.0-20210630090346-f95d2ec8b7c1 h1:NVOKRVwN+W6DGqhFltP33+w87HTg2IiHl3nRqFGMeeU=
 github.com/percona-platform/dbaas-api v0.0.0-20210630090346-f95d2ec8b7c1/go.mod h1:zgb9gTJusc8Jv2zRNAlWV0/XQ8IK+hwHMc9lIqfK0tM=
+github.com/percona-platform/dbaas-api v0.0.0-20211020162735-d1a1308ac529 h1:tht/pdZ+1HkSXnZ7XhszGROvHp0F0hrCCBlZ2PnXBeg=
+github.com/percona-platform/dbaas-api v0.0.0-20211020162735-d1a1308ac529/go.mod h1:zgb9gTJusc8Jv2zRNAlWV0/XQ8IK+hwHMc9lIqfK0tM=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

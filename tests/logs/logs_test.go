@@ -48,21 +48,21 @@ func TestGetLogs(t *testing.T) {
 	memoryBytes := int64(1024 * 1024 * 1024)
 	diskSize := int64(1024 * 1024 * 1024)
 
-	createXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.CreateXtraDBCluster(tests.Context, &controllerv1beta1.CreateXtraDBClusterRequest{
+	createPXCClusterResponse, err := tests.PXCClusterAPIClient.CreatePXCCluster(tests.Context, &controllerv1beta1.CreatePXCClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
-		Params: &controllerv1beta1.XtraDBClusterParams{
+		Params: &controllerv1beta1.PXCClusterParams{
 			ClusterSize: clusterSize,
-			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
+			Pxc: &controllerv1beta1.PXCClusterParams_PXC{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        cpuM,
 					MemoryBytes: memoryBytes,
 				},
 				DiskSize: diskSize,
 			},
-			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
+			Proxysql: &controllerv1beta1.PXCClusterParams_ProxySQL{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        cpuM,
 					MemoryBytes: memoryBytes,
@@ -73,7 +73,7 @@ func TestGetLogs(t *testing.T) {
 		Pmm: tests.PMMServerParams,
 	})
 	require.NoError(t, err)
-	require.NotNil(t, createXtraDBClusterResponse)
+	require.NotNil(t, createPXCClusterResponse)
 
 	request := &controllerv1beta1.GetLogsRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
@@ -84,7 +84,7 @@ func TestGetLogs(t *testing.T) {
 
 	t.Run("Get logs of initializing cluster", func(t *testing.T) {
 		t.Parallel()
-		err = tests.WaitForClusterState(tests.Context, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
+		err = tests.WaitForClusterState(tests.Context, kubeconfig, name, controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING)
 		require.NoError(t, err)
 		// Wait 5 seconds for pods to be scheduled.
 		time.Sleep(time.Second * 5)
@@ -93,7 +93,7 @@ func TestGetLogs(t *testing.T) {
 		assert.Equal(t, 0, len(response.Logs))
 	})
 
-	err = tests.WaitForClusterState(tests.Context, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
+	err = tests.WaitForClusterState(tests.Context, kubeconfig, name, controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_READY)
 	require.NoError(t, err)
 
 	response, err := tests.LogsAPIClient.GetLogs(tests.Context, request)
@@ -109,7 +109,7 @@ func TestGetLogs(t *testing.T) {
 	}
 	assert.LessOrEqual(t, sum(response.Logs), 1000)
 
-	_, err = tests.XtraDBClusterAPIClient.DeleteXtraDBCluster(tests.Context, &controllerv1beta1.DeleteXtraDBClusterRequest{
+	_, err = tests.PXCClusterAPIClient.DeletePXCCluster(tests.Context, &controllerv1beta1.DeletePXCClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
