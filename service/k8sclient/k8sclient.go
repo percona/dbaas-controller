@@ -605,7 +605,7 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 
 	if params.PXC != nil {
 		cluster.Spec.PXC.Resources = c.updateComputeResources(params.PXC.ComputeResources, cluster.Spec.PXC.Resources)
-		if params.PXC.Image != cluster.Spec.PXC.Image {
+		if params.PXC.Image != "" && params.PXC.Image != cluster.Spec.PXC.Image {
 			// Let's upgrade the cluster.
 			err = c.changeImageInCluster(&cluster, params.PXC.Image)
 			if err != nil {
@@ -1142,7 +1142,7 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	if params.Replicaset != nil {
 		cluster.Spec.Replsets[0].Resources = c.updateComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
 	}
-	if params.Image != cluster.Spec.Image {
+	if params.Image != "" && params.Image != cluster.Spec.Image {
 		// We want to upgrade the cluster.
 		err = c.changeImageInCluster(&cluster, params.Image)
 		if err != nil {
