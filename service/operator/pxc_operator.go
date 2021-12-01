@@ -27,19 +27,19 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
-const xtradbOperatorDeploymentName = "percona-xtradb-cluster-operator"
+const pxcOperatorDeploymentName = "percona-xtradb-cluster-operator"
 
-type XtraDBOperatorService struct {
+type PXCOperatorService struct {
 	p                    *message.Printer
 	manifestsURLTemplate string
 }
 
-// NewXtraDBOperatorService returns new XtraDBOperatorService instance.
-func NewXtraDBOperatorService(p *message.Printer, url string) *XtraDBOperatorService {
-	return &XtraDBOperatorService{p: p, manifestsURLTemplate: url}
+// NewPXCOperatorService returns new PXCOperatorService instance.
+func NewPXCOperatorService(p *message.Printer, url string) *PXCOperatorService {
+	return &PXCOperatorService{p: p, manifestsURLTemplate: url}
 }
 
-func (x XtraDBOperatorService) InstallXtraDBOperator(ctx context.Context, req *controllerv1beta1.InstallXtraDBOperatorRequest) (*controllerv1beta1.InstallXtraDBOperatorResponse, error) {
+func (x PXCOperatorService) InstallPXCOperator(ctx context.Context, req *controllerv1beta1.InstallPXCOperatorRequest) (*controllerv1beta1.InstallPXCOperatorResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -53,17 +53,17 @@ func (x XtraDBOperatorService) InstallXtraDBOperator(ctx context.Context, req *c
 	}
 
 	// NOTE: This does not handle corner case when user has deployed database clusters and operator is no longer installed.
-	if operators.XtradbOperatorVersion != "" {
-		err = client.UpdateOperator(ctx, req.Version, xtradbOperatorDeploymentName, x.manifestsURLTemplate)
+	if operators.PXCOperatorVersion != "" {
+		err = client.UpdateOperator(ctx, req.Version, pxcOperatorDeploymentName, x.manifestsURLTemplate)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		err = client.PatchAllPXCClusters(ctx, operators.XtradbOperatorVersion, req.Version)
+		err = client.PatchAllPXCClusters(ctx, operators.PXCOperatorVersion, req.Version)
 		if err != nil {
 			return nil, err
 		}
 
-		return new(controllerv1beta1.InstallXtraDBOperatorResponse), nil
+		return new(controllerv1beta1.InstallPXCOperatorResponse), nil
 	}
 
 	err = client.ApplyOperator(ctx, req.Version, x.manifestsURLTemplate)
@@ -71,5 +71,5 @@ func (x XtraDBOperatorService) InstallXtraDBOperator(ctx context.Context, req *c
 		return nil, err
 	}
 
-	return new(controllerv1beta1.InstallXtraDBOperatorResponse), nil
+	return new(controllerv1beta1.InstallPXCOperatorResponse), nil
 }

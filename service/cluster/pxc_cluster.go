@@ -31,25 +31,25 @@ import (
 )
 
 //nolint:gochecknoglobals
-// pxcStatesMap matches pxc app states to cluster states.
-var pxcStatesMap = map[k8sclient.ClusterState]controllerv1beta1.XtraDBClusterState{
-	k8sclient.ClusterStateInvalid:   controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_INVALID,
-	k8sclient.ClusterStateChanging:  controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING,
-	k8sclient.ClusterStateReady:     controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY,
-	k8sclient.ClusterStateFailed:    controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_FAILED,
-	k8sclient.ClusterStateDeleting:  controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_DELETING,
-	k8sclient.ClusterStateUpgrading: controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_UPGRADING,
-	k8sclient.ClusterStatePaused:    controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED,
+// dbClusterStatesMap matches pxc app states to cluster states.
+var dbClusterStatesMap = map[k8sclient.ClusterState]controllerv1beta1.DBClusterState{
+	k8sclient.ClusterStateInvalid:   controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_INVALID,
+	k8sclient.ClusterStateChanging:  controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING,
+	k8sclient.ClusterStateReady:     controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_READY,
+	k8sclient.ClusterStateFailed:    controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_FAILED,
+	k8sclient.ClusterStateDeleting:  controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_DELETING,
+	k8sclient.ClusterStatePaused:    controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED,
+	k8sclient.ClusterStateUpgrading: controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_UPGRADING,
 }
 
-// XtraDBClusterService implements methods of gRPC server and other business logic related to XtraDB clusters.
-type XtraDBClusterService struct {
+// PXCClusterService implements methods of gRPC server and other business logic related to PXC clusters.
+type PXCClusterService struct {
 	p *message.Printer
 }
 
-// NewXtraDBClusterService returns new XtraDBClusterService instance.
-func NewXtraDBClusterService(p *message.Printer) *XtraDBClusterService {
-	return &XtraDBClusterService{p: p}
+// NewPXCClusterService returns new PXCClusterService instance.
+func NewPXCClusterService(p *message.Printer) *PXCClusterService {
+	return &PXCClusterService{p: p}
 }
 
 // setComputeResources converts input resources and sets them to output compute resources.
@@ -72,20 +72,20 @@ func setComputeResources(inputResources *k8sclient.ComputeResources, outputResou
 	return nil
 }
 
-// ListXtraDBClusters returns a list of XtraDB clusters.
-func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *controllerv1beta1.ListXtraDBClustersRequest) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
+// ListPXCClusters returns a list of PXC clusters.
+func (s *PXCClusterService) ListPXCClusters(ctx context.Context, req *controllerv1beta1.ListPXCClustersRequest) (*controllerv1beta1.ListPXCClustersResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, s.p.Sprintf("Cannot initialize K8s client: %s", err))
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	xtradbClusters, err := client.ListXtraDBClusters(ctx)
+	xtradbClusters, err := client.ListPXCClusters(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	res := &controllerv1beta1.ListXtraDBClustersResponse{
-		Clusters: make([]*controllerv1beta1.ListXtraDBClustersResponse_Cluster, len(xtradbClusters)),
+	res := &controllerv1beta1.ListPXCClustersResponse{
+		Clusters: make([]*controllerv1beta1.ListPXCClustersResponse_Cluster, len(xtradbClusters)),
 	}
 
 	for i, cluster := range xtradbClusters {
@@ -93,9 +93,9 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		params := &controllerv1beta1.XtraDBClusterParams{
+		params := &controllerv1beta1.PXCClusterParams{
 			ClusterSize: cluster.Size,
-			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
+			Pxc: &controllerv1beta1.PXCClusterParams_PXC{
 				DiskSize: int64(pxcDiskSize),
 				Image:    cluster.PXC.Image,
 			},
@@ -106,7 +106,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
-			params.Proxysql = &controllerv1beta1.XtraDBClusterParams_ProxySQL{
+			params.Proxysql = &controllerv1beta1.PXCClusterParams_ProxySQL{
 				DiskSize: int64(proxySQLDiskSize),
 			}
 			params.Proxysql.ComputeResources = new(controllerv1beta1.ComputeResources)
@@ -117,7 +117,7 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 		}
 
 		if cluster.HAProxy != nil {
-			params.Haproxy = new(controllerv1beta1.XtraDBClusterParams_HAProxy)
+			params.Haproxy = new(controllerv1beta1.PXCClusterParams_HAProxy)
 			params.Haproxy.ComputeResources = new(controllerv1beta1.ComputeResources)
 			err = setComputeResources(cluster.HAProxy.ComputeResources, params.Haproxy.ComputeResources)
 			if err != nil {
@@ -133,9 +133,9 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 			}
 		}
 
-		res.Clusters[i] = &controllerv1beta1.ListXtraDBClustersResponse_Cluster{
+		res.Clusters[i] = &controllerv1beta1.ListPXCClustersResponse_Cluster{
 			Name:  cluster.Name,
-			State: pxcStatesMap[cluster.State],
+			State: dbClusterStatesMap[cluster.State],
 			Operation: &controllerv1beta1.RunningOperation{
 				FinishedSteps: cluster.DetailedState.CountReadyPods(),
 				TotalSteps:    cluster.DetailedState.CountAllPods(),
@@ -149,15 +149,15 @@ func (s *XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *cont
 	return res, nil
 }
 
-// CreateXtraDBCluster creates a new XtraDB cluster.
-func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *controllerv1beta1.CreateXtraDBClusterRequest) (*controllerv1beta1.CreateXtraDBClusterResponse, error) {
+// CreatePXCCluster creates a new PXC cluster.
+func (s *PXCClusterService) CreatePXCCluster(ctx context.Context, req *controllerv1beta1.CreatePXCClusterRequest) (*controllerv1beta1.CreatePXCClusterResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	params := &k8sclient.XtraDBParams{
+	params := &k8sclient.PXCParams{
 		Name: req.Name,
 		Size: req.Params.ClusterSize,
 		PXC: &k8sclient.PXC{
@@ -188,11 +188,11 @@ func (s *XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *con
 			Password:      req.Pmm.Password,
 		}
 	}
-	err = client.CreateXtraDBCluster(ctx, params)
+	err = client.CreatePXCCluster(ctx, params)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return new(controllerv1beta1.CreateXtraDBClusterResponse), nil
+	return new(controllerv1beta1.CreatePXCClusterResponse), nil
 }
 
 func computeResources(pxcRes *controllerv1beta1.ComputeResources) *k8sclient.ComputeResources {
@@ -205,8 +205,8 @@ func computeResources(pxcRes *controllerv1beta1.ComputeResources) *k8sclient.Com
 	}
 }
 
-// UpdateXtraDBCluster updates existing XtraDB cluster.
-func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *controllerv1beta1.UpdateXtraDBClusterRequest) (*controllerv1beta1.UpdateXtraDBClusterResponse, error) {
+// UpdatePXCCluster updates existing PXC cluster.
+func (s *PXCClusterService) UpdatePXCCluster(ctx context.Context, req *controllerv1beta1.UpdatePXCClusterRequest) (*controllerv1beta1.UpdatePXCClusterResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -217,7 +217,7 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 		return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
 	}
 
-	params := &k8sclient.XtraDBParams{
+	params := &k8sclient.PXCParams{
 		Name:    req.Name,
 		Size:    req.Params.ClusterSize,
 		Suspend: req.Params.Suspend,
@@ -243,55 +243,55 @@ func (s *XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *con
 		}
 	}
 
-	err = client.UpdateXtraDBCluster(ctx, params)
+	err = client.UpdatePXCCluster(ctx, params)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return new(controllerv1beta1.UpdateXtraDBClusterResponse), nil
+	return new(controllerv1beta1.UpdatePXCClusterResponse), nil
 }
 
-// DeleteXtraDBCluster deletes XtraDB cluster.
-func (s *XtraDBClusterService) DeleteXtraDBCluster(ctx context.Context, req *controllerv1beta1.DeleteXtraDBClusterRequest) (*controllerv1beta1.DeleteXtraDBClusterResponse, error) {
+// DeletePXCCluster deletes PXC cluster.
+func (s *PXCClusterService) DeletePXCCluster(ctx context.Context, req *controllerv1beta1.DeletePXCClusterRequest) (*controllerv1beta1.DeletePXCClusterResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	err = client.DeleteXtraDBCluster(ctx, req.Name)
+	err = client.DeletePXCCluster(ctx, req.Name)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return new(controllerv1beta1.DeleteXtraDBClusterResponse), nil
+	return new(controllerv1beta1.DeletePXCClusterResponse), nil
 }
 
-// RestartXtraDBCluster restarts XtraDB cluster.
-func (s *XtraDBClusterService) RestartXtraDBCluster(ctx context.Context, req *controllerv1beta1.RestartXtraDBClusterRequest) (*controllerv1beta1.RestartXtraDBClusterResponse, error) {
+// RestartPXCCluster restarts PXC cluster.
+func (s *PXCClusterService) RestartPXCCluster(ctx context.Context, req *controllerv1beta1.RestartPXCClusterRequest) (*controllerv1beta1.RestartPXCClusterResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	err = client.RestartXtraDBCluster(ctx, req.Name)
+	err = client.RestartPXCCluster(ctx, req.Name)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return new(controllerv1beta1.RestartXtraDBClusterResponse), nil
+	return new(controllerv1beta1.RestartPXCClusterResponse), nil
 }
 
-// GetXtraDBClusterCredentials returns an XtraDB cluster connection credentials.
-func (s XtraDBClusterService) GetXtraDBClusterCredentials(ctx context.Context, req *controllerv1beta1.GetXtraDBClusterCredentialsRequest) (*controllerv1beta1.GetXtraDBClusterCredentialsResponse, error) {
+// GetPXCClusterCredentials returns an PXC cluster connection credentials.
+func (s PXCClusterService) GetPXCClusterCredentials(ctx context.Context, req *controllerv1beta1.GetPXCClusterCredentialsRequest) (*controllerv1beta1.GetPXCClusterCredentialsResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	cluster, err := client.GetXtraDBClusterCredentials(ctx, req.Name)
+	cluster, err := client.GetPXCClusterCredentials(ctx, req.Name)
 	if err != nil {
-		if errors.Is(err, k8sclient.ErrClusterStateUnexpected) {
+		if errors.Is(err, k8sclient.ErrPXCClusterStateUnexpected) {
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		} else if errors.Is(err, k8sclient.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -299,8 +299,8 @@ func (s XtraDBClusterService) GetXtraDBClusterCredentials(ctx context.Context, r
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	resp := &controllerv1beta1.GetXtraDBClusterCredentialsResponse{
-		Credentials: &controllerv1beta1.XtraDBCredentials{
+	resp := &controllerv1beta1.GetPXCClusterCredentialsResponse{
+		Credentials: &controllerv1beta1.PXCCredentials{
 			Username: cluster.Username,
 			Password: cluster.Password,
 			Host:     cluster.Host,
@@ -313,5 +313,5 @@ func (s XtraDBClusterService) GetXtraDBClusterCredentials(ctx context.Context, r
 
 // Check interface.
 var (
-	_ controllerv1beta1.XtraDBClusterAPIServer = (*XtraDBClusterService)(nil)
+	_ controllerv1beta1.PXCClusterAPIServer = (*PXCClusterService)(nil)
 )

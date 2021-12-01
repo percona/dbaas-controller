@@ -253,23 +253,23 @@ func TestK8sClient(t *testing.T) {
 		t.Parallel()
 		_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdb")
 		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
-		_, err = client.GetXtraDBClusterCredentials(ctx, "871f766d43f8e-xtradb")
+		_, err = client.GetPXCClusterCredentials(ctx, "871f766d43f8e-pxc")
 		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
 	})
 
 	var pmm *PMM
-	t.Run("XtraDB", func(t *testing.T) {
+	t.Run("PXC", func(t *testing.T) {
 		t.Parallel()
-		name := "test-cluster-xtradb"
-		_ = client.DeleteXtraDBCluster(ctx, name)
+		name := "test-cluster-pxc"
+		_ = client.DeletePXCCluster(ctx, name)
 
-		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 			return cluster == nil
 		})
 
-		l.Info("No XtraDB Clusters running")
+		l.Info("No PXC Clusters running")
 
-		err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
+		err := client.CreatePXCCluster(ctx, &PXCParams{
 			Name: name,
 			Size: 1,
 			PXC: &PXC{
@@ -282,20 +282,20 @@ func TestK8sClient(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		l.Info("XtraDB Cluster is created")
+		l.Info("PXC Cluster is created")
 
-		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 			return cluster != nil && cluster.State != ClusterStateInvalid
 		})
 
-		t.Run("Make sure XtraDB cluster is in changing state right after creation", func(t *testing.T) {
-			cluster, err := getXtraDBCluster(ctx, client, name)
+		t.Run("Make sure PXC cluster is in changing state right after creation", func(t *testing.T) {
+			cluster, err := getPXCCluster(ctx, client, name)
 			require.NoError(t, err)
 			assert.Equal(t, ClusterStateChanging, cluster.State)
 		})
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
-			err = client.CreateXtraDBCluster(ctx, &XtraDBParams{
+			err = client.CreatePXCCluster(ctx, &PXCParams{
 				Name:     name,
 				Size:     1,
 				PXC:      &PXC{DiskSize: "1000000000"},
@@ -306,12 +306,12 @@ func TestK8sClient(t *testing.T) {
 			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
 		})
 
-		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
 
 		t.Run("All pods are ready", func(t *testing.T) {
-			cluster, err := getXtraDBCluster(ctx, client, name)
+			cluster, err := getPXCCluster(ctx, client, name)
 			require.NoError(t, err)
 			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
 			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
@@ -376,8 +376,8 @@ func TestK8sClient(t *testing.T) {
 			}
 		})
 
-		t.Run("Upgrade Xtradb", func(t *testing.T) {
-			err = client.UpdateXtraDBCluster(ctx, &XtraDBParams{
+		t.Run("Upgrade PXC", func(t *testing.T) {
+			err = client.UpdatePXCCluster(ctx, &PXCParams{
 				Name: name,
 				Size: 1,
 				PXC: &PXC{
@@ -389,60 +389,60 @@ func TestK8sClient(t *testing.T) {
 				VersionServiceURL: "https://check.percona.com",
 			})
 			require.NoError(t, err)
-			assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+			assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 				return cluster != nil && cluster.State == ClusterStateUpgrading
 			})
-			l.Infof("upgrade of XtraDB cluster %q has begun", name)
+			l.Infof("upgrade of PXC cluster %q has begun", name)
 
-			assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+			assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 				return cluster != nil && cluster.State == ClusterStateReady
 			})
-			l.Infof("XtraDB cluster %q has been upgraded", name)
+			l.Infof("PXC cluster %q has been upgraded", name)
 
-			cluster, err := getXtraDBCluster(ctx, client, name)
+			cluster, err := getPXCCluster(ctx, client, name)
 			require.NoError(t, err)
 			assert.Equal(t, "percona/percona-xtradb-cluster:8.0.20-11.2", cluster.PXC.Image)
 		})
 
-		err = client.RestartXtraDBCluster(ctx, name)
+		err = client.RestartPXCCluster(ctx, name)
 		require.NoError(t, err)
-		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateChanging
 		})
 
-		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
-		l.Info("XtraDB Cluster is restarted")
+		l.Info("PXC Cluster is restarted")
 
-		err = client.UpdateXtraDBCluster(ctx, &XtraDBParams{
+		err = client.UpdatePXCCluster(ctx, &PXCParams{
 			Name: name,
 			Size: 3,
 		})
 		require.NoError(t, err)
 
-		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 			if cluster != nil && cluster.State == ClusterStateReady {
 				assert.Equal(t, int32(3), cluster.Size)
 				return true
 			}
 			return false
 		})
-		l.Info("XtraDB Cluster is updated")
+		l.Info("PXC Cluster is updated")
 
-		err = client.DeleteXtraDBCluster(ctx, name)
+		err = client.DeletePXCCluster(ctx, name)
 		require.NoError(t, err)
 
-		assertListXtraDBCluster(ctx, t, client, name, func(cluster *XtraDBCluster) bool {
+		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 			return cluster == nil
 		})
-		l.Info("XtraDB Cluster is deleted")
+		l.Info("PXC Cluster is deleted")
 	})
 
-	t.Run("Create XtraDB with HAProxy", func(t *testing.T) {
+	t.Run("Create PXC with HAProxy", func(t *testing.T) {
 		t.Parallel()
 		clusterName := "test-pxc-haproxy"
-		err := client.CreateXtraDBCluster(ctx, &XtraDBParams{
+		err := client.CreatePXCCluster(ctx, &PXCParams{
 			Name:    clusterName,
 			Size:    1,
 			PXC:     &PXC{DiskSize: "1000000000"},
@@ -450,15 +450,15 @@ func TestK8sClient(t *testing.T) {
 			PMM:     pmm,
 		})
 		require.NoError(t, err)
-		assertListXtraDBCluster(ctx, t, client, clusterName, func(cluster *XtraDBCluster) bool {
+		assertListPXCCluster(ctx, t, client, clusterName, func(cluster *PXCCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
 
 		// Test listing.
-		clusters, err := client.ListXtraDBClusters(ctx)
+		clusters, err := client.ListPXCClusters(ctx)
 		require.NoError(t, err)
 		assert.Conditionf(t,
-			func(clusters []XtraDBCluster, clusterName string) assert.Comparison {
+			func(clusters []PXCCluster, clusterName string) assert.Comparison {
 				return func() bool {
 					for _, cluster := range clusters {
 						if cluster.Name == clusterName {
@@ -472,7 +472,7 @@ func TestK8sClient(t *testing.T) {
 			clusterName,
 		)
 
-		err = client.DeleteXtraDBCluster(ctx, clusterName)
+		err = client.DeletePXCCluster(ctx, clusterName)
 		require.NoError(t, err)
 	})
 
@@ -606,7 +606,7 @@ func TestK8sClient(t *testing.T) {
 		require.NotNil(t, operators)
 		_, err = goversion.NewVersion(operators.PsmdbOperatorVersion)
 		require.NoError(t, err)
-		_, err = goversion.NewVersion(operators.XtradbOperatorVersion)
+		_, err = goversion.NewVersion(operators.PXCOperatorVersion)
 		require.NoError(t, err)
 	})
 }
@@ -629,9 +629,9 @@ func getPSMDBCluster(ctx context.Context, client *K8sClient, name string) (*PSMD
 	return nil, ErrNoSuchCluster
 }
 
-func getXtraDBCluster(ctx context.Context, client *K8sClient, name string) (*XtraDBCluster, error) {
+func getPXCCluster(ctx context.Context, client *K8sClient, name string) (*PXCCluster, error) {
 	l := logger.Get(ctx)
-	clusters, err := client.ListXtraDBClusters(ctx)
+	clusters, err := client.ListPXCClusters(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -644,13 +644,13 @@ func getXtraDBCluster(ctx context.Context, client *K8sClient, name string) (*Xtr
 	return nil, ErrNoSuchCluster
 }
 
-func assertListXtraDBCluster(ctx context.Context, t *testing.T, client *K8sClient, name string, conditionFunc func(cluster *XtraDBCluster) bool) {
+func assertListPXCCluster(ctx context.Context, t *testing.T, client *K8sClient, name string, conditionFunc func(cluster *PXCCluster) bool) {
 	t.Helper()
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 	for {
 		time.Sleep(5 * time.Second)
-		cluster, err := getXtraDBCluster(timeoutCtx, client, name)
+		cluster, err := getPXCCluster(timeoutCtx, client, name)
 		if !errors.Is(err, ErrNoSuchCluster) {
 			require.NoError(t, err)
 		}

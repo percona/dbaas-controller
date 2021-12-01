@@ -97,7 +97,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	assert.True(t, clusterFound)
 
 	t.Log("Waiting for cluster to be ready")
-	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_READY)
 	assert.NoError(t, err)
 
 	// There is no Ingress in minikube
@@ -143,7 +143,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	assert.Nil(t, upresp)
 
 	t.Log("Wating for cluster to be ready after update")
-	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_READY)
 	require.NoError(t, err)
 
 	clusterFound = false
@@ -188,7 +188,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	assert.NotNil(t, suspendResp)
 
 	t.Log("Waiting for cluster to be suspended")
-	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED)
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED)
 	require.NoError(t, err)
 
 	// Resume cluster
@@ -207,7 +207,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	assert.NotNil(t, resumeResp)
 
 	t.Log("Waiting for cluster to be resumend")
-	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY)
+	err = waitForPSMDBClusterState(tests.Context, kubeconfig, name, controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_READY)
 	require.NoError(t, err)
 
 	deletePSMDBClusterResponse, err := tests.PSMDBClusterAPIClient.DeletePSMDBCluster(tests.Context, &controllerv1beta1.DeletePSMDBClusterRequest{
@@ -220,7 +220,7 @@ func TestPSMDBClusterAPI(t *testing.T) {
 	require.NotNil(t, deletePSMDBClusterResponse)
 }
 
-func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.PSMDBClusterState) error {
+func waitForPSMDBClusterState(ctx context.Context, kubeconfig string, name string, state controllerv1beta1.DBClusterState) error {
 	for {
 		clusters, err := tests.PSMDBClusterAPIClient.ListPSMDBClusters(tests.Context, &controllerv1beta1.ListPSMDBClustersRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{

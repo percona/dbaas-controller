@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package xtradbcluster
+package pxccluster
 
 import (
 	"context"
@@ -28,7 +28,7 @@ import (
 	"github.com/percona-platform/dbaas-controller/tests"
 )
 
-func TestXtraDBClusterAPI(t *testing.T) {
+func TestPXCClusterAPI(t *testing.T) {
 	// PERCONA_TEST_DBAAS_KUBECONFIG=$(minikube kubectl -- config view --flatten --minify --output json)
 	kubeconfig := os.Getenv("PERCONA_TEST_DBAAS_KUBECONFIG")
 	if kubeconfig == "" {
@@ -39,7 +39,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 
 	ctx := context.TODO()
 
-	clusters, err := tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
+	clusters, err := tests.PXCClusterAPIClient.ListPXCClusters(tests.Context, &controllerv1beta1.ListPXCClustersRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
@@ -59,21 +59,21 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	memoryBytes := int64(1024 * 1024 * 1024)
 	diskSize := int64(1024 * 1024 * 1024)
 
-	createXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.CreateXtraDBCluster(tests.Context, &controllerv1beta1.CreateXtraDBClusterRequest{
+	createPXCClusterResponse, err := tests.PXCClusterAPIClient.CreatePXCCluster(tests.Context, &controllerv1beta1.CreatePXCClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
-		Params: &controllerv1beta1.XtraDBClusterParams{
+		Params: &controllerv1beta1.PXCClusterParams{
 			ClusterSize: clusterSize,
-			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
+			Pxc: &controllerv1beta1.PXCClusterParams_PXC{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        cpuM,
 					MemoryBytes: memoryBytes,
 				},
 				DiskSize: diskSize,
 			},
-			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
+			Proxysql: &controllerv1beta1.PXCClusterParams_ProxySQL{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        cpuM,
 					MemoryBytes: memoryBytes,
@@ -84,12 +84,12 @@ func TestXtraDBClusterAPI(t *testing.T) {
 		Pmm: tests.PMMServerParams,
 	})
 	require.NoError(t, err)
-	require.NotNil(t, createXtraDBClusterResponse)
+	require.NotNil(t, createPXCClusterResponse)
 
 	// This gets the list of cluster immediately after after the creation.
 	// At this point, k8 doesn't return a valid status (returns empty status) but our controller should
 	// return CLUSTER_STATE_CHANGING. That's what we check here.
-	clusters, err = tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
+	clusters, err = tests.PXCClusterAPIClient.ListPXCClusters(tests.Context, &controllerv1beta1.ListPXCClustersRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
@@ -98,15 +98,15 @@ func TestXtraDBClusterAPI(t *testing.T) {
 
 	for _, cluster := range clusters.Clusters {
 		if cluster.Name == name {
-			assert.Equal(t, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING, cluster.State)
+			assert.Equal(t, controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING, cluster.State)
 			break
 		}
 	}
 
-	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
+	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_READY)
 	assert.NoError(t, err)
 
-	clusters, err = tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
+	clusters, err = tests.PXCClusterAPIClient.ListPXCClusters(tests.Context, &controllerv1beta1.ListPXCClustersRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
@@ -125,7 +125,7 @@ func TestXtraDBClusterAPI(t *testing.T) {
 
 	// There is no Ingress in minikube
 	if os.Getenv("IN_EKS") != "" {
-		cluster, err := tests.XtraDBClusterAPIClient.GetXtraDBClusterCredentials(tests.Context, &controllerv1beta1.GetXtraDBClusterCredentialsRequest{
+		cluster, err := tests.PXCClusterAPIClient.GetPXCClusterCredentials(tests.Context, &controllerv1beta1.GetPXCClusterCredentialsRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: kubeconfig,
 			},
@@ -138,19 +138,19 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	clusterSize = 3
 	memoryBytes = 512 * 1024 * 1024 * 2
 
-	updateClusterReq := &controllerv1beta1.UpdateXtraDBClusterRequest{
+	updateClusterReq := &controllerv1beta1.UpdatePXCClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
-		Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+		Params: &controllerv1beta1.UpdatePXCClusterRequest_UpdatePXCClusterParams{
 			ClusterSize: clusterSize,
-			Pxc: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
+			Pxc: &controllerv1beta1.UpdatePXCClusterRequest_UpdatePXCClusterParams_PXC{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					MemoryBytes: memoryBytes,
 				},
 			},
-			Proxysql: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
+			Proxysql: &controllerv1beta1.UpdatePXCClusterRequest_UpdatePXCClusterParams_ProxySQL{
 				ComputeResources: &controllerv1beta1.ComputeResources{
 					MemoryBytes: memoryBytes,
 				},
@@ -160,25 +160,25 @@ func TestXtraDBClusterAPI(t *testing.T) {
 
 	t.Log("Before first update")
 
-	updateXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.UpdateXtraDBCluster(tests.Context, updateClusterReq)
+	updatePXCClusterResponse, err := tests.PXCClusterAPIClient.UpdatePXCCluster(tests.Context, updateClusterReq)
 	assert.NoError(t, err)
-	assert.NotNil(t, updateXtraDBClusterResponse)
+	assert.NotNil(t, updatePXCClusterResponse)
 
 	t.Log("Waiting for cluster into changing state")
-	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
+	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING)
 	assert.NoError(t, err)
 
 	t.Log("Before second update")
 
 	// Cannot run a second update while the first haven't finish yet
-	updateXtraDBClusterResponse, err = tests.XtraDBClusterAPIClient.UpdateXtraDBCluster(tests.Context, updateClusterReq)
+	updatePXCClusterResponse, err = tests.PXCClusterAPIClient.UpdatePXCCluster(tests.Context, updateClusterReq)
 	assert.Error(t, err)
-	assert.Nil(t, updateXtraDBClusterResponse)
+	assert.Nil(t, updatePXCClusterResponse)
 
-	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING)
+	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING)
 	require.NoError(t, err)
 
-	clusters, err = tests.XtraDBClusterAPIClient.ListXtraDBClusters(tests.Context, &controllerv1beta1.ListXtraDBClustersRequest{
+	clusters, err = tests.PXCClusterAPIClient.ListPXCClusters(tests.Context, &controllerv1beta1.ListPXCClustersRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
@@ -188,58 +188,58 @@ func TestXtraDBClusterAPI(t *testing.T) {
 	assert.Equal(t, memoryBytes, clusters.Clusters[0].Params.Pxc.ComputeResources.MemoryBytes)
 	assert.Equal(t, memoryBytes, clusters.Clusters[0].Params.Proxysql.ComputeResources.MemoryBytes)
 
-	suspendClusterReq := &controllerv1beta1.UpdateXtraDBClusterRequest{
+	suspendClusterReq := &controllerv1beta1.UpdatePXCClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
-		Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+		Params: &controllerv1beta1.UpdatePXCClusterRequest_UpdatePXCClusterParams{
 			Suspend: true,
 		},
 	}
 	t.Log("Before suspend")
 
 	// Cannot run a second update while the first haven't finish yet
-	suspendXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.UpdateXtraDBCluster(tests.Context, suspendClusterReq)
+	suspendPXCClusterResponse, err := tests.PXCClusterAPIClient.UpdatePXCCluster(tests.Context, suspendClusterReq)
 	assert.Error(t, err)
-	assert.Nil(t, suspendXtraDBClusterResponse)
+	assert.Nil(t, suspendPXCClusterResponse)
 
-	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED)
+	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED)
 	require.NoError(t, err)
 
-	resumeClusterReq := &controllerv1beta1.UpdateXtraDBClusterRequest{
+	resumeClusterReq := &controllerv1beta1.UpdatePXCClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
-		Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+		Params: &controllerv1beta1.UpdatePXCClusterRequest_UpdatePXCClusterParams{
 			Resume: true,
 		},
 	}
 	t.Log("Before resume")
 
-	resumeXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.UpdateXtraDBCluster(tests.Context, resumeClusterReq)
+	resumePXCClusterResponse, err := tests.PXCClusterAPIClient.UpdatePXCCluster(tests.Context, resumeClusterReq)
 	assert.Error(t, err)
-	assert.Nil(t, resumeXtraDBClusterResponse)
+	assert.Nil(t, resumePXCClusterResponse)
 
-	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY)
+	err = tests.WaitForClusterState(ctx, kubeconfig, name, controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_READY)
 	require.NoError(t, err)
 
-	restartXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.RestartXtraDBCluster(tests.Context, &controllerv1beta1.RestartXtraDBClusterRequest{
+	restartPXCClusterResponse, err := tests.PXCClusterAPIClient.RestartPXCCluster(tests.Context, &controllerv1beta1.RestartPXCClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
 	})
 	require.NoError(t, err)
-	require.NotNil(t, restartXtraDBClusterResponse)
+	require.NotNil(t, restartPXCClusterResponse)
 
-	deleteXtraDBClusterResponse, err := tests.XtraDBClusterAPIClient.DeleteXtraDBCluster(tests.Context, &controllerv1beta1.DeleteXtraDBClusterRequest{
+	deletePXCClusterResponse, err := tests.PXCClusterAPIClient.DeletePXCCluster(tests.Context, &controllerv1beta1.DeletePXCClusterRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeconfig,
 		},
 		Name: name,
 	})
 	require.NoError(t, err)
-	require.NotNil(t, deleteXtraDBClusterResponse)
+	require.NotNil(t, deletePXCClusterResponse)
 }
