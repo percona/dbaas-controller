@@ -111,7 +111,7 @@ type PerconaServerMongoDBSpec struct {
 	UpdateStrategy          string                 `json:"updateStrategy,omitempty"`
 	UpgradeOptions          *common.UpgradeOptions `json:"upgradeOptions,omitempty"`
 	CRVersion               string                 `json:"crVersion,omitempty"`
-	Pause                   bool                   `json:"pause,omitempty"`
+	Pause                   bool                   `json:"pause"`
 	UnsafeConf              bool                   `json:"allowUnsafeConfigurations"`
 	RunUID                  int64                  `json:"runUid,omitempty"`
 	Platform                *platform              `json:"platform,omitempty"`
@@ -162,6 +162,8 @@ const (
 	AppStateReady AppState = "ready"
 	// AppStateError error application state.
 	AppStateError AppState = "error"
+	// AppStatePaused paused application state.
+	AppStatePaused AppState = "paused"
 )
 
 // PerconaServerMongoDBStatus defines the observed state of PerconaServerMongoDB.

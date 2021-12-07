@@ -305,6 +305,7 @@ var psmdbStatesMap = map[psmdb.AppState]ClusterState{ //nolint:gochecknoglobals
 	psmdb.AppStateInit:    ClusterStateChanging,
 	psmdb.AppStateReady:   ClusterStateReady,
 	psmdb.AppStateError:   ClusterStateFailed,
+	psmdb.AppStatePaused:  ClusterStatePaused,
 }
 
 var (
@@ -849,6 +850,35 @@ func (c *K8sClient) getPXCState(ctx context.Context, cluster *pxc.PerconaXtraDBC
 	return clusterState
 }
 
+func (c *K8sClient) getPSMDBState(ctx context.Context, cluster *psmdb.PerconaServerMongoDB, crAndPodsMatchFunc func(context.Context, common.DatabaseCluster) (bool, error)) ClusterState {
+	if cluster == nil || cluster.Status == nil {
+		return ClusterStateInvalid
+	}
+	// Handle paused state for operator version >= 1.9.0 and for operator version <= 1.8.0.
+	if cluster.Status.Status == psmdb.AppStatePaused || (cluster.Spec.Pause && cluster.Status.Status == psmdb.AppStateReady) {
+		return ClusterStatePaused
+	}
+
+	clusterState, ok := psmdbStatesMap[cluster.Status.Status]
+	if !ok {
+		c.l.Warnf("failed to recognize cluster state: %q, setting status to ClusterStateChanging", cluster.Status.Status)
+		return ClusterStateChanging
+	}
+	if clusterState == ClusterStateChanging {
+		// Check if cr and pods version matches.
+		match, err := crAndPodsMatchFunc(ctx, cluster)
+		if err != nil {
+			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.Name, err)
+			return ClusterStateInvalid
+		}
+		if match {
+			return ClusterStateChanging
+		}
+		return ClusterStateUpgrading
+	}
+	return clusterState
+}
+
 // getDeletingClusters returns clusters which are not fully deleted yet.
 func (c *K8sClient) getDeletingClusters(ctx context.Context, managedBy string, runningClusters map[string]struct{}) ([]Cluster, error) {
 	var list common.PodList
@@ -1124,17 +1154,20 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return err
 	}
 
+	clusterState := c.getPSMDBState(ctx, &cluster, c.crVersionMatchesPodsVersion)
+	if params.Resume && clusterState == ClusterStatePaused {
+		cluster.Spec.Pause = false
+		return c.kubeCtl.Apply(ctx, &cluster)
+	}
+
 	// This is to prevent concurrent updates
-	if cluster.Status == nil || cluster.Status.Status != psmdb.AppStateReady {
+	if clusterState != ClusterStateReady {
 		return errors.Wrap(ErrPSMDBClusterNotReady, "cluster is not in ready state") //nolint:wrapcheck
 	}
 	if params.Size > 0 {
 		cluster.Spec.Replsets[0].Size = params.Size
 	}
 
-	if params.Resume {
-		cluster.Spec.Pause = false
-	}
 	if params.Suspend {
 		cluster.Spec.Pause = true
 	}
@@ -1293,7 +1326,6 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 		val := PSMDBCluster{
 			Name:  cluster.Name,
 			Size:  cluster.Spec.Replsets[0].Size,
-			State: getReplicasetStatus(cluster),
 			Pause: cluster.Spec.Pause,
 			Replicaset: &Replicaset{
 				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
@@ -1322,56 +1354,10 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 			val.Message = message
 		}
 
-		match, err := c.crVersionMatchesPodsVersion(ctx, &cluster)
-		if err != nil {
-			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.Name, err)
-			val.State = ClusterStateInvalid
-			res[i] = val
-			continue
-		}
-		if match {
-			val.State = getReplicasetStatus(cluster)
-		} else {
-			val.State = ClusterStateUpgrading
-		}
-
+		val.State = c.getPSMDBState(ctx, &cluster, c.crVersionMatchesPodsVersion)
 		res[i] = val
 	}
 	return res, nil
-}
-
-/*
-  When a cluster is being initialized but there are not enough nodes to form a cluster (less than 3)
-  the operator returns State=Error but that's not the real cluster state.
-  While the cluster is being initialized, we need to return the lowest state value found in the
-  replicaset list of members.
-*/
-func getReplicasetStatus(cluster psmdb.PerconaServerMongoDB) ClusterState {
-	if cluster.Status == nil {
-		return ClusterStateInvalid
-	}
-	if strings.ToLower(string(cluster.Status.Status)) != string(psmdb.AppStateError) {
-		return psmdbStatesMap[cluster.Status.Status]
-	}
-
-	if len(cluster.Status.Replsets) == 0 {
-		return ClusterStateInvalid
-	}
-
-	// We shouldn't return ready state.
-	status := ClusterStateFailed
-
-	// We need to extract the lowest value so the first time, that's the lowest value.
-	// Its is not possible to get the initial value in other way since cluster.Status.Replsets is a map
-	// not an array.
-	for _, replset := range cluster.Status.Replsets {
-		replStatus := psmdbStatesMap[replset.Status]
-		if replStatus < status {
-			status = replStatus
-		}
-	}
-
-	return status
 }
 
 // getDeletingPSMDBClusters returns Percona Server for MongoDB clusters which are not fully deleted yet.
