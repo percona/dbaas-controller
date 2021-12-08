@@ -113,6 +113,7 @@ const expected = `
             "image": "percona/percona-server-mongodb-operator:1.4.0-backup",
             "serviceAccountName": "percona-server-mongodb-operator"
         },
+		"pause": false,
         "pmm": {}
     }
 }
