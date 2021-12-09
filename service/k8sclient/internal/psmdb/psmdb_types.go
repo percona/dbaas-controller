@@ -162,8 +162,10 @@ const (
 	AppStateReady AppState = "ready"
 	// AppStateError error application state.
 	AppStateError AppState = "error"
-	// AppStatePaused paused application state.
+	// AppStatePaused paused application state. Available only in the operator >= 1.9.0.
 	AppStatePaused AppState = "paused"
+	// AppStateStopping means cluster is stopping. Available only in the operator >= 1.9.0.
+	AppStateStopping AppState = "stopping"
 )
 
 // PerconaServerMongoDBStatus defines the observed state of PerconaServerMongoDB.

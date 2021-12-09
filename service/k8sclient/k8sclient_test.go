@@ -39,6 +39,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
@@ -1015,6 +1016,150 @@ func TestGetPXCState(t *testing.T) {
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
 			t.Parallel()
 			clusterState := c.getPXCState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
+				return tt.crAndPodsVersionMatches, tt.matchingError
+			})
+			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
+		})
+	}
+}
+
+func TestGetPSMDBState(t *testing.T) {
+	t.Parallel()
+	type getPSMDBStateTestCase struct {
+		matchingError           error
+		cluster                 *psmdb.PerconaServerMongoDB
+		expectedState           ClusterState
+		crAndPodsVersionMatches bool
+	}
+	testCases := []getPSMDBStateTestCase{
+		{
+			expectedState: ClusterStateInvalid,
+		},
+		{
+			cluster:       new(psmdb.PerconaServerMongoDB),
+			expectedState: ClusterStateInvalid,
+		},
+		// Initializing.
+		{
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: false,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: psmdb.AppStateInit},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+		// Ready.
+		{
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: false,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: psmdb.AppStateReady},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateReady,
+		},
+		// Pausing related states.
+		{
+			// Cluster is being paused, pxc operator <= 1.8.0.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: true,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: psmdb.AppStateInit},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+		{
+			// Cluster is being paused, pxc operator >= 1.9.0.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: true,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: psmdb.AppStateStopping},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+		{
+			// Cluster is paused = no cluster pods.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: true,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: psmdb.AppStateReady},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStatePaused,
+		},
+		{
+			// Cluster is paused = no cluster pods.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: true,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: psmdb.AppStatePaused},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStatePaused,
+		},
+		{
+			// Cluster just got instructed to resume.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: false,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: psmdb.AppStateInit},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+		// Upgrading.
+		{
+			// No failure during checking cr and pods version.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: false,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: psmdb.AppStateInit},
+			},
+			crAndPodsVersionMatches: false,
+			expectedState:           ClusterStateUpgrading,
+		},
+		{
+			// Checking cr and pods version failed.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: false,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: psmdb.AppStateInit},
+			},
+			crAndPodsVersionMatches: false,
+			matchingError:           errors.New("example error"),
+			expectedState:           ClusterStateInvalid,
+		},
+		{
+			// Not implemented state of the cluster.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: false,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: "notimplemented"},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+	}
+	ctx := context.Background()
+	c, _ := New(ctx, "")
+	for i, test := range testCases {
+		tt := test
+		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
+			t.Parallel()
+			clusterState := c.getPSMDBState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
 				return tt.crAndPodsVersionMatches, tt.matchingError
 			})
 			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")

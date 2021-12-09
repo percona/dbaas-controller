@@ -300,12 +300,13 @@ var pxcStatesMap = map[pxc.AppState]ClusterState{ //nolint:gochecknoglobals
 
 // psmdbStatesMap matches psmdb app states to cluster states.
 var psmdbStatesMap = map[psmdb.AppState]ClusterState{ //nolint:gochecknoglobals
-	psmdb.AppStateUnknown: ClusterStateInvalid,
-	psmdb.AppStatePending: ClusterStateChanging,
-	psmdb.AppStateInit:    ClusterStateChanging,
-	psmdb.AppStateReady:   ClusterStateReady,
-	psmdb.AppStateError:   ClusterStateFailed,
-	psmdb.AppStatePaused:  ClusterStatePaused,
+	psmdb.AppStateUnknown:  ClusterStateInvalid,
+	psmdb.AppStatePending:  ClusterStateChanging,
+	psmdb.AppStateInit:     ClusterStateChanging,
+	psmdb.AppStateReady:    ClusterStateReady,
+	psmdb.AppStateError:    ClusterStateFailed,
+	psmdb.AppStatePaused:   ClusterStatePaused,
+	psmdb.AppStateStopping: ClusterStateChanging,
 }
 
 var (
