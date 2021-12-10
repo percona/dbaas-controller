@@ -901,7 +901,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -912,7 +912,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateReady},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateReady},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateReady,
@@ -924,7 +924,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: true,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -935,7 +935,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: true,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateStopping},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateStopping},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -946,7 +946,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: true,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateReady},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateReady},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStatePaused,
@@ -957,7 +957,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: true,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStatePaused},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStatePaused},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStatePaused,
@@ -968,7 +968,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -980,7 +980,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: false,
 			expectedState:           ClusterStateUpgrading,
@@ -991,7 +991,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: false,
 			matchingError:           errors.New("example error"),
