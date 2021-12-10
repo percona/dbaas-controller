@@ -1219,22 +1219,21 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
-	if cluster.Status == nil || cluster.Status.Status != psmdb.AppStateReady {
+
+	clusterState := c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
+	if clusterState != ClusterStateReady {
 		return nil, errors.Wrap(ErrPSMDBClusterNotReady, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
 
 	password := ""
 	username := ""
 	var secret common.Secret
-	// Retrieve secrets only for initializing or ready cluster.
-	if cluster.Status.Status == psmdb.AppStateReady || cluster.Status.Status == psmdb.AppStateInit {
-		err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(psmdbSecretNameTmpl, name), &secret)
-		if err != nil {
-			return nil, errors.Wrap(err, "cannot get PSMDB cluster secrets")
-		}
-		username = string(secret.Data["MONGODB_USER_ADMIN_USER"])
-		password = string(secret.Data["MONGODB_USER_ADMIN_PASSWORD"])
+	err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(psmdbSecretNameTmpl, name), &secret)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot get PSMDB cluster secrets")
 	}
+	username = string(secret.Data["MONGODB_USER_ADMIN_USER"])
+	password = string(secret.Data["MONGODB_USER_ADMIN_PASSWORD"])
 
 	credentials := &PSMDBCredentials{
 		Username:   username,
