@@ -70,6 +70,22 @@ func (p *PerconaServerMongoDB) DatabasePodLabels() []string {
 	return []string{"app.kubernetes.io/instance=" + p.Name, "app.kubernetes.io/part-of=percona-server-mongodb"}
 }
 
+// Pause returns bool indicating if cluster should be paused.
+func (p *PerconaServerMongoDB) Pause() bool {
+	if p == nil || p.Spec == nil {
+		return false
+	}
+	return p.Spec.Pause
+}
+
+// State get's clusters state.
+func (p *PerconaServerMongoDB) State() common.AppState {
+	if p == nil || p.Status == nil {
+		return common.AppStateUnknown
+	}
+	return p.Status.Status
+}
+
 // PerconaServerMongoDBList holds a list of PSMDB objects.
 type PerconaServerMongoDBList struct {
 	common.TypeMeta // anonymous for embedding
@@ -132,45 +148,25 @@ type replsetMemberStatus struct {
 }
 
 type appStatus struct {
-	Size   int32    `json:"size,omitempty"`
-	Ready  int32    `json:"ready,omitempty"`
-	Status AppState `json:"status,omitempty"`
+	Size   int32           `json:"size,omitempty"`
+	Ready  int32           `json:"ready,omitempty"`
+	Status common.AppState `json:"status,omitempty"`
 }
 
 type replsetStatus struct {
 	Members     []*replsetMemberStatus `json:"members,omitempty"`
 	ClusterRole clusterRole            `json:"clusterRole,omitempty"`
 
-	Initialized bool     `json:"initialized,omitempty"`
-	Size        int32    `json:"size"`
-	Ready       int32    `json:"ready"`
-	Status      AppState `json:"status,omitempty"`
-	Message     string   `json:"message,omitempty"`
+	Initialized bool            `json:"initialized,omitempty"`
+	Size        int32           `json:"size"`
+	Ready       int32           `json:"ready"`
+	Status      common.AppState `json:"status,omitempty"`
+	Message     string          `json:"message,omitempty"`
 }
-
-// AppState application state.
-type AppState string
-
-const (
-	// AppStateUnknown unknown application state.
-	AppStateUnknown AppState = "unknown"
-	// AppStatePending pending application state.
-	AppStatePending AppState = "pending"
-	// AppStateInit initializing application state.
-	AppStateInit AppState = "initializing"
-	// AppStateReady ready application state.
-	AppStateReady AppState = "ready"
-	// AppStateError error application state.
-	AppStateError AppState = "error"
-	// AppStatePaused paused application state. Available only in the operator >= 1.9.0.
-	AppStatePaused AppState = "paused"
-	// AppStateStopping means cluster is stopping. Available only in the operator >= 1.9.0.
-	AppStateStopping AppState = "stopping"
-)
 
 // PerconaServerMongoDBStatus defines the observed state of PerconaServerMongoDB.
 type PerconaServerMongoDBStatus struct {
-	Status             AppState                  `json:"state,omitempty"`
+	Status             common.AppState           `json:"state,omitempty"`
 	Message            string                    `json:"message,omitempty"`
 	Conditions         []clusterCondition        `json:"conditions,omitempty"`
 	Mongos             appStatus                 `json:"mongos,omitempty"`

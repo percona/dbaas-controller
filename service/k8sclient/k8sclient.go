@@ -288,25 +288,13 @@ type StorageClass struct {
 	} `json:"metadata"`
 }
 
-// pxcStatesMap matches pxc app states to cluster states.
-var pxcStatesMap = map[pxc.AppState]ClusterState{ //nolint:gochecknoglobals
-	pxc.AppStateUnknown:  ClusterStateInvalid,
-	pxc.AppStateInit:     ClusterStateChanging,
-	pxc.AppStateReady:    ClusterStateReady,
-	pxc.AppStateError:    ClusterStateFailed,
-	pxc.AppStatePaused:   ClusterStatePaused,
-	pxc.AppStateStopping: ClusterStateChanging,
-}
-
-// psmdbStatesMap matches psmdb app states to cluster states.
-var psmdbStatesMap = map[psmdb.AppState]ClusterState{ //nolint:gochecknoglobals
-	psmdb.AppStateUnknown:  ClusterStateInvalid,
-	psmdb.AppStatePending:  ClusterStateChanging,
-	psmdb.AppStateInit:     ClusterStateChanging,
-	psmdb.AppStateReady:    ClusterStateReady,
-	psmdb.AppStateError:    ClusterStateFailed,
-	psmdb.AppStatePaused:   ClusterStatePaused,
-	psmdb.AppStateStopping: ClusterStateChanging,
+// clustertatesMap matches pxc and psmdb app states to cluster states.
+var clusterStatesMap = map[common.AppState]ClusterState{ //nolint:gochecknoglobals
+	common.AppStateInit:     ClusterStateChanging,
+	common.AppStateReady:    ClusterStateReady,
+	common.AppStateError:    ClusterStateFailed,
+	common.AppStatePaused:   ClusterStatePaused,
+	common.AppStateStopping: ClusterStateChanging,
 }
 
 var (
@@ -579,7 +567,7 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 		return err
 	}
 
-	clusterState := c.getPXCState(ctx, &cluster, c.crVersionMatchesPodsVersion)
+	clusterState := c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
 
 	// Only if cluster is paused, allow resuming it. All other modifications are forbinden.
 	if params.Resume && clusterState == ClusterStatePaused {
@@ -588,7 +576,7 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 	}
 
 	// This is to prevent concurrent updates
-	if cluster.Status.PXC.Status != pxc.AppStateReady {
+	if clusterState != ClusterStateReady {
 		return errors.Wrapf(ErrPXCClusterStateUnexpected, "state is %v", cluster.Status.Status) //nolint:wrapcheck
 	}
 
@@ -681,7 +669,7 @@ func (c *K8sClient) GetPXCClusterCredentials(ctx context.Context, name string) (
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
 	}
 
-	clusterState := c.getPXCState(ctx, &cluster, c.crVersionMatchesPodsVersion)
+	clusterState := c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
 	if clusterState != ClusterStateReady && clusterState != ClusterStateChanging {
 		return nil, errors.Wrapf(
 			errors.Wrap(ErrPXCClusterStateUnexpected,
@@ -798,7 +786,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 			val.Message = strings.Join(cluster.Status.Messages, ";")
 		}
 
-		val.State = c.getPXCState(ctx, &cluster, c.crVersionMatchesPodsVersion)
+		val.State = c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
 
 		if cluster.Spec.ProxySQL != nil {
 			val.ProxySQL = &ProxySQL{
@@ -822,54 +810,26 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 	return res, nil
 }
 
-func (c *K8sClient) getPXCState(ctx context.Context, cluster *pxc.PerconaXtraDBCluster, crAndPodsMatchFunc func(context.Context, common.DatabaseCluster) (bool, error)) ClusterState {
-	if cluster == nil || cluster.Status == nil {
+func (c *K8sClient) getClusterState(ctx context.Context, cluster common.DatabaseCluster, crAndPodsMatchFunc func(context.Context, common.DatabaseCluster) (bool, error)) ClusterState {
+	state := cluster.State()
+	if state == common.AppStateUnknown {
 		return ClusterStateInvalid
 	}
 	// Handle paused state for operator version >= 1.9.0 and for operator version <= 1.8.0.
-	if cluster.Status.Status == pxc.AppStatePaused || (cluster.Spec.Pause && cluster.Status.Status == pxc.AppStateReady) {
+	if state == common.AppStatePaused || (cluster.Pause() && state == common.AppStateReady) {
 		return ClusterStatePaused
 	}
 
-	clusterState, ok := pxcStatesMap[cluster.Status.Status]
+	clusterState, ok := clusterStatesMap[state]
 	if !ok {
-		c.l.Warnf("failed to recognize cluster state: %q, setting status to ClusterStateChanging", cluster.Status.Status)
+		c.l.Warnf("failed to recognize cluster state: %q, setting status to ClusterStateChanging", state)
 		return ClusterStateChanging
 	}
 	if clusterState == ClusterStateChanging {
 		// Check if cr and pods version matches.
 		match, err := crAndPodsMatchFunc(ctx, cluster)
 		if err != nil {
-			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.Name, err)
-			return ClusterStateInvalid
-		}
-		if match {
-			return ClusterStateChanging
-		}
-		return ClusterStateUpgrading
-	}
-	return clusterState
-}
-
-func (c *K8sClient) getPSMDBState(ctx context.Context, cluster *psmdb.PerconaServerMongoDB, crAndPodsMatchFunc func(context.Context, common.DatabaseCluster) (bool, error)) ClusterState {
-	if cluster == nil || cluster.Status == nil {
-		return ClusterStateInvalid
-	}
-	// Handle paused state for operator version >= 1.9.0 and for operator version <= 1.8.0.
-	if cluster.Status.Status == psmdb.AppStatePaused || (cluster.Spec.Pause && cluster.Status.Status == psmdb.AppStateReady) {
-		return ClusterStatePaused
-	}
-
-	clusterState, ok := psmdbStatesMap[cluster.Status.Status]
-	if !ok {
-		c.l.Warnf("failed to recognize cluster state: %q, setting status to ClusterStateChanging", cluster.Status.Status)
-		return ClusterStateChanging
-	}
-	if clusterState == ClusterStateChanging {
-		// Check if cr and pods version matches.
-		match, err := crAndPodsMatchFunc(ctx, cluster)
-		if err != nil {
-			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.Name, err)
+			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.GetName(), err)
 			return ClusterStateInvalid
 		}
 		if match {
@@ -1155,7 +1115,7 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return err
 	}
 
-	clusterState := c.getPSMDBState(ctx, &cluster, c.crVersionMatchesPodsVersion)
+	clusterState := c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
 	if params.Resume && clusterState == ClusterStatePaused {
 		cluster.Spec.Pause = false
 		return c.kubeCtl.Apply(ctx, &cluster)
@@ -1355,7 +1315,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 			val.Message = message
 		}
 
-		val.State = c.getPSMDBState(ctx, &cluster, c.crVersionMatchesPodsVersion)
+		val.State = c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
 		res[i] = val
 	}
 	return res, nil
