@@ -72,7 +72,7 @@ func (p *PerconaServerMongoDB) DatabasePodLabels() []string {
 
 // Pause returns bool indicating if cluster should be paused.
 func (p *PerconaServerMongoDB) Pause() bool {
-	if p == nil || p.Spec == nil {
+	if p.Spec == nil {
 		return false
 	}
 	return p.Spec.Pause
@@ -80,7 +80,7 @@ func (p *PerconaServerMongoDB) Pause() bool {
 
 // State get's clusters state.
 func (p *PerconaServerMongoDB) State() common.AppState {
-	if p == nil || p.Status == nil {
+	if p.Status == nil {
 		return common.AppStateUnknown
 	}
 	return p.Status.Status

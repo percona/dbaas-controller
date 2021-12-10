@@ -811,6 +811,9 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 }
 
 func (c *K8sClient) getClusterState(ctx context.Context, cluster common.DatabaseCluster, crAndPodsMatchFunc func(context.Context, common.DatabaseCluster) (bool, error)) ClusterState {
+	if cluster == nil {
+		return ClusterStateInvalid
+	}
 	state := cluster.State()
 	if state == common.AppStateUnknown {
 		return ClusterStateInvalid

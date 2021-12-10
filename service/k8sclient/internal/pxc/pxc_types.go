@@ -155,7 +155,7 @@ func (p *PerconaXtraDBCluster) DatabasePodLabels() []string {
 
 // Pause returns bool indicating if cluster should be paused.
 func (p *PerconaXtraDBCluster) Pause() bool {
-	if p == nil || p.Spec == nil {
+	if p.Spec == nil {
 		return false
 	}
 	return p.Spec.Pause
@@ -163,7 +163,7 @@ func (p *PerconaXtraDBCluster) Pause() bool {
 
 // State get's clusters state.
 func (p *PerconaXtraDBCluster) State() common.AppState {
-	if p == nil || p.Status == nil {
+	if p.Status == nil {
 		return common.AppStateUnknown
 	}
 	return p.Status.Status
