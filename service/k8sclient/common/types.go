@@ -194,6 +194,24 @@ type UpgradeOptions struct {
 	Schedule               string `json:"schedule,omitempty"`
 }
 
+// AppState application state.
+type AppState string
+
+const (
+	// AppStateUnknown unknown application state.
+	AppStateUnknown AppState = "unknown"
+	// AppStateInit initializing application state.
+	AppStateInit AppState = "initializing"
+	// AppStateReady ready application state.
+	AppStateReady AppState = "ready"
+	// AppStateError error application state.
+	AppStateError AppState = "error"
+	// AppStatePaused paused application state. Available only in the operator >= 1.9.0.
+	AppStatePaused AppState = "paused"
+	// AppStateStopping means cluster is stopping. Available only in the operator >= 1.9.0.
+	AppStateStopping AppState = "stopping"
+)
+
 // DatabaseCluster is an abstraction of database cluster.
 type DatabaseCluster interface {
 	// SetDatabaseImage sets database image to appropriate image field.
@@ -208,4 +226,8 @@ type DatabaseCluster interface {
 	DatabaseContainerNames() []string
 	// DatabasePodLabels return list of labels to get pods where database is running.
 	DatabasePodLabels() []string
+	// State get's clusters state as a string.
+	State() AppState
+	// Pause returns bool indicating if cluster should be paused.
+	Pause() bool
 }

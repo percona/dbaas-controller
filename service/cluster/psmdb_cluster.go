@@ -92,10 +92,6 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 			Params:  params,
 			Exposed: cluster.Exposed,
 		}
-
-		if cluster.State == k8sclient.ClusterStateReady && cluster.Pause {
-			res.Clusters[i].State = controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_PAUSED
-		}
 	}
 
 	return res, nil

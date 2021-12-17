@@ -39,6 +39,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
@@ -878,20 +879,21 @@ func TestVMAgentSpec(t *testing.T) {
 	assert.Equal(t, expected, inBuf.String())
 }
 
-func TestGetPXCState(t *testing.T) {
+func TestGetClusterState(t *testing.T) {
 	t.Parallel()
-	type getPXCStateTestCase struct {
+	type getClusterStateTestCase struct {
 		matchingError           error
-		cluster                 *pxc.PerconaXtraDBCluster
+		cluster                 common.DatabaseCluster
 		expectedState           ClusterState
 		crAndPodsVersionMatches bool
 	}
-	testCases := []getPXCStateTestCase{
+	testCases := []getClusterStateTestCase{
+		// PXC
 		{
 			expectedState: ClusterStateInvalid,
 		},
 		{
-			cluster:       new(pxc.PerconaXtraDBCluster),
+			cluster:       common.DatabaseCluster(nil),
 			expectedState: ClusterStateInvalid,
 		},
 		// Initializing.
@@ -900,7 +902,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -911,7 +913,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateReady},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateReady},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateReady,
@@ -923,7 +925,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: true,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -934,7 +936,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: true,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateStopping},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateStopping},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -945,7 +947,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: true,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateReady},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateReady},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStatePaused,
@@ -956,7 +958,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: true,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStatePaused},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStatePaused},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStatePaused,
@@ -967,7 +969,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -979,7 +981,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: false,
 			expectedState:           ClusterStateUpgrading,
@@ -990,7 +992,7 @@ func TestGetPXCState(t *testing.T) {
 				Spec: &pxc.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: pxc.AppStateInit},
+				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: false,
 			matchingError:           errors.New("example error"),
@@ -1007,6 +1009,128 @@ func TestGetPXCState(t *testing.T) {
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
+
+		// PSMDB
+		{
+			expectedState: ClusterStateInvalid,
+		},
+		{
+			cluster:       new(psmdb.PerconaServerMongoDB),
+			expectedState: ClusterStateInvalid,
+		},
+		// Initializing.
+		{
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: false,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+		// Ready.
+		{
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: false,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateReady},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateReady,
+		},
+		// Pausing related states.
+		{
+			// Cluster is being paused, pxc operator <= 1.8.0.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: true,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+		{
+			// Cluster is being paused, pxc operator >= 1.9.0.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: true,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateStopping},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+		{
+			// Cluster is paused = no cluster pods.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: true,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateReady},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStatePaused,
+		},
+		{
+			// Cluster is paused = no cluster pods.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: true,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStatePaused},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStatePaused,
+		},
+		{
+			// Cluster just got instructed to resume.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: false,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
+		// Upgrading.
+		{
+			// No failure during checking cr and pods version.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: false,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+			},
+			crAndPodsVersionMatches: false,
+			expectedState:           ClusterStateUpgrading,
+		},
+		{
+			// Checking cr and pods version failed.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: false,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+			},
+			crAndPodsVersionMatches: false,
+			matchingError:           errors.New("example error"),
+			expectedState:           ClusterStateInvalid,
+		},
+		{
+			// Not implemented state of the cluster.
+			cluster: &psmdb.PerconaServerMongoDB{
+				Spec: &psmdb.PerconaServerMongoDBSpec{
+					Pause: false,
+				},
+				Status: &psmdb.PerconaServerMongoDBStatus{Status: "notimplemented"},
+			},
+			crAndPodsVersionMatches: true,
+			expectedState:           ClusterStateChanging,
+		},
 	}
 	ctx := context.Background()
 	c, _ := New(ctx, "")
@@ -1014,7 +1138,7 @@ func TestGetPXCState(t *testing.T) {
 		tt := test
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
 			t.Parallel()
-			clusterState := c.getPXCState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
+			clusterState := c.getClusterState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
 				return tt.crAndPodsVersionMatches, tt.matchingError
 			})
 			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
