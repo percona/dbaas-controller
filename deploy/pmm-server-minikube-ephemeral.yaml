@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pmm
+spec:
+  selector:
+    app: pmm
+  type: NodePort
+  ports:
+  - port: 80
+    name: web
+    targetPort: 80
+    nodePort: 30080
+  - port: 443
+    name: api
+    targetPort: 443
+    nodePort: 30443
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+    name: pmm-net
+spec:
+  selector:
+     app.kubernetes.io/part-of: pmm
+  ports:
+    - name: pmm-server
+      port: 443
+    - name: vm-agent
+      port: 8428
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pmm-conf
+  labels:
+    app: pmm
+    app.kubernetes.io/part-of: pmm
+data:
+  PMM_AGENT_SERVER_PASSWORD: admin
+  PMM_AGENT_SERVER_USERNAME: admin
+  PMM_AGENT_SERVER_ADDRESS: pmm-net:443
+  PMM_AGENT_SETUP: 'true'
+  PMM_AGENT_DEBUG: 'true'
+  PMM_AGENT_TRACE: 'true'
+  PMM_AGENT_CONFIG_FILE: "/usr/local/percona/pmm2/config/pmm-agent.yaml"
+  PMM_AGENT_SETUP_METRICS_MODE: "push"
+  PMM_AGENT_SERVER_INSECURE_TLS: "true"
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pmm-deployment
+  labels:
+    app: pmm
+    app.kubernetes.io/part-of: pmm
+spec:
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: pmm
+  template:
+    metadata:
+      labels:
+        app: pmm
+        app.kubernetes.io/part-of: pmm
+    spec:
+      containers:
+      - name: pmm-server
+        image: docker.io/perconalab/pmm-server:2
+        ports:
+        - containerPort: 80
+          name: web
+        - containerPort: 443
+          name: api
+        - containerPort: 8428
+          name: vm
