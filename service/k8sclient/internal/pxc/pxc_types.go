@@ -70,24 +70,6 @@ type PXCScheduledBackupSchedule struct {
 	StorageName string `json:"storageName,omitempty"`
 }
 
-// AppState Application state.
-type AppState string
-
-const (
-	// AppStateUnknown application state is unknown.
-	AppStateUnknown AppState = "unknown"
-	// AppStateInit initializing state.
-	AppStateInit AppState = "initializing"
-	// AppStateReady application is ready state.
-	AppStateReady AppState = "ready"
-	// AppStateError error state.
-	AppStateError AppState = "error"
-	// AppStatePaused means cluster is paused.
-	AppStatePaused AppState = "paused"
-	// AppStateStopping means cluster is stopping. Available only in the operator >= 1.9.0.
-	AppStateStopping AppState = "stopping"
-)
-
 // PerconaXtraDBClusterStatus defines the observed state of PerconaXtraDBCluster.
 type PerconaXtraDBClusterStatus struct {
 	PXC                AppStatus          `json:"pxc,omitempty"`
@@ -97,7 +79,7 @@ type PerconaXtraDBClusterStatus struct {
 	PMM                AppStatus          `json:"pmm,omitempty"`
 	Host               string             `json:"host,omitempty"`
 	Messages           []string           `json:"message,omitempty"`
-	Status             AppState           `json:"state,omitempty"`
+	Status             common.AppState    `json:"state,omitempty"`
 	Conditions         []ClusterCondition `json:"conditions,omitempty"`
 	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
 }
@@ -118,12 +100,12 @@ type ClusterCondition struct {
 
 // AppStatus holds exported fields representing the application status information.
 type AppStatus struct {
-	Size    int32    `json:"size,omitempty"`
-	Ready   int32    `json:"ready,omitempty"`
-	Status  AppState `json:"status,omitempty"`
-	Message string   `json:"message,omitempty"`
-	Version string   `json:"version,omitempty"`
-	Image   string   `json:"image,omitempty"`
+	Size    int32           `json:"size,omitempty"`
+	Ready   int32           `json:"ready,omitempty"`
+	Status  common.AppState `json:"status,omitempty"`
+	Message string          `json:"message,omitempty"`
+	Version string          `json:"version,omitempty"`
+	Image   string          `json:"image,omitempty"`
 }
 
 // PerconaXtraDBCluster is the Schema for the perconaxtradbclusters API.
@@ -169,6 +151,22 @@ func (p *PerconaXtraDBCluster) DatabaseContainerNames() []string {
 // DatabasePodLabels return list of labels to get pods where database is running.
 func (p *PerconaXtraDBCluster) DatabasePodLabels() []string {
 	return []string{"app.kubernetes.io/instance=" + p.Name, "app.kubernetes.io/component=pxc"}
+}
+
+// Pause returns bool indicating if cluster should be paused.
+func (p *PerconaXtraDBCluster) Pause() bool {
+	if p.Spec == nil {
+		return false
+	}
+	return p.Spec.Pause
+}
+
+// State get's clusters state.
+func (p *PerconaXtraDBCluster) State() common.AppState {
+	if p.Status == nil {
+		return common.AppStateUnknown
+	}
+	return p.Status.Status
 }
 
 // PerconaXtraDBClusterList contains a list of PerconaXtraDBCluster.
