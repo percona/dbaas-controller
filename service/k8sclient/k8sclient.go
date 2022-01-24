@@ -1918,7 +1918,7 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 		return err
 	}
 
-	secretName := fmt.Sprintf("victoria-metrics-operator-%d", randomCrypto)
+	secretName := fmt.Sprintf("vm-operator-%d", randomCrypto)
 	err = c.CreateSecret(ctx, secretName, map[string][]byte{
 		"username": []byte(params.Login),
 		"password": []byte(params.Password),
