@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"os"
 
 	"github.com/AlekSi/pointer"
 	goversion "github.com/hashicorp/go-version"
