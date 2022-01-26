@@ -318,6 +318,12 @@ type K8sClient struct {
 }
 
 func init() {
+	pmmClientImageEnv, ok := os.LookupEnv("PERCONA_TEST_DBAAS_PMM_CLIENT")
+	if ok {
+  	pmmClientImage = pmmClientImageEnv
+  	return
+	}
+
 	if pmmversion.PMMVersion == "" {
 		// Prevent panicing on local development builds.
 		pmmClientImage = "perconalab/pmm-client:dev-latest"
