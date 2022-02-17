@@ -24,9 +24,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"time"
-	"os"
 
 	"github.com/AlekSi/pointer"
 	goversion "github.com/hashicorp/go-version"
