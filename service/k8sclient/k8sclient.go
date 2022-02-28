@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -318,6 +319,12 @@ type K8sClient struct {
 }
 
 func init() {
+	pmmClientImageEnv, ok := os.LookupEnv("PERCONA_TEST_DBAAS_PMM_CLIENT")
+	if ok {
+		pmmClientImage = pmmClientImageEnv
+		return
+	}
+
 	if pmmversion.PMMVersion == "" {
 		// Prevent panicing on local development builds.
 		pmmClientImage = "perconalab/pmm-client:dev-latest"
@@ -1918,7 +1925,7 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 		return err
 	}
 
-	secretName := fmt.Sprintf("victoria-metrics-operator-%d", randomCrypto)
+	secretName := fmt.Sprintf("vm-operator-%d", randomCrypto)
 	err = c.CreateSecret(ctx, secretName, map[string][]byte{
 		"username": []byte(params.Login),
 		"password": []byte(params.Password),
