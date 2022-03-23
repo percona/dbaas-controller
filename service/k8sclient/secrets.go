@@ -71,7 +71,7 @@ func generatePXCPasswords() (map[string][]byte, error) {
 
 func generatePSMDBPasswords() (map[string][]byte, error) {
 	// secrets represents stringData part of
-	// https://github.com/percona/percona-xtradb-cluster-operator/blob/main/deploy/secrets.yaml.
+	// https://github.com/percona/percona-server-mongodb-operator/blob/main/deploy/secrets.yaml.
 	secrets := map[string][]byte{
 		"MONGODB_BACKUP_USER":          []byte("backup"),
 		"MONGODB_CLUSTER_ADMIN_USER":   []byte("clusterAdmin"),
