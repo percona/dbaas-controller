@@ -63,6 +63,7 @@ func generatePXCPasswords() (map[string][]byte, error) {
 		"clustercheck": {},
 		"proxyadmin":   {},
 		"operator":     {},
+		"replication":  {},
 	}
 
 	return generatePasswords(secrets)
