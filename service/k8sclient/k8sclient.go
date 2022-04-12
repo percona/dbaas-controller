@@ -512,7 +512,7 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 			ImagePullPolicy: pullPolicy,
 			Resources: &common.PodResources{
 				Requests: &common.ResourcesList{
-					Memory: "500M",
+					Memory: "300M",
 					CPU:    "500m",
 				},
 			},
@@ -1100,7 +1100,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			Image:      pmmClientImage,
 			Resources: &common.PodResources{
 				Requests: &common.ResourcesList{
-					Memory: "500M",
+					Memory: "300M",
 					CPU:    "500m",
 				},
 			},
