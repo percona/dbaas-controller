@@ -1916,7 +1916,7 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 		}
 		err = c.kubeCtl.Apply(ctx, file)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "cannot apply file: %q", path)
 		}
 	}
 
@@ -1967,7 +1967,7 @@ func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 					Memory: "850Mi",
 				},
 			},
-			AdditionalArgs: map[string]string{
+			ExtraArgs: map[string]string{
 				"memory.allowedPercent": "40",
 			},
 			RemoteWrite: []monitoring.VMAgentRemoteWriteSpec{

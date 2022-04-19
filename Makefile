@@ -33,7 +33,7 @@ help:                             ## Display this help message
 	@echo "         - -i"
 	@echo ""
 
-KUBERNETES_VERSION ?= 1.16.8
+KUBERNETES_VERSION ?= 1.21.0
 
 # `cut` is used to remove first `v` from `git describe` output
 # PMM_RELEASE_XXX variables are overwritten during PMM Server build
