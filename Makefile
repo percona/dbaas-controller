@@ -85,7 +85,7 @@ check:                            ## Run checks/linters for the whole project
 	bin/check-license
 	bin/go-consistent -pedantic -exclude "tests" ./...
 	cd tests && ../bin/go-consistent -pedantic ./...
-	bin/golangci-lint run
+	bin/golangci-lint run -c=.golangci.yml ./... --new-from-rev=main
 
 install:                          ## Install binaries
 	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
