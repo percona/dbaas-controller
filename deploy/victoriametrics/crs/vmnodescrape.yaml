@@ -20,3 +20,12 @@ spec:
       regex: (.+)
       targetLabel: __metrics_path__
       replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+  serviceScrapeRelabelTemplate:
+   # add another label with value of namespace label
+    - target_label: node_name
+      source_labels: [namespace]
+   # add value of namespace label to the another label
+    - target_label: node_name
+      source_labels: [namespace, my_label_name]
+      regex: '(.+),(.+)'
+      replacement: $1-$2
