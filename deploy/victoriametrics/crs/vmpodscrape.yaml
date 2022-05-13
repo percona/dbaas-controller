@@ -9,3 +9,9 @@ spec:
   selector:
     matchLabels:
       monitored-by: vm-operator
+  relabelConfigs:
+      # add value of namespace label to the another label
+    - target_label: node_name
+      source_labels: [namespace, pod]
+      regex: '(.+),(.+)'
+      replacement: $1-$2
