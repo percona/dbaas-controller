@@ -23,5 +23,5 @@ spec:
       # add value of namespace label to the another label
     - target_label: node_name
       source_labels: [namespace, pod]
-      regex: '(.+),(.+)'
+      regex: '(.+);(.+)'
       replacement: $1-$2
