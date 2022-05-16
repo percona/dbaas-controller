@@ -11,6 +11,7 @@ spec:
           source_labels: [namespace, pod]
           regex: '(.+);(.+)'
           replacement: $1-$2
+          relabel_debug: true
   selector:
     matchLabels:
       monitored-by: vm-operator
