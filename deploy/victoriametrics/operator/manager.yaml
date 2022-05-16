@@ -40,7 +40,7 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: vm-operator
-          image: victoriametrics/operator:v0.16.0
+          image: victoriametrics/operator:v0.24.0
           name: manager
           resources:
             limits:
