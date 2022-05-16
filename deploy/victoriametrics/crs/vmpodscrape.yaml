@@ -7,9 +7,11 @@ spec:
     - port: metrics
       scheme: http
       relabelConfigs:
+        - target_label: my_label_name
+          source_labels: [namespace]
         - target_label: node_name
           source_labels: [namespace, pod]
-          regex: '(.+);(.+)'
+          regex: '(.+),(.+)'
           replacement: $1-$2
           relabel_debug: true
   selector:
