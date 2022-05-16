@@ -33,7 +33,7 @@ help:                             ## Display this help message
 	@echo "         - -i"
 	@echo ""
 
-KUBERNETES_VERSION ?= 1.16.8
+KUBERNETES_VERSION ?= 1.21.0
 
 # `cut` is used to remove first `v` from `git describe` output
 # PMM_RELEASE_XXX variables are overwritten during PMM Server build
@@ -63,13 +63,8 @@ release:                          ## Build dbaas-controller release binaries.
 	$(PMM_RELEASE_PATH)/dbaas-controller --version
 
 init:                             ## Install development tools
-	go build -o bin/check-license ./.github/check-license.go
-
-	go build -modfile=tools/go.mod -o bin/go-consistent github.com/quasilyte/go-consistent
-	go build -modfile=tools/go.mod -o bin/gofumports mvdan.cc/gofumpt/gofumports
-	go build -modfile=tools/go.mod -o bin/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
-	go build -modfile=tools/go.mod -o bin/gotext golang.org/x/text/cmd/gotext
-	go build -modfile=tools/go.mod -o bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
+	rm -rf ./bin
+	cd tools && go generate -x -tags=tools
 
 ci-init:                ## Initialize CI environment
 	# nothing there yet
@@ -82,8 +77,9 @@ gen:                              ## Generate code
 	make format
 
 format:                           ## Format source code
-	gofmt -w -s .
-	bin/gofumports -local github.com/percona-platform/dbaas-controller -l -w .
+	bin/gofumpt -l -w .
+	bin/goimports -local github.com/percona-platform/dbaas-controller -l -w .
+	bin/gci write --Section Standard --Section Default --Section "Prefix(github.com/percona-platform/dbaas-controller)" .
 
 check:                            ## Run checks/linters for the whole project
 	bin/check-license

@@ -843,7 +843,7 @@ func TestVMAgentSpec(t *testing.T) {
         "cpu": "500m"
       }
     },
-    "additionalArgs": {
+    "extraArgs": {
       "memory.allowedPercent": "40"
     },
     "remoteWrite": [
