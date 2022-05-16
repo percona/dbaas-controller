@@ -21,7 +21,7 @@ spec:
       targetLabel: __metrics_path__
       replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
       # add value of namespace label to the another label
-    - target_label: node_name
-      source_labels: [namespace, pod]
+    - targetLabel: node_name
+      sourceLabels: [namespace, pod]
       regex: '(.+);(.+)'
       replacement: $1-$2
