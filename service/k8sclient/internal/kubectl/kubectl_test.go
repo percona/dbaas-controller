@@ -106,6 +106,7 @@ func TestSelectCorrectKubectlVersions(t *testing.T) {
 		got, err := selectCorrectKubectlVersions([]byte(kubernetsVersions))
 		require.NoError(t, err)
 		expected := []string{
+			dbaasToolPath + "/kubectl-1.23",
 			dbaasToolPath + "/kubectl-1.17",
 			dbaasToolPath + "/kubectl-1.16",
 			dbaasToolPath + "/kubectl-1.15",
@@ -129,7 +130,7 @@ func TestGetKubectlCmd(t *testing.T) {
 		got, err := getKubectlCmd(ctx, defaultKubectl, "")
 		require.NoError(t, err)
 		// `/usr/local/bin/minikube kubectl --` - for dev env
-		// `/opt/dbaas-tools/bin/kubectl-1.16` - for pmm-server
+		// `/opt/dbaas-tools/bin/kubectl-1.23` - for pmm-server
 		assert.Equal(t, got, defaultKubectl)
 	})
 }
@@ -140,6 +141,7 @@ func TestLookupCorrectKubectlCmd(t *testing.T) {
 	require.NoError(t, err)
 	t.Run("basic", func(t *testing.T) {
 		args := []string{
+			"kubectl-1.23",
 			"kubectl-1.17",
 			"kubectl-1.16",
 			"kubectl-1.15",
