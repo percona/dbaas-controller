@@ -37,7 +37,7 @@ import (
 
 const (
 	dbaasToolPath           = "/opt/dbaas-tools/bin"
-	defaultPmmServerKubectl = dbaasToolPath + "/kubectl-1.16"
+	defaultPmmServerKubectl = dbaasToolPath + "/kubectl-1.23"
 	defaultDevEnvKubectl    = "minikube kubectl --"
 )
 

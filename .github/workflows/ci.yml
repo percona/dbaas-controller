@@ -23,17 +23,17 @@ jobs:
         go-version:
           - 1.18.x
         kubernetes_version:
-          # We recommend this version of kubernetes in docs.
-          - 1.20.1
+          # latest supported version in minikube (in pare with k8s releases)
+          - ""
           # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
-          - 1.20.7
+          - 1.22.6
         build_tags: [""]
         os: [ubuntu-latest]
         may-fail: [false]
 
         include:
           - go-version: tip
-            kubernetes_version: 1.20.7
+            kubernetes_version: ""
             build_tags: ""
             os: ubuntu-latest
             may-fail: true
@@ -87,7 +87,7 @@ jobs:
       - name: Configure minikube
         run: |
           sudo apt install -y conntrack
-          sudo curl -Lo /tmp/minikube https://github.com/kubernetes/minikube/releases/download/v1.16.0/minikube-linux-amd64
+          sudo curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
           sudo chmod +x /tmp/minikube
           sudo mv /tmp/minikube $(which minikube)
           sudo -E minikube config set driver none
@@ -130,7 +130,9 @@ jobs:
         run: make test-api-build
 
       - name: Start development environment
-        run: sudo -E make env-up
+        run: |
+          sudo -E make env-up
+          make env-check
 
       - name: Run tests
         run: |
@@ -264,11 +266,11 @@ jobs:
           make init
           mkdir -p "${DBAAS_TOOLS_PATH}"
           echo "${DBAAS_TOOLS_PATH}" >> $GITHUB_PATH          
-          curl -o aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.19.6/2021-01-05/bin/linux/amd64/aws-iam-authenticator
+          curl -o aws-iam-authenticator https://s3.us-west-2.amazonaws.com/amazon-eks/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
           chmod +x ./aws-iam-authenticator
           mv aws-iam-authenticator "${DBAAS_TOOLS_PATH}"
           # dbaas-controller tries to search for kubectl at certain path
-          cp $(which kubectl) "${DBAAS_TOOLS_PATH}/kubectl-1.16"
+          cp $(which kubectl) "${DBAAS_TOOLS_PATH}/kubectl-1.23"
         env:
           DBAAS_TOOLS_PATH: "/opt/dbaas-tools/bin"
 
