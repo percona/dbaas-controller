@@ -109,7 +109,9 @@ env-up:                           ## Start development environment
 	make env-up-start
 
 env-up-start:
-	minikube config set kubernetes-version $(KUBERNETES_VERSION)
+	ifneq ($(KUBERNETES_VERSION, "")
+		minikube config set kubernetes-version $(KUBERNETES_VERSION)
+	endif
 	minikube config view
 	minikube start
 	minikube status
