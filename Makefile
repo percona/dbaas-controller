@@ -33,7 +33,7 @@ help:                             ## Display this help message
 	@echo "         - -i"
 	@echo ""
 
-KUBERNETES_VERSION ?= 1.21.0
+KUBERNETES_VERSION ?= 1.23.6
 
 # `cut` is used to remove first `v` from `git describe` output
 # PMM_RELEASE_XXX variables are overwritten during PMM Server build
@@ -109,9 +109,9 @@ env-up:                           ## Start development environment
 	make env-up-start
 
 env-up-start:
-	ifneq "$(KUBERNETES_VERSION)" ""
-	minikube config set kubernetes-version $(KUBERNETES_VERSION)
-	endif
+	if [ $KUBERNETES_VERSION ]; then
+		minikube config set kubernetes-version $(KUBERNETES_VERSION);
+	fi
 	minikube config view
 	minikube start
 	minikube status
