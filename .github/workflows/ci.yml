@@ -23,7 +23,7 @@ jobs:
         go-version:
           - 1.18.x
         kubernetes_version:
-          # lates supported version in minikube (in pare with k8s releases)
+          # latest supported version in minikube (in pare with k8s releases)
           - ""
           # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
           - 1.22.6
