@@ -87,7 +87,7 @@ jobs:
       - name: Configure minikube
         run: |
           sudo apt install -y conntrack
-          sudo curl -Lo /tmp/minikube https://github.com/kubernetes/minikube/releases/download/v1.16.0/minikube-linux-amd64
+          sudo curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
           sudo chmod +x /tmp/minikube
           sudo mv /tmp/minikube $(which minikube)
           sudo -E minikube config set driver none
@@ -264,7 +264,7 @@ jobs:
           make init
           mkdir -p "${DBAAS_TOOLS_PATH}"
           echo "${DBAAS_TOOLS_PATH}" >> $GITHUB_PATH          
-          curl -o aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.19.6/2021-01-05/bin/linux/amd64/aws-iam-authenticator
+          curl -o aws-iam-authenticator https://s3.us-west-2.amazonaws.com/amazon-eks/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
           chmod +x ./aws-iam-authenticator
           mv aws-iam-authenticator "${DBAAS_TOOLS_PATH}"
           # dbaas-controller tries to search for kubectl at certain path
