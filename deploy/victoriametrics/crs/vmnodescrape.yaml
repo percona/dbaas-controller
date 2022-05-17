@@ -1,7 +1,7 @@
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMNodeScrape
 metadata:
-  name: pmm-vm-cadvisor-metrics
+  name: cadvisor-metrics
 spec:
   scheme: "https"
   interval: "10s"
@@ -14,14 +14,9 @@ spec:
   relabelConfigs:
     - action: labelmap
       regex: __meta_kubernetes_node_label_(.+)
-    - target_label: __address__
+    - targetLabel: __address__
       replacement: kubernetes.default.svc:443
-    - source_labels: [__meta_kubernetes_node_name]
+    - sourceLabels: [__meta_kubernetes_node_name]
       regex: (.+)
-      target_label: __metrics_path__
+      targetLabel: __metrics_path__
       replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
-      # add value of namespace label to the another label
-    - target_label: node_name
-      source_labels: [namespace, pod]
-      regex: '(.+);(.+)'
-      replacement: $1-$2
