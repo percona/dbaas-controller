@@ -23,17 +23,17 @@ jobs:
         go-version:
           - 1.18.x
         kubernetes_version:
-          # We recommend this version of kubernetes in docs.
-          - 1.20.1
+          # lates supported version in minikube (in pare with k8s releases)
+          - ""
           # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
-          - 1.20.7
+          - 1.22.6
         build_tags: [""]
         os: [ubuntu-latest]
         may-fail: [false]
 
         include:
           - go-version: tip
-            kubernetes_version: 1.20.7
+            kubernetes_version: ""
             build_tags: ""
             os: ubuntu-latest
             may-fail: true
