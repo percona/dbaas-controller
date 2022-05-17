@@ -130,7 +130,9 @@ jobs:
         run: make test-api-build
 
       - name: Start development environment
-        run: sudo -E make env-up
+        run: |
+          sudo -E make env-up
+          make env-check
 
       - name: Run tests
         run: |

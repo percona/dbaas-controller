@@ -114,13 +114,16 @@ env-up-start:
 	fi
 	minikube config view
 	minikube start
+
+env-check:
+	# none driver in CI needs to run this under different user permissions
+	# https://minikube.sigs.k8s.io/docs/drivers/none/#other
 	minikube status
 	minikube profile list
 	minikube addons list
 	minikube kubectl -- version
 	minikube kubectl -- get nodes
 	minikube kubectl -- get pods
-
 
 env-down:
 	#
