@@ -39,6 +39,7 @@ func TestNewKubeCtl(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("BasicNewKubeCtl", func(t *testing.T) {
+		t.Parallel()
 		kubeCtl, err := NewKubeCtl(ctx, string(kubeconfig))
 		require.NoError(t, err)
 		// lookup for kubeconfig path
@@ -65,6 +66,7 @@ func TestNewKubeCtl(t *testing.T) {
 	})
 
 	t.Run("BasicNewKubeCtl", func(t *testing.T) {
+		t.Parallel()
 		kubeCtl, err := NewKubeCtl(ctx, "{")
 		require.Error(t, err)
 		// lookup for kubeconfig path
