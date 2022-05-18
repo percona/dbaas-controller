@@ -833,7 +833,7 @@ func TestVMAgentSpec(t *testing.T) {
     "staticScrapeSelector": {},
     "staticScrapeNamespaceSelector": {},
     "replicaCount": 1,
-		"selectAllByDefault": true,
+    "selectAllByDefault": true,
     "resources": {
       "requests": {
         "memory": "350Mi",
