@@ -1908,6 +1908,7 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 		"deploy/victoriametrics/crs/vmagent_rbac.yaml",
 		"deploy/victoriametrics/crs/vmnodescrape.yaml",
 		"deploy/victoriametrics/crs/vmpodscrape.yaml",
+		"deploy/victoriametrics/crs/vmagent.yaml",
 	}
 	for _, path := range files {
 		file, err := dbaascontroller.DeployDir.ReadFile(path)
