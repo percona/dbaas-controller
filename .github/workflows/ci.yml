@@ -348,7 +348,7 @@ jobs:
           go env
           pwd
           git status
-          kubectl version
+          kubectl version --output=yaml
 
   check:
     name: Check
