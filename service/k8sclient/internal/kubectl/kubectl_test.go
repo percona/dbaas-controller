@@ -77,23 +77,23 @@ const kubernetsVersions = `
 {
 	"clientVersion": {
 	  "major": "1",
-	  "minor": "16",
-	  "gitVersion": "v1.16.8",
-	  "gitCommit": "ec6eb119b81be488b030e849b9e64fda4caaf33c",
+	  "minor": "23",
+	  "gitVersion": "v1.23.6",
+	  "gitCommit": "ad3338546da947756e8a88aa6822e9c11e7eac22",
 	  "gitTreeState": "clean",
-	  "buildDate": "2020-03-12T21:00:06Z",
-	  "goVersion": "go1.13.8",
+	  "buildDate": "2022-04-14T08:49:13Z",
+	  "goVersion": "go1.17.9",
 	  "compiler": "gc",
-	  "platform": "darwin/amd64"
+	  "platform": "linux/amd64"
 	},
 	"serverVersion": {
 	  "major": "1",
-	  "minor": "16",
-	  "gitVersion": "v1.16.8",
-	  "gitCommit": "ec6eb119b81be488b030e849b9e64fda4caaf33c",
+	  "minor": "22",
+	  "gitVersion": "v1.22.3",
+	  "gitCommit": "c92036820499fedefec0f847e2054d824aea6cd1",
 	  "gitTreeState": "clean",
-	  "buildDate": "2020-03-12T20:52:22Z",
-	  "goVersion": "go1.13.8",
+	  "buildDate": "2021-10-27T18:35:25Z",
+	  "goVersion": "go1.16.9",
 	  "compiler": "gc",
 	  "platform": "linux/amd64"
 	}
@@ -107,9 +107,8 @@ func TestSelectCorrectKubectlVersions(t *testing.T) {
 		require.NoError(t, err)
 		expected := []string{
 			dbaasToolPath + "/kubectl-1.23",
-			dbaasToolPath + "/kubectl-1.17",
-			dbaasToolPath + "/kubectl-1.16",
-			dbaasToolPath + "/kubectl-1.15",
+			dbaasToolPath + "/kubectl-1.22",
+			dbaasToolPath + "/kubectl-1.21",
 		}
 		assert.Equal(t, got, expected)
 	})
