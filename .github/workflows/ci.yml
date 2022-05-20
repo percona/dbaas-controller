@@ -208,6 +208,7 @@ jobs:
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
       # Set DELETE_NAMESPACE to false when you want to debug in EKS cluster after job is done.
       DELETE_NAMESPACE: true
+      DBAAS_TOOLS_PATH: "/opt/dbaas-tools/bin"
     steps:
       - name: Set up Go release
         if: matrix.go-version != 'tip'
@@ -275,8 +276,10 @@ jobs:
           echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
           chmod +x kubectl
           cp kubectl "${DBAAS_TOOLS_PATH}/kubectl-1.23"
+          cp kubectl "${DBAAS_TOOLS_PATH}/kubectl"
+          rm kubectl
+          rm kubectl.sha256
         env:
-          DBAAS_TOOLS_PATH: "/opt/dbaas-tools/bin"
           KUBECTL_VERSION: 1.23.6
 
       - name: Initialize CI environment
