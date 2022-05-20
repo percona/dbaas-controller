@@ -31,13 +31,6 @@ jobs:
         os: [ubuntu-latest]
         may-fail: [false]
 
-        include:
-          - go-version: tip
-            kubernetes_version: ""
-            build_tags: ""
-            os: ubuntu-latest
-            may-fail: true
-
     continue-on-error: ${{ matrix.may-fail }}
     runs-on: ${{ matrix.os }}
 
@@ -193,11 +186,6 @@ jobs:
         build_tags: [""]
         os: [ubuntu-latest]
         may-fail: [false]
-        include:
-          - go-version: tip
-            build_tags: ""
-            os: ubuntu-latest
-            may-fail: true
 
     continue-on-error: ${{ matrix.may-fail }}
     runs-on: ${{ matrix.os }}
