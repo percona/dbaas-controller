@@ -21,10 +21,10 @@ spec:
       regex: (.+)
       targetLabel: __metrics_path__
       replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
-   metricRelabelConfigs:
-   - source_labels:
-     - namespace
-     - pod
-     target_label: node_name
-     regex: (.+);(.+)
-     replacement: $1-$2
+  metricRelabelConfigs:
+  - source_labels:
+    - namespace
+    - pod
+    target_label: node_name
+    regex: (.+);(.+)
+    replacement: $1-$2
