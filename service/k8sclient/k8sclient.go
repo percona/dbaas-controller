@@ -1949,8 +1949,7 @@ func (c *K8sClient) RemoveVMOperator(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		c.kubeCtl.Delete(ctx, file)
-		// err = c.kubeCtl.Delete(ctx, file)
+		err = c.kubeCtl.Delete(ctx, file)
 		if err != nil {
 			return errors.Wrapf(err, "cannot apply file: %q", path)
 		}

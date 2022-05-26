@@ -1150,6 +1150,7 @@ func TestGetClusterState(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest
 func TestCreateVMOperator(t *testing.T) {
 	ctx := app.Context()
 

@@ -149,7 +149,7 @@ func (k KubernetesClusterService) StartMonitoring(ctx context.Context, req *cont
 	return new(controllerv1beta1.StartMonitoringResponse), nil
 }
 
-// RemoveMonitoring removes Victoria metrics operator to monitor kubernetes cluster.
+// StopMonitoring removes Victoria metrics operator from kubernetes cluster.
 func (k KubernetesClusterService) StopMonitoring(ctx context.Context, req *controllerv1beta1.StopMonitoringRequest) (*controllerv1beta1.StopMonitoringResponse, error) {
 	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
