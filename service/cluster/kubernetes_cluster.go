@@ -161,5 +161,5 @@ func (k KubernetesClusterService) StopMonitoring(ctx context.Context, req *contr
 		return nil, err
 	}
 
-	return &controllerv1beta1.StopMonitoringResponse{}, nil
+	return new(controllerv1beta1.StopMonitoringResponse), nil
 }
