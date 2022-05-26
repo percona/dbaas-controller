@@ -33,7 +33,7 @@ help:                             ## Display this help message
 	@echo "         - -i"
 	@echo ""
 
-KUBERNETES_VERSION ?= 1.21.0
+KUBERNETES_VERSION ?= 1.23.6
 
 # `cut` is used to remove first `v` from `git describe` output
 # PMM_RELEASE_XXX variables are overwritten during PMM Server build
@@ -109,16 +109,21 @@ env-up:                           ## Start development environment
 	make env-up-start
 
 env-up-start:
-	minikube config set kubernetes-version $(KUBERNETES_VERSION)
+	if [ $(KUBERNETES_VERSION) ]; then \
+		minikube config set kubernetes-version $(KUBERNETES_VERSION); \
+	fi
 	minikube config view
 	minikube start
+
+env-check:
+	# none driver in CI needs to run this under different user permissions
+	# https://minikube.sigs.k8s.io/docs/drivers/none/#other
 	minikube status
 	minikube profile list
 	minikube addons list
 	minikube kubectl -- version
 	minikube kubectl -- get nodes
 	minikube kubectl -- get pods
-
 
 env-down:
 	#
