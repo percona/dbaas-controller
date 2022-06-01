@@ -55,6 +55,7 @@ type VMAgentSpec struct {
 	Resources                      *common.PodResources     `json:"resources"`
 	ExtraArgs                      map[string]string        `json:"extraArgs"`
 	RemoteWrite                    []VMAgentRemoteWriteSpec `json:"remoteWrite"`
+	SelectAllByDefault             bool                     `json:"selectAllByDefault"`
 }
 
 // VMAgent contains CR for VM Agent.

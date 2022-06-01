@@ -1957,6 +1957,7 @@ func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 			StaticScrapeSelector:           new(common.LabelSelector),
 			StaticScrapeNamespaceSelector:  new(common.LabelSelector),
 			ReplicaCount:                   1,
+			SelectAllByDefault:             true,
 			Resources: &common.PodResources{
 				Requests: &common.ResourcesList{
 					CPU:    "250m",
