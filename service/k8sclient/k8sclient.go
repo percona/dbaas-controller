@@ -1050,7 +1050,6 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: affinity,
 					},
-					Expose: expose,
 				},
 				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
 					Mode: psmdb.OperationProfilingModeSlowOp,
@@ -1068,6 +1067,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 							Affinity: affinity,
 						},
 					},
+					Expose:     expose,
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
 					PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
 						MaxUnavailable: pointer.ToInt(1),

@@ -234,8 +234,11 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 }
 
 // Apply executes `kubectl apply` with given resource.
-func (k *KubeCtl) Apply(ctx context.Context, res interface{}) error {
-	_, err := run(ctx, k.cmd, []string{"apply", "-f", "-"}, res)
+func (k *KubeCtl) Apply(ctx context.Context, res interface{}, extraArgs ...string) error {
+	params := append([]string{"apply"}, extraArgs...)
+	params = append(params, []string{"-f", "-"}...)
+
+	_, err := run(ctx, k.cmd, params, res)
 	return err
 }
 
