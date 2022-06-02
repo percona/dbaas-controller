@@ -867,7 +867,8 @@ func TestVMAgentSpec(t *testing.T) {
           "insecureSkipVerify": true
         }
       }
-    ]
+    ],
+    "selectAllByDefault": true
   }
 }
 `
