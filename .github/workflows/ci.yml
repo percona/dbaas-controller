@@ -101,13 +101,11 @@ jobs:
       - name: Configure minikube
         id: minikube
         with:
-          driver: docker
-          container-runtime: containerd
           kubernetes-version: ${{ matrix.kubernetes_version }}
-          cpus: 4
+          cpus: 'max'
           memory: 4096m
           cni: bridge
-        uses: medyagh/setup-minikube@master
+        uses: percona-platform/setup-minikube@master
 
       - name: Enable Go modules cache
         uses: percona-platform/cache@v2
