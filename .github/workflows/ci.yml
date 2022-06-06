@@ -35,9 +35,7 @@ jobs:
         include:
           - go-version: 1.18.x
             build_tags: ""
-            kubernetes_version:
-              # latest supported version in minikube (in pare with k8s releases)
-              - ""
+            kubernetes_version: "" # latest supported version in minikube (in pare with k8s releases)
             os: ubuntu-latest
             may-fail: true
             version_service_url: "https://check-dev.percona.com/versions/v1"
