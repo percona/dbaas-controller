@@ -24,7 +24,7 @@ jobs:
           - 1.18.x
         kubernetes_version:
           # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
-          - 1.22.6
+          - v1.22.6
         versions:
           - {psmdb: "", pxc: ""}
           - {psmdb: "1.10.0", pxc: "1.9.0"}
@@ -89,15 +89,25 @@ jobs:
 
       # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
       # https://minikube.sigs.k8s.io/docs/drivers/none/
+#      - name: Configure minikube
+#        run: |
+#          sudo apt install -y conntrack
+#          sudo curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+#          sudo chmod +x /tmp/minikube
+#          sudo mv /tmp/minikube $(which minikube)
+#          sudo -E minikube config set driver none
+#          sudo -E minikube config set cpus 2
+#          sudo -E minikube config set memory 4096
       - name: Configure minikube
-        run: |
-          sudo apt install -y conntrack
-          sudo curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-          sudo chmod +x /tmp/minikube
-          sudo mv /tmp/minikube $(which minikube)
-          sudo -E minikube config set driver none
-          sudo -E minikube config set cpus 2
-          sudo -E minikube config set memory 4096
+        id: minikube
+        with:
+          driver: docker
+          container-runtime: containerd
+          kubernetes-version: ${{ matrix.kubernetes_version }}
+          cpus: 4
+          memory: 4096m
+          cni: bridge
+        uses: medyagh/setup-minikube@master
 
       - name: Enable Go modules cache
         uses: percona-platform/cache@v2
