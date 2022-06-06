@@ -91,7 +91,7 @@ type VersionServiceResponse struct {
 	Versions []Version `json:"versions"`
 }
 
-var errNoVersionsFound = errors.New("no versions to compare current version with found")
+var errNoVersionsFound error = errors.New("no versions to compare current version with found")
 
 func latestRecommended(m map[string]componentVersion) (*goversion.Version, error) {
 	if len(m) == 0 {
@@ -668,7 +668,7 @@ func TestK8sClient(t *testing.T) {
 }
 
 // ErrNoSuchCluster indicates that no cluster with given name was found.
-var ErrNoSuchCluster = errors.New("no cluster found with given name")
+var ErrNoSuchCluster error = errors.New("no cluster found with given name")
 
 func getPSMDBCluster(ctx context.Context, client *K8sClient, name string) (*PSMDBCluster, error) {
 	l := logger.Get(ctx)
