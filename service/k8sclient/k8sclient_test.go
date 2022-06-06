@@ -222,8 +222,8 @@ func TestK8sClient(t *testing.T) {
 	l := logger.Get(ctx)
 
 	versionServiceURL := "https://check-dev.percona.com/versions/v1"
-	if uri, ok := os.LookupEnv("PERCONA_TEST_VERSION_SERVICE_URL"); ok {
-		versionServiceURL = uri
+	if value := os.Getenv("PERCONA_TEST_VERSION_SERVICE_URL"); value != "" {
+		versionServiceURL = value
 	}
 
 	versionService := NewVersionServiceClient(versionServiceURL)
@@ -235,11 +235,11 @@ func TestK8sClient(t *testing.T) {
 	require.NoError(t, err)
 
 	pxcVersion := pxc.String()
-	if value, ok := os.LookupEnv("PERCONA_TEST_PXC_OPERATOR_VERSION"); ok {
+	if value := os.Getenv("PERCONA_TEST_PXC_OPERATOR_VERSION"); value != "" {
 		pxcVersion = value
 	}
 	psmdbVersion := psmdb.String()
-	if value, ok := os.LookupEnv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); ok {
+	if value := os.Getenv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); value != "" {
 		psmdbVersion = value
 	}
 
