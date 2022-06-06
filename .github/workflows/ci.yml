@@ -151,11 +151,11 @@ jobs:
           env_vars: GO_VERSION,MINIKUBE_KUBERNETES_VERSION
           fail_ci_if_error: false
 
-      - name: Collect debugdata
+      - name: Collect debug data
         if: ${{ always() }}
         run: make collect-debugdata
 
-      - name: Upload debugdata
+      - name: Upload debug data
         if: ${{ always() }}
         uses: percona-platform/upload-artifact@v2
         with:

@@ -296,7 +296,7 @@ func TestK8sClient(t *testing.T) {
 		b := make([]byte, 5)
 		n, err := rand.Read(b)
 		require.NoError(t, err)
-		require.Equal(t, 4, n)
+		require.Equal(t, 5, n)
 		name := fmt.Sprintf("test-cluster-pxc-%s", hex.EncodeToString(b))
 		_ = client.DeletePXCCluster(ctx, name)
 
@@ -491,7 +491,7 @@ func TestK8sClient(t *testing.T) {
 		b := make([]byte, 5)
 		n, err := rand.Read(b)
 		require.NoError(t, err)
-		require.Equal(t, 4, n)
+		require.Equal(t, 5, n)
 		clusterName := fmt.Sprintf("test-haproxy-pxc-%s", hex.EncodeToString(b))
 		err = client.CreatePXCCluster(ctx, &PXCParams{
 			Name:    clusterName,
@@ -532,7 +532,7 @@ func TestK8sClient(t *testing.T) {
 		b := make([]byte, 5)
 		n, err := rand.Read(b)
 		require.NoError(t, err)
-		require.Equal(t, 4, n)
+		require.Equal(t, 5, n)
 		name := fmt.Sprintf("test-cluster-psmdb-%s", hex.EncodeToString(b))
 		_ = client.DeletePSMDBCluster(ctx, name)
 
