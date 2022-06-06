@@ -213,7 +213,12 @@ func TestK8sClient(t *testing.T) {
 
 	l := logger.Get(ctx)
 
-	versionService := NewVersionServiceClient("https://check-dev.percona.com/versions/v1")
+	versionServiceURL := "https://check-dev.percona.com/versions/v1"
+	if uri, ok := os.LookupEnv("PERCONA_TEST_VERSION_SERVICE_URL"); ok {
+		versionServiceURL = uri
+	}
+
+	versionService := NewVersionServiceClient(versionServiceURL)
 	pmmVersions, err := versionService.Matrix(ctx, componentsParams{product: "pmm-server"})
 	require.NoError(t, err)
 	latestPMMVersion, err := latestProduct(pmmVersions.Versions)

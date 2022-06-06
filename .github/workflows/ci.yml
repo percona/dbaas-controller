@@ -30,6 +30,7 @@ jobs:
         build_tags: [""]
         os: [ubuntu-latest]
         may-fail: [false]
+        version_service_url: ["", "https://check.percona.com/versions/v1"]
 
     continue-on-error: ${{ matrix.may-fail }}
     runs-on: ${{ matrix.os }}
@@ -39,6 +40,7 @@ jobs:
       # `git diff --exit-code` step below still checks what we need
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
       KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
+      VERSION_SERVICE_URL: ${{ matrix.version_service_url }}
       MINIKUBE_IN_STYLE: 1
       CHANGE_MINIKUBE_NONE_USER: true
 
@@ -186,6 +188,13 @@ jobs:
         build_tags: [""]
         os: [ubuntu-latest]
         may-fail: [false]
+        version_service_url: ["https://check.percona.com/versions/v1"]
+        include:
+          - go-version: 1.18.x
+            build_tags: ""
+            os: ubuntu-latest
+            may-fail: true
+            version_service_url: "https://check-dev.percona.com/versions/v1"
 
     continue-on-error: ${{ matrix.may-fail }}
     runs-on: ${{ matrix.os }}
@@ -194,6 +203,7 @@ jobs:
       # no `-mod=readonly` to test PRs made by @dependabot;
       # `git diff --exit-code` step below still checks what we need
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
+      PERCONA_TEST_VERSION_SERVICE_URL: ${{ matrix.version_service_url }}
       # Set DELETE_NAMESPACE to false when you want to debug in EKS cluster after job is done.
       DELETE_NAMESPACE: true
       DBAAS_TOOLS_PATH: "/opt/dbaas-tools/bin"
