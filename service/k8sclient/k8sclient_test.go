@@ -91,7 +91,7 @@ type VersionServiceResponse struct {
 	Versions []Version `json:"versions"`
 }
 
-var errNoVersionsFound error = errors.New("no versions to compare current version with found")
+var errNoVersionsFound = errors.New("no versions to compare current version with found")
 
 func latestRecommended(m map[string]componentVersion) (*goversion.Version, error) {
 	if len(m) == 0 {
@@ -231,14 +231,14 @@ func TestK8sClient(t *testing.T) {
 	require.NoError(t, err)
 	latestPMMVersion, err := latestProduct(pmmVersions.Versions)
 	require.NoError(t, err)
-	pxc, psmdb, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
+	pxcOperator, psmdbOperator, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
 	require.NoError(t, err)
 
-	pxcVersion := pxc.String()
+	pxcVersion := pxcOperator.String()
 	if value := os.Getenv("PERCONA_TEST_PXC_OPERATOR_VERSION"); value != "" {
 		pxcVersion = value
 	}
-	psmdbVersion := psmdb.String()
+	psmdbVersion := psmdbOperator.String()
 	if value := os.Getenv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); value != "" {
 		psmdbVersion = value
 	}
@@ -272,6 +272,16 @@ func TestK8sClient(t *testing.T) {
 	err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
 	require.NoError(t, err)
 
+	t.Run("CheckOperators", func(t *testing.T) {
+		operators, err := client.CheckOperators(ctx)
+		require.NoError(t, err)
+		require.NotNil(t, operators)
+		_, err = goversion.NewVersion(operators.PsmdbOperatorVersion)
+		require.NoError(t, err)
+		_, err = goversion.NewVersion(operators.PXCOperatorVersion)
+		require.NoError(t, err)
+	})
+
 	t.Run("Get non-existing clusters", func(t *testing.T) {
 		t.Parallel()
 		_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdb")
@@ -283,7 +293,11 @@ func TestK8sClient(t *testing.T) {
 	var pmm *PMM
 	t.Run("PXC", func(t *testing.T) {
 		t.Parallel()
-		name := "test-cluster-pxc"
+		b := make([]byte, 5)
+		n, err := rand.Read(b)
+		require.NoError(t, err)
+		require.Equal(t, 4, n)
+		name := fmt.Sprintf("test-cluster-pxc-%s", hex.EncodeToString(b))
 		_ = client.DeletePXCCluster(ctx, name)
 
 		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
@@ -292,14 +306,24 @@ func TestK8sClient(t *testing.T) {
 
 		l.Info("No PXC Clusters running")
 
-		err := client.CreatePXCCluster(ctx, &PXCParams{
+		err = client.CreatePXCCluster(ctx, &PXCParams{
 			Name: name,
 			Size: 1,
 			PXC: &PXC{
 				DiskSize: "1000000000",
-				Image:    "percona/percona-xtradb-cluster:8.0.20-11.1",
+				ComputeResources: &ComputeResources{
+					CPUM:        "500m",
+					MemoryBytes: "500M",
+				},
+				Image: "percona/percona-xtradb-cluster:8.0.20-11.1",
 			},
-			ProxySQL:          &ProxySQL{DiskSize: "1000000000"},
+			ProxySQL: &ProxySQL{
+				DiskSize: "1000000000",
+				ComputeResources: &ComputeResources{
+					CPUM:        "500m",
+					MemoryBytes: "500M",
+				},
+			},
 			PMM:               pmm,
 			VersionServiceURL: "https://check.percona.com",
 		})
@@ -464,8 +488,12 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("Create PXC with HAProxy", func(t *testing.T) {
 		t.Parallel()
-		clusterName := "test-pxc-haproxy"
-		err := client.CreatePXCCluster(ctx, &PXCParams{
+		b := make([]byte, 5)
+		n, err := rand.Read(b)
+		require.NoError(t, err)
+		require.Equal(t, 4, n)
+		clusterName := fmt.Sprintf("test-haproxy-pxc-%s", hex.EncodeToString(b))
+		err = client.CreatePXCCluster(ctx, &PXCParams{
 			Name:    clusterName,
 			Size:    1,
 			PXC:     &PXC{DiskSize: "1000000000"},
@@ -501,7 +529,11 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("PSMDB", func(t *testing.T) {
 		t.Parallel()
-		name := "test-cluster-psmdb"
+		b := make([]byte, 5)
+		n, err := rand.Read(b)
+		require.NoError(t, err)
+		require.Equal(t, 4, n)
+		name := fmt.Sprintf("test-cluster-psmdb-%s", hex.EncodeToString(b))
 		_ = client.DeletePSMDBCluster(ctx, name)
 
 		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
@@ -510,11 +542,17 @@ func TestK8sClient(t *testing.T) {
 
 		l.Info("No PSMDB Clusters running")
 
-		err := client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name:       name,
-			Size:       3,
-			Replicaset: &Replicaset{DiskSize: "1000000000"},
-			PMM:        pmm,
+		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
+			Name: name,
+			Size: 3,
+			Replicaset: &Replicaset{
+				DiskSize: "1000000000",
+				ComputeResources: &ComputeResources{
+					CPUM:        "500m",
+					MemoryBytes: "500M",
+				},
+			},
+			PMM: pmm,
 		})
 		require.NoError(t, err)
 
@@ -561,9 +599,15 @@ func TestK8sClient(t *testing.T) {
 
 		t.Run("Upgrade PSMDB", func(t *testing.T) {
 			err = client.UpdatePSMDBCluster(ctx, &PSMDBParams{
-				Name:              name,
-				Size:              3,
-				Replicaset:        &Replicaset{DiskSize: "1000000000"},
+				Name: name,
+				Size: 3,
+				Replicaset: &Replicaset{
+					DiskSize: "1000000000",
+					ComputeResources: &ComputeResources{
+						CPUM:        "500m",
+						MemoryBytes: "500M",
+					},
+				},
 				PMM:               pmm,
 				Image:             "percona/percona-server-mongodb:4.4.6-8",
 				VersionServiceURL: "https://check.percona.com",
@@ -621,21 +665,10 @@ func TestK8sClient(t *testing.T) {
 		})
 		l.Info("PSMDB Cluster is deleted")
 	})
-
-	t.Run("CheckOperators", func(t *testing.T) {
-		t.Parallel()
-		operators, err := client.CheckOperators(ctx)
-		require.NoError(t, err)
-		require.NotNil(t, operators)
-		_, err = goversion.NewVersion(operators.PsmdbOperatorVersion)
-		require.NoError(t, err)
-		_, err = goversion.NewVersion(operators.PXCOperatorVersion)
-		require.NoError(t, err)
-	})
 }
 
 // ErrNoSuchCluster indicates that no cluster with given name was found.
-var ErrNoSuchCluster error = errors.New("no cluster found with given name")
+var ErrNoSuchCluster = errors.New("no cluster found with given name")
 
 func getPSMDBCluster(ctx context.Context, client *K8sClient, name string) (*PSMDBCluster, error) {
 	l := logger.Get(ctx)

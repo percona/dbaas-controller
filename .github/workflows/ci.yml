@@ -15,7 +15,7 @@ on:
 jobs:
   test:
     name: Test
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
@@ -47,7 +47,7 @@ jobs:
       # no `-mod=readonly` to test PRs made by @dependabot;
       # `git diff --exit-code` step below still checks what we need
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
-      KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
+      MINIKUBE_KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
       VERSION_SERVICE_URL: ${{ matrix.version_service_url }}
       PERCONA_TEST_PXC_OPERATOR_VERSION: ${{ matrix.versions.pxc }}
       PERCONA_TEST_PSMDB_OPERATOR_VERSION: ${{ matrix.versions.psmdb }}
@@ -103,7 +103,7 @@ jobs:
         with:
           kubernetes-version: ${{ matrix.kubernetes_version }}
           cpus: 'max'
-          memory: 4096m
+          memory: 'max'
           cni: bridge
         uses: percona-platform/setup-minikube@master
 
@@ -148,7 +148,7 @@ jobs:
         with:
           file: crosscover.out
           flags: crosscover
-          env_vars: GO_VERSION,KUBERNETES_VERSION
+          env_vars: GO_VERSION,MINIKUBE_KUBERNETES_VERSION
           fail_ci_if_error: false
 
       - name: Collect debugdata
@@ -177,7 +177,7 @@ jobs:
 
   test-on-eks:
     name: Test on EKS
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
@@ -306,7 +306,7 @@ jobs:
         with:
           file: crosscover.out
           flags: crosscover
-          env_vars: GO_VERSION,KUBERNETES_VERSION
+          env_vars: GO_VERSION,MINIKUBE_KUBERNETES_VERSION
           fail_ci_if_error: false
       
       - name: Report Kubernetes resources count and state
@@ -338,8 +338,7 @@ jobs:
 
   check:
     name: Check
-    timeout-minutes: 5
-    if: github.event_name == 'pull_request'
+    timeout-minutes: 10
 
     strategy:
       matrix:
