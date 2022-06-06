@@ -133,18 +133,9 @@ jobs:
       - name: Initialize CI environment
         run: make ci-init
 
-      - name: Generate code
-        run: make gen
-
-      - name: Install binaries
-        run: make release install
-
-      - name: Check that API tests can be built
-        run: make test-api-build
-
       - name: Start development environment
         run: |
-          sudo -E make env-up
+          make env-up
           make env-check
 
       - name: Run tests
@@ -174,16 +165,6 @@ jobs:
       # - name: Setup tmate session on failure
       #   if: ${{ failure() }}
       #   uses: percona-platform/action-tmate@v2
-
-      - name: Check that there are no source code changes
-        run: |
-          # Break job if any files were changed during its run (code generation, etc), except go.sum.
-          # `go mod tidy` could remove old checksums from that file, and that's okay on CI,
-          # and actually expected for PRs made by @dependabot.
-          # Checksums of actually used modules are checked by previous `go` subcommands.
-          pushd tools && go mod tidy && git checkout go.sum
-          popd        && go mod tidy && git checkout go.sum
-          git diff --exit-code
 
       - name: Run debug commands on failure
         if: ${{ failure() }}
@@ -301,15 +282,6 @@ jobs:
       - name: Initialize CI environment
         run: make ci-init
 
-      - name: Generate code
-        run: make gen
-
-      - name: Install binaries
-        run: make release install
-
-      - name: Check that API tests can be built
-        run: make test-api-build
-
       - name: Setup environment for tests to run
         id: setupenv
         run: |
@@ -353,16 +325,6 @@ jobs:
           make eks-cleanup-namespace
           make eks-delete-operators
           make eks-delete-current-namespace
-
-      - name: Check that there are no source code changes
-        run: |
-          # Break job if any files were changed during its run (code generation, etc), except go.sum.
-          # `go mod tidy` could remove old checksums from that file, and that's okay on CI,
-          # and actually expected for PRs made by @dependabot.
-          # Checksums of actually used modules are checked by previous `go` subcommands.
-          pushd tools && go mod tidy && git checkout go.sum
-          popd        && go mod tidy && git checkout go.sum
-          git diff --exit-code
 
       - name: Run debug commands on failure
         if: ${{ failure() }}
@@ -424,6 +386,15 @@ jobs:
 
       - name: Install tools
         run: make init
+
+      - name: Generate code
+        run: make gen
+
+      - name: Install binaries
+        run: make release install
+
+      - name: Check that API tests can be built
+        run: make test-api-build
 
       - name: Run checks/linters
         run: |
