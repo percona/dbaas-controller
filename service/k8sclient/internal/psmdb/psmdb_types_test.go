@@ -183,15 +183,15 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 						PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
 							MaxUnavailable: pointer.ToInt(1),
 						},
-						Arbiter: Arbiter{
-							Enabled: false,
-							Size:    1,
-							MultiAZ: MultiAZ{
-								Affinity: &PodAffinity{
-									TopologyKey: pointer.ToString("kubernetes.io/hostname"),
-								},
-							},
-						},
+						// Arbiter: Arbiter{
+						// 	Enabled: false,
+						// 	Size:    1,
+						// 	MultiAZ: MultiAZ{
+						// 		Affinity: &PodAffinity{
+						// 			TopologyKey: pointer.ToString("kubernetes.io/hostname"),
+						// 		},
+						// 	},
+						// },
 						VolumeSpec: &common.VolumeSpec{
 							PersistentVolumeClaim: &common.PersistentVolumeClaimSpec{
 								Resources: common.ResourceRequirements{

@@ -224,15 +224,15 @@ type PodAffinity struct {
 
 // Expose holds information about how the cluster is exposed to the worl via ingress.
 type Expose struct {
-	Enabled    bool               `json:"enabled"`
-	ExposeType common.ServiceType `json:"exposeType"`
+	Enabled    bool               `json:"enabled,omitempty"`
+	ExposeType common.ServiceType `json:"exposeType,omitempty"`
 }
 
 // ReplsetSpec defines replicaton set specification.
 type ReplsetSpec struct {
-	Expose              Expose                          `json:"expose,omitempty"`
-	Size                int32                           `json:"size"`
-	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
+	Expose Expose `json:"expose,omitempty"`
+	Size   int32  `json:"size"`
+	// Arbiter             Arbiter                         `json:"arbiter,omitempty"`
 	Resources           *common.PodResources            `json:"resources,omitempty"`
 	Name                string                          `json:"name,omitempty"`
 	ClusterRole         clusterRole                     `json:"clusterRole,omitempty"`
