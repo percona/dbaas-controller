@@ -25,6 +25,14 @@ jobs:
         kubernetes_version:
           # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
           - 1.22.6
+        psmdb_version:
+          # Check for the latest stable PSMDB operator version
+          - ""
+          - "1.10.0"
+        pxc_version:
+          # Check for the latest stable PXC operator version
+          - ""
+          - "1.9.0"
         build_tags: [""]
         os: [ubuntu-latest]
         may-fail: [false]
@@ -48,6 +56,8 @@ jobs:
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
       KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
       VERSION_SERVICE_URL: ${{ matrix.version_service_url }}
+      PERCONA_TEST_PXC_OPERATOR_VERSION: ${{ matrix.pxc_version }}
+      PERCONA_TEST_PSMDB_OPERATOR_VERSION: ${{ matrix.psmdb_version }}
       MINIKUBE_IN_STYLE: 1
       CHANGE_MINIKUBE_NONE_USER: true
 

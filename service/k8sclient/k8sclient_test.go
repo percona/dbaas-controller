@@ -67,9 +67,17 @@ type componentsParams struct {
 	productVersion string
 }
 
+// componentVersion contains info about exact component version.
+type componentVersion struct {
+	ImagePath string `json:"imagePath"`
+	ImageHash string `json:"imageHash"`
+	Status    string `json:"status"`
+	Critical  bool   `json:"critical"`
+}
+
 type matrix struct {
-	PXCOperator   map[string]interface{} `json:"pxcOperator,omitempty"`
-	PSMDBOperator map[string]interface{} `json:"psmdbOperator,omitempty"`
+	PXCOperator   map[string]componentVersion `json:"pxcOperator,omitempty"`
+	PSMDBOperator map[string]componentVersion `json:"psmdbOperator,omitempty"`
 }
 
 type Version struct {
@@ -85,17 +93,17 @@ type VersionServiceResponse struct {
 
 var errNoVersionsFound error = errors.New("no versions to compare current version with found")
 
-func latest(m map[string]interface{}) (*goversion.Version, error) {
+func latestRecommended(m map[string]componentVersion) (*goversion.Version, error) {
 	if len(m) == 0 {
 		return nil, errNoVersionsFound
 	}
 	latest := goversion.Must(goversion.NewVersion("0.0.0"))
-	for version := range m {
+	for version, c := range m {
 		parsedVersion, err := goversion.NewVersion(version)
 		if err != nil {
 			return nil, err
 		}
-		if parsedVersion.GreaterThan(latest) {
+		if parsedVersion.GreaterThan(latest) && c.Status == "recommended" {
 			latest = parsedVersion
 		}
 	}
@@ -175,11 +183,11 @@ func (c *VersionServiceClient) LatestOperatorVersion(ctx context.Context, pmmVer
 		return nil, nil, nil // no deps for the PMM version passed to c.Matrix
 	}
 	pmmVersionDeps := resp.Versions[0]
-	latestPSMDBOperator, err := latest(pmmVersionDeps.Matrix.PSMDBOperator)
+	latestPSMDBOperator, err := latestRecommended(pmmVersionDeps.Matrix.PSMDBOperator)
 	if err != nil {
 		return nil, nil, err
 	}
-	latestPXCOperator, err := latest(pmmVersionDeps.Matrix.PXCOperator)
+	latestPXCOperator, err := latestRecommended(pmmVersionDeps.Matrix.PXCOperator)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -226,10 +234,19 @@ func TestK8sClient(t *testing.T) {
 	pxc, psmdb, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
 	require.NoError(t, err)
 
-	err = client.ApplyOperator(ctx, pxc.String(), app.DefaultPXCOperatorURLTemplate)
+	pxcVersion := pxc.String()
+	if value, ok := os.LookupEnv("PERCONA_TEST_PXC_OPERATOR_VERSION"); ok {
+		pxcVersion = value
+	}
+	psmdbVersion := psmdb.String()
+	if value, ok := os.LookupEnv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); ok {
+		psmdbVersion = value
+	}
+
+	err = client.ApplyOperator(ctx, pxcVersion, app.DefaultPXCOperatorURLTemplate)
 	require.NoError(t, err)
 
-	err = client.ApplyOperator(ctx, psmdb.String(), app.DefaultPSMDBOperatorURLTemplate)
+	err = client.ApplyOperator(ctx, psmdbVersion, app.DefaultPSMDBOperatorURLTemplate)
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
