@@ -272,7 +272,7 @@ func TestK8sClient(t *testing.T) {
 	err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
 	require.NoError(t, err)
 
-	t.Run("CheckOperators", func(t *testing.T) {
+	t.Run("CheckOperators", func(t *testing.T) { //nolint:paralleltest
 		operators, err := client.CheckOperators(ctx)
 		require.NoError(t, err)
 		require.NotNil(t, operators)
