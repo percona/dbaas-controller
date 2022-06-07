@@ -325,8 +325,8 @@ func TestK8sClient(t *testing.T) {
 			VersionServiceURL: "https://check.percona.com",
 		})
 		require.NoError(t, err)
-
 		l.Info("PXC Cluster is created")
+		defer client.DeletePXCCluster(ctx, name)
 
 		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 			return cluster != nil && cluster.State != ClusterStateInvalid
@@ -481,54 +481,55 @@ func TestK8sClient(t *testing.T) {
 			return cluster == nil
 		})
 		l.Info("PXC Cluster is deleted")
-	})
 
-	t.Run("Create PXC with HAProxy", func(t *testing.T) {
-		t.Parallel()
-		clusterName := "test-haproxy-pxc"
-		err = client.CreatePXCCluster(ctx, &PXCParams{
-			Name: clusterName,
-			Size: 1,
-			PXC: &PXC{
-				DiskSize: "1000000000",
-				ComputeResources: &ComputeResources{
-					CPUM:        "500m",
-					MemoryBytes: "500M",
+		t.Run("with HAProxy", func(t *testing.T) {
+			t.Parallel()
+			clusterName := "test-haproxy-pxc"
+			err = client.CreatePXCCluster(ctx, &PXCParams{
+				Name: clusterName,
+				Size: 1,
+				PXC: &PXC{
+					DiskSize: "1000000000",
+					ComputeResources: &ComputeResources{
+						CPUM:        "500m",
+						MemoryBytes: "500M",
+					},
 				},
-			},
-			HAProxy: &HAProxy{
-				ComputeResources: &ComputeResources{
-					CPUM:        "300m",
-					MemoryBytes: "300M",
+				HAProxy: &HAProxy{
+					ComputeResources: &ComputeResources{
+						CPUM:        "300m",
+						MemoryBytes: "300M",
+					},
 				},
-			},
-			PMM: pmm,
-		})
-		require.NoError(t, err)
-		assertListPXCCluster(ctx, t, client, clusterName, func(cluster *PXCCluster) bool {
-			return cluster != nil && cluster.State == ClusterStateReady
-		})
+				PMM: pmm,
+			})
+			require.NoError(t, err)
+			defer client.DeletePXCCluster(ctx, clusterName)
+			assertListPXCCluster(ctx, t, client, clusterName, func(cluster *PXCCluster) bool {
+				return cluster != nil && cluster.State == ClusterStateReady
+			})
 
-		// Test listing.
-		clusters, err := client.ListPXCClusters(ctx)
-		require.NoError(t, err)
-		assert.Conditionf(t,
-			func(clusters []PXCCluster, clusterName string) assert.Comparison {
-				return func() bool {
-					for _, cluster := range clusters {
-						if cluster.Name == clusterName {
-							return true
+			// Test listing.
+			clusters, err := client.ListPXCClusters(ctx)
+			require.NoError(t, err)
+			assert.Conditionf(t,
+				func(clusters []PXCCluster, clusterName string) assert.Comparison {
+					return func() bool {
+						for _, cluster := range clusters {
+							if cluster.Name == clusterName {
+								return true
+							}
 						}
+						return false
 					}
-					return false
-				}
-			}(clusters, clusterName),
-			"cluster '%s' was not found",
-			clusterName,
-		)
+				}(clusters, clusterName),
+				"cluster '%s' was not found",
+				clusterName,
+			)
 
-		err = client.DeletePXCCluster(ctx, clusterName)
-		require.NoError(t, err)
+			err = client.DeletePXCCluster(ctx, clusterName)
+			require.NoError(t, err)
+		})
 	})
 
 	t.Run("PSMDB", func(t *testing.T) {
@@ -555,6 +556,7 @@ func TestK8sClient(t *testing.T) {
 			PMM: pmm,
 		})
 		require.NoError(t, err)
+		defer client.DeletePSMDBCluster(ctx, name)
 
 		l.Info("PSMDB Cluster is created")
 
