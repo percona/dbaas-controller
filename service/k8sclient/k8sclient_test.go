@@ -272,7 +272,8 @@ func TestK8sClient(t *testing.T) {
 	err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
 	require.NoError(t, err)
 
-	t.Run("CheckOperators", func(t *testing.T) { //nolint:paralleltest
+	t.Run("CheckOperators", func(t *testing.T) {
+		t.Parallel()
 		operators, err := client.CheckOperators(ctx)
 		require.NoError(t, err)
 		require.NotNil(t, operators)
@@ -316,8 +317,8 @@ func TestK8sClient(t *testing.T) {
 			ProxySQL: &ProxySQL{
 				DiskSize: "1000000000",
 				ComputeResources: &ComputeResources{
-					CPUM:        "500m",
-					MemoryBytes: "500M",
+					CPUM:        "300m",
+					MemoryBytes: "300M",
 				},
 			},
 			PMM:               pmm,
@@ -486,11 +487,22 @@ func TestK8sClient(t *testing.T) {
 		t.Parallel()
 		clusterName := "test-haproxy-pxc"
 		err = client.CreatePXCCluster(ctx, &PXCParams{
-			Name:    clusterName,
-			Size:    1,
-			PXC:     &PXC{DiskSize: "1000000000"},
-			HAProxy: new(HAProxy),
-			PMM:     pmm,
+			Name: clusterName,
+			Size: 1,
+			PXC: &PXC{
+				DiskSize: "1000000000",
+				ComputeResources: &ComputeResources{
+					CPUM:        "500m",
+					MemoryBytes: "500M",
+				},
+			},
+			HAProxy: &HAProxy{
+				ComputeResources: &ComputeResources{
+					CPUM:        "300m",
+					MemoryBytes: "300M",
+				},
+			},
+			PMM: pmm,
 		})
 		require.NoError(t, err)
 		assertListPXCCluster(ctx, t, client, clusterName, func(cluster *PXCCluster) bool {
@@ -690,7 +702,7 @@ func getPXCCluster(ctx context.Context, client *K8sClient, name string) (*PXCClu
 
 func assertListPXCCluster(ctx context.Context, t *testing.T, client *K8sClient, name string, conditionFunc func(cluster *PXCCluster) bool) {
 	t.Helper()
-	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 	for {
 		time.Sleep(5 * time.Second)
