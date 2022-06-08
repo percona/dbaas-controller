@@ -103,8 +103,7 @@ jobs:
         with:
           kubernetes-version: ${{ matrix.kubernetes_version }}
           cpus: 'max'
-          memory: 'max'
-          cni: bridge
+          memory: '6000'
         uses: percona-platform/setup-minikube@master
 
       - name: Enable Go modules cache
@@ -318,6 +317,12 @@ jobs:
           echo "Pods: $(kubectl get pod | tail +2 | wc -l)"
           echo "State of all pods:"
           kubectl describe pods
+          kubectl describe pv,pvc
+          kubectl get events --sort-by=lastTimestamp
+          kubectl logs --all-containers --timestamps --selector='name=percona-xtradb-cluster-operator'
+          kubectl logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-xtradb-cluster'
+          kubectl logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator'
+          kubectl logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb'
 
       - name: Delete the test namespace
         if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1' && env.DELETE_NAMESPACE
