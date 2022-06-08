@@ -340,8 +340,8 @@ func TestK8sClient(t *testing.T) {
 		t.Run("All pods are ready", func(t *testing.T) {
 			cluster, err := getPXCCluster(ctx, client, name)
 			require.NoError(t, err)
-			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
-			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
+			assert.Equal(t, int32(6), cluster.DetailedState.CountReadyPods())
+			assert.Equal(t, int32(6), cluster.DetailedState.CountAllPods())
 		})
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
@@ -507,7 +507,7 @@ func TestK8sClient(t *testing.T) {
 		// Test listing.
 		clusters, err := client.ListPXCClusters(ctx)
 		require.NoError(t, err)
-		assert.Conditionf(t,
+		require.Conditionf(t,
 			func(clusters []PXCCluster, clusterName string) assert.Comparison {
 				return func() bool {
 					for _, cluster := range clusters {

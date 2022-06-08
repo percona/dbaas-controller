@@ -105,7 +105,7 @@ jobs:
         with:
           kubernetes-version: ${{ matrix.kubernetes_version }}
           cpus: 'max'
-          memory: '6000'
+          memory: '5500'
         uses: percona-platform/setup-minikube@master
 
       - name: Enable Go modules cache
