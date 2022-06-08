@@ -309,7 +309,6 @@ func TestK8sClient(t *testing.T) {
 			PXC: &PXC{
 				DiskSize: "1000000000",
 				ComputeResources: &ComputeResources{
-					CPUM:        "500m",
 					MemoryBytes: "500M",
 				},
 				Image: "percona/percona-xtradb-cluster:8.0.20-11.1",
@@ -317,8 +316,7 @@ func TestK8sClient(t *testing.T) {
 			ProxySQL: &ProxySQL{
 				DiskSize: "1000000000",
 				ComputeResources: &ComputeResources{
-					CPUM:        "300m",
-					MemoryBytes: "300M",
+					MemoryBytes: "500M",
 				},
 			},
 			PMM:               pmm,
@@ -491,14 +489,12 @@ func TestK8sClient(t *testing.T) {
 				PXC: &PXC{
 					DiskSize: "1000000000",
 					ComputeResources: &ComputeResources{
-						CPUM:        "500m",
 						MemoryBytes: "500M",
 					},
 				},
 				HAProxy: &HAProxy{
 					ComputeResources: &ComputeResources{
-						CPUM:        "300m",
-						MemoryBytes: "300M",
+						MemoryBytes: "500M",
 					},
 				},
 				PMM: pmm,
@@ -549,7 +545,7 @@ func TestK8sClient(t *testing.T) {
 			Replicaset: &Replicaset{
 				DiskSize: "1000000000",
 				ComputeResources: &ComputeResources{
-					CPUM:        "500m",
+					CPUM:        "400m",
 					MemoryBytes: "500M",
 				},
 			},
@@ -605,10 +601,6 @@ func TestK8sClient(t *testing.T) {
 				Size: 3,
 				Replicaset: &Replicaset{
 					DiskSize: "1000000000",
-					ComputeResources: &ComputeResources{
-						CPUM:        "500m",
-						MemoryBytes: "500M",
-					},
 				},
 				PMM:               pmm,
 				Image:             "percona/percona-server-mongodb:4.4.6-8",
@@ -704,17 +696,25 @@ func getPXCCluster(ctx context.Context, client *K8sClient, name string) (*PXCClu
 
 func assertListPXCCluster(ctx context.Context, t *testing.T, client *K8sClient, name string, conditionFunc func(cluster *PXCCluster) bool) {
 	t.Helper()
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
-	for {
-		time.Sleep(5 * time.Second)
-		cluster, err := getPXCCluster(timeoutCtx, client, name)
-		if !errors.Is(err, ErrNoSuchCluster) {
-			require.NoError(t, err)
-		}
 
-		if conditionFunc(cluster) {
-			break
+	ticker := time.NewTicker(1 * time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			clusters, _ := client.ListPXCClusters(ctx)
+			t.Log(clusters)
+			t.Errorf("PXC cluster did not get to the right state")
+		case <-ticker.C:
+			cluster, err := getPXCCluster(timeoutCtx, client, name)
+			if !errors.Is(err, ErrNoSuchCluster) {
+				require.NoError(t, err)
+			}
+
+			if conditionFunc(cluster) {
+				return
+			}
 		}
 	}
 }
@@ -723,15 +723,22 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 	t.Helper()
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
+	ticker := time.NewTicker(1 * time.Second)
 	for {
-		time.Sleep(1 * time.Second)
-		cluster, err := getPSMDBCluster(timeoutCtx, client, name)
-		if !errors.Is(err, ErrNoSuchCluster) {
-			require.NoError(t, err)
-		}
+		select {
+		case <-ctx.Done():
+			clusters, _ := client.ListPSMDBClusters(ctx)
+			t.Log(clusters)
+			t.Errorf("PSMDB cluster did not get to the right state")
+		case <-ticker.C:
+			cluster, err := getPSMDBCluster(timeoutCtx, client, name)
+			if !errors.Is(err, ErrNoSuchCluster) {
+				require.NoError(t, err)
+			}
 
-		if conditionFunc(cluster) {
-			break
+			if conditionFunc(cluster) {
+				return
+			}
 		}
 	}
 }

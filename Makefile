@@ -142,6 +142,7 @@ collect-debugdata:                ## Collect debugdata
 	minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-xtradb-cluster' > ./debugdata/pxc-clusters.txt
 	minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator' > ./debugdata/psmdb-operators.txt
 	minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb' > ./debugdata/psmdb-clusters.txt
+	cat debugdata/*
 
 eks-setup-test-namespace:
 	kubectl ${KUBECTL_ARGS} create ns "${NAMESPACE}"
