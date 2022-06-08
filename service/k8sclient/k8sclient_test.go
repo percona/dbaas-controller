@@ -311,16 +311,10 @@ func TestK8sClient(t *testing.T) {
 			Size: 1,
 			PXC: &PXC{
 				DiskSize: "1000000000",
-				ComputeResources: &ComputeResources{
-					MemoryBytes: "500M",
-				},
-				Image: "percona/percona-xtradb-cluster:8.0.20-11.1",
+				Image:    "percona/percona-xtradb-cluster:8.0.20-11.1",
 			},
 			ProxySQL: &ProxySQL{
 				DiskSize: "1000000000",
-				ComputeResources: &ComputeResources{
-					MemoryBytes: "500M",
-				},
 			},
 			PMM:               pmm,
 			VersionServiceURL: "https://check.percona.com",
@@ -494,9 +488,6 @@ func TestK8sClient(t *testing.T) {
 			Size: 1,
 			PXC: &PXC{
 				DiskSize: "1000000000",
-				ComputeResources: &ComputeResources{
-					MemoryBytes: "500M",
-				},
 			},
 			HAProxy: &HAProxy{
 				ComputeResources: &ComputeResources{
@@ -551,10 +542,6 @@ func TestK8sClient(t *testing.T) {
 			Size: 3,
 			Replicaset: &Replicaset{
 				DiskSize: "1000000000",
-				ComputeResources: &ComputeResources{
-					CPUM:        "400m",
-					MemoryBytes: "500M",
-				},
 			},
 			PMM: pmm,
 		})
