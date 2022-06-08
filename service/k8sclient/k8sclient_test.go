@@ -322,7 +322,6 @@ func TestK8sClient(t *testing.T) {
 		})
 		require.NoError(t, err)
 		l.Info("PXC Cluster is created")
-		defer client.DeletePXCCluster(ctx, name)
 
 		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 			return cluster != nil && cluster.State != ClusterStateInvalid
@@ -499,7 +498,8 @@ func TestK8sClient(t *testing.T) {
 			PMM: pmm,
 		})
 		require.NoError(t, err)
-		defer client.DeletePXCCluster(ctx, clusterName)
+		l.Info("PXC Cluster is created")
+
 		assertListPXCCluster(ctx, t, client, clusterName, func(cluster *PXCCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
@@ -549,7 +549,6 @@ func TestK8sClient(t *testing.T) {
 			PMM: pmm,
 		})
 		require.NoError(t, err)
-		defer client.DeletePSMDBCluster(ctx, name)
 
 		l.Info("PSMDB Cluster is created")
 
