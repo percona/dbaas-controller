@@ -294,6 +294,7 @@ func TestK8sClient(t *testing.T) {
 
 	var pmm *PMM
 	t.Run("PXC", func(t *testing.T) {
+		t.Parallel()
 		if perconaTestOperator != "pxc" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
 		}
@@ -479,6 +480,7 @@ func TestK8sClient(t *testing.T) {
 	})
 
 	t.Run("with HAProxy", func(t *testing.T) {
+		t.Parallel()
 		if perconaTestOperator != "haproxy-pxc" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
 		}
@@ -525,6 +527,7 @@ func TestK8sClient(t *testing.T) {
 	})
 
 	t.Run("PSMDB", func(t *testing.T) {
+		t.Parallel()
 		if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
 		}
