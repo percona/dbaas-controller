@@ -309,7 +309,7 @@ func TestK8sClient(t *testing.T) {
 
 		err = client.CreatePXCCluster(ctx, &PXCParams{
 			Name: name,
-			Size: 1,
+			Size: 3,
 			PXC: &PXC{
 				DiskSize: "1000000000",
 				Image:    "percona/percona-xtradb-cluster:8.0.20-11.1",
@@ -333,6 +333,17 @@ func TestK8sClient(t *testing.T) {
 			assert.Equal(t, ClusterStateChanging, cluster.State)
 		})
 
+		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+
+		t.Run("All pods are ready", func(t *testing.T) {
+			cluster, err := getPXCCluster(ctx, client, name)
+			require.NoError(t, err)
+			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
+			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
+		})
+
 		t.Run("Create cluster with the same name", func(t *testing.T) {
 			err = client.CreatePXCCluster(ctx, &PXCParams{
 				Name:     name,
@@ -343,17 +354,6 @@ func TestK8sClient(t *testing.T) {
 			})
 			require.Error(t, err)
 			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
-		})
-
-		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
-			return cluster != nil && cluster.State == ClusterStateReady
-		})
-
-		t.Run("All pods are ready", func(t *testing.T) {
-			cluster, err := getPXCCluster(ctx, client, name)
-			require.NoError(t, err)
-			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
-			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
 		})
 
 		t.Run("Get logs", func(t *testing.T) {
@@ -418,7 +418,7 @@ func TestK8sClient(t *testing.T) {
 		t.Run("Upgrade PXC", func(t *testing.T) {
 			err = client.UpdatePXCCluster(ctx, &PXCParams{
 				Name: name,
-				Size: 1,
+				Size: 3,
 				PXC: &PXC{
 					DiskSize: "1000000000",
 					Image:    "percona/percona-xtradb-cluster:8.0.20-11.2",
@@ -456,13 +456,13 @@ func TestK8sClient(t *testing.T) {
 
 		err = client.UpdatePXCCluster(ctx, &PXCParams{
 			Name: name,
-			Size: 3,
+			Size: 1,
 		})
 		require.NoError(t, err)
 
 		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 			if cluster != nil && cluster.State == ClusterStateReady {
-				assert.Equal(t, int32(3), cluster.Size)
+				assert.Equal(t, int32(1), cluster.Size)
 				return true
 			}
 			return false
@@ -486,7 +486,7 @@ func TestK8sClient(t *testing.T) {
 		clusterName := "test-haproxy-pxc"
 		err = client.CreatePXCCluster(ctx, &PXCParams{
 			Name: clusterName,
-			Size: 1,
+			Size: 3,
 			PXC: &PXC{
 				DiskSize: "1000000000",
 			},
