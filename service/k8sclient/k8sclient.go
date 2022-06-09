@@ -940,22 +940,22 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return err
 	}
 
-	affinity := new(psmdb.PodAffinity)
+	// affinity := new(psmdb.PodAffinity)
 	affinity112 := new(psmdb.Affinity112)
-	var expose psmdb.Expose
+	// var expose psmdb.Expose
 	var expose112 psmdb.Expose112
 	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType {
-		affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
+		//  affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
 		affinity112.AntiAffinityTopologyKey = "kubernetes.io/hostname"
 
 		if params.Expose {
 			// This enables ingress for the cluster and exposes the cluster to the world.
 			// The cluster will have an internal IP and a world accessible hostname.
 			// This feature cannot be tested with minikube. Please use EKS for testing.
-			expose = psmdb.Expose{
-				Enabled:    true,
-				ExposeType: common.ServiceTypeLoadBalancer,
-			}
+			// 	expose = psmdb.Expose{
+			// 		Enabled:    true,
+			// 		ExposeType: common.ServiceTypeLoadBalancer,
+			// 	}
 			expose112 = psmdb.Expose112{
 				Enabled:    true,
 				ExposeType: string(common.ServiceTypeLoadBalancer),
@@ -967,7 +967,8 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		// > ...
 		// > set affinity.antiAffinityTopologyKey key to "none"
 		// > (the Operator will be unable to spread the cluster on several nodes)
-		affinity.TopologyKey = pointer.ToString(psmdb.AffinityOff)
+		// affinity.TopologyKey = pointer.ToString(psmdb.AffinityOff)
+		affinity112.AntiAffinityTopologyKey = psmdb.AffinityOff
 	}
 
 	operators, err := c.CheckOperators(ctx)
@@ -1021,7 +1022,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 						Affinity: affinity112,
 					},
 					Expose:     expose112,
-					VolumeSpec: c.volumeSpec112(params.Replicaset.DiskSize),
+					VolumeSpec: c.volumeSpec112(params.Replicaset.DiskSize, params.Replicaset.ComputeResources),
 					PodDisruptionBudget: &psmdb.PodDisruptionBudget112{
 						MaxUnavailable: 1,
 					},
@@ -1041,145 +1042,145 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 	_ = res1
 
-	res := &psmdb.PerconaServerMongoDB{
-		TypeMeta: common.TypeMeta{
-			APIVersion: c.getAPIVersionForPSMDBOperator(operators.PsmdbOperatorVersion),
-			Kind:       psmdb.PerconaServerMongoDBKind,
-		},
-		ObjectMeta: common.ObjectMeta{
-			Name:       params.Name,
-			Finalizers: []string{"delete-psmdb-pvc"},
-		},
-		Spec: &psmdb.PerconaServerMongoDBSpec{
-			UpdateStrategy: updateStrategyRollingUpdate,
-			CRVersion:      operators.PsmdbOperatorVersion,
-			Image:          psmdbImage,
-			Secrets: &psmdb.SecretsSpec{
-				Users: secretName,
-			},
-			Mongod: &psmdb.MongodSpec{
-				Net: &psmdb.MongodSpecNet{
-					Port: 27017,
-				},
-				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
-					Mode: psmdb.OperationProfilingModeSlowOp,
-				},
-				Security: &psmdb.MongodSpecSecurity{
-					RedactClientLogData:  false,
-					EnableEncryption:     pointer.ToBool(true),
-					EncryptionKeySecret:  fmt.Sprintf("%s-mongodb-encryption-key", params.Name),
-					EncryptionCipherMode: psmdb.MongodChiperModeCBC,
-				},
-				SetParameter: &psmdb.MongodSpecSetParameter{
-					TTLMonitorSleepSecs: 60,
-				},
-				Storage: &psmdb.MongodSpecStorage{
-					Engine: psmdb.StorageEngineWiredTiger,
-					MMAPv1: &psmdb.MongodSpecMMAPv1{
-						NsSize:     16,
-						Smallfiles: false,
-					},
-					WiredTiger: &psmdb.MongodSpecWiredTiger{
-						CollectionConfig: &psmdb.MongodSpecWiredTigerCollectionConfig{
-							BlockCompressor: &psmdb.WiredTigerCompressorSnappy,
-						},
-						EngineConfig: &psmdb.MongodSpecWiredTigerEngineConfig{
-							DirectoryForIndexes: false,
-							JournalCompressor:   &psmdb.WiredTigerCompressorSnappy,
-						},
-						IndexConfig: &psmdb.MongodSpecWiredTigerIndexConfig{
-							PrefixCompression: true,
-						},
-					},
-				},
-			},
-			Sharding: &psmdb.ShardingSpec{
-				Enabled: true,
-				ConfigsvrReplSet: &psmdb.ReplsetSpec{
-					Size:       3,
-					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
-					// Arbiter: psmdb.Arbiter{
-					// 	Enabled: false,
-					// 	Size:    1,
-					// 	MultiAZ: psmdb.MultiAZ{
-					// 		Affinity: affinity,
-					// 	},
-					// },
-					MultiAZ: psmdb.MultiAZ{
-						Affinity: affinity,
-					},
-				},
-				Mongos: &psmdb.ReplsetSpec{
-					// Arbiter: psmdb.Arbiter{
-					// 	Enabled: false,
-					// 	Size:    1,
-					// 	MultiAZ: psmdb.MultiAZ{
-					// 		Affinity: affinity,
-					// 	},
-					// },
-					Size: params.Size,
-					MultiAZ: psmdb.MultiAZ{
-						Affinity: affinity,
-					},
-				},
-				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
-					Mode: psmdb.OperationProfilingModeSlowOp,
-				},
-			},
-			Replsets: []*psmdb.ReplsetSpec{
-				{
-					Name:      "rs0",
-					Size:      params.Size,
-					Resources: c.setComputeResources(params.Replicaset.ComputeResources),
-					// Arbiter: psmdb.Arbiter{
-					// 	Enabled: false,
-					// 	Size:    1,
-					// 	MultiAZ: psmdb.MultiAZ{
-					// 		Affinity: affinity,
-					// 	},
-					// },
-					Expose:     expose,
-					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
-					PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
-						MaxUnavailable: pointer.ToInt(1),
-					},
-					MultiAZ: psmdb.MultiAZ{
-						Affinity: affinity,
-					},
-				},
-			},
+	// res := &psmdb.PerconaServerMongoDB{
+	// 	TypeMeta: common.TypeMeta{
+	// 		APIVersion: c.getAPIVersionForPSMDBOperator(operators.PsmdbOperatorVersion),
+	// 		Kind:       psmdb.PerconaServerMongoDBKind,
+	// 	},
+	// 	ObjectMeta: common.ObjectMeta{
+	// 		Name:       params.Name,
+	// 		Finalizers: []string{"delete-psmdb-pvc"},
+	// 	},
+	// 	Spec: &psmdb.PerconaServerMongoDBSpec{
+	// 		UpdateStrategy: updateStrategyRollingUpdate,
+	// 		CRVersion:      operators.PsmdbOperatorVersion,
+	// 		Image:          psmdbImage,
+	// 		Secrets: &psmdb.SecretsSpec{
+	// 			Users: secretName,
+	// 		},
+	// 		Mongod: &psmdb.MongodSpec{
+	// 			Net: &psmdb.MongodSpecNet{
+	// 				Port: 27017,
+	// 			},
+	// 			OperationProfiling: &psmdb.MongodSpecOperationProfiling{
+	// 				Mode: psmdb.OperationProfilingModeSlowOp,
+	// 			},
+	// 			Security: &psmdb.MongodSpecSecurity{
+	// 				RedactClientLogData:  false,
+	// 				EnableEncryption:     pointer.ToBool(true),
+	// 				EncryptionKeySecret:  fmt.Sprintf("%s-mongodb-encryption-key", params.Name),
+	// 				EncryptionCipherMode: psmdb.MongodChiperModeCBC,
+	// 			},
+	// 			SetParameter: &psmdb.MongodSpecSetParameter{
+	// 				TTLMonitorSleepSecs: 60,
+	// 			},
+	// 			Storage: &psmdb.MongodSpecStorage{
+	// 				Engine: psmdb.StorageEngineWiredTiger,
+	// 				MMAPv1: &psmdb.MongodSpecMMAPv1{
+	// 					NsSize:     16,
+	// 					Smallfiles: false,
+	// 				},
+	// 				WiredTiger: &psmdb.MongodSpecWiredTiger{
+	// 					CollectionConfig: &psmdb.MongodSpecWiredTigerCollectionConfig{
+	// 						BlockCompressor: &psmdb.WiredTigerCompressorSnappy,
+	// 					},
+	// 					EngineConfig: &psmdb.MongodSpecWiredTigerEngineConfig{
+	// 						DirectoryForIndexes: false,
+	// 						JournalCompressor:   &psmdb.WiredTigerCompressorSnappy,
+	// 					},
+	// 					IndexConfig: &psmdb.MongodSpecWiredTigerIndexConfig{
+	// 						PrefixCompression: true,
+	// 					},
+	// 				},
+	// 			},
+	// 		},
+	// 		Sharding: &psmdb.ShardingSpec{
+	// 			Enabled: true,
+	// 			ConfigsvrReplSet: &psmdb.ReplsetSpec{
+	// 				Size:       3,
+	// 				VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
+	// 				// Arbiter: psmdb.Arbiter{
+	// 				// 	Enabled: false,
+	// 				// 	Size:    1,
+	// 				// 	MultiAZ: psmdb.MultiAZ{
+	// 				// 		Affinity: affinity,
+	// 				// 	},
+	// 				// },
+	// 				MultiAZ: psmdb.MultiAZ{
+	// 					Affinity: affinity,
+	// 				},
+	// 			},
+	// 			Mongos: &psmdb.ReplsetSpec{
+	// 				// Arbiter: psmdb.Arbiter{
+	// 				// 	Enabled: false,
+	// 				// 	Size:    1,
+	// 				// 	MultiAZ: psmdb.MultiAZ{
+	// 				// 		Affinity: affinity,
+	// 				// 	},
+	// 				// },
+	// 				Size: params.Size,
+	// 				MultiAZ: psmdb.MultiAZ{
+	// 					Affinity: affinity,
+	// 				},
+	// 			},
+	// 			OperationProfiling: &psmdb.MongodSpecOperationProfiling{
+	// 				Mode: psmdb.OperationProfilingModeSlowOp,
+	// 			},
+	// 		},
+	// 		Replsets: []*psmdb.ReplsetSpec{
+	// 			{
+	// 				Name:      "rs0",
+	// 				Size:      params.Size,
+	// 				Resources: c.setComputeResources(params.Replicaset.ComputeResources),
+	// 				// Arbiter: psmdb.Arbiter{
+	// 				// 	Enabled: false,
+	// 				// 	Size:    1,
+	// 				// 	MultiAZ: psmdb.MultiAZ{
+	// 				// 		Affinity: affinity,
+	// 				// 	},
+	// 				// },
+	// 				Expose:     expose,
+	// 				VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
+	// 				PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
+	// 					MaxUnavailable: pointer.ToInt(1),
+	// 				},
+	// 				MultiAZ: psmdb.MultiAZ{
+	// 					Affinity: affinity,
+	// 				},
+	// 			},
+	// 		},
 
-			PMM: &psmdb.PmmSpec{
-				Enabled: false,
-			},
+	// 		PMM: &psmdb.PmmSpec{
+	// 			Enabled: false,
+	// 		},
 
-			Backup: &psmdb.BackupSpec{
-				Enabled:            true,
-				Image:              fmt.Sprintf(psmdbBackupImageTemplate, operators.PsmdbOperatorVersion),
-				ServiceAccountName: "percona-server-mongodb-operator",
-			},
-		},
-	}
-	_ = res
-	if params.Replicaset != nil {
-		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
-		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
-	}
-	if params.PMM != nil {
-		res.Spec.PMM = &psmdb.PmmSpec{
-			Enabled:    true,
-			ServerHost: params.PMM.PublicAddress,
-			Image:      pmmClientImage,
-			Resources: &common.PodResources{
-				Requests: &common.ResourcesList{
-					Memory: "300M",
-					CPU:    "500m",
-				},
-			},
-		}
-		secrets["PMM_SERVER_USER"] = []byte(params.PMM.Login)
-		secrets["PMM_SERVER_PASSWORD"] = []byte(params.PMM.Password)
-	}
+	// 		Backup: &psmdb.BackupSpec{
+	// 			Enabled:            true,
+	// 			Image:              fmt.Sprintf(psmdbBackupImageTemplate, operators.PsmdbOperatorVersion),
+	// 			ServiceAccountName: "percona-server-mongodb-operator",
+	// 		},
+	// 	},
+	// }
+	// _ = res
+	// if params.Replicaset != nil {
+	// 	res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+	// 	res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+	// }
+	// if params.PMM != nil {
+	// 	res.Spec.PMM = &psmdb.PmmSpec{
+	// 		Enabled:    true,
+	// 		ServerHost: params.PMM.PublicAddress,
+	// 		Image:      pmmClientImage,
+	// 		Resources: &common.PodResources{
+	// 			Requests: &common.ResourcesList{
+	// 				Memory: "300M",
+	// 				CPU:    "500m",
+	// 			},
+	// 		},
+	// 	}
+	// 	secrets["PMM_SERVER_USER"] = []byte(params.PMM.Login)
+	// 	secrets["PMM_SERVER_PASSWORD"] = []byte(params.PMM.Password)
+	// }
 
 	err = c.CreateSecret(ctx, secretName, secrets)
 	if err != nil {
@@ -1516,12 +1517,16 @@ func (c *K8sClient) volumeSpec(diskSize string) *common.VolumeSpec {
 	}
 }
 
-func (c *K8sClient) volumeSpec112(diskSize string) *psmdb.VolumeSpec112 {
+func (c *K8sClient) volumeSpec112(diskSize string, res *ComputeResources) *psmdb.VolumeSpec112 {
 	return &psmdb.VolumeSpec112{
 		PersistentVolumeClaim: psmdb.PersistentVolumeClaim112{
 			Resources: psmdb.Resources112{
 				Requests: &psmdb.Requests112{
 					Storage: diskSize,
+				},
+				Limits: &psmdb.Limits112{
+					CPU:    res.CPUM,
+					Memory: res.MemoryBytes,
 				},
 			},
 		},
