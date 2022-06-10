@@ -109,10 +109,11 @@ const (
 )
 
 type ShardingSpec struct {
-	Enabled            bool                          `json:"enabled"`
-	ConfigsvrReplSet   *ReplsetSpec                  `json:"configsvrReplSet"`
-	Mongos             *ReplsetSpec                  `json:"mongos"`
-	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
+	Enabled          bool               `json:"enabled"`
+	ConfigsvrReplSet *ReplsetSpec       `json:"configsvrReplSet"`
+	Mongos           *ReplsetMongosSpec `json:"mongos"`
+	//	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
+	Expose *Expose `json:"expose"`
 }
 
 // UpgradeOptions specify how and to what version we update.
@@ -233,6 +234,23 @@ type ReplsetSpec struct {
 	Expose              Expose                          `json:"expose,omitempty"`
 	Size                int32                           `json:"size"`
 	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
+	Resources           *common.PodResources            `json:"resources,omitempty"`
+	Name                string                          `json:"name,omitempty"`
+	ClusterRole         clusterRole                     `json:"clusterRole,omitempty"`
+	VolumeSpec          *common.VolumeSpec              `json:"volumeSpec,omitempty"`
+	LivenessProbe       *livenessProbeExtended          `json:"livenessProbe,omitempty"`
+	PodDisruptionBudget *common.PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+	MultiAZ
+}
+
+// Expose holds information about how the cluster is exposed to the worl via ingress.
+type ExposeSpec struct {
+	ExposeType common.ServiceType `json:"exposeType"`
+}
+
+type ReplsetMongosSpec struct {
+	Expose              ExposeSpec                      `json:"expose,omitempty"`
+	Size                int32                           `json:"size"`
 	Resources           *common.PodResources            `json:"resources,omitempty"`
 	Name                string                          `json:"name,omitempty"`
 	ClusterRole         clusterRole                     `json:"clusterRole,omitempty"`

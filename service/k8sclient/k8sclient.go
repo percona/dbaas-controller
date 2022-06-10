@@ -1037,24 +1037,27 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: affinity,
 					},
+					Expose: expose,
 				},
-				Mongos: &psmdb.ReplsetSpec{
-					Arbiter: psmdb.Arbiter{
-						Enabled: false,
-						Size:    1,
-						MultiAZ: psmdb.MultiAZ{
-							Affinity: affinity,
-						},
-					},
+				Mongos: &psmdb.ReplsetMongosSpec{
+					//Arbiter: psmdb.Arbiter{
+					//	Enabled: false,
+					//	Size:    1,
+					//	MultiAZ: psmdb.MultiAZ{
+					//		Affinity: affinity,
+					//	},
+					//},
 					Size: params.Size,
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: affinity,
 					},
-					Expose: expose,
+					Expose: psmdb.ExposeSpec{
+						ExposeType: common.ServiceTypeLoadBalancer,
+					},
 				},
-				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
-					Mode: psmdb.OperationProfilingModeSlowOp,
-				},
+				// OperationProfiling: &psmdb.MongodSpecOperationProfiling{
+				// 	Mode: psmdb.OperationProfilingModeSlowOp,
+				// },
 			},
 			Replsets: []*psmdb.ReplsetSpec{
 				{
@@ -1301,8 +1304,8 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
-			Exposed: cluster.Spec.Sharding.Mongos.Expose.Enabled,
-			Image:   cluster.Spec.Image,
+			// Exposed: cluster.Spec.Sharding.Expose.Enabled,
+			Image: cluster.Spec.Image,
 		}
 
 		if cluster.Status != nil {
