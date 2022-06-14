@@ -154,7 +154,18 @@ jobs:
 
       - name: Collect debug data
         if: ${{ always() }}
-        run: make collect-debugdata
+        run: |
+          make collect-debugdata
+          minikube logs --length=100
+          minikube kubectl -- get all
+          minikube kubectl -- describe pods
+          minikube kubectl -- describe pv,pvc
+          minikube kubectl -- get events --sort-by=lastTimestamp
+          minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-xtradb-cluster-operator'
+          minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-xtradb-cluster'
+          minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator'
+          minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb'
+          minikube kubectl -- logs --all-containers
 
       - name: Upload debug data
         if: ${{ always() }}

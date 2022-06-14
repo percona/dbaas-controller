@@ -369,6 +369,22 @@ func TestK8sClient(t *testing.T) {
 					name:       name + "-pxc-0",
 					containers: []string{"pxc", "pmm-client", "pxc-init"},
 				},
+				{
+					name:       name + "-proxysql-1",
+					containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
+				},
+				{
+					name:       name + "-pxc-1",
+					containers: []string{"pxc", "pmm-client", "pxc-init"},
+				},
+				{
+					name:       name + "-proxysql-2",
+					containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
+				},
+				{
+					name:       name + "-pxc-2",
+					containers: []string{"pxc", "pmm-client", "pxc-init"},
+				},
 			}
 			for _, ppod := range pods.Items {
 				var foundPod pod
