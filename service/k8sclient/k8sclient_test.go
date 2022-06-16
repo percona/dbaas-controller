@@ -309,10 +309,10 @@ func TestK8sClient(t *testing.T) {
 
 		err = client.CreatePXCCluster(ctx, &PXCParams{
 			Name: name,
-			Size: 3,
+			Size: 1,
 			PXC: &PXC{
 				DiskSize: "1000000000",
-				Image:    "percona/percona-xtradb-cluster:8.0.20-11.1",
+				Image:    "percona/percona-xtradb-cluster:8.0.23-14.1",
 			},
 			ProxySQL: &ProxySQL{
 				DiskSize: "1000000000",
@@ -369,22 +369,22 @@ func TestK8sClient(t *testing.T) {
 					name:       name + "-pxc-0",
 					containers: []string{"pxc", "pmm-client", "pxc-init"},
 				},
-				{
-					name:       name + "-proxysql-1",
-					containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
-				},
-				{
-					name:       name + "-pxc-1",
-					containers: []string{"pxc", "pmm-client", "pxc-init"},
-				},
-				{
-					name:       name + "-proxysql-2",
-					containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
-				},
-				{
-					name:       name + "-pxc-2",
-					containers: []string{"pxc", "pmm-client", "pxc-init"},
-				},
+				//{
+				//	name:       name + "-proxysql-1",
+				//	containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
+				//},
+				//{
+				//	name:       name + "-pxc-1",
+				//	containers: []string{"pxc", "pmm-client", "pxc-init"},
+				//},
+				//{
+				//	name:       name + "-proxysql-2",
+				//	containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
+				//},
+				//{
+				//	name:       name + "-pxc-2",
+				//	containers: []string{"pxc", "pmm-client", "pxc-init"},
+				//},
 			}
 			for _, ppod := range pods.Items {
 				var foundPod pod
@@ -437,7 +437,7 @@ func TestK8sClient(t *testing.T) {
 				Size: 3,
 				PXC: &PXC{
 					DiskSize: "1000000000",
-					Image:    "percona/percona-xtradb-cluster:8.0.20-11.2",
+					Image:    "percona/percona-xtradb-cluster:8.0.25-15.1",
 				},
 				ProxySQL:          &ProxySQL{DiskSize: "1000000000"},
 				PMM:               pmm,
@@ -456,7 +456,7 @@ func TestK8sClient(t *testing.T) {
 
 			cluster, err := getPXCCluster(ctx, client, name)
 			require.NoError(t, err)
-			assert.Equal(t, "percona/percona-xtradb-cluster:8.0.20-11.2", cluster.PXC.Image)
+			assert.Equal(t, "percona/percona-xtradb-cluster:8.0.25-15.1", cluster.PXC.Image)
 		})
 
 		err = client.RestartPXCCluster(ctx, name)
@@ -472,13 +472,13 @@ func TestK8sClient(t *testing.T) {
 
 		err = client.UpdatePXCCluster(ctx, &PXCParams{
 			Name: name,
-			Size: 1,
+			Size: 3,
 		})
 		require.NoError(t, err)
 
 		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
 			if cluster != nil && cluster.State == ClusterStateReady {
-				assert.Equal(t, int32(1), cluster.Size)
+				assert.Equal(t, int32(3), cluster.Size)
 				return true
 			}
 			return false
