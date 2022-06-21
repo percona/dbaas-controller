@@ -166,7 +166,7 @@ jobs:
           minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-xtradb-cluster'
           minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator'
           minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb'
-          minikube kubectl -- logs test-haproxy-pxc-0 
+          minikube kubectl -- logs test-haproxy-pxc-pxc-0 
 
       - name: Upload debug data
         if: ${{ always() }}
