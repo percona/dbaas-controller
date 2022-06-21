@@ -313,9 +313,17 @@ func TestK8sClient(t *testing.T) {
 			PXC: &PXC{
 				DiskSize: "1000000000",
 				Image:    "percona/percona-xtradb-cluster:8.0.23-14.1",
+				ComputeResources: &ComputeResources{
+					CPUM:        "400m",
+					MemoryBytes: "600M",
+				},
 			},
 			ProxySQL: &ProxySQL{
 				DiskSize: "1000000000",
+				ComputeResources: &ComputeResources{
+					CPUM:        "250m",
+					MemoryBytes: "500M",
+				},
 			},
 			PMM:               pmm,
 			VersionServiceURL: "https://check.percona.com",
@@ -340,8 +348,8 @@ func TestK8sClient(t *testing.T) {
 		t.Run("All pods are ready", func(t *testing.T) {
 			cluster, err := getPXCCluster(ctx, client, name)
 			require.NoError(t, err)
-			assert.Equal(t, int32(6), cluster.DetailedState.CountReadyPods())
-			assert.Equal(t, int32(6), cluster.DetailedState.CountAllPods())
+			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
+			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
 		})
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
