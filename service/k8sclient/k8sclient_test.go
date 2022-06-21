@@ -510,7 +510,7 @@ func TestK8sClient(t *testing.T) {
 		clusterName := "test-haproxy-pxc"
 		err = client.CreatePXCCluster(ctx, &PXCParams{
 			Name: clusterName,
-			Size: 3,
+			Size: 1,
 			PXC: &PXC{
 				DiskSize: "1000000000",
 			},
@@ -725,7 +725,9 @@ func assertListPXCCluster(ctx context.Context, t *testing.T, client *K8sClient, 
 		case <-ctx.Done():
 			clusters, _ := client.ListPXCClusters(ctx)
 			t.Log(clusters)
+			printLogs(t, context.TODO(), client, name)
 			t.Errorf("PXC cluster did not get to the right state")
+			return
 		case <-ticker.C:
 			cluster, err := getPXCCluster(timeoutCtx, client, name)
 			if !errors.Is(err, ErrNoSuchCluster) {
@@ -841,6 +843,24 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), cpuMillis)
 	assert.Equal(t, uint64(0), memoryBytes)
+}
+
+func printLogs(t *testing.T, ctx context.Context, client *K8sClient, name string) {
+	t.Helper()
+
+	pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+name)
+	require.NoError(t, err)
+
+	for _, ppod := range pods.Items {
+
+		for _, container := range ppod.Spec.Containers {
+
+			logs, _ := client.GetLogs(ctx, ppod.Status.ContainerStatuses, ppod.Name, container.Name)
+			for _, l := range logs {
+				t.Log(l)
+			}
+		}
+	}
 }
 
 func TestGetAllClusterResources(t *testing.T) {
