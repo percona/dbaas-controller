@@ -106,9 +106,8 @@ jobs:
           kubernetes-version: ${{ matrix.kubernetes_version }}
 #          driver: 'docker'
 #          container-runtime: 'containerd'
-          cpus: '4'
-          memory: '5500'
-          cni: 'calico'
+          cpus: '2'
+          memory: '5700'
         uses: percona-platform/setup-minikube@master
 
       - name: Enable Go modules cache
