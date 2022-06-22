@@ -104,9 +104,9 @@ jobs:
         id: minikube
         with:
           kubernetes-version: ${{ matrix.kubernetes_version }}
-          driver: 'docker'
-          container-runtime: 'containerd'
-          cpus: '2'
+#          driver: 'docker'
+#          container-runtime: 'containerd'
+          cpus: '4'
           memory: '5500'
           cni: 'calico'
         uses: percona-platform/setup-minikube@master

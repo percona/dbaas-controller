@@ -856,6 +856,9 @@ func printLogs(t *testing.T, ctx context.Context, client *K8sClient, name string
 
 		for _, container := range ppod.Spec.Containers {
 
+			t.Log("========================= ")
+			t.Log("Container = ", ppod.Name, container)
+
 			logs, _ := client.GetLogs(ctx, ppod.Status.ContainerStatuses, ppod.Name, container.Name)
 			for _, l := range logs {
 				t.Log(l)
