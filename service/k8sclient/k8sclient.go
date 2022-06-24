@@ -193,6 +193,7 @@ type Cluster struct {
 type PSMDBParams struct {
 	Name              string
 	Image             string
+	BackupImage       string
 	Size              int32
 	Suspend           bool
 	Resume            bool
@@ -968,6 +969,14 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	psmdbImage := psmdbDefaultImage
 	if params.Image != "" {
 		psmdbImage = params.Image
+	}
+
+	// Starting with operator 1.12, the image name doesn't follow a template rule anymore.
+	// That's why it should be obtained from the components service and passed as a parameter.
+	// If it is empty, try the old format using the template.
+	backupImage := params.BackupImage
+	if backupImage == "" {
+		backupImage = fmt.Sprintf(psmdbBackupImageTemplate, operators.PsmdbOperatorVersion)
 	}
 
 	res := &psmdb.PerconaServerMongoDB{
