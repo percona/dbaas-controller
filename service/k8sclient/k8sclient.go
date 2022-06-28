@@ -2030,6 +2030,26 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 	return c.kubeCtl.Apply(ctx, vmagent)
 }
 
+// RemoveVMOperator deletes the VM Operator installed when the cluster was registered.
+func (c *K8sClient) RemoveVMOperator(ctx context.Context) error {
+	files := []string{
+		"deploy/victoriametrics/crds/crd.yaml",
+		"deploy/victoriametrics/operator/manager.yaml",
+	}
+	for _, path := range files {
+		file, err := dbaascontroller.DeployDir.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		err = c.kubeCtl.Delete(ctx, file)
+		if err != nil {
+			return errors.Wrapf(err, "cannot apply file: %q", path)
+		}
+	}
+
+	return nil
+}
+
 func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 	return monitoring.VMAgent{
 		TypeMeta: common.TypeMeta{
