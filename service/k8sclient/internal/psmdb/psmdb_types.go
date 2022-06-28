@@ -109,11 +109,11 @@ const (
 )
 
 type ShardingSpec struct {
-	Enabled          bool               `json:"enabled"`
-	ConfigsvrReplSet *ReplsetSpec       `json:"configsvrReplSet"`
-	Mongos           *ReplsetMongosSpec `json:"mongos"`
-	//	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
-	Expose *Expose `json:"expose"`
+	Enabled            bool                          `json:"enabled"`
+	ConfigsvrReplSet   *ReplsetSpec                  `json:"configsvrReplSet"`
+	Mongos             *ReplsetMongosSpec            `json:"mongos"`
+	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
+	Expose             *Expose                       `json:"expose"`
 }
 
 // UpgradeOptions specify how and to what version we update.
@@ -121,6 +121,7 @@ type UpgradeOptions struct {
 	Apply                  string `json:"apply,omitempty"`
 	VersionServiceEndpoint string `json:"versionServiceEndpoint,omitempty"`
 	Schedule               string `json:"schedule,omitempty"`
+	SetFCV                 bool   `yaml:"setFCV,omitempty"` // v1.12+
 }
 
 // PerconaServerMongoDBSpec defines the desired state of PerconaServerMongoDB.
@@ -229,17 +230,24 @@ type Expose struct {
 	ExposeType common.ServiceType `json:"exposeType"`
 }
 
+// ConfigurationOptions options that will be passed as defined in MongoDB configuration file.
+// See https://github.com/percona/percona-server-mongodb-operator/blob/b304b6c5bb0df2e6e7dac637d23f10fbcbd4800e/pkg/apis/psmdb/v1/psmdb_types.go#L353-L367
+type ConfigurationOptions map[interface{}]interface{}
+
 // ReplsetSpec defines replicaton set specification.
 type ReplsetSpec struct {
-	Expose              Expose                          `json:"expose,omitempty"`
-	Size                int32                           `json:"size"`
+	Affinity            *PodAffinity                    `yaml:"affinity,omitempty"` // Operator 1.12+
 	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
-	Resources           *common.PodResources            `json:"resources,omitempty"`
-	Name                string                          `json:"name,omitempty"`
 	ClusterRole         clusterRole                     `json:"clusterRole,omitempty"`
-	VolumeSpec          *common.VolumeSpec              `json:"volumeSpec,omitempty"`
+	Expose              Expose                          `json:"expose,omitempty"`
 	LivenessProbe       *livenessProbeExtended          `json:"livenessProbe,omitempty"`
+	Name                string                          `json:"name,omitempty"`
+	Nonvoting           Nonvoting                       `yaml:"nonvoting,omitempty"` // Operator 1.12+
 	PodDisruptionBudget *common.PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+	Resources           *common.PodResources            `json:"resources,omitempty"`
+	Size                int32                           `json:"size"`
+	VolumeSpec          *common.VolumeSpec              `json:"volumeSpec,omitempty"`
+	Configuration       ConfigurationOptions            `json:"configuration,omitempty"` // Operatot 1.12+
 	MultiAZ
 }
 
@@ -266,9 +274,10 @@ type livenessProbeExtended struct {
 
 // SecretsSpec defines secrets specification.
 type SecretsSpec struct {
-	Users       string `json:"users,omitempty"`
-	SSL         string `json:"ssl,omitempty"`
-	SSLInternal string `json:"sslInternal,omitempty"`
+	Users         string `json:"users,omitempty"`
+	SSL           string `json:"ssl,omitempty"`
+	SSLInternal   string `json:"sslInternal,omitempty"`
+	EncryptionKey string `yaml:"encryptionKey,omitempty"` // Operator 1.12+
 }
 
 // MongosSpec defines MongoDB specification.
@@ -470,6 +479,13 @@ type backupStorageSpec struct {
 	S3   backupStorageS3Spec `json:"s3,omitempty"`
 }
 
+// Pirt Point in time recovery.
+type Pitr struct {
+	Enabled          bool   `yaml:"enabled,omitempty"`
+	CompressionType  string `yaml:"compressionType,omitempty"`
+	CompressionLevel int    `yaml:"compressionLevel,omitempty"`
+}
+
 // BackupSpec defines back up specification.
 type BackupSpec struct {
 	Enabled            bool                         `json:"enabled"`
@@ -478,6 +494,7 @@ type BackupSpec struct {
 	Tasks              []backupTaskSpec             `json:"tasks,omitempty"`
 	ServiceAccountName string                       `json:"serviceAccountName,omitempty"`
 	Resources          *common.PodResources         `json:"resources,omitempty"`
+	Pitr               Pitr                         `yaml:"pitr,omitempty"` // Operator 1.12+
 }
 
 // Arbiter defines Arbiter.
