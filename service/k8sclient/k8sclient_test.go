@@ -235,6 +235,8 @@ func TestK8sClient(t *testing.T) {
 	pxcOperator, psmdbOperator, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
 	require.NoError(t, err)
 
+	// There is an error with Operator version 1.12
+	// See https://jira.percona.com/browse/PMM-10012
 	pxcVersion := pxcOperator.String()
 	if value := os.Getenv("PERCONA_TEST_PXC_OPERATOR_VERSION"); value != "" {
 		pxcVersion = value
@@ -1253,4 +1255,60 @@ func TestGetClusterState(t *testing.T) {
 			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
 		})
 	}
+}
+
+//nolint:paralleltest
+func TestCreateVMOperator(t *testing.T) {
+	ctx := app.Context()
+
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+
+	client, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err := client.Cleanup()
+		require.NoError(t, err)
+	})
+
+	err = client.CreateVMOperator(ctx, &PMM{
+		PublicAddress: "127.0.0.1",
+		Login:         "admin",
+		Password:      "admin",
+	})
+	assert.NoError(t, err)
+
+	time.Sleep(30 * time.Second) // Give it some time to deploy
+	count, err := getDeploymentCount(ctx, client, "vmagent")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	err = client.RemoveVMOperator(ctx)
+	assert.NoError(t, err)
+
+	count, err = getDeploymentCount(ctx, client, "vmagent")
+	assert.NoError(t, err)
+	assert.Equal(t, 0, count)
+}
+
+func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (int, error) {
+	type deployments struct {
+		Items []common.Deployment `json:"items"`
+	}
+	var deps deployments
+	err := client.kubeCtl.Get(ctx, "deployment", "", &deps)
+	if err != nil {
+		return -1, err
+	}
+
+	count := 0
+
+	for _, item := range deps.Items {
+		if strings.Contains(strings.ToLower(item.ObjectMeta.Name), name) {
+			count++
+		}
+	}
+
+	return count, nil
 }
