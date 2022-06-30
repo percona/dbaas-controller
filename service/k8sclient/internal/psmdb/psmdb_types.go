@@ -121,7 +121,7 @@ type UpgradeOptions struct {
 	Apply                  string `json:"apply,omitempty"`
 	VersionServiceEndpoint string `json:"versionServiceEndpoint,omitempty"`
 	Schedule               string `json:"schedule,omitempty"`
-	SetFCV                 bool   `yaml:"setFCV,omitempty"` // v1.12+
+	SetFCV                 bool   `json:"setFCV,omitempty"` // v1.12+
 }
 
 // PerconaServerMongoDBSpec defines the desired state of PerconaServerMongoDB.
@@ -230,24 +230,25 @@ type Expose struct {
 	ExposeType common.ServiceType `json:"exposeType"`
 }
 
-// ConfigurationOptions options that will be passed as defined in MongoDB configuration file.
-// See https://github.com/percona/percona-server-mongodb-operator/blob/b304b6c5bb0df2e6e7dac637d23f10fbcbd4800e/pkg/apis/psmdb/v1/psmdb_types.go#L353-L367
-type ConfigurationOptions map[interface{}]interface{}
-
 // ReplsetSpec defines replicaton set specification.
 type ReplsetSpec struct {
-	Affinity            *PodAffinity                    `yaml:"affinity,omitempty"` // Operator 1.12+
+	Affinity            *PodAffinity                    `json:"affinity,omitempty"` // Operator 1.12+
 	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
 	ClusterRole         clusterRole                     `json:"clusterRole,omitempty"`
 	Expose              Expose                          `json:"expose,omitempty"`
 	LivenessProbe       *livenessProbeExtended          `json:"livenessProbe,omitempty"`
 	Name                string                          `json:"name,omitempty"`
-	Nonvoting           Nonvoting                       `yaml:"nonvoting,omitempty"` // Operator 1.12+
+	Nonvoting           *Nonvoting                      `json:"nonvoting,omitempty"` // Operator 1.12+
 	PodDisruptionBudget *common.PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
 	Resources           *common.PodResources            `json:"resources,omitempty"`
 	Size                int32                           `json:"size"`
 	VolumeSpec          *common.VolumeSpec              `json:"volumeSpec,omitempty"`
-	Configuration       ConfigurationOptions            `json:"configuration,omitempty"` // Operatot 1.12+
+	// ConfigurationOptions options that will be passed as defined in MongoDB configuration file.
+	// See https://github.com/percona/percona-server-mongodb-operator/blob/b304b6c5bb0df2e6e7dac637d23f10fbcbd4800e/pkg/apis/psmdb/v1/psmdb_types.go#L353-L367
+	// It must be a multi line string with indentation to produce a map, like:
+	//      operationProfiling:
+	//        mode: slowOp
+	Configuration string `json:"configuration,omitempty"` // Operator 1.12+
 	MultiAZ
 }
 
@@ -257,6 +258,7 @@ type ExposeSpec struct {
 }
 
 type ReplsetMongosSpec struct {
+	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
 	Expose              ExposeSpec                      `json:"expose,omitempty"`
 	Size                int32                           `json:"size"`
 	Resources           *common.PodResources            `json:"resources,omitempty"`
@@ -277,7 +279,7 @@ type SecretsSpec struct {
 	Users         string `json:"users,omitempty"`
 	SSL           string `json:"ssl,omitempty"`
 	SSLInternal   string `json:"sslInternal,omitempty"`
-	EncryptionKey string `yaml:"encryptionKey,omitempty"` // Operator 1.12+
+	EncryptionKey string `json:"encryptionKey,omitempty"` // Operator 1.12+
 }
 
 // MongosSpec defines MongoDB specification.
@@ -481,9 +483,9 @@ type backupStorageSpec struct {
 
 // Pirt Point in time recovery.
 type Pitr struct {
-	Enabled          bool   `yaml:"enabled,omitempty"`
-	CompressionType  string `yaml:"compressionType,omitempty"`
-	CompressionLevel int    `yaml:"compressionLevel,omitempty"`
+	Enabled          bool   `json:"enabled,omitempty"`
+	CompressionType  string `json:"compressionType,omitempty"`
+	CompressionLevel int    `json:"compressionLevel,omitempty"`
 }
 
 // BackupSpec defines back up specification.
@@ -494,7 +496,7 @@ type BackupSpec struct {
 	Tasks              []backupTaskSpec             `json:"tasks,omitempty"`
 	ServiceAccountName string                       `json:"serviceAccountName,omitempty"`
 	Resources          *common.PodResources         `json:"resources,omitempty"`
-	Pitr               Pitr                         `yaml:"pitr,omitempty"` // Operator 1.12+
+	Pitr               *Pitr                        `json:"pitr,omitempty"` // Operator 1.12+
 }
 
 // Arbiter defines Arbiter.
