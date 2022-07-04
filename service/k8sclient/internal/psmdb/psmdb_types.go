@@ -252,11 +252,12 @@ type ReplsetSpec struct {
 	MultiAZ
 }
 
-// Expose holds information about how the cluster is exposed to the worl via ingress.
+// ExposeSpec holds information about how the cluster is exposed to the worl via ingress.
 type ExposeSpec struct {
 	ExposeType common.ServiceType `json:"exposeType"`
 }
 
+// ReplsetMongosSpec holds the fields to describe replicaset's Mongos specs.
 type ReplsetMongosSpec struct {
 	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
 	Expose              ExposeSpec                      `json:"expose,omitempty"`
