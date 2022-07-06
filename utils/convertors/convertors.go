@@ -68,7 +68,7 @@ func StrToBytes(memory string) (uint64, error) {
 	}
 	coeficient, ok := suffixMapping[strings.ToLower(suffix)]
 	if !ok {
-		return 0, errors.Errorf("suffix '%s' not supported", suffix)
+		return 0, errors.Errorf("suffix '%s' is not supported", suffix)
 	}
 
 	if suffix != "" {
