@@ -62,12 +62,15 @@ func TestConvertToBytes(t *testing.T) {
 	}{
 		{in: "100M", expectedOut: 100 * 1000 * 1000, errShouldBeNil: true},
 		{in: "100Mi", expectedOut: 100 * 1024 * 1024, errShouldBeNil: true},
+		{in: "100m", expectedOut: 100 * 1000 * 1000, errShouldBeNil: true},
+		{in: "100mi", expectedOut: 100 * 1024 * 1024, errShouldBeNil: true},
 		{in: "100", expectedOut: 100, errShouldBeNil: true},
 		{in: "1G", expectedOut: 1000 * 1000 * 1000, errShouldBeNil: true},
 		{in: "1Gi", expectedOut: 1024 * 1024 * 1024, errShouldBeNil: true},
+		{in: "1g", expectedOut: 1000 * 1000 * 1000, errShouldBeNil: true},
+		{in: "1gi", expectedOut: 1024 * 1024 * 1024, errShouldBeNil: true},
 		{in: "0.5Gi", expectedOut: 1024 * 1024 * 1024 / 2, errShouldBeNil: true},
 		{in: "0.3Gi", expectedOut: 322122548, errShouldBeNil: true},
-		{in: "3000m", expectedOut: 3, errShouldBeNil: true},
 		{in: "Gi", expectedOut: 0, errShouldBeNil: false},
 		{in: "", expectedOut: 0, errShouldBeNil: true},
 		{in: "1Z", expectedOut: 0, errShouldBeNil: false},
@@ -76,6 +79,7 @@ func TestConvertToBytes(t *testing.T) {
 		{in: "1ki", expectedOut: 1024, errShouldBeNil: true},
 		{in: "1k", expectedOut: 1000, errShouldBeNil: true},
 		{in: "1T", expectedOut: 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
+		{in: "1t", expectedOut: 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
 		{in: "1Ti", expectedOut: 1024 * 1024 * 1024 * 1024, errShouldBeNil: true},
 	}
 

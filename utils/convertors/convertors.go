@@ -50,21 +50,23 @@ func StrToBytes(memory string) (uint64, error) {
 	if i >= 0 {
 		suffix = memory[i+1:]
 	}
+
+	// IEC and SI prefixes for bytes mapping
+	//
+	// https://en.wikipedia.org/wiki/Binary_prefix
+	// https://www.alteeve.com/w/IEC_and_SI_Size_Notations
 	suffixMapping := map[string]float64{
-		"m":  0.001,
-		"K":  float64(kiloByte),
-		"Ki": float64(kibiByte),
 		"k":  float64(kiloByte),
 		"ki": float64(kibiByte),
-		"M":  float64(megaByte),
-		"Mi": float64(mibiByte),
-		"G":  float64(gigaByte),
-		"Gi": float64(gibiByte),
-		"T":  float64(teraByte),
-		"Ti": float64(tebiByte),
+		"m":  float64(megaByte),
+		"mi": float64(mibiByte),
+		"g":  float64(gigaByte),
+		"gi": float64(gibiByte),
+		"t":  float64(teraByte),
+		"ti": float64(tebiByte),
 		"":   1.0,
 	}
-	coeficient, ok := suffixMapping[suffix]
+	coeficient, ok := suffixMapping[strings.ToLower(suffix)]
 	if !ok {
 		return 0, errors.Errorf("suffix '%s' not supported", suffix)
 	}
