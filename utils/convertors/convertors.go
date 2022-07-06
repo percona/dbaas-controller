@@ -59,8 +59,10 @@ func StrToBytes(memory string) (uint64, error) {
 	//
 	// Supports the following units
 	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory
+	//
+	// Support of 'm' unit can be redundant because it's used for CPU limits mostly
 	suffixMapping := map[string]float64{
-		"m":  0.001, // TODO: It can be redundant here because it's used moslty for CPU lmits
+		"m":  0.001,
 		"k":  float64(kiloByte),
 		"Ki": float64(kibiByte),
 		"M":  float64(megaByte),
