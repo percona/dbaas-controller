@@ -73,6 +73,8 @@ func TestConvertToBytes(t *testing.T) {
 		{in: "1Z", expectedOut: 0, errShouldBeNil: false},
 		{in: "1Ki", expectedOut: 1024, errShouldBeNil: true},
 		{in: "1K", expectedOut: 1000, errShouldBeNil: true},
+		{in: "1ki", expectedOut: 1024, errShouldBeNil: true},
+		{in: "1k", expectedOut: 1000, errShouldBeNil: true},
 		{in: "1T", expectedOut: 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
 		{in: "1Ti", expectedOut: 1024 * 1024 * 1024 * 1024, errShouldBeNil: true},
 	}

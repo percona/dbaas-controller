@@ -54,6 +54,8 @@ func StrToBytes(memory string) (uint64, error) {
 		"m":  0.001,
 		"K":  float64(kiloByte),
 		"Ki": float64(kibiByte),
+		"k":  float64(kiloByte),
+		"ki": float64(kibiByte),
 		"M":  float64(megaByte),
 		"Mi": float64(mibiByte),
 		"G":  float64(gigaByte),
