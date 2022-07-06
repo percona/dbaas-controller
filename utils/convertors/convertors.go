@@ -55,27 +55,27 @@ func StrToBytes(memory string) (uint64, error) {
 		suffix = memory[i+1:]
 	}
 
-	// IEC and SI prefixes for bytes mapping
-	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory
+	// Resources units map for k8s
 	//
-	// https://en.wikipedia.org/wiki/Binary_prefix
-	// https://www.alteeve.com/w/IEC_and_SI_Size_Notations
+	// Supports the following units
+	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory
 	suffixMapping := map[string]float64{
+		"m":  0.001, // TODO: It can be redundant here because it's used moslty for CPU lmits
 		"k":  float64(kiloByte),
-		"ki": float64(kibiByte),
-		"m":  float64(megaByte),
-		"mi": float64(mibiByte),
-		"g":  float64(gigaByte),
-		"gi": float64(gibiByte),
-		"t":  float64(teraByte),
-		"ti": float64(tebiByte),
-		"p":  float64(petaByte),
-		"pi": float64(pebiByte),
-		"e":  float64(exaByte),
-		"ei": float64(exbiByte),
+		"Ki": float64(kibiByte),
+		"M":  float64(megaByte),
+		"Mi": float64(mibiByte),
+		"G":  float64(gigaByte),
+		"Gi": float64(gibiByte),
+		"T":  float64(teraByte),
+		"Ti": float64(tebiByte),
+		"P":  float64(petaByte),
+		"Pi": float64(pebiByte),
+		"E":  float64(exaByte),
+		"Ei": float64(exbiByte),
 		"":   1.0,
 	}
-	coeficient, ok := suffixMapping[strings.ToLower(suffix)]
+	coeficient, ok := suffixMapping[suffix]
 	if !ok {
 		return 0, errors.Errorf("suffix '%s' is not supported", suffix)
 	}
