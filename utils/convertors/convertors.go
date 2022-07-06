@@ -35,6 +35,10 @@ const (
 	gibiByte uint64 = mibiByte * 1024
 	teraByte uint64 = gigaByte * 1000
 	tebiByte uint64 = gibiByte * 1024
+	petaByte uint64 = teraByte * 1000
+	pebiByte uint64 = tebiByte * 1024
+	exaByte  uint64 = petaByte * 1000
+	exbiByte uint64 = pebiByte * 1024
 )
 
 // StrToBytes converts string containing memory as string to number of bytes the string represents.
@@ -52,6 +56,7 @@ func StrToBytes(memory string) (uint64, error) {
 	}
 
 	// IEC and SI prefixes for bytes mapping
+	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory
 	//
 	// https://en.wikipedia.org/wiki/Binary_prefix
 	// https://www.alteeve.com/w/IEC_and_SI_Size_Notations
@@ -64,6 +69,10 @@ func StrToBytes(memory string) (uint64, error) {
 		"gi": float64(gibiByte),
 		"t":  float64(teraByte),
 		"ti": float64(tebiByte),
+		"p":  float64(petaByte),
+		"pi": float64(pebiByte),
+		"e":  float64(exaByte),
+		"ei": float64(exbiByte),
 		"":   1.0,
 	}
 	coeficient, ok := suffixMapping[strings.ToLower(suffix)]

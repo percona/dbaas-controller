@@ -81,6 +81,12 @@ func TestConvertToBytes(t *testing.T) {
 		{in: "1T", expectedOut: 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
 		{in: "1t", expectedOut: 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
 		{in: "1Ti", expectedOut: 1024 * 1024 * 1024 * 1024, errShouldBeNil: true},
+		{in: "1P", expectedOut: 1000 * 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
+		{in: "1p", expectedOut: 1000 * 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
+		{in: "1Pi", expectedOut: 1024 * 1024 * 1024 * 1024 * 1024, errShouldBeNil: true},
+		{in: "1E", expectedOut: 1000 * 1000 * 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
+		{in: "1e", expectedOut: 1000 * 1000 * 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
+		{in: "1Ei", expectedOut: 1024 * 1024 * 1024 * 1024 * 1024 * 1024, errShouldBeNil: true},
 	}
 
 	for _, test := range testCases {
