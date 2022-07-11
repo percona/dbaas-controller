@@ -338,7 +338,7 @@ func init() {
 
 	if v.Core().String() == v.String() {
 		// Production version contains only major.minor.patch ...
-		pmmClientImage = "percona/pmm-client:2"
+		pmmClientImage = "percona/pmm-client:" + pmmversion.PMMVersion
 	} else {
 		// ... development version contains also commit.
 		pmmClientImage = "perconalab/pmm-client:dev-latest"
