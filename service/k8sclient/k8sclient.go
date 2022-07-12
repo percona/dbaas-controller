@@ -334,21 +334,7 @@ func init() {
 		}
 
 		pmmClientImage = "percona/pmm-client:" + v.Core().String()
-		return
 	}
-
-	//v, err := goversion.NewVersion(pmmversion.PMMVersion)
-	//if err != nil {
-	//	panic("failed to decide what version of pmm-client to use: " + err.Error())
-	//}
-	//
-	//if v.Core().String() == v.String() {
-	//	// Production version contains only major.minor.patch ...
-	//	pmmClientImage = "percona/pmm-client:" + pmmversion.PMMVersion
-	//} else {
-	//	// ... development version contains also commit.
-	//	pmmClientImage = "perconalab/pmm-client:dev-latest"
-	//}
 }
 
 // CountReadyPods returns number of pods that are ready and belong to the
