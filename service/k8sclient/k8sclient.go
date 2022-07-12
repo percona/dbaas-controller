@@ -319,8 +319,6 @@ type K8sClient struct {
 }
 
 func init() {
-	// The default is here just to prevent a panic on dev environments not having the
-	// PERCONA_TEST_DBAAS_PMM_CLIENT variable set.
 	pmmClientImage = "perconalab/pmm-client:dev-latest"
 
 	pmmClientImageEnv, ok := os.LookupEnv("PERCONA_TEST_DBAAS_PMM_CLIENT")
@@ -329,10 +327,28 @@ func init() {
 		return
 	}
 
-	if pmmversion.PMMVersion != "" { // Prod and feature builds environments have a proper version.
-		pmmClientImage = "percona/pmm-client:" + pmmversion.PMMVersion
+	if pmmversion.PMMVersion != "" {
+		v, err := goversion.NewVersion(pmmversion.PMMVersion)
+		if err != nil {
+			panic("failed to decide what version of pmm-client to use: " + err.Error())
+		}
+
+		pmmClientImage = "percona/pmm-client:" + v.Core().String()
 		return
 	}
+
+	//v, err := goversion.NewVersion(pmmversion.PMMVersion)
+	//if err != nil {
+	//	panic("failed to decide what version of pmm-client to use: " + err.Error())
+	//}
+	//
+	//if v.Core().String() == v.String() {
+	//	// Production version contains only major.minor.patch ...
+	//	pmmClientImage = "percona/pmm-client:" + pmmversion.PMMVersion
+	//} else {
+	//	// ... development version contains also commit.
+	//	pmmClientImage = "perconalab/pmm-client:dev-latest"
+	//}
 }
 
 // CountReadyPods returns number of pods that are ready and belong to the
