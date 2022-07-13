@@ -17,7 +17,9 @@
 // Package psmdb contains API Schema definitions for the psmdb v1 API group.
 package psmdb
 
-import "github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+import (
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+)
 
 // PerconaServerMongoDB is the Schema for the perconaservermongodbs 1.12+ API.
 type PerconaServerMongoDB112 struct {

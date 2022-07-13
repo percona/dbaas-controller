@@ -33,7 +33,7 @@ type PSMDBClusterService struct{}
 
 // NewPSMDBClusterService returns new PSMDBClusterService instance.
 func NewPSMDBClusterService() *PSMDBClusterService {
-	return &PSMDBClusterService{}
+	return new(PSMDBClusterService)
 }
 
 // ListPSMDBClusters returns a list of PSMDB clusters.

@@ -47,7 +47,7 @@ type PXCClusterService struct { // p *message.Printer
 
 // NewPXCClusterService returns new PXCClusterService instance.
 func NewPXCClusterService() *PXCClusterService {
-	return &PXCClusterService{}
+	return new(PXCClusterService)
 }
 
 // setComputeResources converts input resources and sets them to output compute resources.
