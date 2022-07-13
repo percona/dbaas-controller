@@ -67,9 +67,6 @@ init:                             ## Install development tools
 	cd tools && go generate -x -tags=tools
 
 ci-init:                ## Initialize CI environment
-	# nothing there yet
-	minikube config set driver docker
-	sudo chown -R $(USER) $(HOME)/.minikube; chmod -R u+wrx $(HOME)/.minikube
 
 
 format:                           ## Format source code
@@ -109,7 +106,7 @@ env-up-start:
 		minikube config set kubernetes-version $(KUBERNETES_VERSION); \
 	fi
 	minikube config view
-	minikube start
+	minikube start --vm-driver=none
 
 env-check:
 	# none driver in CI needs to run this under different user permissions
