@@ -69,6 +69,7 @@ init:                             ## Install development tools
 ci-init:                ## Initialize CI environment
 	# nothing there yet
 	minikube config set driver docker
+	sudo chown -R $(USER) $(HOME)/.minikube; chmod -R u+wrx $(HOME)/.minikube
 
 
 format:                           ## Format source code
