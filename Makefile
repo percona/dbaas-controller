@@ -68,6 +68,8 @@ init:                             ## Install development tools
 
 ci-init:                ## Initialize CI environment
 	# nothing there yet
+	minikube config set driver docker
+
 
 format:                           ## Format source code
 	bin/gofumpt -l -w .
