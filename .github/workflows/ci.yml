@@ -282,9 +282,6 @@ jobs:
       - name: Initialize CI environment
         run: make ci-init
 
-      - name: Generate code
-        run: make gen
-
       - name: Install binaries
         run: make release install
 
