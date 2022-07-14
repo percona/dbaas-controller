@@ -21,7 +21,7 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
-// PerconaServerMongoDB is the Schema for the perconaservermongodbs 1.12+ API.
+// PerconaServerMongoDB112 is the Schema for the perconaservermongodbs 1.12+ API.
 type PerconaServerMongoDB112 struct {
 	common.TypeMeta   // anonymous for embedding
 	common.ObjectMeta `json:"metadata,omitempty"`
@@ -41,7 +41,7 @@ type Nonvoting struct {
 	VolumeSpec          *common.VolumeSpec              `json:"volumeSpec,omitempty"`
 }
 
-// Spec defines the PSMDB operator parameters.
+// PSMDB112Spec defines the PSMDB spec section for the operator parameters.
 type PSMDB112Spec struct {
 	CRVersion                 string          `json:"crVersion,omitempty"`
 	Image                     string          `json:"image,omitempty"`
