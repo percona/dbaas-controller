@@ -925,7 +925,7 @@ func (c *K8sClient) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, erro
 	return res, nil
 }
 
-type extraReqParams struct {
+type extraCRParams struct {
 	secretName  string
 	secrets     map[string][]byte
 	psmdbImage  string
