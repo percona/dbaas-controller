@@ -218,6 +218,11 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
+      - uses: azure/setup-kubectl@v2.0
+        with:
+          version: 'v1.23.6'
+        id: install
+
       - name: Set up Go tip
         if: matrix.go-version == 'tip'
         env:
