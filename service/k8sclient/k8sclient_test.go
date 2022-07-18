@@ -264,7 +264,6 @@ func TestK8sClient(t *testing.T) {
 
 	var pmm *PMM
 	t.Run("PXC", func(t *testing.T) {
-		t.Skip("Timing out in minikube")
 		t.Parallel()
 		name := "test-cluster-pxc"
 		_ = client.DeletePXCCluster(ctx, name)
@@ -446,7 +445,6 @@ func TestK8sClient(t *testing.T) {
 	})
 
 	t.Run("Create PXC with HAProxy", func(t *testing.T) {
-		t.Skip("Timing out in minikube")
 		t.Parallel()
 		clusterName := "test-pxc-haproxy"
 		err := client.CreatePXCCluster(ctx, &PXCParams{
