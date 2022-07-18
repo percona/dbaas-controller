@@ -330,7 +330,9 @@ func init() {
 	if pmmversion.PMMVersion != "" {
 		v, err := goversion.NewVersion(pmmversion.PMMVersion)
 		if err != nil {
-			panic("failed to decide what version of pmm-client to use: " + err.Error())
+			logger.Get(context.Background()).Warnf("failed to decide what version of pmm-client to use: %s", err)
+			logger.Get(context.Background()).Warnf("Using %q for pmm client image", pmmClientImage)
+			return
 		}
 
 		pmmClientImage = "percona/pmm-client:" + v.Core().String()
