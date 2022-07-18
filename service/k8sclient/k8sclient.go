@@ -937,7 +937,7 @@ type extraCRParams struct {
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
-	extra := extraReqParams{}
+	extra := extraCRParams{}
 
 	var cluster psmdb.PerconaServerMongoDB
 	err := c.kubeCtl.Get(ctx, psmdb.PerconaServerMongoDBKind, params.Name, &cluster)
@@ -1019,7 +1019,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	return c.kubeCtl.Apply(ctx, res)
 }
 
-func (c *K8sClient) makeReq(params *PSMDBParams, extra extraReqParams) *psmdb.PerconaServerMongoDB {
+func (c *K8sClient) makeReq(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB {
 	req := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
 			APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
@@ -1163,7 +1163,7 @@ func (c *K8sClient) makeReq(params *PSMDBParams, extra extraReqParams) *psmdb.Pe
 	return req
 }
 
-func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraReqParams) *psmdb.PerconaServerMongoDB112 {
+func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB112 {
 	req := &psmdb.PerconaServerMongoDB112{
 		APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
 		Kind:       psmdb.PerconaServerMongoDBKind,

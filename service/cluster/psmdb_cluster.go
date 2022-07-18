@@ -40,7 +40,7 @@ func NewPSMDBClusterService() *PSMDBClusterService {
 func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *controllerv1beta1.ListPSMDBClustersRequest) (*controllerv1beta1.ListPSMDBClustersResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Cannot initialize K8s client: "+err.Error())
+		return nil, status.Errorf(codes.Internal, "Cannot initialize K8s client: %s", err)
 	}
 	defer client.Cleanup() //nolint:errcheck
 

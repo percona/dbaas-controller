@@ -264,7 +264,7 @@ func TestK8sClient(t *testing.T) {
 
 	var pmm *PMM
 	t.Run("PXC", func(t *testing.T) {
-		t.Skip("Skipping PXC. Times out on minikube")
+		t.Skip("Timing out in minikube")
 		t.Parallel()
 		name := "test-cluster-pxc"
 		_ = client.DeletePXCCluster(ctx, name)
@@ -446,7 +446,7 @@ func TestK8sClient(t *testing.T) {
 	})
 
 	t.Run("Create PXC with HAProxy", func(t *testing.T) {
-		t.Skip("Skipping PXC with HA Proxy. Timing out on minikube")
+		t.Skip("Timing out in minikube")
 		t.Parallel()
 		clusterName := "test-pxc-haproxy"
 		err := client.CreatePXCCluster(ctx, &PXCParams{
@@ -484,7 +484,6 @@ func TestK8sClient(t *testing.T) {
 	})
 
 	t.Run("PSMDB", func(t *testing.T) {
-		t.Skip("Skipping PSMDB. Timing out on minikube")
 		t.Parallel()
 		name := "test-cluster-psmdb"
 		_ = client.DeletePSMDBCluster(ctx, name)
@@ -687,7 +686,6 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 }
 
 func TestGetConsumedCPUAndMemory(t *testing.T) {
-	t.Skip("timeout?")
 	t.Parallel()
 	ctx := app.Context()
 
@@ -768,7 +766,7 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 }
 
 func TestGetAllClusterResources(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	ctx := app.Context()
 
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -824,7 +822,7 @@ func TestGetAllClusterResources(t *testing.T) {
 }
 
 func TestVMAgentSpec(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	expected := `{
   "kind": "VMAgent",
   "apiVersion": "operator.victoriametrics.com/v1beta1",
@@ -889,7 +887,7 @@ func TestVMAgentSpec(t *testing.T) {
 }
 
 func TestGetClusterState(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	type getClusterStateTestCase struct {
 		matchingError           error
 		cluster                 common.DatabaseCluster
@@ -1157,7 +1155,6 @@ func TestGetClusterState(t *testing.T) {
 
 //nolint:paralleltest
 func TestCreateVMOperator(t *testing.T) {
-	t.Skip("timing out")
 	ctx := app.Context()
 
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
