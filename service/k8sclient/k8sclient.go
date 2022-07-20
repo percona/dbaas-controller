@@ -1899,6 +1899,35 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 	deployment.Spec.Template.Spec.Containers[containerIndex].Image = imageAndTag[0] + ":" + version
 	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeStrategic, "deployment", deploymentName, deployment)
 }
+func (c *K8sClient) CreateKubeStats(ctx context.Context) error {
+	files := []string{
+		"deploy/victoriametrics/kube-state-metrics/cluster-role-binding.yaml",
+		"deploy/victoriametrics/kube-state-metrics/cluster-role.yaml",
+		"deploy/victoriametrics/kube-state-metrics/deployment.yaml",
+		"deploy/victoriametrics/kube-state-metrics/service-account.yaml",
+		"deploy/victoriametrics/kube-state-metrics/service.yaml",
+	}
+	for _, path := range files {
+		file, err := dbaascontroller.DeployDir.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		err = c.kubeCtl.Apply(ctx, file)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+
+}
+func (c *K8sClient) RegisterKubeStats(ctx context.Context) error {
+	file, err := dbaascontroller.DeployDir.ReadFile("deploy/victoriametrics/kube-state-metrics.yaml")
+	if err != nil {
+		return err
+	}
+	err = c.kubeCtl.Apply(ctx, file)
+	return err
+}
 
 func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 	files := []string{
@@ -1907,6 +1936,7 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 		"deploy/victoriametrics/operator/rbac.yaml",
 		"deploy/victoriametrics/crs/vmagent_rbac.yaml",
 		"deploy/victoriametrics/crs/vmnodescrape.yaml",
+		"deploy/victoriametrics/crs/vmpodscrape.yaml",
 		"deploy/victoriametrics/crs/vmpodscrape.yaml",
 	}
 	for _, path := range files {

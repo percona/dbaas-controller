@@ -137,11 +137,20 @@ func (k KubernetesClusterService) StartMonitoring(ctx context.Context, req *cont
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
 
+	err = k8sClient.CreateKubeStats(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	err = k8sClient.CreateVMOperator(ctx, &k8sclient.PMM{
 		PublicAddress: req.Pmm.PublicAddress,
 		Login:         req.Pmm.Login,
 		Password:      req.Pmm.Password,
 	})
+	if err != nil {
+		return nil, err
+	}
+	err = k8sClient.RegisterKubeStats(ctx)
 	if err != nil {
 		return nil, err
 	}
