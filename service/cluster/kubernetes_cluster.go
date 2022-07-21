@@ -136,7 +136,6 @@ func (k KubernetesClusterService) StartMonitoring(ctx context.Context, req *cont
 		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
-
 	err = k8sClient.CreateKubeStats(ctx)
 	if err != nil {
 		return nil, err
@@ -147,10 +146,6 @@ func (k KubernetesClusterService) StartMonitoring(ctx context.Context, req *cont
 		Login:         req.Pmm.Login,
 		Password:      req.Pmm.Password,
 	})
-	if err != nil {
-		return nil, err
-	}
-	err = k8sClient.RegisterKubeStats(ctx)
 	if err != nil {
 		return nil, err
 	}
