@@ -246,8 +246,8 @@ type ReplsetSpec struct {
 	// ConfigurationOptions options that will be passed as defined in MongoDB configuration file.
 	// See https://github.com/percona/percona-server-mongodb-operator/blob/b304b6c5bb0df2e6e7dac637d23f10fbcbd4800e/pkg/apis/psmdb/v1/psmdb_types.go#L353-L367
 	// It must be a multi line string with indentation to produce a map, like:
-	//      operationProfiling:
-	//        mode: slowOp
+	// operationProfiling:
+	//     mode: slowOp
 	Configuration string `json:"configuration,omitempty"` // Operator 1.12+
 	MultiAZ
 }

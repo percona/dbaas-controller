@@ -29,8 +29,8 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
-	goversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/go-version"
+	goversion "github.com/hashicorp/go-version"
 	pmmversion "github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
@@ -937,14 +937,13 @@ type extraCRParams struct {
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams) error {
-	extra := extraCRParams{}
-
 	var cluster psmdb.PerconaServerMongoDB
 	err := c.kubeCtl.Get(ctx, psmdb.PerconaServerMongoDBKind, params.Name, &cluster)
 	if err == nil {
 		return fmt.Errorf(clusterWithSameNameExistsErrTemplate, params.Name)
 	}
 
+	extra := extraCRParams{}
 	extra.secretName = fmt.Sprintf(psmdbSecretNameTmpl, params.Name)
 	extra.secrets, err = generatePSMDBPasswords()
 	if err != nil {
@@ -1448,8 +1447,8 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
 				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
-			// Exposed: cluster.Spec.Sharding.Expose.Enabled,
-			Image: cluster.Spec.Image,
+			Exposed: cluster.Spec.Sharding.Expose.Enabled,
+			Image:   cluster.Spec.Image,
 		}
 
 		if cluster.Status != nil {
