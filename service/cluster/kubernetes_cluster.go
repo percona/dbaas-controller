@@ -136,10 +136,6 @@ func (k KubernetesClusterService) StartMonitoring(ctx context.Context, req *cont
 		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
-	err = k8sClient.CreateKubeStats(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	err = k8sClient.CreateVMOperator(ctx, &k8sclient.PMM{
 		PublicAddress: req.Pmm.PublicAddress,
@@ -160,10 +156,6 @@ func (k KubernetesClusterService) StopMonitoring(ctx context.Context, req *contr
 		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
-
-	if err := k8sClient.RemoveKubeStats(ctx); err != nil {
-		return nil, err
-	}
 
 	if err := k8sClient.RemoveVMOperator(ctx); err != nil {
 		return nil, err
