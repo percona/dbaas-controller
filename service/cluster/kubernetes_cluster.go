@@ -166,6 +166,10 @@ func (k KubernetesClusterService) StopMonitoring(ctx context.Context, req *contr
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
 
+	if err := k8sClient.RemoveKubeStats(ctx); err != nil {
+		return nil, err
+	}
+
 	if err := k8sClient.RemoveVMOperator(ctx); err != nil {
 		return nil, err
 	}

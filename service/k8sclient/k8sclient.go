@@ -1928,6 +1928,28 @@ func (c *K8sClient) RegisterKubeStats(ctx context.Context) error {
 	err = c.kubeCtl.Apply(ctx, file)
 	return err
 }
+func (c *K8sClient) RemoveKubeStats(ctx context.Context) error {
+	files := []string{
+		"deploy/victoriametrics/kube-state-metrics.yaml",
+		"deploy/victoriametrics/kube-state-metrics/cluster-role-binding.yaml",
+		"deploy/victoriametrics/kube-state-metrics/cluster-role.yaml",
+		"deploy/victoriametrics/kube-state-metrics/deployment.yaml",
+		"deploy/victoriametrics/kube-state-metrics/service-account.yaml",
+		"deploy/victoriametrics/kube-state-metrics/service.yaml",
+	}
+	for _, path := range files {
+		file, err := dbaascontroller.DeployDir.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		err = c.kubeCtl.Delete(ctx, file)
+		if err != nil {
+			return errors.Wrapf(err, "cannot apply file: %q", path)
+		}
+	}
+
+	return nil
+}
 
 func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 	files := []string{
