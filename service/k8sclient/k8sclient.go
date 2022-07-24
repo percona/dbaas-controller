@@ -384,6 +384,18 @@ func (c *K8sClient) Cleanup() error {
 	return c.kubeCtl.Cleanup()
 }
 
+func (c *K8sClient) Run(ctx context.Context, params []string) ([]byte, error) {
+	return c.kubeCtl.Run(ctx, params, nil)
+}
+
+func (c *K8sClient) Apply(ctx context.Context, res interface{}) error {
+	return c.kubeCtl.Apply(ctx, res)
+}
+
+func (c *K8sClient) Delete(ctx context.Context, res interface{}) error {
+	return c.kubeCtl.Delete(ctx, res)
+}
+
 // ListPXCClusters returns list of Percona XtraDB clusters and their statuses.
 func (c *K8sClient) ListPXCClusters(ctx context.Context) ([]PXCCluster, error) {
 	perconaXtraDBClusters, err := c.getPerconaXtraDBClusters(ctx)
@@ -1930,6 +1942,25 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 
 	vmagent := vmAgentSpec(params, secretName)
 	return c.kubeCtl.Apply(ctx, vmagent)
+}
+
+// Apply the definitions specified in uri.
+func (c *K8sClient) Create(ctx context.Context, uri string) error {
+	_, err := c.kubeCtl.Run(ctx, []string{"create", "-f", uri}, nil)
+	if err != nil {
+		return errors.Wrap(err, "cannot create uri")
+	}
+
+	return nil
+}
+
+func (c *K8sClient) WaitForCondition(ctx context.Context, condition, uri string) error {
+	condition = "--for=condition=" + condition
+	_, err := c.kubeCtl.Run(ctx, []string{"wait", "-f", uri}, nil)
+	if err != nil {
+		return errors.Wrapf(err, "error while waiting for condition %q on %q", condition, uri)
+	}
+	return nil
 }
 
 // RemoveVMOperator deletes the VM Operator installed when the cluster was registered.
