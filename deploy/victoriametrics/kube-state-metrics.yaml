@@ -4,14 +4,22 @@ metadata:
   name: kube-state-metrics
   namespace: default
 spec:
-  endpoints:
-  - bearerTokenSecret:
-      key: ""
-    honorLabels: true
-    port: http
+  discoveryRole: service
   jobLabel: app.kubernetes.io/name
   namespaceSelector: {}
+  endpoints:
+    - scheme: http
+      port: http-metrics
+      interval: "30s"
+      path: /metrics
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      follow_redirects: true
+      honorLabels: true
+      #relabelConfigs:
+
+      #  - targetLabel: __address__
+      #    replacement: kube-state-metrics.kube-system.svc.cluster.local:8080
   selector:
     matchLabels:
-      #app.kubernetes.io/instance: kube-state-metrics
+      app.kubernetes.io/instance: kube-state-metrics
       app.kubernetes.io/name: kube-state-metrics
