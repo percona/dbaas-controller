@@ -532,6 +532,14 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 			podSpec.Image = params.HAProxy.Image
 		}
 		podSpec.Resources = c.setComputeResources(params.HAProxy.ComputeResources)
+		if podSpec.Resources == nil {
+			podSpec.Resources = &common.PodResources{
+				Requests: &common.ResourcesList{
+					Memory: "500M",
+					CPU:    "500m",
+				},
+			}
+		}
 	}
 
 	// This enables ingress for the cluster and exposes the cluster to the world.
