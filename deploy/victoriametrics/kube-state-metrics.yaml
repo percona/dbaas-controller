@@ -13,5 +13,5 @@ spec:
   namespaceSelector: {}
   selector:
     matchLabels:
-      app.kubernetes.io/instance: kube-state-metrics
+      #app.kubernetes.io/instance: kube-state-metrics
       app.kubernetes.io/name: kube-state-metrics

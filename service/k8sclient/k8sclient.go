@@ -1908,13 +1908,13 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 		"deploy/victoriametrics/crs/vmagent_rbac.yaml",
 		"deploy/victoriametrics/crs/vmnodescrape.yaml",
 		"deploy/victoriametrics/crs/vmpodscrape.yaml",
-		"deploy/victoriametrics/kube-state-metrics/cluster-role-binding.yaml",
-		"deploy/victoriametrics/kube-state-metrics/cluster-role.yaml",
-		"deploy/victoriametrics/kube-state-metrics/deployment.yaml",
 		"deploy/victoriametrics/kube-state-metrics/service-account.yaml",
+		"deploy/victoriametrics/kube-state-metrics/cluster-role.yaml",
+		"deploy/victoriametrics/kube-state-metrics/cluster-role-binding.yaml",
+		"deploy/victoriametrics/kube-state-metrics/deployment.yaml",
 		"deploy/victoriametrics/kube-state-metrics/service.yaml",
 		"deploy/victoriametrics/kube-state-metrics.yaml",
-		"deploy/victoriametrics/kubelet.yaml",
+		//"deploy/victoriametrics/kubelet.yaml",
 	}
 	for _, path := range files {
 		file, err := dbaascontroller.DeployDir.ReadFile(path)
@@ -1973,6 +1973,11 @@ func (c *K8sClient) RemoveVMOperator(ctx context.Context) error {
 }
 
 func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
+	scrapeConfig := `
+- job_name: "ksm"
+  static_configs:
+    - targets: ["kube-state-metrics.kube-system.svc.cluster.local:8080"]
+`
 	return monitoring.VMAgent{
 		TypeMeta: common.TypeMeta{
 			Kind:       "VMAgent",
@@ -1990,6 +1995,7 @@ func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 			ProbeNamespaceSelector:         new(common.LabelSelector),
 			StaticScrapeSelector:           new(common.LabelSelector),
 			StaticScrapeNamespaceSelector:  new(common.LabelSelector),
+			InlineScrapeConfig:             scrapeConfig,
 			ReplicaCount:                   1,
 			SelectAllByDefault:             true,
 			Resources: &common.PodResources{

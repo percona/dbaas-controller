@@ -52,6 +52,7 @@ type VMAgentSpec struct {
 	StaticScrapeSelector           *common.LabelSelector    `json:"staticScrapeSelector"`
 	StaticScrapeNamespaceSelector  *common.LabelSelector    `json:"staticScrapeNamespaceSelector"`
 	ReplicaCount                   int                      `json:"replicaCount"`
+	InlineScrapeConfig             string                   `json:"inlineScrapeConfig"`
 	Resources                      *common.PodResources     `json:"resources"`
 	ExtraArgs                      map[string]string        `json:"extraArgs"`
 	RemoteWrite                    []VMAgentRemoteWriteSpec `json:"remoteWrite"`
