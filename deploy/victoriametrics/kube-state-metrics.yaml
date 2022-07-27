@@ -9,12 +9,8 @@ spec:
   endpoints:
     - scheme: http
       port: http-metrics
-      interval: "30s"
-      path: /metrics
-      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
-      follow_redirects: true
       honorLabels: true
+
   selector:
     matchLabels:
-      #app.kubernetes.io/instance: kube-state-metrics
       app.kubernetes.io/name: kube-state-metrics
