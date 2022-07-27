@@ -21,10 +21,12 @@ import (
 	"context"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"github.com/pkg/errors"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
@@ -46,7 +48,6 @@ func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *con
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	defer client.Cleanup() //nolint:errcheck
-
 	// Try to get operator versions to see if we should upgrade or install.
 	operators, err := client.CheckOperators(ctx)
 	if err != nil {
@@ -55,21 +56,17 @@ func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *con
 
 	// NOTE: This does not handle corner case when user has deployed database clusters and operator is no longer installed.
 	if operators.PsmdbOperatorVersion != "" {
-		err = client.UpdateOperator(ctx, req.Version, psmdbOperatorDeploymentName, x.manifestsURLTemplate)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		err = client.PatchAllPSMDBClusters(ctx, operators.PsmdbOperatorVersion, req.Version)
-		if err != nil {
-			return nil, err
-		}
-
+		// TODO: If operator is installed, try to upgrade it?
 		return new(controllerv1beta1.InstallPSMDBOperatorResponse), nil
 	}
 
-	err = client.ApplyOperator(ctx, req.Version, x.manifestsURLTemplate)
+	yamlFile, err := dbaascontroller.DeployDir.ReadFile("deploy/olm/psmdb/percona-server-mongodb-operator.yaml")
 	if err != nil {
 		return nil, err
+	}
+
+	if err := client.Create(ctx, yamlFile); err != nil {
+		return nil, errors.Wrap(err, "cannot install the PXC operator via OLM")
 	}
 
 	return new(controllerv1beta1.InstallPSMDBOperatorResponse), nil

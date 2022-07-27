@@ -24,12 +24,15 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
+	"strings"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	dbaascontroller "github.com/percona-platform/dbaas-controller"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
 const (
@@ -37,13 +40,15 @@ const (
 	githubAPIURLTemplate = "https://api.github.com/repos/operator-framework/%s/releases/latest"
 	baseDownloadURL      = "github.com/operator-framework/operator-lifecycle-manager/releases/download"
 	olmNamespace         = "olm"
+
+	// If version is not set, DBaaS controller will choose the latest from the repo.
+	// It doesn't work for offline installation.
+	latestOLMVersion  = "latest"
+	defaultOLMVersion = ""
 )
 
-var (
-	// ErrEmptyVersionTag Got an empty version tag from GitHub API.
-	ErrEmptyVersionTag  = errors.New("got an empty version tag from Github")
-	ErrAlreadyInstalled = errors.New("olm is already installed")
-)
+// ErrEmptyVersionTag Got an empty version tag from GitHub API.
+var ErrEmptyVersionTag = errors.New("got an empty version tag from Github")
 
 // OLMOperatorService holds methods to handle the OLM operator.
 type OLMOperatorService struct{}
@@ -61,28 +66,42 @@ func (o *OLMOperatorService) InstallOLMOperator(ctx context.Context, req *contro
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	if isInstalled(ctx, client, olmNamespace) {
-		return nil, ErrAlreadyInstalled
-	}
-
 	response := &controllerv1beta1.InstallOLMOperatorResponse{}
 
-	latestVersion, err := o.getLatestVersion(ctx, olmRepo)
-	if err != nil {
-		return nil, err
+	if isInstalled(ctx, client, olmNamespace) {
+		return response, nil // No error, already installed.
 	}
 
-	uri := "https://" + path.Join(baseDownloadURL, latestVersion, "crds.yaml")
-	if err := client.Create(ctx, uri); err != nil {
-		// TODO: revert applied files before return
-		return nil, errors.Wrapf(err, "cannot apply %q file", uri)
-	}
-	client.WaitForCondition(ctx, "Established", uri)
+	var crdFile, olmFile interface{}
 
-	uri = "https://" + path.Join(baseDownloadURL, latestVersion, "olm.yaml")
-	if err := client.Create(ctx, uri); err != nil {
+	switch strings.ToLower(req.Version) {
+	case latestOLMVersion:
+		latestVersion, err := o.getLatestVersion(ctx, olmRepo)
+		if err != nil {
+			return nil, err
+		}
+		crdFile = "https://" + path.Join(baseDownloadURL, latestVersion, "crds.yaml")
+		olmFile = "https://" + path.Join(baseDownloadURL, latestVersion, "olm.yaml")
+	case defaultOLMVersion:
+		crdFile, err = dbaascontroller.DeployDir.ReadFile("deploy/olm/crds.yaml")
+		if err != nil {
+			return nil, err
+		}
+		olmFile, err = dbaascontroller.DeployDir.ReadFile("deploy/olm/olm.yaml")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := client.Create(ctx, crdFile); err != nil {
 		// TODO: revert applied files before return
-		return nil, errors.Wrapf(err, "cannot apply %q file", uri)
+		return nil, errors.Wrapf(err, "cannot apply %q file", crdFile)
+	}
+	client.WaitForCondition(ctx, "Established", crdFile)
+
+	if err := client.Create(ctx, olmFile); err != nil {
+		// TODO: revert applied files before return
+		return nil, errors.Wrapf(err, "cannot apply %q file", olmFile)
 	}
 
 	return response, nil

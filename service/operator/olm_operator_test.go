@@ -21,13 +21,15 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
-	"path"
 	"testing"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 func TestGetLatestVersion(t *testing.T) {
@@ -57,19 +59,43 @@ func TestInstallOlmOperator(t *testing.T) {
 	_, err = olms.InstallOLMOperator(ctx, req)
 	assert.NoError(t, err)
 
+	i18nPrinter := message.NewPrinter(language.English)
+
+	DefaultPSMDBOperatorURLTemplate := "https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v%s/deploy/%s"
+	psmdbOperatorService := NewPSMDBOperatorService(i18nPrinter, DefaultPSMDBOperatorURLTemplate)
+	_, err = psmdbOperatorService.InstallPSMDBOperator(ctx, &controllerv1beta1.InstallPSMDBOperatorRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: string(kubeconfig),
+		},
+		Version: "1.10.0",
+	})
+	assert.NoError(t, err)
+
+	DefaultPXCOperatorURLTemplate := "https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/v%s/deploy/%s"
+	pxcOperatorService := NewPXCOperatorService(i18nPrinter, DefaultPXCOperatorURLTemplate)
+	_, err = pxcOperatorService.InstallPXCOperator(ctx, &controllerv1beta1.InstallPXCOperatorRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
+			Kubeconfig: string(kubeconfig),
+		},
+		Version: "1.10.0",
+	})
+	assert.NoError(t, err)
+
+	// Cleanup the cluster
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
-	if err != nil {
-		//	return nil, status.Error(codes.Internal, err.Error())
-	}
+	assert.NoError(t, err)
 	defer client.Cleanup() //nolint:errcheck
 
-	uris := []string{
-		path.Join(baseDownloadURL, "crds.yaml"),
-		path.Join(baseDownloadURL, "olm.yaml"),
+	files := []string{
+		"deploy/olm/pxc/percona-xtradb-cluster-operator.yaml",
+		"deploy/olm/psmdb/percona-server-mongodb-operator.yaml",
+		"deploy/olm/crds.yaml",
 	}
 
-	for _, uri := range uris {
-		err := client.Delete(ctx, "https://"+uri)
+	for _, file := range files {
+		t.Logf("deleting %q\n", file)
+		yamlFile, _ := dbaascontroller.DeployDir.ReadFile(file)
+		err := client.Delete(ctx, yamlFile)
 		assert.NoError(t, err)
 	}
 }

@@ -254,7 +254,22 @@ func (k *KubeCtl) Patch(ctx context.Context, patchType PatchType, resourceType, 
 
 // Delete executes `kubectl delete` with given resource.
 func (k *KubeCtl) Delete(ctx context.Context, res interface{}) error {
-	_, err := run(ctx, k.cmd, []string{"delete", "-f", "-"}, res)
+	var err error
+
+	switch it := res.(type) {
+	case []byte:
+		_, err = run(ctx, k.cmd, []string{"delete", "-f", "-"}, it)
+	case []string:
+		params := []string{"delete"}
+		if len(it) == 1 {
+			if _, err := os.Stat(it[0]); err == nil || strings.HasPrefix(it[0], "http") {
+				params = append(params, "-f")
+			}
+		}
+		params = append(params, it...)
+		_, err = run(ctx, k.cmd, params, nil)
+	}
+
 	return err
 }
 
