@@ -1953,7 +1953,6 @@ func (c *K8sClient) RemoveVMOperator(ctx context.Context) error {
 		"deploy/victoriametrics/kube-state-metrics/deployment.yaml",
 		"deploy/victoriametrics/kube-state-metrics/service-account.yaml",
 		"deploy/victoriametrics/kube-state-metrics/service.yaml",
-		"deploy/victoriametrics/kube-state-metrics.yaml",
 		"deploy/victoriametrics/crds/crd.yaml",
 		"deploy/victoriametrics/operator/manager.yaml",
 	}
