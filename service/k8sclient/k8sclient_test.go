@@ -455,13 +455,13 @@ func TestK8sClient(t *testing.T) {
 			PMM:     pmm,
 		})
 		require.NoError(t, err)
+
 		time.Sleep(15 * time.Second)
 		resources, err := getPodResources(ctx, client, "test-pxc-haproxy-haproxy-0")
 		assert.NoError(t, err)
-		for _, r := range resources {
-			assert.Equal(t, "500m", r.Requests.CPU)
-			assert.Equal(t, "500M", r.Requests.Memory)
-		}
+		assert.Equal(t, "500m", resources[0].Requests.CPU)
+		assert.Equal(t, "500M", resources[0].Requests.Memory)
+
 		assertListPXCCluster(ctx, t, client, clusterName, func(cluster *PXCCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
@@ -1218,7 +1218,7 @@ func getPodResources(ctx context.Context, client *K8sClient, name string) ([]*co
 	type resources struct {
 		Spec struct {
 			Containers []struct {
-				Resources *common.PodResources `json:"resources`
+				Resources *common.PodResources `json:"resources"`
 			} `json:"containers"`
 		} `json:"spec"`
 	}
