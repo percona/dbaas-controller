@@ -59,7 +59,7 @@ release-component-version:
 	@echo $(COMPONENT_VERSION)
 
 release:                          ## Build dbaas-controller release binaries.
-	env CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
+	env CGO_ENABLED=0 GOARCH=amd64 -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
 	$(PMM_RELEASE_PATH)/dbaas-controller --version
 
 init:                             ## Install development tools
