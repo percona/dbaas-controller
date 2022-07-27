@@ -455,6 +455,13 @@ func TestK8sClient(t *testing.T) {
 			PMM:     pmm,
 		})
 		require.NoError(t, err)
+		time.Sleep(15 * time.Second)
+		resources, err := getPodResources(ctx, client, "test-pxc-haproxy-haproxy-0")
+		assert.NoError(t, err)
+		for _, r := range resources {
+			assert.Equal(t, "500m", r.Requests.CPU)
+			assert.Equal(t, "500M", r.Requests.Memory)
+		}
 		assertListPXCCluster(ctx, t, client, clusterName, func(cluster *PXCCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
@@ -1205,4 +1212,24 @@ func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (in
 	}
 
 	return count, nil
+}
+
+func getPodResources(ctx context.Context, client *K8sClient, name string) ([]*common.PodResources, error) {
+	type resources struct {
+		Spec struct {
+			Containers []struct {
+				Resources *common.PodResources `json:"resources`
+			} `json:"containers"`
+		} `json:"spec"`
+	}
+	var res resources
+	var podResources []*common.PodResources
+	err := client.kubeCtl.Get(ctx, "pod", name, &res)
+	if err != nil {
+		return podResources, err
+	}
+	for _, p := range res.Spec.Containers {
+		podResources = append(podResources, p.Resources)
+	}
+	return podResources, nil
 }
