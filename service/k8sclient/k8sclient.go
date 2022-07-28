@@ -321,29 +321,23 @@ type K8sClient struct {
 }
 
 func init() {
+	pmmClientImage = "perconalab/pmm-client:dev-latest"
+
 	pmmClientImageEnv, ok := os.LookupEnv("PERCONA_TEST_DBAAS_PMM_CLIENT")
 	if ok {
 		pmmClientImage = pmmClientImageEnv
 		return
 	}
 
-	if pmmversion.PMMVersion == "" {
-		// Prevent panicing on local development builds.
-		pmmClientImage = "perconalab/pmm-client:dev-latest"
-		return
-	}
+	if pmmversion.PMMVersion != "" {
+		v, err := goversion.NewVersion(pmmversion.PMMVersion)
+		if err != nil {
+			logger.Get(context.Background()).Warnf("failed to decide what version of pmm-client to use: %s", err)
+			logger.Get(context.Background()).Warnf("Using %q for pmm client image", pmmClientImage)
+			return
+		}
 
-	v, err := goversion.NewVersion(pmmversion.PMMVersion)
-	if err != nil {
-		panic("failed to decide what version of pmm-client to use: " + err.Error())
-	}
-
-	if v.Core().String() == v.String() {
-		// Production version contains only major.minor.patch ...
-		pmmClientImage = "percona/pmm-client:2"
-	} else {
-		// ... development version contains also commit.
-		pmmClientImage = "perconalab/pmm-client:dev-latest"
+		pmmClientImage = "percona/pmm-client:" + v.Core().String()
 	}
 }
 
