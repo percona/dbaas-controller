@@ -1175,7 +1175,7 @@ func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraCRParams) *ps
 			Secrets: &psmdb.SecretsSpec{
 				Users: extra.secretName,
 			},
-			Sharding: &psmdb.ShardingSpec{
+			Sharding: &psmdb.ShardingSpec112{
 				Enabled: true,
 				ConfigsvrReplSet: &psmdb.ReplsetSpec{
 					Size:       3,
@@ -1192,7 +1192,7 @@ func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraCRParams) *ps
 					},
 					Expose: extra.expose,
 				},
-				Mongos: &psmdb.ReplsetMongosSpec{
+				Mongos: &psmdb.ReplsetMongosSpec112{
 					Size: params.Size,
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: extra.affinity,

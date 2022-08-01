@@ -43,15 +43,36 @@ type Nonvoting struct {
 
 // PSMDB112Spec defines the PSMDB spec section for the operator parameters.
 type PSMDB112Spec struct {
-	CRVersion                 string          `json:"crVersion,omitempty"`
-	Image                     string          `json:"image,omitempty"`
-	ImagePullPolicy           string          `json:"imagePullPolicy,omitempty"`
-	AllowUnsafeConfigurations bool            `json:"allowUnsafeConfigurations,omitempty"`
-	UpdateStrategy            string          `json:"updateStrategy,omitempty"`
-	UpgradeOptions            *UpgradeOptions `json:"upgradeOptions,omitempty"`
-	Secrets                   *SecretsSpec    `json:"secrets,omitempty"`
-	PMM                       *PmmSpec        `json:"pmm,omitempty"`
-	Replsets                  []*ReplsetSpec  `json:"replsets,omitempty"`
-	Sharding                  *ShardingSpec   `json:"sharding,omitempty"`
-	Backup                    *BackupSpec     `json:"backup,omitempty"`
+	CRVersion                 string           `json:"crVersion,omitempty"`
+	Image                     string           `json:"image,omitempty"`
+	ImagePullPolicy           string           `json:"imagePullPolicy,omitempty"`
+	AllowUnsafeConfigurations bool             `json:"allowUnsafeConfigurations,omitempty"`
+	UpdateStrategy            string           `json:"updateStrategy,omitempty"`
+	UpgradeOptions            *UpgradeOptions  `json:"upgradeOptions,omitempty"`
+	Secrets                   *SecretsSpec     `json:"secrets,omitempty"`
+	PMM                       *PmmSpec         `json:"pmm,omitempty"`
+	Replsets                  []*ReplsetSpec   `json:"replsets,omitempty"`
+	Sharding                  *ShardingSpec112 `json:"sharding,omitempty"`
+	Backup                    *BackupSpec      `json:"backup,omitempty"`
+}
+
+type ShardingSpec112 struct {
+	Enabled            bool                          `json:"enabled"`
+	ConfigsvrReplSet   *ReplsetSpec                  `json:"configsvrReplSet"`
+	Mongos             *ReplsetMongosSpec112         `json:"mongos"`
+	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
+	Expose             *Expose                       `json:"expose"`
+}
+
+// ReplsetMongosSpec holds the fields to describe replicaset's Mongos specs.
+type ReplsetMongosSpec112 struct {
+	Expose              ExposeSpec                      `json:"expose,omitempty"`
+	Size                int32                           `json:"size"`
+	Resources           *common.PodResources            `json:"resources,omitempty"`
+	Name                string                          `json:"name,omitempty"`
+	ClusterRole         clusterRole                     `json:"clusterRole,omitempty"`
+	VolumeSpec          *common.VolumeSpec              `json:"volumeSpec,omitempty"`
+	LivenessProbe       *livenessProbeExtended          `json:"livenessProbe,omitempty"`
+	PodDisruptionBudget *common.PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+	MultiAZ
 }
