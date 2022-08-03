@@ -52,49 +52,77 @@ func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *contro
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	res := &controllerv1beta1.ListPSMDBClustersResponse{
-		Clusters: make([]*controllerv1beta1.ListPSMDBClustersResponse_Cluster, len(PSMDBClusters)),
+		Clusters: make([]*controllerv1beta1.PSMDBCluster, len(PSMDBClusters)),
 	}
 
 	for i, cluster := range PSMDBClusters {
-		diskSizeBytes, err := convertors.StrToBytes(cluster.Replicaset.DiskSize)
+		psmdbCluster, err := s.convertPSMDBCluster(cluster)
 		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, err
 		}
-		params := &controllerv1beta1.PSMDBClusterParams{
-			Image:       cluster.Image,
-			ClusterSize: cluster.Size,
-			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
-				DiskSize: int64(diskSizeBytes),
-			},
-		}
-		if cluster.Replicaset.ComputeResources != nil {
-			cpuMillis, err := convertors.StrToMilliCPU(cluster.Replicaset.ComputeResources.CPUM)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			memoryBytes, err := convertors.StrToBytes(cluster.Replicaset.ComputeResources.MemoryBytes)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			params.Replicaset.ComputeResources = &controllerv1beta1.ComputeResources{
-				CpuM:        int32(cpuMillis),
-				MemoryBytes: int64(memoryBytes),
-			}
-		}
-		res.Clusters[i] = &controllerv1beta1.ListPSMDBClustersResponse_Cluster{
-			Name:  cluster.Name,
-			State: dbClusterStatesMap[cluster.State],
-			Operation: &controllerv1beta1.RunningOperation{
-				FinishedSteps: cluster.DetailedState.CountReadyPods(),
-				TotalSteps:    cluster.DetailedState.CountAllPods(),
-				Message:       cluster.Message,
-			},
-			Params:  params,
-			Exposed: cluster.Exposed,
-		}
+		res.Clusters[i] = psmdbCluster
 	}
 
 	return res, nil
+}
+
+// GetPSMDBCluster gets existing PSMDB cluster.
+func (s *PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *controllerv1beta1.GetPSMDBClusterRequest) (*controllerv1beta1.GetPSMDBClusterResponse, error) {
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	PSMDBCluster, err := client.GetPSMDBCluster(ctx, req.Name)
+	if err != nil {
+		return nil, err
+	}
+	cluster, err := s.convertPSMDBCluster(*PSMDBCluster)
+	if err != nil {
+		return nil, err
+	}
+	return &controllerv1beta1.GetPSMDBClusterResponse{Cluster: cluster}, nil
+}
+
+func (s *PSMDBClusterService) convertPSMDBCluster(cluster k8sclient.PSMDBCluster) (*controllerv1beta1.PSMDBCluster, error) {
+	diskSizeBytes, err := convertors.StrToBytes(cluster.Replicaset.DiskSize)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	params := &controllerv1beta1.PSMDBClusterParams{
+		Image:       cluster.Image,
+		ClusterSize: cluster.Size,
+		Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
+			DiskSize: int64(diskSizeBytes),
+		},
+	}
+	if cluster.Replicaset.ComputeResources != nil {
+		cpuMillis, err := convertors.StrToMilliCPU(cluster.Replicaset.ComputeResources.CPUM)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		memoryBytes, err := convertors.StrToBytes(cluster.Replicaset.ComputeResources.MemoryBytes)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		params.Replicaset.ComputeResources = &controllerv1beta1.ComputeResources{
+			CpuM:        int32(cpuMillis),
+			MemoryBytes: int64(memoryBytes),
+		}
+	}
+	psmdbCluster := &controllerv1beta1.PSMDBCluster{
+		Name:  cluster.Name,
+		State: dbClusterStatesMap[cluster.State],
+		Operation: &controllerv1beta1.RunningOperation{
+			FinishedSteps: cluster.DetailedState.CountReadyPods(),
+			TotalSteps:    cluster.DetailedState.CountAllPods(),
+			Message:       cluster.Message,
+		},
+		Params:  params,
+		Exposed: cluster.Exposed,
+	}
+	return psmdbCluster, nil
 }
 
 // CreatePSMDBCluster creates a new PSMDB cluster.

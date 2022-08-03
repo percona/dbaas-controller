@@ -392,7 +392,7 @@ func (c *K8sClient) Cleanup() error {
 
 // ListPXCClusters returns list of Percona XtraDB clusters and their statuses.
 func (c *K8sClient) ListPXCClusters(ctx context.Context) ([]PXCCluster, error) {
-	perconaXtraDBClusters, err := c.getPerconaXtraDBClusters(ctx)
+	perconaXtraDBClusters, err := c.getPXCClusters(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -404,6 +404,17 @@ func (c *K8sClient) ListPXCClusters(ctx context.Context) ([]PXCCluster, error) {
 	res := append(perconaXtraDBClusters, deletingClusters...)
 
 	return res, nil
+}
+
+func (c *K8sClient) GetPXCCluster(ctx context.Context, name string) (*PXCCluster, error) {
+	var cluster pxc.PerconaXtraDBCluster
+	err := c.kubeCtl.Get(ctx, pxc.PerconaXtraDBClusterKind, name, &cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	val := c.convertPXCCluster(ctx, cluster)
+	return &val, nil
 }
 
 // CreateSecret creates secret resource to use as credential source for clusters.
@@ -763,8 +774,8 @@ func (c *K8sClient) RestartPXCCluster(ctx context.Context, name string) error {
 	return errors.New("failed to restart pxc cluster proxy statefulset")
 }
 
-// getPerconaXtraDBClusters returns Percona XtraDB clusters.
-func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster, error) {
+// getPXCClusters returns Percona XtraDB clusters.
+func (c *K8sClient) getPXCClusters(ctx context.Context) ([]PXCCluster, error) {
 	var list pxc.PerconaXtraDBClusterList
 	err := c.kubeCtl.Get(ctx, pxc.PerconaXtraDBClusterKind, "", &list)
 	if err != nil {
@@ -773,48 +784,49 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 
 	res := make([]PXCCluster, len(list.Items))
 	for i, cluster := range list.Items {
-		val := PXCCluster{
-			Name: cluster.Name,
-			Size: *cluster.Spec.PXC.Size,
-			PXC: &PXC{
-				Image:            cluster.Spec.PXC.Image,
-				DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
-				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
-			},
-			Pause: cluster.Spec.Pause,
-		}
-		if cluster.Status != nil {
-			val.DetailedState = []appStatus{
-				{size: cluster.Status.PMM.Size, ready: cluster.Status.PMM.Ready},
-				{size: cluster.Status.HAProxy.Size, ready: cluster.Status.HAProxy.Ready},
-				{size: cluster.Status.ProxySQL.Size, ready: cluster.Status.ProxySQL.Ready},
-				{size: cluster.Status.PXC.Size, ready: cluster.Status.PXC.Ready},
-			}
-			val.Message = strings.Join(cluster.Status.Messages, ";")
-		}
-
-		val.State = c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
-
-		if cluster.Spec.ProxySQL != nil {
-			val.ProxySQL = &ProxySQL{
-				DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
-				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
-			}
-			val.Exposed = cluster.Spec.ProxySQL.ServiceType != "" &&
-				cluster.Spec.ProxySQL.ServiceType != common.ServiceTypeClusterIP
-			res[i] = val
-			continue
-		}
-		if cluster.Spec.HAProxy != nil {
-			val.HAProxy = &HAProxy{
-				ComputeResources: c.getComputeResources(cluster.Spec.HAProxy.Resources),
-			}
-			val.Exposed = cluster.Spec.HAProxy.ServiceType != "" &&
-				cluster.Spec.HAProxy.ServiceType != common.ServiceTypeClusterIP
-		}
-		res[i] = val
+		res[i] = c.convertPXCCluster(ctx, cluster)
 	}
 	return res, nil
+}
+
+func (c *K8sClient) convertPXCCluster(ctx context.Context, cluster pxc.PerconaXtraDBCluster) PXCCluster {
+	val := PXCCluster{
+		Name: cluster.Name,
+		Size: *cluster.Spec.PXC.Size,
+		PXC: &PXC{
+			Image:            cluster.Spec.PXC.Image,
+			DiskSize:         c.getDiskSize(cluster.Spec.PXC.VolumeSpec),
+			ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
+		},
+		Pause: cluster.Spec.Pause,
+	}
+	if cluster.Status != nil {
+		val.DetailedState = []appStatus{
+			{size: cluster.Status.PMM.Size, ready: cluster.Status.PMM.Ready},
+			{size: cluster.Status.HAProxy.Size, ready: cluster.Status.HAProxy.Ready},
+			{size: cluster.Status.ProxySQL.Size, ready: cluster.Status.ProxySQL.Ready},
+			{size: cluster.Status.PXC.Size, ready: cluster.Status.PXC.Ready},
+		}
+		val.Message = strings.Join(cluster.Status.Messages, ";")
+	}
+
+	val.State = c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
+
+	if cluster.Spec.ProxySQL != nil {
+		val.ProxySQL = &ProxySQL{
+			DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
+			ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
+		}
+		val.Exposed = cluster.Spec.ProxySQL.ServiceType != "" &&
+			cluster.Spec.ProxySQL.ServiceType != common.ServiceTypeClusterIP
+	} else if cluster.Spec.HAProxy != nil {
+		val.HAProxy = &HAProxy{
+			ComputeResources: c.getComputeResources(cluster.Spec.HAProxy.Resources),
+		}
+		val.Exposed = cluster.Spec.HAProxy.ServiceType != "" &&
+			cluster.Spec.HAProxy.ServiceType != common.ServiceTypeClusterIP
+	}
+	return val
 }
 
 func (c *K8sClient) getClusterState(ctx context.Context, cluster common.DatabaseCluster, crAndPodsMatchFunc func(context.Context, common.DatabaseCluster) (bool, error)) ClusterState {
@@ -921,6 +933,17 @@ func (c *K8sClient) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, erro
 	res := append(clusters, deletingClusters...)
 
 	return res, nil
+}
+
+func (c *K8sClient) GetPSMDBCluster(ctx context.Context, name string) (*PSMDBCluster, error) {
+	var cluster psmdb.PerconaServerMongoDB
+	err := c.kubeCtl.Get(ctx, psmdb.PerconaServerMongoDBKind, name, &cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	val := c.convertPSMDBCluster(ctx, cluster)
+	return &val, nil
 }
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
@@ -1293,41 +1316,46 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
-		val := PSMDBCluster{
-			Name:  cluster.Name,
-			Size:  cluster.Spec.Replsets[0].Size,
-			Pause: cluster.Spec.Pause,
-			Replicaset: &Replicaset{
-				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
-				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
-			},
-			Exposed: cluster.Spec.Sharding.Mongos.Expose.Enabled,
-			Image:   cluster.Spec.Image,
-		}
-
-		if cluster.Status != nil {
-			message := cluster.Status.Message
-			conditions := cluster.Status.Conditions
-			if message == "" && len(conditions) > 0 {
-				message = conditions[len(conditions)-1].Message
-			}
-
-			status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
-			for _, rs := range cluster.Status.Replsets {
-				status = append(status, appStatus{rs.Size, rs.Ready})
-			}
-			status = append(status, appStatus{
-				size:  cluster.Status.Mongos.Size,
-				ready: cluster.Status.Mongos.Ready,
-			})
-			val.DetailedState = status
-			val.Message = message
-		}
-
-		val.State = c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
+		val := c.convertPSMDBCluster(ctx, cluster)
 		res[i] = val
 	}
 	return res, nil
+}
+
+func (c *K8sClient) convertPSMDBCluster(ctx context.Context, cluster psmdb.PerconaServerMongoDB) PSMDBCluster {
+	val := PSMDBCluster{
+		Name:  cluster.Name,
+		Size:  cluster.Spec.Replsets[0].Size,
+		Pause: cluster.Spec.Pause,
+		Replicaset: &Replicaset{
+			DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
+			ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
+		},
+		Exposed: cluster.Spec.Sharding.Mongos.Expose.Enabled,
+		Image:   cluster.Spec.Image,
+	}
+
+	if cluster.Status != nil {
+		message := cluster.Status.Message
+		conditions := cluster.Status.Conditions
+		if message == "" && len(conditions) > 0 {
+			message = conditions[len(conditions)-1].Message
+		}
+
+		status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
+		for _, rs := range cluster.Status.Replsets {
+			status = append(status, appStatus{rs.Size, rs.Ready})
+		}
+		status = append(status, appStatus{
+			size:  cluster.Status.Mongos.Size,
+			ready: cluster.Status.Mongos.Ready,
+		})
+		val.DetailedState = status
+		val.Message = message
+	}
+
+	val.State = c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
+	return val
 }
 
 // getDeletingPSMDBClusters returns Percona Server for MongoDB clusters which are not fully deleted yet.

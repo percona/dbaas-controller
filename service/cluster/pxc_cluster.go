@@ -85,68 +85,96 @@ func (s *PXCClusterService) ListPXCClusters(ctx context.Context, req *controller
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	res := &controllerv1beta1.ListPXCClustersResponse{
-		Clusters: make([]*controllerv1beta1.ListPXCClustersResponse_Cluster, len(xtradbClusters)),
+		Clusters: make([]*controllerv1beta1.PXCCluster, len(xtradbClusters)),
 	}
 
 	for i, cluster := range xtradbClusters {
-		pxcDiskSize, err := convertors.StrToBytes(cluster.PXC.DiskSize)
+		pxcCluster, err := s.convertPXCCluster(cluster)
 		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, err
 		}
-		params := &controllerv1beta1.PXCClusterParams{
-			ClusterSize: cluster.Size,
-			Pxc: &controllerv1beta1.PXCClusterParams_PXC{
-				DiskSize: int64(pxcDiskSize),
-				Image:    cluster.PXC.Image,
-			},
-		}
-
-		if cluster.ProxySQL != nil {
-			proxySQLDiskSize, err := convertors.StrToBytes(cluster.ProxySQL.DiskSize)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-			params.Proxysql = &controllerv1beta1.PXCClusterParams_ProxySQL{
-				DiskSize: int64(proxySQLDiskSize),
-			}
-			params.Proxysql.ComputeResources = new(controllerv1beta1.ComputeResources)
-			err = setComputeResources(cluster.ProxySQL.ComputeResources, params.Proxysql.ComputeResources)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-
-		if cluster.HAProxy != nil {
-			params.Haproxy = new(controllerv1beta1.PXCClusterParams_HAProxy)
-			params.Haproxy.ComputeResources = new(controllerv1beta1.ComputeResources)
-			err = setComputeResources(cluster.HAProxy.ComputeResources, params.Haproxy.ComputeResources)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-
-		if cluster.PXC.ComputeResources != nil {
-			params.Pxc.ComputeResources = new(controllerv1beta1.ComputeResources)
-			err = setComputeResources(cluster.PXC.ComputeResources, params.Pxc.ComputeResources)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-
-		res.Clusters[i] = &controllerv1beta1.ListPXCClustersResponse_Cluster{
-			Name:  cluster.Name,
-			State: dbClusterStatesMap[cluster.State],
-			Operation: &controllerv1beta1.RunningOperation{
-				FinishedSteps: cluster.DetailedState.CountReadyPods(),
-				TotalSteps:    cluster.DetailedState.CountAllPods(),
-				Message:       cluster.Message,
-			},
-			Params:  params,
-			Exposed: cluster.Exposed,
-		}
+		res.Clusters[i] = pxcCluster
 	}
 
 	return res, nil
+}
+
+func (s *PXCClusterService) convertPXCCluster(cluster k8sclient.PXCCluster) (*controllerv1beta1.PXCCluster, error) {
+	pxcDiskSize, err := convertors.StrToBytes(cluster.PXC.DiskSize)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	params := &controllerv1beta1.PXCClusterParams{
+		ClusterSize: cluster.Size,
+		Pxc: &controllerv1beta1.PXCClusterParams_PXC{
+			DiskSize: int64(pxcDiskSize),
+			Image:    cluster.PXC.Image,
+		},
+	}
+
+	if cluster.ProxySQL != nil {
+		proxySQLDiskSize, err := convertors.StrToBytes(cluster.ProxySQL.DiskSize)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		params.Proxysql = &controllerv1beta1.PXCClusterParams_ProxySQL{
+			DiskSize: int64(proxySQLDiskSize),
+		}
+		params.Proxysql.ComputeResources = new(controllerv1beta1.ComputeResources)
+		err = setComputeResources(cluster.ProxySQL.ComputeResources, params.Proxysql.ComputeResources)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	if cluster.HAProxy != nil {
+		params.Haproxy = new(controllerv1beta1.PXCClusterParams_HAProxy)
+		params.Haproxy.ComputeResources = new(controllerv1beta1.ComputeResources)
+		err = setComputeResources(cluster.HAProxy.ComputeResources, params.Haproxy.ComputeResources)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	if cluster.PXC.ComputeResources != nil {
+		params.Pxc.ComputeResources = new(controllerv1beta1.ComputeResources)
+		err = setComputeResources(cluster.PXC.ComputeResources, params.Pxc.ComputeResources)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	pxcCluster := &controllerv1beta1.PXCCluster{
+		Name:  cluster.Name,
+		State: dbClusterStatesMap[cluster.State],
+		Operation: &controllerv1beta1.RunningOperation{
+			FinishedSteps: cluster.DetailedState.CountReadyPods(),
+			TotalSteps:    cluster.DetailedState.CountAllPods(),
+			Message:       cluster.Message,
+		},
+		Params:  params,
+		Exposed: cluster.Exposed,
+	}
+	return pxcCluster, nil
+}
+
+// GetPXCCluster gets existing PSMDB cluster.
+func (s *PXCClusterService) GetPXCCluster(ctx context.Context, req *controllerv1beta1.GetPXCClusterRequest) (*controllerv1beta1.GetPXCClusterResponse, error) {
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	PSMDBCluster, err := client.GetPXCCluster(ctx, req.Name)
+	if err != nil {
+		return nil, err
+	}
+	cluster, err := s.convertPXCCluster(*PSMDBCluster)
+	if err != nil {
+		return nil, err
+	}
+	return &controllerv1beta1.GetPXCClusterResponse{Cluster: cluster}, nil
 }
 
 // CreatePXCCluster creates a new PXC cluster.
