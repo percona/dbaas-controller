@@ -329,16 +329,23 @@ func init() {
 		return
 	}
 
-	if pmmversion.PMMVersion != "" {
-		v, err := goversion.NewVersion(pmmversion.PMMVersion)
-		if err != nil {
-			logger.Get(context.Background()).Warnf("failed to decide what version of pmm-client to use: %s", err)
-			logger.Get(context.Background()).Warnf("Using %q for pmm client image", pmmClientImage)
-			return
-		}
-
-		pmmClientImage = "percona/pmm-client:" + v.Core().String()
+	if pmmversion.PMMVersion == "" { // No version set, use dev-latest.
+		return
 	}
+
+	v, err := goversion.NewVersion(pmmversion.PMMVersion)
+	if err != nil {
+		logger.Get(context.Background()).Warnf("failed to decide what version of pmm-client to use: %s", err)
+		logger.Get(context.Background()).Warnf("Using %q for pmm client image", pmmClientImage)
+		return
+	}
+	// if version has a suffix like 1.2.0-dev or 3.4.1-HEAD-something it is an unreleased version.
+	// Docker image won't exist in the repo so use dev-latest.
+	if v.Core().String() != v.String() {
+		return
+	}
+
+	pmmClientImage = "percona/pmm-client:" + v.Core().String()
 }
 
 // CountReadyPods returns number of pods that are ready and belong to the
