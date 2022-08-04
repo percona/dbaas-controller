@@ -86,6 +86,7 @@ const (
 	psmdbAPIVersionTemplate  = psmdbAPINamespace + "/v%s"
 	psmdbSecretNameTmpl      = "dbaas-%s-psmdb-secrets"
 
+	stabePMMClientImage = "percona/pmm-client:2"
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
 	pullPolicy              = common.PullIfNotPresent
@@ -340,8 +341,9 @@ func init() {
 		return
 	}
 	// if version has a suffix like 1.2.0-dev or 3.4.1-HEAD-something it is an unreleased version.
-	// Docker image won't exist in the repo so use dev-latest.
+	// Docker image won't exist in the repo so use latest stable.
 	if v.Core().String() != v.String() {
+		pmmClientImage = stabePMMClientImage
 		return
 	}
 
