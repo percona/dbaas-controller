@@ -148,3 +148,18 @@ func (k KubernetesClusterService) StartMonitoring(ctx context.Context, req *cont
 
 	return new(controllerv1beta1.StartMonitoringResponse), nil
 }
+
+// StopMonitoring removes Victoria metrics operator from kubernetes cluster.
+func (k KubernetesClusterService) StopMonitoring(ctx context.Context, req *controllerv1beta1.StopMonitoringRequest) (*controllerv1beta1.StopMonitoringResponse, error) {
+	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
+	}
+	defer k8sClient.Cleanup() //nolint:errcheck
+
+	if err := k8sClient.RemoveVMOperator(ctx); err != nil {
+		return nil, err
+	}
+
+	return new(controllerv1beta1.StopMonitoringResponse), nil
+}

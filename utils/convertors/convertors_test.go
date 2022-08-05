@@ -60,6 +60,7 @@ func TestConvertToBytes(t *testing.T) {
 		expectedOut    uint64
 		errShouldBeNil bool
 	}{
+		{in: "3000m", expectedOut: 3, errShouldBeNil: true},
 		{in: "100M", expectedOut: 100 * 1000 * 1000, errShouldBeNil: true},
 		{in: "100Mi", expectedOut: 100 * 1024 * 1024, errShouldBeNil: true},
 		{in: "100", expectedOut: 100, errShouldBeNil: true},
@@ -67,14 +68,17 @@ func TestConvertToBytes(t *testing.T) {
 		{in: "1Gi", expectedOut: 1024 * 1024 * 1024, errShouldBeNil: true},
 		{in: "0.5Gi", expectedOut: 1024 * 1024 * 1024 / 2, errShouldBeNil: true},
 		{in: "0.3Gi", expectedOut: 322122548, errShouldBeNil: true},
-		{in: "3000m", expectedOut: 3, errShouldBeNil: true},
 		{in: "Gi", expectedOut: 0, errShouldBeNil: false},
 		{in: "", expectedOut: 0, errShouldBeNil: true},
 		{in: "1Z", expectedOut: 0, errShouldBeNil: false},
 		{in: "1Ki", expectedOut: 1024, errShouldBeNil: true},
-		{in: "1K", expectedOut: 1000, errShouldBeNil: true},
+		{in: "1k", expectedOut: 1000, errShouldBeNil: true},
 		{in: "1T", expectedOut: 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
 		{in: "1Ti", expectedOut: 1024 * 1024 * 1024 * 1024, errShouldBeNil: true},
+		{in: "1P", expectedOut: 1000 * 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
+		{in: "1Pi", expectedOut: 1024 * 1024 * 1024 * 1024 * 1024, errShouldBeNil: true},
+		{in: "1E", expectedOut: 1000 * 1000 * 1000 * 1000 * 1000 * 1000, errShouldBeNil: true},
+		{in: "1Ei", expectedOut: 1024 * 1024 * 1024 * 1024 * 1024 * 1024, errShouldBeNil: true},
 	}
 
 	for _, test := range testCases {

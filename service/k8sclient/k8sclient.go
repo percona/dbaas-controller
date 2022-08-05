@@ -319,29 +319,23 @@ type K8sClient struct {
 }
 
 func init() {
+	pmmClientImage = "perconalab/pmm-client:dev-latest"
+
 	pmmClientImageEnv, ok := os.LookupEnv("PERCONA_TEST_DBAAS_PMM_CLIENT")
 	if ok {
 		pmmClientImage = pmmClientImageEnv
 		return
 	}
 
-	if pmmversion.PMMVersion == "" {
-		// Prevent panicing on local development builds.
-		pmmClientImage = "perconalab/pmm-client:dev-latest"
-		return
-	}
+	if pmmversion.PMMVersion != "" {
+		v, err := goversion.NewVersion(pmmversion.PMMVersion)
+		if err != nil {
+			logger.Get(context.Background()).Warnf("failed to decide what version of pmm-client to use: %s", err)
+			logger.Get(context.Background()).Warnf("Using %q for pmm client image", pmmClientImage)
+			return
+		}
 
-	v, err := goversion.NewVersion(pmmversion.PMMVersion)
-	if err != nil {
-		panic("failed to decide what version of pmm-client to use: " + err.Error())
-	}
-
-	if v.Core().String() == v.String() {
-		// Production version contains only major.minor.patch ...
-		pmmClientImage = "percona/pmm-client:2"
-	} else {
-		// ... development version contains also commit.
-		pmmClientImage = "perconalab/pmm-client:dev-latest"
+		pmmClientImage = "percona/pmm-client:" + v.Core().String()
 	}
 }
 
@@ -1966,6 +1960,26 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 	return c.kubeCtl.Apply(ctx, vmagent)
 }
 
+// RemoveVMOperator deletes the VM Operator installed when the cluster was registered.
+func (c *K8sClient) RemoveVMOperator(ctx context.Context) error {
+	files := []string{
+		"deploy/victoriametrics/crds/crd.yaml",
+		"deploy/victoriametrics/operator/manager.yaml",
+	}
+	for _, path := range files {
+		file, err := dbaascontroller.DeployDir.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		err = c.kubeCtl.Delete(ctx, file)
+		if err != nil {
+			return errors.Wrapf(err, "cannot apply file: %q", path)
+		}
+	}
+
+	return nil
+}
+
 func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 	return monitoring.VMAgent{
 		TypeMeta: common.TypeMeta{
@@ -1985,6 +1999,7 @@ func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 			StaticScrapeSelector:           new(common.LabelSelector),
 			StaticScrapeNamespaceSelector:  new(common.LabelSelector),
 			ReplicaCount:                   1,
+			SelectAllByDefault:             true,
 			Resources: &common.PodResources{
 				Requests: &common.ResourcesList{
 					CPU:    "250m",
