@@ -85,6 +85,7 @@ const (
 	psmdbAPINamespace        = "psmdb.percona.com"
 	psmdbAPIVersionTemplate  = psmdbAPINamespace + "/v%s"
 	psmdbSecretNameTmpl      = "dbaas-%s-psmdb-secrets"
+	stabePMMClientImage      = "percona/pmm-client:2"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
@@ -329,16 +330,24 @@ func init() {
 		return
 	}
 
-	if pmmversion.PMMVersion != "" {
-		v, err := goversion.NewVersion(pmmversion.PMMVersion)
-		if err != nil {
-			logger.Get(context.Background()).Warnf("failed to decide what version of pmm-client to use: %s", err)
-			logger.Get(context.Background()).Warnf("Using %q for pmm client image", pmmClientImage)
-			return
-		}
-
-		pmmClientImage = "percona/pmm-client:" + v.Core().String()
+	if pmmversion.PMMVersion == "" { // No version set, use dev-latest.
+		return
 	}
+
+	v, err := goversion.NewVersion(pmmversion.PMMVersion)
+	if err != nil {
+		logger.Get(context.Background()).Warnf("failed to decide what version of pmm-client to use: %s", err)
+		logger.Get(context.Background()).Warnf("Using %q for pmm client image", pmmClientImage)
+		return
+	}
+	// if version has a suffix like 1.2.0-dev or 3.4.1-HEAD-something it is an unreleased version.
+	// Docker image won't exist in the repo so use latest stable.
+	if v.Core().String() != v.String() {
+		pmmClientImage = stabePMMClientImage
+		return
+	}
+
+	pmmClientImage = "percona/pmm-client:" + v.Core().String()
 }
 
 // CountReadyPods returns number of pods that are ready and belong to the
