@@ -113,7 +113,7 @@ type ShardingSpec struct {
 	ConfigsvrReplSet   *ReplsetSpec                  `json:"configsvrReplSet"`
 	Mongos             *ReplsetMongosSpec            `json:"mongos"`
 	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
-	Expose             *Expose                       `json:"expose"`
+	Expose             Expose                        `json:"expose"`
 }
 
 // UpgradeOptions specify how and to what version we update.

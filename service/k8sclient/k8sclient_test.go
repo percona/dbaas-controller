@@ -34,6 +34,7 @@ import (
 	"time"
 
 	goversion "github.com/hashicorp/go-version"
+	"github.com/k0kubun/pp"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -197,7 +198,7 @@ type pod struct {
 	containers []string
 }
 
-func TestK8sClient(t *testing.T) {
+func TestGetPSMDB(t *testing.T) {
 	ctx := app.Context()
 
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -210,6 +211,25 @@ func TestK8sClient(t *testing.T) {
 		err := client.Cleanup()
 		require.NoError(t, err)
 	})
+
+	clusters, err := client.ListPSMDBClusters(ctx)
+	require.NoError(t, err)
+	pp.Println(clusters)
+}
+
+func TestK8sClient(t *testing.T) {
+	ctx := app.Context()
+
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+
+	client, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
+
+	// t.Cleanup(func() {
+	// 	err := client.Cleanup()
+	// 	require.NoError(t, err)
+	// })
 
 	l := logger.Get(ctx)
 
@@ -497,6 +517,7 @@ func TestK8sClient(t *testing.T) {
 			Size:       3,
 			Replicaset: &Replicaset{DiskSize: "1000000000"},
 			PMM:        pmm,
+			Expose:     true,
 		})
 		require.NoError(t, err)
 
