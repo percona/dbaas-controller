@@ -1386,12 +1386,11 @@ func (c *K8sClient) volumeSpec(diskSize string) *common.VolumeSpec {
 
 // CheckOperators checks installed operator API version.
 func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
-	output, err := c.kubeCtl.Run(ctx, []string{"api-versions"}, "")
+	apiVersions, err := c.kube.GetAPIVersions(ctx)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get api versions list")
 	}
-
-	apiVersions := strings.Split(string(output), "\n")
 
 	return &Operators{
 		PXCOperatorVersion:   c.getLatestOperatorAPIVersion(apiVersions, pxcAPINamespace),
@@ -1443,18 +1442,8 @@ func sumVolumesSize(pvs *common.PersistentVolumeList) (sum uint64, err error) {
 }
 
 // GetPersistentVolumes returns list of persistent volumes.
-func (c *K8sClient) GetPersistentVolumes(ctx context.Context) (*common.PersistentVolumeList, error) {
-	list := new(common.PersistentVolumeList)
-	args := []string{"get", "pv", "-ojson"}
-	out, err := c.kubeCtl.Run(ctx, args, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get persistent volumes")
-	}
-	err = json.Unmarshal(out, list)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get persistent volumes")
-	}
-	return list, nil
+func (c *K8sClient) GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error) {
+	return c.kube.GetPersistentVolumes(ctx)
 }
 
 // GetPods returns list of pods based on given filters. Filters are args to
@@ -1879,7 +1868,7 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 		if err != nil {
 			return err
 		}
-		err = c.kubeCtl.Apply(ctx, file)
+		err = c.kube.ApplyFile(ctx, file)
 		if err != nil {
 			return errors.Wrapf(err, "cannot apply file: %q", path)
 		}
@@ -1900,7 +1889,7 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 	}
 
 	vmagent := vmAgentSpec(params, secretName)
-	return c.kubeCtl.Apply(ctx, vmagent)
+	return c.kube.Apply(ctx, vmagent)
 }
 
 // RemoveVMOperator deletes the VM Operator installed when the cluster was registered.
@@ -1914,7 +1903,7 @@ func (c *K8sClient) RemoveVMOperator(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		err = c.kubeCtl.Delete(ctx, file)
+		err = c.kube.DeleteFile(ctx, file)
 		if err != nil {
 			return errors.Wrapf(err, "cannot apply file: %q", path)
 		}

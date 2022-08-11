@@ -3,8 +3,6 @@ package kube
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
-	"os"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
@@ -171,46 +169,28 @@ func (c *Client) Apply(ctx context.Context, rawObj interface{}) error {
 	err = applyObject(helper, namespace, name, obj)
 	return err
 }
-func (c *Client) ApplyFiles(files []string) error {
-	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
+func (c *Client) DeleteFile(ctx context.Context, fileBytes []byte) error {
+	objs, err := c.getObjects(fileBytes)
 	if err != nil {
 		return err
 	}
-	mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
-	for _, file := range files {
-		f, err := os.Open(file)
+	for i := range objs {
+		err := c.Delete(ctx, objs[i])
 		if err != nil {
 			return err
 		}
-		fBytes, err := ioutil.ReadAll(f)
+	}
+	return nil
+}
+func (c *Client) ApplyFile(ctx context.Context, fileBytes []byte) error {
+	objs, err := c.getObjects(fileBytes)
+	if err != nil {
+		return err
+	}
+	for i := range objs {
+		err := c.Apply(ctx, objs[i])
 		if err != nil {
 			return err
-		}
-		objs, err := c.getObjects(fBytes)
-		if err != nil {
-			return err
-		}
-		for i := range objs {
-			// Get some metadata needed to make the REST request.
-			gvk := objs[i].GetObjectKind().GroupVersionKind()
-			gk := schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind}
-			mapping, err := mapper.RESTMapping(gk, gvk.Version)
-			if err != nil {
-				return err
-			}
-			namespace, name, err := retrievesMetaFromObject(objs[i])
-			if err != nil {
-				return err
-			}
-			cli, err := c.resourceClient(mapping.GroupVersionKind.GroupVersion())
-			if err != nil {
-				return err
-			}
-			helper := resource.NewHelper(cli, mapping)
-			err = applyObject(helper, namespace, name, objs[i])
-			if err != nil {
-				return err
-			}
 		}
 	}
 	return nil
@@ -279,4 +259,17 @@ func (c *Client) GetStorageClasses(ctx context.Context) (*v1.StorageClassList, e
 
 func (c *Client) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
 	return c.clientset.CoreV1().Secrets("default").Get(ctx, name, metav1.GetOptions{})
+}
+func (c *Client) GetAPIVersions(ctx context.Context) ([]string, error) {
+	var versions []string
+	groupList, err := c.clientset.Discovery().ServerGroups()
+	if err != nil {
+		return versions, err
+	}
+	versions = metav1.ExtractGroupVersions(groupList)
+	return versions, nil
+}
+
+func (c *Client) GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error) {
+	return c.clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 }
