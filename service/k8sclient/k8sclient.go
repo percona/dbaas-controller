@@ -1603,16 +1603,6 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType Kube
 		memoryBytes += memory
 
 		switch clusterType {
-		case MinikubeClusterType:
-			storage, ok := node.Status.Allocatable[common.ResourceEphemeralStorage]
-			if !ok {
-				return 0, 0, 0, errors.Errorf("could not get storage size of the node")
-			}
-			bytes, err := convertors.StrToBytes(storage)
-			if err != nil {
-				return 0, 0, 0, errors.Wrapf(err, "could not convert storage size '%s' to bytes", storage)
-			}
-			diskSizeBytes += bytes
 		case AmazonEKSClusterType:
 			// See https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/#scheduler.
 			if common.IsNodeInCondition(node, common.NodeConditionDiskPressure) {
@@ -1638,6 +1628,16 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType Kube
 				volumeLimitPerNode = 25
 			}
 			volumeCountEKS += volumeLimitPerNode
+		default:
+			storage, ok := node.Status.Allocatable[common.ResourceEphemeralStorage]
+			if !ok {
+				return 0, 0, 0, errors.Errorf("could not get storage size of the node")
+			}
+			bytes, err := convertors.StrToBytes(storage)
+			if err != nil {
+				return 0, 0, 0, errors.Wrapf(err, "could not convert storage size '%s' to bytes", storage)
+			}
+			diskSizeBytes += bytes
 		}
 	}
 	if clusterType == AmazonEKSClusterType {
