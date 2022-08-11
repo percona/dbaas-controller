@@ -190,36 +190,6 @@ func (p *Pod) ContainerImage(containerName string) (string, error) {
 	return "", errors.Errorf("container %q not found inside pod %q", containerName, p.Name)
 }
 
-// Secret holds secret data of a certain type. The total bytes of the values in
-// the Data field must be less than 1024 * 1024 bytes.
-type Secret struct {
-	TypeMeta
-	// Standard object's metadata.
-	ObjectMeta `json:"metadata,omitempty"`
-
-	// Data contains the secret data. Each key must consist of alphanumeric
-	// characters, '-', '_' or '.'. The serialized form of the secret data is a
-	// base64 encoded string, representing the arbitrary (possibly non-string)
-	// data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
-	Data map[string][]byte `json:"data,omitempty"`
-
-	// stringData allows specifying non-binary secret data in string form.
-	// It is provided as a write-only input field for convenience.
-	// All keys and values are merged into the data field on write, overwriting any existing values.
-	// The stringData field is never output when reading from the API.
-	StringData map[string][]byte `json:"stringData,omitempty"`
-
-	// Used to facilitate programmatic handling of secret data.
-	Type SecretType `json:"type,omitempty"`
-}
-
-type SecretType string
-
-const (
-	// SecretTypeOpaque is the default. Arbitrary user-defined data.
-	SecretTypeOpaque SecretType = "Opaque"
-)
-
 type (
 	// NodeConditionType represents type of condition Node can get into.
 	NodeConditionType string

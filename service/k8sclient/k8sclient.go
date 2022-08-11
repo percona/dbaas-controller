@@ -32,6 +32,9 @@ import (
 	goversion "github.com/hashicorp/go-version"
 	pmmversion "github.com/percona/pmm/version"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -256,41 +259,6 @@ type PXCCredentials struct {
 	Port     int32
 }
 
-// StorageClass represents a cluster storage class information.
-// We use the Items.Provisioner to detect if we are running against minikube or AWS.
-// Returned value examples:
-// - AWS EKS: kubernetes.io/aws-ebs
-// - Minukube: k8s.io/minikube-hostpath.
-type StorageClass struct {
-	APIVersion string `json:"apiVersion"`
-	Items      []struct {
-		APIVersion string `json:"apiVersion"`
-		Kind       string `json:"kind"`
-		Metadata   struct {
-			Annotations struct {
-				KubectlKubernetesIoLastAppliedConfiguration string `json:"kubectl.kubernetes.io/last-applied-configuration"`
-				StorageclassKubernetesIoIsDefaultClass      string `json:"storageclass.kubernetes.io/is-default-class"`
-			} `json:"annotations"`
-			CreationTimestamp time.Time `json:"creationTimestamp"`
-			Labels            struct {
-				AddonmanagerKubernetesIoMode string `json:"addonmanager.kubernetes.io/mode"`
-			} `json:"labels"`
-			Name            string `json:"name"`
-			ResourceVersion string `json:"resourceVersion"`
-			SelfLink        string `json:"selfLink"`
-			UID             string `json:"uid"`
-		} `json:"metadata"`
-		Provisioner       string `json:"provisioner"`
-		ReclaimPolicy     string `json:"reclaimPolicy"`
-		VolumeBindingMode string `json:"volumeBindingMode"`
-	} `json:"items"`
-	Kind     string `json:"kind"`
-	Metadata struct {
-		ResourceVersion string `json:"resourceVersion"`
-		SelfLink        string `json:"selfLink"`
-	} `json:"metadata"`
-}
-
 // clustertatesMap matches pxc and psmdb app states to cluster states.
 var clusterStatesMap = map[common.AppState]ClusterState{ //nolint:gochecknoglobals
 	common.AppStateInit:     ClusterStateChanging,
@@ -418,18 +386,18 @@ func (c *K8sClient) ListPXCClusters(ctx context.Context) ([]PXCCluster, error) {
 
 // CreateSecret creates secret resource to use as credential source for clusters.
 func (c *K8sClient) CreateSecret(ctx context.Context, secretName string, data map[string][]byte) error {
-	secret := common.Secret{
-		TypeMeta: common.TypeMeta{
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: k8sAPIVersion,
 			Kind:       k8sMetaKindSecret,
 		},
-		ObjectMeta: common.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: secretName,
 		},
-		Type: common.SecretTypeOpaque,
+		Type: corev1.SecretTypeOpaque,
 		Data: data,
 	}
-	return c.kubeCtl.Apply(ctx, secret)
+	return c.kube.Apply(ctx, secret)
 }
 
 // CreatePXCCluster creates Percona XtraDB cluster with provided parameters.
@@ -662,17 +630,17 @@ func (c *K8sClient) DeletePXCCluster(ctx context.Context, name string) error {
 }
 
 func (c *K8sClient) deleteSecret(ctx context.Context, secretName string) error {
-	secret := &common.Secret{
-		TypeMeta: common.TypeMeta{
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
 			APIVersion: k8sAPIVersion,
 			Kind:       k8sMetaKindSecret,
 		},
-		ObjectMeta: common.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: secretName,
 		},
 	}
 
-	return c.kubeCtl.Delete(ctx, secret)
+	return c.kube.Delete(ctx, secret)
 }
 
 // GetPXCClusterCredentials returns an PXC cluster credentials.
@@ -699,8 +667,7 @@ func (c *K8sClient) GetPXCClusterCredentials(ctx context.Context, name string) (
 		)
 	}
 
-	var secret common.Secret
-	err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(pxcSecretNameTmpl, name), &secret)
+	secret, err := c.kube.GetSecret(ctx, fmt.Sprintf(pxcSecretNameTmpl, name))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get XtraDb cluster secrets")
 	}
@@ -716,20 +683,9 @@ func (c *K8sClient) GetPXCClusterCredentials(ctx context.Context, name string) (
 	return credentials, nil
 }
 
-func (c *K8sClient) getStorageClass(ctx context.Context) (*StorageClass, error) {
-	var storageClass *StorageClass
-
-	err := c.kubeCtl.Get(ctx, "storageclass", "", &storageClass)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot get storageClass")
-	}
-
-	return storageClass, nil
-}
-
 // GetKubernetesClusterType returns k8s cluster type based on storage class.
 func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) KubernetesClusterType {
-	sc, err := c.getStorageClass(ctx)
+	sc, err := c.kube.GetStorageClasses(ctx)
 	if err != nil {
 		c.l.Error(errors.Wrap(err, "failed to get k8s cluster type"))
 		return clusterTypeUnknown
@@ -1247,8 +1203,7 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 
 	password := ""
 	username := ""
-	var secret common.Secret
-	err = c.kubeCtl.Get(ctx, k8sMetaKindSecret, fmt.Sprintf(psmdbSecretNameTmpl, name), &secret)
+	secret, err := c.kube.GetSecret(ctx, fmt.Sprintf(psmdbSecretNameTmpl, name))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get PSMDB cluster secrets")
 	}

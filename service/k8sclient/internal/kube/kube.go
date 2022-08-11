@@ -2,10 +2,14 @@ package kube
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"os"
 
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -115,7 +119,59 @@ func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) 
 	}
 	return rest.RESTClientFor(cfg)
 }
-func (c *Client) Apply(files []string) error {
+func (c *Client) Delete(ctx context.Context, rawObj interface{}) error {
+	obj := rawObj.(runtime.Object)
+	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
+	if err != nil {
+		return err
+	}
+	mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
+
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	gk := schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind}
+	mapping, err := mapper.RESTMapping(gk, gvk.Version)
+	if err != nil {
+		return err
+	}
+	namespace, name, err := retrievesMetaFromObject(obj)
+	if err != nil {
+		return err
+	}
+	cli, err := c.resourceClient(mapping.GroupVersionKind.GroupVersion())
+	if err != nil {
+		return err
+	}
+	helper := resource.NewHelper(cli, mapping)
+	err = deleteObject(helper, namespace, name)
+	return err
+}
+func (c *Client) Apply(ctx context.Context, rawObj interface{}) error {
+	obj := rawObj.(runtime.Object)
+	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
+	if err != nil {
+		return err
+	}
+	mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
+
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	gk := schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind}
+	mapping, err := mapper.RESTMapping(gk, gvk.Version)
+	if err != nil {
+		return err
+	}
+	namespace, name, err := retrievesMetaFromObject(obj)
+	if err != nil {
+		return err
+	}
+	cli, err := c.resourceClient(mapping.GroupVersionKind.GroupVersion())
+	if err != nil {
+		return err
+	}
+	helper := resource.NewHelper(cli, mapping)
+	err = applyObject(helper, namespace, name, obj)
+	return err
+}
+func (c *Client) ApplyFiles(files []string) error {
 	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
 	if err != nil {
 		return err
@@ -185,6 +241,15 @@ func applyObject(helper *resource.Helper, namespace, name string, obj runtime.Ob
 	}
 	return nil
 }
+func deleteObject(helper *resource.Helper, namespace, name string) error {
+	if _, err := helper.Get(namespace, name); err == nil {
+		_, err = helper.Delete(namespace, name)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
 	objs := make([]runtime.Object, 0)
@@ -206,4 +271,12 @@ func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
 	}
 
 	return objs, nil
+}
+
+func (c *Client) GetStorageClasses(ctx context.Context) (*v1.StorageClassList, error) {
+	return c.clientset.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
+}
+
+func (c *Client) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
+	return c.clientset.CoreV1().Secrets("default").Get(ctx, name, metav1.GetOptions{})
 }
