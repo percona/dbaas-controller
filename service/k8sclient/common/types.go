@@ -145,13 +145,6 @@ type NodeList struct {
 	Items []Node `json:"items,omitempty"`
 }
 
-// PersistentVolumeList holds a list of persistent volume objects.
-type PersistentVolumeList struct {
-	TypeMeta // anonymous for embedding
-
-	Items []PersistentVolume `json:"items,omitempty"`
-}
-
 // NodeFileSystemSummary holds a summary of Node's filesystem.
 type NodeFileSystemSummary struct {
 	UsedBytes uint64 `json:"usedBytes,omitempty"`

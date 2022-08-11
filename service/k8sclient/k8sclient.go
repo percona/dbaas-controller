@@ -1430,9 +1430,9 @@ func (c *K8sClient) getLatestOperatorAPIVersion(installedVersions []string, apiP
 }
 
 // sumVolumesSize returns sum of persistent volumes storage size in bytes.
-func sumVolumesSize(pvs *common.PersistentVolumeList) (sum uint64, err error) {
+func sumVolumesSize(pvs *corev1.PersistentVolumeList) (sum uint64, err error) {
 	for _, pv := range pvs.Items {
-		bytes, err := convertors.StrToBytes(pv.Spec.Capacity.Storage)
+		bytes, err := convertors.StrToBytes(pv.Spec.Capacity.Storage().String())
 		if err != nil {
 			return 0, err
 		}
@@ -1537,7 +1537,7 @@ func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
 }
 
 // GetAllClusterResources goes through all cluster nodes and sums their allocatable resources.
-func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType KubernetesClusterType, volumes *common.PersistentVolumeList) (
+func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType KubernetesClusterType, volumes *corev1.PersistentVolumeList) (
 	cpuMillis uint64, memoryBytes uint64, diskSizeBytes uint64, err error,
 ) {
 	nodes, err := c.getWorkerNodes(ctx)
@@ -1670,7 +1670,7 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespace strin
 }
 
 // GetConsumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
-func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType KubernetesClusterType, volumes *common.PersistentVolumeList) (consumedBytes uint64, err error) {
+func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType KubernetesClusterType, volumes *corev1.PersistentVolumeList) (consumedBytes uint64, err error) {
 	switch clusterType {
 	case MinikubeClusterType:
 		nodes, err := c.getWorkerNodes(ctx)
