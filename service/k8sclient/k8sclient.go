@@ -33,6 +33,7 @@ import (
 	pmmversion "github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/kubernetes"
@@ -1889,7 +1890,7 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 	}
 
 	vmagent := vmAgentSpec(params, secretName)
-	return c.kube.Apply(ctx, vmagent)
+	return c.kube.Apply(ctx, vmagent.DeepCopyObject())
 }
 
 // RemoveVMOperator deletes the VM Operator installed when the cluster was registered.
@@ -1914,11 +1915,11 @@ func (c *K8sClient) RemoveVMOperator(ctx context.Context) error {
 
 func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 	return monitoring.VMAgent{
-		TypeMeta: common.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       "VMAgent",
 			APIVersion: "operator.victoriametrics.com/v1beta1",
 		},
-		ObjectMeta: common.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "pmm-vmagent-" + secretName,
 		},
 		Spec: monitoring.VMAgentSpec{
@@ -1932,14 +1933,14 @@ func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 			StaticScrapeNamespaceSelector:  new(common.LabelSelector),
 			ReplicaCount:                   1,
 			SelectAllByDefault:             true,
-			Resources: &common.PodResources{
-				Requests: &common.ResourcesList{
-					CPU:    "250m",
-					Memory: "350Mi",
+			Resources: &corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("250m"),
+					corev1.ResourceMemory: resource.MustParse("350Mi"),
 				},
-				Limits: &common.ResourcesList{
-					CPU:    "500m",
-					Memory: "850Mi",
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("500m"),
+					corev1.ResourceMemory: resource.MustParse("850Mi"),
 				},
 			},
 			ExtraArgs: map[string]string{

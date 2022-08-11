@@ -17,6 +17,10 @@
 // Package common contains common API Schema definitions for the pxc and psmdb API groups
 package common
 
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
 // VolumeSpec backup storage volume specs.
 type VolumeSpec struct {
 	// EmptyDir to use as data volume for mysql. EmptyDir represents a temporary
@@ -170,8 +174,11 @@ type LocalObjectReference struct {
 	Name string `json:"name,omitempty"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // SecretKeySelector selects a key of a Secret.
 type SecretKeySelector struct {
+	metav1.TypeMeta   // anonymous for embedding
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// The name of the secret in the pod's namespace to select from.
 	LocalObjectReference `json:",inline"`
 	// The key of the secret to select from.  Must be a valid secret key.

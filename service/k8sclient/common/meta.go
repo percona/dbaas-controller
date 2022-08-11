@@ -16,6 +16,10 @@
 
 package common
 
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
 // Extracted from https://pkg.go.dev/k8s.io/apimachinery/pkg/apis/meta/v1
 
 // TypeMeta describes an individual object in an API response or request
@@ -69,6 +73,7 @@ type ObjectMeta struct {
 	Finalizers []string `json:"finalizers,omitempty"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // Note:
 // There are two different styles of label selectors used in versioned types:
 // an older style which is represented as just a string in versioned types, and a
@@ -79,6 +84,12 @@ type ObjectMeta struct {
 // matchExpressions are ANDed. An empty label selector matches all objects. A null
 // label selector matches no objects.
 type LabelSelector struct {
+	metav1.TypeMeta // anonymous for embedding
+
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
 	// map is equivalent to an element of matchExpressions, whose key field is "key", the
 	// operator is "In", and the values array contains only "value". The requirements are ANDed.
@@ -89,9 +100,16 @@ type LabelSelector struct {
 	MatchExpressions []LabelSelectorRequirement `json:"matchExpressions,omitempty"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // LabelSelectorRequirement is a selector that contains values, a key, and an operator that
 // relates the key and values.
 type LabelSelectorRequirement struct {
+	metav1.TypeMeta // anonymous for embedding
+
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// key is the label key that the selector applies to.
 	Key string `json:"key"`
 	// values is an array of string values. If the operator is In or NotIn,

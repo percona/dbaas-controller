@@ -19,10 +19,18 @@ package monitoring
 
 import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // BasicAuth contains basic auth credentials to connect to Victoria Metrics.
 type BasicAuth struct {
+	metav1.TypeMeta // anonymous for embedding
+
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// The secret in the service scrape namespace that contains the username
 	// for authentication.
 	Username common.SecretKeySelector `json:"username,omitempty"`
@@ -31,8 +39,14 @@ type BasicAuth struct {
 	Password common.SecretKeySelector `json:"password,omitempty"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // VMAgentRemoteWriteSpec defines the remote storage configuration for VmAgent.
 type VMAgentRemoteWriteSpec struct {
+	metav1.TypeMeta // anonymous for embedding
+
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// URL of the endpoint to send samples to.
 	URL string `json:"url"`
 	// BasicAuth allow an endpoint to authenticate over basic authentication
@@ -41,36 +55,50 @@ type VMAgentRemoteWriteSpec struct {
 	TLSConfig *TLSConfig `json:"tlsConfig,omitempty"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // VMAgentSpec contains configuration for VM Agent pod.
 type VMAgentSpec struct {
-	ServiceScrapeNamespaceSelector *common.LabelSelector    `json:"serviceScrapeNamespaceSelector"`
-	ServiceScrapeSelector          *common.LabelSelector    `json:"serviceScrapeSelector"`
-	PodScrapeNamespaceSelector     *common.LabelSelector    `json:"podScrapeNamespaceSelector"`
-	PodScrapeSelector              *common.LabelSelector    `json:"podScrapeSelector"`
-	ProbeSelector                  *common.LabelSelector    `json:"probeSelector"`
-	ProbeNamespaceSelector         *common.LabelSelector    `json:"probeNamespaceSelector"`
-	StaticScrapeSelector           *common.LabelSelector    `json:"staticScrapeSelector"`
-	StaticScrapeNamespaceSelector  *common.LabelSelector    `json:"staticScrapeNamespaceSelector"`
-	ReplicaCount                   int                      `json:"replicaCount"`
-	Resources                      *common.PodResources     `json:"resources"`
-	ExtraArgs                      map[string]string        `json:"extraArgs"`
-	RemoteWrite                    []VMAgentRemoteWriteSpec `json:"remoteWrite"`
-	SelectAllByDefault             bool                     `json:"selectAllByDefault"`
-}
-
-// VMAgent contains CR for VM Agent.
-type VMAgent struct {
-	common.TypeMeta // anonymous for embedding
+	metav1.TypeMeta // anonymous for embedding
 
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-	common.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta              `json:"metadata,omitempty"`
+	ServiceScrapeNamespaceSelector *common.LabelSelector        `json:"serviceScrapeNamespaceSelector"`
+	ServiceScrapeSelector          *common.LabelSelector        `json:"serviceScrapeSelector"`
+	PodScrapeNamespaceSelector     *common.LabelSelector        `json:"podScrapeNamespaceSelector"`
+	PodScrapeSelector              *common.LabelSelector        `json:"podScrapeSelector"`
+	ProbeSelector                  *common.LabelSelector        `json:"probeSelector"`
+	ProbeNamespaceSelector         *common.LabelSelector        `json:"probeNamespaceSelector"`
+	StaticScrapeSelector           *common.LabelSelector        `json:"staticScrapeSelector"`
+	StaticScrapeNamespaceSelector  *common.LabelSelector        `json:"staticScrapeNamespaceSelector"`
+	ReplicaCount                   int                          `json:"replicaCount"`
+	Resources                      *corev1.ResourceRequirements `json:"resources"`
+	ExtraArgs                      map[string]string            `json:"extraArgs"`
+	RemoteWrite                    []VMAgentRemoteWriteSpec     `json:"remoteWrite"`
+	SelectAllByDefault             bool                         `json:"selectAllByDefault"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// VMAgent contains CR for VM Agent.
+type VMAgent struct {
+	metav1.TypeMeta // anonymous for embedding
+
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec VMAgentSpec `json:"spec"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // TLSConfig specifies TLSConfig configuration parameters.
 type TLSConfig struct {
+	metav1.TypeMeta // anonymous for embedding
+
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Path to the CA cert in the container to use for the targets.
 	CAFile string `json:"caFile,omitempty"`
 	// Stuct containing the CA cert to use for the targets.

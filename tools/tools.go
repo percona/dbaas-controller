@@ -36,3 +36,4 @@ import (
 //go:generate go build -o ../bin/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
 //go:generate go build -o ../bin/gotext golang.org/x/text/cmd/gotext
 //go:generate go build -o ../bin/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
+//go:generate go build -o ../bin/controller-gen sigs.k8s.io/controller-tools/cmd/controller-gen

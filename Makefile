@@ -59,7 +59,7 @@ release-component-version:
 	@echo $(COMPONENT_VERSION)
 
 release:                          ## Build dbaas-controller release binaries.
-	env CGO_ENABLED=0 go build -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
+	env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
 	$(PMM_RELEASE_PATH)/dbaas-controller --version
 
 init:                             ## Install development tools
@@ -70,6 +70,8 @@ ci-init:                ## Initialize CI environment
 	# nothing there yet
 
 gen:                              ## Generate code
+	./bin/controller-gen object paths=./service/k8sclient/internal/monitoring
+	./bin/controller-gen object paths=./service/k8sclient/common/
 	go generate ./catalog
 	mv catalog/locales/en/out.gotext.json catalog/locales/en/messages.gotext.json
 	# add blank line at EOF

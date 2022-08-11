@@ -99,6 +99,8 @@ func NewFromKubeConfigObject(kubeconfig string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	config.QPS = 350
+	config.Burst = 500
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
@@ -203,6 +205,9 @@ func retrievesMetaFromObject(obj runtime.Object) (namespace, name string, err er
 	namespace, err = meta.NewAccessor().Namespace(obj)
 	if err != nil {
 		return
+	}
+	if namespace == "" {
+		namespace = "default"
 	}
 	return
 }
