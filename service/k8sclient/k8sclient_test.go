@@ -34,7 +34,6 @@ import (
 	"time"
 
 	goversion "github.com/hashicorp/go-version"
-	"github.com/k0kubun/pp"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -198,7 +197,12 @@ type pod struct {
 	containers []string
 }
 
-func TestGetPSMDB(t *testing.T) {
+func TestPSMDBCluster(t *testing.T) {
+	runPSMDBTests(t, "1.10.0")
+	runPSMDBTests(t, "1.12.0")
+}
+
+func runPSMDBTests(t *testing.T, operatorVersion string) {
 	ctx := app.Context()
 
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -212,9 +216,145 @@ func TestGetPSMDB(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	clusters, err := client.ListPSMDBClusters(ctx)
+	l := logger.Get(ctx)
+
+	psmdb, err := goversion.NewVersion(operatorVersion)
 	require.NoError(t, err)
-	pp.Println(clusters)
+
+	err = client.ApplyOperator(ctx, psmdb.String(), app.DefaultPSMDBOperatorURLTemplate)
+	require.NoError(t, err)
+
+	for i := 0; i < 5; i++ {
+		_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil)
+		if err == nil {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+	require.NoError(t, err)
+
+	var res interface{}
+	err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
+	require.NoError(t, err)
+
+	// t.Run("Get non-existing clusters", func(t *testing.T) {
+	// 	t.Parallel()
+	// 	_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdb")
+	// 	assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
+	// })
+
+	var pmm *PMM
+
+	t.Run("PSMDB", func(t *testing.T) {
+		t.Parallel()
+		name := "test-cluster-psmdb"
+		_ = client.DeletePSMDBCluster(ctx, name)
+
+		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster == nil
+		})
+
+		l.Info("No PSMDB Clusters running")
+
+		err := client.CreatePSMDBCluster(ctx, &PSMDBParams{
+			Name:       name,
+			Size:       3,
+			Replicaset: &Replicaset{DiskSize: "1000000000"},
+			PMM:        pmm,
+			// Leave false otherwise it will fail in minikube.
+			// It seems to work, the field is populated but the cluster might never reach the ready state.
+			Expose:      false,
+			BackupImage: "percona/percona-backup-mongodb:1.7.0",
+		})
+		require.NoError(t, err)
+
+		l.Info("PSMDB Cluster is created")
+
+		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil && cluster.State != ClusterStateInvalid
+		})
+
+		t.Run("Make sure PSMDB cluster is in changing state right after creation", func(t *testing.T) {
+			cluster, err := getPSMDBCluster(ctx, client, name)
+			require.NoError(t, err)
+			assert.Equal(t, ClusterStateChanging, cluster.State)
+		})
+
+		t.Run("Get credentials of cluster that is not Ready", func(t *testing.T) {
+			_, err := client.GetPSMDBClusterCredentials(ctx, name)
+			assert.EqualError(t, errors.Cause(err), ErrPSMDBClusterNotReady.Error())
+		})
+
+		t.Run("Create cluster with the same name", func(t *testing.T) {
+			err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
+				Name:              name,
+				Size:              3,
+				Replicaset:        &Replicaset{DiskSize: "1000000000"},
+				PMM:               pmm,
+				Image:             "percona/percona-server-mongodb:4.4.5-7",
+				VersionServiceURL: "https://check.percona.com",
+			})
+			require.Error(t, err)
+			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
+		})
+
+		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+
+		t.Run("All pods are ready", func(t *testing.T) {
+			cluster, err := getPSMDBCluster(ctx, client, name)
+			require.NoError(t, err)
+			assert.Equal(t, int32(9), cluster.DetailedState.CountReadyPods())
+			assert.Equal(t, int32(9), cluster.DetailedState.CountAllPods())
+		})
+
+		t.Run("Upgrade PSMDB", func(t *testing.T) {
+			err = client.UpdatePSMDBCluster(ctx, &PSMDBParams{
+				Name:              name,
+				Size:              1,
+				Replicaset:        &Replicaset{DiskSize: "1000000000"},
+				PMM:               pmm,
+				Image:             "percona/percona-server-mongodb:4.4.6-8",
+				VersionServiceURL: "https://check.percona.com",
+			})
+			require.NoError(t, err)
+
+			assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+				return cluster != nil && cluster.State == ClusterStateUpgrading
+			})
+			l.Infof("upgrade of PSMDB cluster %q has begun", name)
+
+			assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+				return cluster != nil && cluster.State == ClusterStateReady
+			})
+			l.Infof("PSMDB Cluster %q has been upgraded", name)
+
+			cluster, err := getPSMDBCluster(ctx, client, name)
+			require.NoError(t, err)
+			assert.Equal(t, "percona/percona-server-mongodb:4.4.6-8", cluster.Image)
+		})
+
+		err = client.RestartPSMDBCluster(ctx, name)
+		require.NoError(t, err)
+
+		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateChanging
+		})
+
+		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+		l.Info("PSMDB Cluster is restarted")
+
+		err = client.DeletePSMDBCluster(ctx, name)
+		require.NoError(t, err)
+
+		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+			return cluster == nil
+		})
+		l.Info("PSMDB Cluster is deleted")
+	})
 }
 
 func TestK8sClient(t *testing.T) {
@@ -226,10 +366,10 @@ func TestK8sClient(t *testing.T) {
 	client, err := New(ctx, string(kubeconfig))
 	require.NoError(t, err)
 
-	// t.Cleanup(func() {
-	// 	err := client.Cleanup()
-	// 	require.NoError(t, err)
-	// })
+	t.Cleanup(func() {
+		err := client.Cleanup()
+		require.NoError(t, err)
+	})
 
 	l := logger.Get(ctx)
 
@@ -238,17 +378,10 @@ func TestK8sClient(t *testing.T) {
 	require.NoError(t, err)
 	latestPMMVersion, err := latestProduct(pmmVersions.Versions)
 	require.NoError(t, err)
-	pxc, psmdb, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
+	pxc, _, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
 	require.NoError(t, err)
-
-	// There is an error with Operator version 1.12
-	// See https://jira.percona.com/browse/PMM-10012
-	psmdb, _ = goversion.NewVersion("1.10.0")
 
 	err = client.ApplyOperator(ctx, pxc.String(), app.DefaultPXCOperatorURLTemplate)
-	require.NoError(t, err)
-
-	err = client.ApplyOperator(ctx, psmdb.String(), app.DefaultPSMDBOperatorURLTemplate)
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
@@ -261,17 +394,6 @@ func TestK8sClient(t *testing.T) {
 	require.NoError(t, err)
 	var res interface{}
 	err = client.kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", &res)
-	require.NoError(t, err)
-
-	for i := 0; i < 5; i++ {
-		_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil)
-		if err == nil {
-			break
-		}
-		time.Sleep(3 * time.Second)
-	}
-	require.NoError(t, err)
-	err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
 	require.NoError(t, err)
 
 	t.Run("Get non-existing clusters", func(t *testing.T) {
@@ -499,130 +621,6 @@ func TestK8sClient(t *testing.T) {
 
 		err = client.DeletePXCCluster(ctx, clusterName)
 		require.NoError(t, err)
-	})
-
-	t.Run("PSMDB", func(t *testing.T) {
-		t.Parallel()
-		name := "test-cluster-psmdb"
-		_ = client.DeletePSMDBCluster(ctx, name)
-
-		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
-			return cluster == nil
-		})
-
-		l.Info("No PSMDB Clusters running")
-
-		err := client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name:       name,
-			Size:       3,
-			Replicaset: &Replicaset{DiskSize: "1000000000"},
-			PMM:        pmm,
-			Expose:     true,
-		})
-		require.NoError(t, err)
-
-		l.Info("PSMDB Cluster is created")
-
-		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
-			return cluster != nil && cluster.State != ClusterStateInvalid
-		})
-
-		t.Run("Make sure PSMDB cluster is in changing state right after creation", func(t *testing.T) {
-			cluster, err := getPSMDBCluster(ctx, client, name)
-			require.NoError(t, err)
-			assert.Equal(t, ClusterStateChanging, cluster.State)
-		})
-
-		t.Run("Get credentials of cluster that is not Ready", func(t *testing.T) {
-			_, err := client.GetPSMDBClusterCredentials(ctx, name)
-			assert.EqualError(t, errors.Cause(err), ErrPSMDBClusterNotReady.Error())
-		})
-
-		t.Run("Create cluster with the same name", func(t *testing.T) {
-			err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
-				Name:              name,
-				Size:              1,
-				Replicaset:        &Replicaset{DiskSize: "1000000000"},
-				PMM:               pmm,
-				Image:             "percona/percona-server-mongodb:4.4.5-7",
-				VersionServiceURL: "https://check.percona.com",
-			})
-			require.Error(t, err)
-			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
-		})
-
-		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
-			return cluster != nil && cluster.State == ClusterStateReady
-		})
-
-		t.Run("All pods are ready", func(t *testing.T) {
-			cluster, err := getPSMDBCluster(ctx, client, name)
-			require.NoError(t, err)
-			assert.Equal(t, int32(9), cluster.DetailedState.CountReadyPods())
-			assert.Equal(t, int32(9), cluster.DetailedState.CountAllPods())
-		})
-
-		t.Run("Upgrade PSMDB", func(t *testing.T) {
-			err = client.UpdatePSMDBCluster(ctx, &PSMDBParams{
-				Name:              name,
-				Size:              3,
-				Replicaset:        &Replicaset{DiskSize: "1000000000"},
-				PMM:               pmm,
-				Image:             "percona/percona-server-mongodb:4.4.6-8",
-				VersionServiceURL: "https://check.percona.com",
-			})
-			require.NoError(t, err)
-
-			assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
-				return cluster != nil && cluster.State == ClusterStateUpgrading
-			})
-			l.Infof("upgrade of PSMDB cluster %q has begun", name)
-
-			assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
-				return cluster != nil && cluster.State == ClusterStateReady
-			})
-			l.Infof("PSMDB Cluster %q has been upgraded", name)
-
-			cluster, err := getPSMDBCluster(ctx, client, name)
-			require.NoError(t, err)
-			assert.Equal(t, "percona/percona-server-mongodb:4.4.6-8", cluster.Image)
-		})
-
-		err = client.RestartPSMDBCluster(ctx, name)
-		require.NoError(t, err)
-
-		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
-			return cluster != nil && cluster.State == ClusterStateChanging
-		})
-
-		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
-			return cluster != nil && cluster.State == ClusterStateReady
-		})
-		l.Info("PSMDB Cluster is restarted")
-
-		err = client.UpdatePSMDBCluster(ctx, &PSMDBParams{
-			Name:  name,
-			Size:  5,
-			Image: "percona/percona-server-mongodb:4.4.6-8",
-		})
-		require.NoError(t, err)
-		l.Info("PSMDB Cluster is updated")
-
-		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
-			if cluster != nil && cluster.State == ClusterStateReady {
-				assert.Equal(t, int32(5), cluster.Size)
-				return true
-			}
-			return false
-		})
-
-		err = client.DeletePSMDBCluster(ctx, name)
-		require.NoError(t, err)
-
-		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
-			return cluster == nil
-		})
-		l.Info("PSMDB Cluster is deleted")
 	})
 
 	t.Run("CheckOperators", func(t *testing.T) {

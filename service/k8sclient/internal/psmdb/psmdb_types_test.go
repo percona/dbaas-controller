@@ -35,7 +35,6 @@ const expected = `
     },
     "spec": {
         "crVersion": "1.8.0",
-        "pause": false,
         "allowUnsafeConfigurations": false,
         "image": "percona/percona-server-mongodb-operator:1.4.0-mongod4.2",
         "mongod": {
@@ -70,6 +69,11 @@ const expected = `
         },
         "replsets": [
             {
+                "expose": {
+                    "enabled": false,
+                    "exposeType": ""
+                },
+                "size": 3,
                 "arbiter": {
                     "enabled": false,
                     "size": 1,
@@ -77,21 +81,13 @@ const expected = `
                         "antiAffinityTopologyKey": "kubernetes.io/hostname"
                     }
                 },
-                "expose": {
-                    "enabled": false,
-                    "exposeType": ""
-                },
-                "name": "rs0",
-                "podDisruptionBudget": {
-                    "maxUnavailable": 1
-                },
                 "resources": {
                     "limits": {
                         "memory": "800000000",
                         "cpu": "500m"
                     }
                 },
-                "size": 3,
+                "name": "rs0",
                 "volumeSpec": {
                     "persistentVolumeClaim": {
                         "resources": {
@@ -100,6 +96,12 @@ const expected = `
                             }
                         }
                     }
+                },
+                "podDisruptionBudget": {
+                    "maxUnavailable": 1
+                },
+                "affinity": {
+                    "antiAffinityTopologyKey": "none"
                 }
             }
         ],
@@ -111,6 +113,7 @@ const expected = `
             "image": "percona/percona-server-mongodb-operator:1.4.0-backup",
             "serviceAccountName": "percona-server-mongodb-operator"
         },
+		"pause": false,
         "pmm": {}
     }
 }

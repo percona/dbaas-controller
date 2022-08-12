@@ -18,6 +18,8 @@
 package psmdb
 
 import (
+	"time"
+
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
@@ -27,6 +29,9 @@ const (
 	// PerconaServerMongoDBKind is a name of CRD for mongodb clusters.
 	PerconaServerMongoDBKind = "PerconaServerMongoDB"
 )
+
+// Ensure it implements the DatabaseCluster interface
+var _ common.DatabaseCluster = (*PerconaServerMongoDB)(nil)
 
 // PerconaServerMongoDB is the Schema for the perconaservermongodbs API.
 type PerconaServerMongoDB struct {
@@ -108,12 +113,36 @@ const (
 	platformOpenshift  platform = "openshift"
 )
 
+// ObjectHeader is the kubectl get response header. It is a partial PSMDB object only used to
+// parse the CR version so we can decode the response into the appropriate stuct type.
+type MinimumObjectListSpec struct {
+	APIVersion string `json:"apiVersion"`
+	Items      []struct {
+		APIVersion string `json:"apiVersion"`
+		Kind       string `json:"kind"`
+		Metadata   struct {
+			Annotations struct {
+				KubectlKubernetesIoLastAppliedConfiguration string `json:"kubectl.kubernetes.io/last-applied-configuration"`
+			} `json:"annotations"`
+			CreationTimestamp time.Time `json:"creationTimestamp"`
+			Finalizers        []string  `json:"finalizers"`
+			Generation        int       `json:"generation"`
+			Name              string    `json:"name"`
+			Namespace         string    `json:"namespace"`
+			ResourceVersion   string    `json:"resourceVersion"`
+			UID               string    `json:"uid"`
+		} `json:"metadata"`
+		Spec struct {
+			CrVersion string `json:"crVersion"`
+		} `json:"spec"`
+	} `json:"items"`
+}
+
 type ShardingSpec struct {
 	Enabled            bool                          `json:"enabled"`
 	ConfigsvrReplSet   *ReplsetSpec                  `json:"configsvrReplSet"`
-	Mongos             *ReplsetMongosSpec            `json:"mongos"`
+	Mongos             *ReplsetSpec                  `json:"mongos"`
 	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
-	Expose             Expose                        `json:"expose"`
 }
 
 // UpgradeOptions specify how and to what version we update.
@@ -121,7 +150,6 @@ type UpgradeOptions struct {
 	Apply                  string `json:"apply,omitempty"`
 	VersionServiceEndpoint string `json:"versionServiceEndpoint,omitempty"`
 	Schedule               string `json:"schedule,omitempty"`
-	SetFCV                 bool   `json:"setFCV,omitempty"` // v1.12+
 }
 
 // PerconaServerMongoDBSpec defines the desired state of PerconaServerMongoDB.
@@ -232,36 +260,9 @@ type Expose struct {
 
 // ReplsetSpec defines replicaton set specification.
 type ReplsetSpec struct {
-	Affinity            *PodAffinity                    `json:"affinity,omitempty"` // Operator 1.12+
-	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
-	ClusterRole         clusterRole                     `json:"clusterRole,omitempty"`
 	Expose              Expose                          `json:"expose,omitempty"`
-	LivenessProbe       *livenessProbeExtended          `json:"livenessProbe,omitempty"`
-	Name                string                          `json:"name,omitempty"`
-	Nonvoting           *Nonvoting                      `json:"nonvoting,omitempty"` // Operator 1.12+
-	PodDisruptionBudget *common.PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
-	Resources           *common.PodResources            `json:"resources,omitempty"`
 	Size                int32                           `json:"size"`
-	VolumeSpec          *common.VolumeSpec              `json:"volumeSpec,omitempty"`
-	// ConfigurationOptions options that will be passed as defined in MongoDB configuration file.
-	// See https://github.com/percona/percona-server-mongodb-operator/blob/b304b6c5bb0df2e6e7dac637d23f10fbcbd4800e/pkg/apis/psmdb/v1/psmdb_types.go#L353-L367
-	// It must be a multi line string with indentation to produce a map, like:
-	// operationProfiling:
-	//     mode: slowOp
-	Configuration string `json:"configuration,omitempty"` // Operator 1.12+
-	MultiAZ
-}
-
-// ExposeSpec holds information about how the cluster is exposed to the worl via ingress.
-type ExposeSpec struct {
-	ExposeType common.ServiceType `json:"exposeType"`
-}
-
-// ReplsetMongosSpec holds the fields to describe replicaset's Mongos specs.
-type ReplsetMongosSpec struct {
 	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
-	Expose              ExposeSpec                      `json:"expose,omitempty"`
-	Size                int32                           `json:"size"`
 	Resources           *common.PodResources            `json:"resources,omitempty"`
 	Name                string                          `json:"name,omitempty"`
 	ClusterRole         clusterRole                     `json:"clusterRole,omitempty"`
@@ -277,10 +278,9 @@ type livenessProbeExtended struct {
 
 // SecretsSpec defines secrets specification.
 type SecretsSpec struct {
-	Users         string `json:"users,omitempty"`
-	SSL           string `json:"ssl,omitempty"`
-	SSLInternal   string `json:"sslInternal,omitempty"`
-	EncryptionKey string `json:"encryptionKey,omitempty"` // Operator 1.12+
+	Users       string `json:"users,omitempty"`
+	SSL         string `json:"ssl,omitempty"`
+	SSLInternal string `json:"sslInternal,omitempty"`
 }
 
 // MongosSpec defines MongoDB specification.
@@ -482,13 +482,6 @@ type backupStorageSpec struct {
 	S3   backupStorageS3Spec `json:"s3,omitempty"`
 }
 
-// Pirt Point in time recovery.
-type Pitr struct {
-	Enabled          bool   `json:"enabled,omitempty"`
-	CompressionType  string `json:"compressionType,omitempty"`
-	CompressionLevel int    `json:"compressionLevel,omitempty"`
-}
-
 // BackupSpec defines back up specification.
 type BackupSpec struct {
 	Enabled            bool                         `json:"enabled"`
@@ -497,7 +490,6 @@ type BackupSpec struct {
 	Tasks              []backupTaskSpec             `json:"tasks,omitempty"`
 	ServiceAccountName string                       `json:"serviceAccountName,omitempty"`
 	Resources          *common.PodResources         `json:"resources,omitempty"`
-	Pitr               *Pitr                        `json:"pitr,omitempty"` // Operator 1.12+
 }
 
 // Arbiter defines Arbiter.
