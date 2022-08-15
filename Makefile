@@ -67,7 +67,7 @@ init:                             ## Install development tools
 	cd tools && go generate -x -tags=tools
 
 ci-init:                ## Initialize CI environment
-
+	# nothing there yet
 
 format:                           ## Format source code
 	bin/gofumpt -l -w .
@@ -107,6 +107,15 @@ env-up-start:
 	fi
 	minikube config view
 	minikube start
+local-env-up:
+	if [ $(KUBERNETES_VERSION) ]; then \
+		minikube config set kubernetes-version $(KUBERNETES_VERSION); \
+	fi
+	minikube config view
+	minikube start --nodes=4 --cpus=3 --memory=2200mb
+	minikube addons enable storage-provisioner
+	kubectl delete storageclass standard
+	kubectl apply -f kubevirt-hostpath-provisioner.yaml
 
 env-check:
 	# none driver in CI needs to run this under different user permissions
