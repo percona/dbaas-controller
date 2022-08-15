@@ -35,7 +35,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -1393,7 +1392,6 @@ func (c *K8sClient) volumeSpec(diskSize string) *common.VolumeSpec {
 // CheckOperators checks installed operator API version.
 func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 	apiVersions, err := c.kube.GetAPIVersions(ctx)
-
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get api versions list")
 	}

@@ -25,9 +25,9 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // overallLinesLimit defines how many last lines of logs we should return upon

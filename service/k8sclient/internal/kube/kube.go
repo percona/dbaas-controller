@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/cli-runtime/pkg/resource"
-
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
@@ -96,6 +95,7 @@ func NewFromKubeConfig(kubeConfigPath string) (*Client, error) {
 	}
 	return &Client{clientset: clientset, restConfig: config}, nil
 }
+
 func NewFromKubeConfigObject(kubeconfig string) (*Client, error) {
 	config, err := clientcmd.BuildConfigFromKubeconfigGetter("", NewConfigGetter(kubeconfig).loadFromString)
 	if err != nil {
@@ -121,6 +121,7 @@ func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) 
 	}
 	return rest.RESTClientFor(cfg)
 }
+
 func (c *Client) Delete(ctx context.Context, rawObj interface{}) error {
 	obj := rawObj.(runtime.Object)
 	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
@@ -147,6 +148,7 @@ func (c *Client) Delete(ctx context.Context, rawObj interface{}) error {
 	err = deleteObject(helper, namespace, name)
 	return err
 }
+
 func (c *Client) Apply(ctx context.Context, rawObj interface{}) error {
 	obj := rawObj.(runtime.Object)
 	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
@@ -173,6 +175,7 @@ func (c *Client) Apply(ctx context.Context, rawObj interface{}) error {
 	err = applyObject(helper, namespace, name, obj)
 	return err
 }
+
 func (c *Client) DeleteFile(ctx context.Context, fileBytes []byte) error {
 	objs, err := c.getObjects(fileBytes)
 	if err != nil {
@@ -186,6 +189,7 @@ func (c *Client) DeleteFile(ctx context.Context, fileBytes []byte) error {
 	}
 	return nil
 }
+
 func (c *Client) ApplyFile(ctx context.Context, fileBytes []byte) error {
 	objs, err := c.getObjects(fileBytes)
 	if err != nil {
@@ -199,6 +203,7 @@ func (c *Client) ApplyFile(ctx context.Context, fileBytes []byte) error {
 	}
 	return nil
 }
+
 func retrievesMetaFromObject(obj runtime.Object) (namespace, name string, err error) {
 	name, err = meta.NewAccessor().Name(obj)
 	if err != nil {
@@ -228,6 +233,7 @@ func applyObject(helper *resource.Helper, namespace, name string, obj runtime.Ob
 	}
 	return nil
 }
+
 func deleteObject(helper *resource.Helper, namespace, name string) error {
 	if _, err := helper.Get(namespace, name); err == nil {
 		_, err = helper.Delete(namespace, name)
@@ -267,6 +273,7 @@ func (c *Client) GetStorageClasses(ctx context.Context) (*v1.StorageClassList, e
 func (c *Client) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
 	return c.clientset.CoreV1().Secrets("default").Get(ctx, name, metav1.GetOptions{})
 }
+
 func (c *Client) GetAPIVersions(ctx context.Context) ([]string, error) {
 	var versions []string
 	groupList, err := c.clientset.Discovery().ServerGroups()
