@@ -37,6 +37,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
@@ -793,7 +794,7 @@ func TestGetAllClusterResources(t *testing.T) {
 	}
 
 	clusterType := client.GetKubernetesClusterType(ctx)
-	var volumes *common.PersistentVolumeList
+	var volumes *corev1.PersistentVolumeList
 	if clusterType == AmazonEKSClusterType {
 		volumes, err = client.GetPersistentVolumes(ctx)
 		require.NoError(t, err)
