@@ -120,6 +120,9 @@ jobs:
       - name: Initialize CI environment
         run: make ci-init
 
+      - name: Generate code
+        run: make gen
+
       - name: Install binaries
         run: make release install
 
@@ -262,7 +265,7 @@ jobs:
         run: |
           make init
           mkdir -p "${DBAAS_TOOLS_PATH}"
-          echo "${DBAAS_TOOLS_PATH}" >> $GITHUB_PATH
+          echo "${DBAAS_TOOLS_PATH}" >> $GITHUB_PATH          
           curl -o aws-iam-authenticator https://s3.us-west-2.amazonaws.com/amazon-eks/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
           chmod +x ./aws-iam-authenticator
           mv aws-iam-authenticator "${DBAAS_TOOLS_PATH}"
@@ -314,7 +317,7 @@ jobs:
           flags: crosscover
           env_vars: GO_VERSION,KUBERNETES_VERSION
           fail_ci_if_error: false
-
+      
       - name: Report Kubernetes resources count and state
         if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1'
         run: |
