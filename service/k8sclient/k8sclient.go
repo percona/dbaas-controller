@@ -1226,7 +1226,7 @@ func (c *K8sClient) crVersionMatchesPodsVersion(ctx context.Context, cluster com
 	podLables := cluster.DatabasePodLabels()
 	databaseContainerNames := cluster.DatabaseContainerNames()
 	crImage := cluster.DatabaseImage()
-	pods, err := c.GetPods(ctx, "-l"+strings.Join(podLables, ","))
+	pods, err := c.GetPods(ctx, "", strings.Join(podLables, ","))
 	if err != nil {
 		return false, err
 	}
@@ -1237,12 +1237,17 @@ func (c *K8sClient) crVersionMatchesPodsVersion(ctx context.Context, cluster com
 	images := make(map[string]struct{})
 	for _, p := range pods.Items {
 		for _, containerName := range databaseContainerNames {
-			image, err := p.ContainerImage(containerName)
-			if err != nil {
+			var imageName string
+			for _, c := range p.Spec.Containers {
+				if c.Name == containerName {
+					imageName = c.Image
+				}
+			}
+			if imageName == "" {
 				c.l.Debugf("failed to check pods for container image: %v", err)
 				continue
 			}
-			images[image] = struct{}{}
+			images[imageName] = struct{}{}
 		}
 	}
 	_, ok := images[crImage]
@@ -1449,34 +1454,22 @@ func (c *K8sClient) GetPersistentVolumes(ctx context.Context) (*corev1.Persisten
 
 // GetPods returns list of pods based on given filters. Filters are args to
 // kubectl command. For example "-lyour-label=value,next-label=value", "-ntest-namespace".
-func (c *K8sClient) GetPods(ctx context.Context, filters ...string) (*common.PodList, error) {
-	list := new(common.PodList)
-	args := []string{"get", "pods"}
-	args = append(args, filters...)
-	args = append(args, "-ojson")
-	out, err := c.kubeCtl.Run(ctx, args, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
-	}
-
-	err = json.Unmarshal(out, list)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
-	}
-	return list, nil
+func (c *K8sClient) GetPods(ctx context.Context, namespace string, filters ...string) (*corev1.PodList, error) {
+	podList, err := c.kube.GetPods(ctx, namespace, strings.Join(filters, ""))
+	return podList, err
 }
 
 // GetLogs returns logs as slice of log lines - strings - for given pod's container.
 func (c *K8sClient) GetLogs(
 	ctx context.Context,
-	containerStatuses []common.ContainerStatus,
+	containerStatuses []corev1.ContainerStatus,
 	pod,
 	container string,
 ) ([]string, error) {
-	if common.IsContainerInState(containerStatuses, common.ContainerStateWaiting, container) {
+	if common.IsContainerInState(containerStatuses, (&corev1.ContainerStateWaiting{}).String(), container) {
 		return []string{}, nil
 	}
-	stdout, err := c.kubeCtl.Run(ctx, []string{"logs", pod, container}, nil)
+	stdout, err := c.kube.GetLogs(ctx, pod, container)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get logs")
 	}
@@ -1506,22 +1499,17 @@ func (c *K8sClient) GetEvents(ctx context.Context, pod string) ([]string, error)
 }
 
 // getWorkerNodes returns list of cluster workers nodes.
-func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]common.Node, error) {
-	nodes := new(common.NodeList)
-	out, err := c.kubeCtl.Run(ctx, []string{"get", "nodes", "-ojson"}, nil)
+func (c *K8sClient) getWorkerNodes(ctx context.Context) ([]corev1.Node, error) {
+	nodes, err := c.kube.GetNodes(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get nodes of Kubernetes cluster")
 	}
-	err = json.Unmarshal(out, nodes)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get nodes of Kubernetes cluster")
+	forbidenTaints := map[string]corev1.TaintEffect{
+		"node.cloudprovider.kubernetes.io/uninitialized": corev1.TaintEffectNoSchedule,
+		"node.kubernetes.io/unschedulable":               corev1.TaintEffectNoSchedule,
+		"node-role.kubernetes.io/master":                 corev1.TaintEffectNoSchedule,
 	}
-	forbidenTaints := map[string]string{
-		"node.cloudprovider.kubernetes.io/uninitialized": "NoSchedule",
-		"node.kubernetes.io/unschedulable":               "NoSchedule",
-		"node-role.kubernetes.io/master":                 "NoSchedule",
-	}
-	workers := make([]common.Node, 0, len(nodes.Items))
+	workers := make([]corev1.Node, 0, len(nodes.Items))
 	for _, node := range nodes.Items {
 		if len(node.Spec.Taints) == 0 {
 			workers = append(workers, node)
@@ -1556,18 +1544,18 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType Kube
 
 		switch clusterType {
 		case MinikubeClusterType:
-			storage, ok := node.Status.Allocatable[common.ResourceEphemeralStorage]
+			storage, ok := node.Status.Allocatable[corev1.ResourceEphemeralStorage]
 			if !ok {
 				return 0, 0, 0, errors.Errorf("could not get storage size of the node")
 			}
-			bytes, err := convertors.StrToBytes(storage)
+			bytes, err := convertors.StrToBytes(storage.String())
 			if err != nil {
 				return 0, 0, 0, errors.Wrapf(err, "could not convert storage size '%s' to bytes", storage)
 			}
 			diskSizeBytes += bytes
 		case AmazonEKSClusterType:
 			// See https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/#scheduler.
-			if common.IsNodeInCondition(node, common.NodeConditionDiskPressure) {
+			if common.IsNodeInCondition(node, corev1.NodeDiskPressure) {
 				continue
 			}
 
@@ -1611,17 +1599,17 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType Kube
 
 // getResources extracts resources out of common.ResourceList and converts them to int64 values.
 // Millicpus are used for CPU values and bytes for memory.
-func getResources(resources common.ResourceList) (cpuMillis uint64, memoryBytes uint64, err error) {
-	cpu, ok := resources[common.ResourceCPU]
+func getResources(resources corev1.ResourceList) (cpuMillis uint64, memoryBytes uint64, err error) {
+	cpu, ok := resources[corev1.ResourceCPU]
 	if ok {
-		cpuMillis, err = convertors.StrToMilliCPU(cpu)
+		cpuMillis, err = convertors.StrToMilliCPU(cpu.String())
 		if err != nil {
 			return 0, 0, errors.Wrapf(err, "failed to convert '%s' to millicpus", cpu)
 		}
 	}
-	memory, ok := resources[common.ResourceMemory]
+	memory, ok := resources[corev1.ResourceMemory]
 	if ok {
-		memoryBytes, err = convertors.StrToBytes(memory)
+		memoryBytes, err = convertors.StrToBytes(memory.String())
 		if err != nil {
 			return 0, 0, errors.Wrapf(err, "failed to convert '%s' to bytes", memory)
 		}
@@ -1635,24 +1623,18 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespace strin
 	cpuMillis uint64, memoryBytes uint64, err error,
 ) {
 	// Get CPU and Memory Requests of Pods' containers.
-	if namespace == "" {
-		namespace = "--all-namespaces"
-	} else {
-		namespace = "-n" + namespace
-	}
-
 	pods, err := c.GetPods(ctx, namespace)
 	if err != nil {
 		return 0, 0, errors.Wrap(err, "failed to get consumed resources")
 	}
 	for _, ppod := range pods.Items {
-		if ppod.Status.Phase != common.PodPhaseRunning {
+		if ppod.Status.Phase != corev1.PodRunning {
 			continue
 		}
-		nonTerminatedInitContainers := make([]common.ContainerSpec, 0, len(ppod.Spec.InitContainers))
+		nonTerminatedInitContainers := make([]corev1.Container, 0, len(ppod.Spec.InitContainers))
 		for _, container := range ppod.Spec.InitContainers {
 			if !common.IsContainerInState(
-				ppod.Status.InitContainerStatuses, common.ContainerStateTerminated, container.Name,
+				ppod.Status.InitContainerStatuses, (&corev1.ContainerStateTerminated{}).String(), container.Name,
 			) {
 				nonTerminatedInitContainers = append(nonTerminatedInitContainers, container)
 			}

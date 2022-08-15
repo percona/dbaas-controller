@@ -3,6 +3,8 @@ package kube
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"io"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
@@ -277,4 +279,45 @@ func (c *Client) GetAPIVersions(ctx context.Context) ([]string, error) {
 
 func (c *Client) GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error) {
 	return c.clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
+}
+
+func (c *Client) GetPods(ctx context.Context, namespace, labelSelector string) (*corev1.PodList, error) {
+	options := metav1.ListOptions{}
+	if labelSelector != "" {
+		fmt.Println(labelSelector)
+		parsed, err := metav1.ParseToLabelSelector(labelSelector)
+		if err != nil {
+			return nil, err
+		}
+		selector, err := parsed.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		options.LabelSelector = string(selector)
+		options.LabelSelector = labelSelector
+	}
+	return c.clientset.CoreV1().Pods(namespace).List(ctx, options)
+}
+
+func (c *Client) GetNodes(ctx context.Context) (*corev1.NodeList, error) {
+	return c.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+}
+
+func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, error) {
+	options := &corev1.PodLogOptions{}
+	if container != "" {
+		options.Container = container
+	}
+	buf := new(bytes.Buffer)
+
+	req := c.clientset.CoreV1().Pods("default").GetLogs(pod, options)
+	podLogs, err := req.Stream(ctx)
+	if err != nil {
+		return buf.String(), err
+	}
+	_, err = io.Copy(buf, podLogs)
+	if err != nil {
+		return buf.String(), err
+	}
+	return buf.String(), nil
 }

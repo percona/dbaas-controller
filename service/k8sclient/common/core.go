@@ -18,6 +18,7 @@ package common
 
 import (
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Extracted from https://pkg.go.dev/k8s.io/api/core/v1
@@ -119,10 +120,10 @@ const (
 )
 
 // IsContainerInState returns true if container is in give state, otherwise false.
-func IsContainerInState(containerStatuses []ContainerStatus, state ContainerState, containerName string) bool {
+func IsContainerInState(containerStatuses []corev1.ContainerStatus, state string, containerName string) bool {
 	for _, status := range containerStatuses {
 		if status.Name == containerName {
-			if _, ok := status.State[string(state)]; ok {
+			if status.State.String() == state {
 				return true
 			}
 		}
@@ -217,9 +218,9 @@ type NodeCondition struct {
 
 // IsNodeInCondition returns true if node's condition given as an argument has
 // status "True". Otherwise it returns false.
-func IsNodeInCondition(node Node, conditionType NodeConditionType) bool {
+func IsNodeInCondition(node corev1.Node, conditionType corev1.NodeConditionType) bool {
 	for _, condition := range node.Status.Conditions {
-		if condition.Status == NodeConditionStatusTrue && condition.Type == conditionType {
+		if condition.Status == corev1.ConditionTrue && condition.Type == conditionType {
 			return true
 		}
 	}

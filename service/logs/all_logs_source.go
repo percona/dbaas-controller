@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // overallLinesLimit defines how many last lines of logs we should return upon
@@ -39,8 +39,8 @@ const overallLinesLimit = 1000
 type allLogsSource struct{}
 
 type tuple struct {
-	statuses   []common.ContainerStatus
-	containers []common.ContainerSpec
+	statuses   []corev1.ContainerStatus
+	containers []corev1.Container
 }
 
 // getLogs gets all logs from all cluster's containers and events from all pods.
@@ -49,7 +49,7 @@ func (a *allLogsSource) getLogs(
 	client *k8sclient.K8sClient,
 	clusterName string,
 ) ([]*controllerv1beta1.Logs, error) {
-	pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+clusterName)
+	pods, err := client.GetPods(ctx, "", "app.kubernetes.io/instance="+clusterName)
 	if err != nil {
 		return nil, status.Error(
 			codes.Internal,
