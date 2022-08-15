@@ -87,7 +87,6 @@ const (
 	psmdbSecretNameTmpl      = "dbaas-%s-psmdb-secrets"
 	stabePMMClientImage      = "percona/pmm-client:2"
 
-	stabePMMClientImage = "percona/pmm-client:2"
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
 	pullPolicy              = common.PullIfNotPresent
