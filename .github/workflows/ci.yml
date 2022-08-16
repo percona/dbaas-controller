@@ -89,15 +89,15 @@ jobs:
 
       # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
       # https://minikube.sigs.k8s.io/docs/drivers/none/
-      # - name: Configure minikube
-      #   run: |
-      #     sudo apt install -y conntrack
-      #     sudo curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-      #     sudo chmod +x /tmp/minikube
-      #     sudo mv /tmp/minikube $(which minikube)
-      #     sudo -E minikube config set driver none
-      #     sudo -E minikube config set cpus 2
-      #     sudo -E minikube config set memory 4096
+      - name: Configure minikube
+        run: |
+          sudo apt install -y conntrack
+          sudo curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+          sudo chmod +x /tmp/minikube
+          sudo mv /tmp/minikube $(which minikube)
+          sudo -E minikube config set driver none
+          sudo -E minikube config set cpus 2
+          sudo -E minikube config set memory 4096
 
       - name: Enable Go modules cache
         uses: percona-platform/cache@v2
