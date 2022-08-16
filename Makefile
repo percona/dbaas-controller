@@ -106,7 +106,7 @@ env-up-start:
 		minikube config set kubernetes-version $(KUBERNETES_VERSION); \
 	fi
 	minikube config view
-	minikube start
+	minikube start --vm-driver=none
 
 env-check:
 	# none driver in CI needs to run this under different user permissions

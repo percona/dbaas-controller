@@ -59,6 +59,11 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
+      - uses: azure/setup-kubectl@v2.0
+        with:
+          version: 'v1.23.6'
+        id: install
+
       - name: Set up Go tip
         if: matrix.go-version == 'tip'
         env:
@@ -84,15 +89,15 @@ jobs:
 
       # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
       # https://minikube.sigs.k8s.io/docs/drivers/none/
-      - name: Configure minikube
-        run: |
-          sudo apt install -y conntrack
-          sudo curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-          sudo chmod +x /tmp/minikube
-          sudo mv /tmp/minikube $(which minikube)
-          sudo -E minikube config set driver none
-          sudo -E minikube config set cpus 2
-          sudo -E minikube config set memory 4096
+      # - name: Configure minikube
+      #   run: |
+      #     sudo apt install -y conntrack
+      #     sudo curl -Lo /tmp/minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+      #     sudo chmod +x /tmp/minikube
+      #     sudo mv /tmp/minikube $(which minikube)
+      #     sudo -E minikube config set driver none
+      #     sudo -E minikube config set cpus 2
+      #     sudo -E minikube config set memory 4096
 
       - name: Enable Go modules cache
         uses: percona-platform/cache@v2
@@ -120,9 +125,6 @@ jobs:
       - name: Initialize CI environment
         run: make ci-init
 
-      - name: Generate code
-        run: make gen
-
       - name: Install binaries
         run: make release install
 
@@ -131,7 +133,7 @@ jobs:
 
       - name: Start development environment
         run: |
-          sudo -E make env-up
+          #sudo -E make env-up
           make env-check
 
       - name: Run tests
@@ -265,7 +267,7 @@ jobs:
         run: |
           make init
           mkdir -p "${DBAAS_TOOLS_PATH}"
-          echo "${DBAAS_TOOLS_PATH}" >> $GITHUB_PATH          
+          echo "${DBAAS_TOOLS_PATH}" >> $GITHUB_PATH
           curl -o aws-iam-authenticator https://s3.us-west-2.amazonaws.com/amazon-eks/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
           chmod +x ./aws-iam-authenticator
           mv aws-iam-authenticator "${DBAAS_TOOLS_PATH}"
@@ -317,7 +319,7 @@ jobs:
           flags: crosscover
           env_vars: GO_VERSION,KUBERNETES_VERSION
           fail_ci_if_error: false
-      
+
       - name: Report Kubernetes resources count and state
         if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1'
         run: |
