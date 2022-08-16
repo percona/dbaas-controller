@@ -413,9 +413,6 @@ jobs:
       - name: Install tools
         run: make init
 
-      - name: Generate code
-        run: make gen
-
       - name: Install binaries
         run: make release install
 
