@@ -237,11 +237,11 @@ func runPSMDBTests(t *testing.T, operatorVersion string) {
 	err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
 	require.NoError(t, err)
 
-	// t.Run("Get non-existing clusters", func(t *testing.T) {
-	// 	t.Parallel()
-	// 	_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdb")
-	// 	assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
-	// })
+	t.Run("Get non-existing clusters", func(t *testing.T) {
+		t.Parallel()
+		_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdb")
+		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
+	})
 
 	var pmm *PMM
 
@@ -644,6 +644,7 @@ func getPSMDBCluster(ctx context.Context, client *K8sClient, name string) (*PSMD
 	if err != nil {
 		return nil, err
 	}
+
 	l.Debug(clusters)
 	for _, c := range clusters {
 		if c.Name == name {

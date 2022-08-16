@@ -36,9 +36,10 @@ type PerconaServerMongoDB112 struct {
 	common.TypeMeta   // anonymous for embedding
 	common.ObjectMeta `json:"metadata,omitempty"`
 
-	APIVersion string        `json:"apiVersion,omitempty"`
-	Kind       string        `json:"kind,omitempty"`
-	Spec       *PSMDB112Spec `json:"spec,omitempty"`
+	APIVersion string                      `json:"apiVersion,omitempty"`
+	Kind       string                      `json:"kind,omitempty"`
+	Spec       *PSMDB112Spec               `json:"spec,omitempty"`
+	Status     *PerconaServerMongoDBStatus `json:"status,omitempty"`
 }
 
 // Nonvoting Non voting members.
@@ -157,5 +158,8 @@ func (p *PerconaServerMongoDB112) Pause() bool {
 
 // State has been deprecated in 1.12+
 func (p *PerconaServerMongoDB112) State() common.AppState {
-	return common.AppStateUnknown
+	if p.Status == nil {
+		return common.AppStateUnknown
+	}
+	return p.Status.Status
 }
