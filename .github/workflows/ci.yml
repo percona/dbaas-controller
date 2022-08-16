@@ -133,7 +133,7 @@ jobs:
 
       - name: Start development environment
         run: |
-          #sudo -E make env-up
+          sudo -E make env-up
           make env-check
 
       - name: Run tests
