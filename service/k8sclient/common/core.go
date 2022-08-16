@@ -17,6 +17,8 @@
 package common
 
 import (
+	"encoding/json"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -55,12 +57,13 @@ const (
 )
 
 // IsContainerInState returns true if container is in give state, otherwise false.
-func IsContainerInState(containerStatuses []corev1.ContainerStatus, state string, containerName string) bool {
+func IsContainerInState(containerStatuses []corev1.ContainerStatus, state ContainerState, containerName string) bool {
+	var containerState = make(map[string]interface{})
 	for _, status := range containerStatuses {
-		if status.Name == containerName {
-			if status.State.String() == state {
-				return true
-			}
+		data, _ := json.Marshal(status.State)
+		json.Unmarshal(data, &containerState)
+		if _, ok := containerState[string(state)]; ok {
+			return true
 		}
 	}
 	return false

@@ -20,6 +20,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -51,14 +54,16 @@ const containerStateTestInput string = `
              }
          }
      }
-  ]        
+  ]
 }
 `
 
 func TestIsContainerInState(t *testing.T) {
 	t.Parallel()
-	ps := new(PodStatus)
+	ps := new(corev1.PodStatus)
 	require.NoError(t, json.Unmarshal([]byte(containerStateTestInput), ps))
+	spew.Dump(ps)
+	spew.Dump((&corev1.ContainerStateWaiting{}).String())
 	assert.True(t, IsContainerInState(ps.ContainerStatuses, ContainerStateWaiting, "pmm-client"), "pmm-client is waiting but reported otherwise")
 	assert.False(t, IsContainerInState(ps.ContainerStatuses, ContainerState("fakestate"), "pmm-client"), "check for non-existing state should return false")
 }

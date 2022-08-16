@@ -33,6 +33,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	goversion "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -340,7 +341,7 @@ func TestK8sClient(t *testing.T) {
 			for _, ppod := range pods.Items {
 				var foundPod pod
 				assert.Conditionf(t,
-					func(ppod common.Pod) assert.Comparison {
+					func(ppod corev1.Pod) assert.Comparison {
 						return func() bool {
 							for _, expectedPod := range expectedPods {
 								if ppod.Name == expectedPod.name {
@@ -358,7 +359,7 @@ func TestK8sClient(t *testing.T) {
 				for _, container := range ppod.Spec.Containers {
 					assert.Conditionf(
 						t,
-						func(container common.ContainerSpec) assert.Comparison {
+						func(container corev1.Container) assert.Comparison {
 							return func() bool {
 								for _, expectedContainerName := range foundPod.containers {
 									if expectedContainerName == container.Name {
@@ -745,11 +746,11 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 		var failed, succeeded bool
 		for _, pod := range list.Items {
 			if pod.Name == "hello1" {
-				succeeded = pod.Status.Phase == common.PodPhaseSucceded
+				succeeded = pod.Status.Phase == corev1.PodRunning
 				continue
 			}
 			if pod.Name == "hello2" {
-				failed = pod.Status.Phase == common.PodPhaseFailed
+				failed = pod.Status.Phase == corev1.PodFailed
 			}
 		}
 
@@ -785,11 +786,11 @@ func TestGetAllClusterResources(t *testing.T) {
 	require.NotNil(t, nodes)
 	assert.Greater(t, len(nodes), 0)
 	for _, node := range nodes {
-		cpu, ok := node.Status.Allocatable[common.ResourceCPU]
-		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", common.ResourceCPU)
+		cpu, ok := node.Status.Allocatable[corev1.ResourceCPU]
+		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", corev1.ResourceCPU)
 		assert.NotEmpty(t, cpu)
-		memory, ok := node.Status.Allocatable[common.ResourceMemory]
-		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", common.ResourceMemory)
+		memory, ok := node.Status.Allocatable[corev1.ResourceMemory]
+		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", corev1.ResourceMemory)
 		assert.NotEmpty(t, memory)
 	}
 
@@ -826,7 +827,8 @@ func TestVMAgentSpec(t *testing.T) {
   "kind": "VMAgent",
   "apiVersion": "operator.victoriametrics.com/v1beta1",
   "metadata": {
-    "name": "pmm-vmagent-rws-basic-auth"
+    "name": "pmm-vmagent-rws-basic-auth",
+    "creationTimestamp": null
   },
   "spec": {
     "serviceScrapeNamespaceSelector": {},
@@ -839,13 +841,13 @@ func TestVMAgentSpec(t *testing.T) {
     "staticScrapeNamespaceSelector": {},
     "replicaCount": 1,
     "resources": {
-      "requests": {
-        "memory": "350Mi",
-        "cpu": "250m"
-      },
       "limits": {
-        "memory": "850Mi",
-        "cpu": "500m"
+        "cpu": "500m",
+        "memory": "850Mi"
+      },
+      "requests": {
+        "cpu": "250m",
+        "memory": "350Mi"
       }
     },
     "extraArgs": {
@@ -1144,6 +1146,7 @@ func TestGetClusterState(t *testing.T) {
 		tt := test
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
 			t.Parallel()
+			spew.Dump(tt)
 			clusterState := c.getClusterState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
 				return tt.crAndPodsVersionMatches, tt.matchingError
 			})

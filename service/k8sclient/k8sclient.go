@@ -1462,7 +1462,7 @@ func (c *K8sClient) GetLogs(
 	pod,
 	container string,
 ) ([]string, error) {
-	if common.IsContainerInState(containerStatuses, (&corev1.ContainerStateWaiting{}).String(), container) {
+	if common.IsContainerInState(containerStatuses, common.ContainerStateWaiting, container) {
 		return []string{}, nil
 	}
 	stdout, err := c.kube.GetLogs(ctx, pod, container)
@@ -1546,7 +1546,7 @@ func (c *K8sClient) GetAllClusterResources(ctx context.Context, clusterType Kube
 			}
 			bytes, err := convertors.StrToBytes(storage.String())
 			if err != nil {
-				return 0, 0, 0, errors.Wrapf(err, "could not convert storage size '%s' to bytes", storage)
+				return 0, 0, 0, errors.Wrapf(err, "could not convert storage size '%s' to bytes", storage.String())
 			}
 			diskSizeBytes += bytes
 		case AmazonEKSClusterType:
@@ -1600,14 +1600,14 @@ func getResources(resources corev1.ResourceList) (cpuMillis uint64, memoryBytes 
 	if ok {
 		cpuMillis, err = convertors.StrToMilliCPU(cpu.String())
 		if err != nil {
-			return 0, 0, errors.Wrapf(err, "failed to convert '%s' to millicpus", cpu)
+			return 0, 0, errors.Wrapf(err, "failed to convert '%s' to millicpus", cpu.String())
 		}
 	}
 	memory, ok := resources[corev1.ResourceMemory]
 	if ok {
 		memoryBytes, err = convertors.StrToBytes(memory.String())
 		if err != nil {
-			return 0, 0, errors.Wrapf(err, "failed to convert '%s' to bytes", memory)
+			return 0, 0, errors.Wrapf(err, "failed to convert '%s' to bytes", memory.String())
 		}
 	}
 	return cpuMillis, memoryBytes, nil
@@ -1630,7 +1630,7 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespace strin
 		nonTerminatedInitContainers := make([]corev1.Container, 0, len(ppod.Spec.InitContainers))
 		for _, container := range ppod.Spec.InitContainers {
 			if !common.IsContainerInState(
-				ppod.Status.InitContainerStatuses, (&corev1.ContainerStateTerminated{}).String(), container.Name,
+				ppod.Status.InitContainerStatuses, common.ContainerStateTerminated, container.Name,
 			) {
 				nonTerminatedInitContainers = append(nonTerminatedInitContainers, container)
 			}
@@ -1901,14 +1901,14 @@ func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 			Name: "pmm-vmagent-" + secretName,
 		},
 		Spec: monitoring.VMAgentSpec{
-			ServiceScrapeNamespaceSelector: new(common.LabelSelector),
-			ServiceScrapeSelector:          new(common.LabelSelector),
-			PodScrapeNamespaceSelector:     new(common.LabelSelector),
-			PodScrapeSelector:              new(common.LabelSelector),
-			ProbeSelector:                  new(common.LabelSelector),
-			ProbeNamespaceSelector:         new(common.LabelSelector),
-			StaticScrapeSelector:           new(common.LabelSelector),
-			StaticScrapeNamespaceSelector:  new(common.LabelSelector),
+			ServiceScrapeNamespaceSelector: new(metav1.LabelSelector),
+			ServiceScrapeSelector:          new(metav1.LabelSelector),
+			PodScrapeNamespaceSelector:     new(metav1.LabelSelector),
+			PodScrapeSelector:              new(metav1.LabelSelector),
+			ProbeSelector:                  new(metav1.LabelSelector),
+			ProbeNamespaceSelector:         new(metav1.LabelSelector),
+			StaticScrapeSelector:           new(metav1.LabelSelector),
+			StaticScrapeNamespaceSelector:  new(metav1.LabelSelector),
 			ReplicaCount:                   1,
 			SelectAllByDefault:             true,
 			Resources: &corev1.ResourceRequirements{
@@ -1926,17 +1926,19 @@ func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 			},
 			RemoteWrite: []monitoring.VMAgentRemoteWriteSpec{
 				{
-					URL:       fmt.Sprintf("%s/victoriametrics/api/v1/write", params.PublicAddress),
-					TLSConfig: &monitoring.TLSConfig{InsecureSkipVerify: true},
+					URL: fmt.Sprintf("%s/victoriametrics/api/v1/write", params.PublicAddress),
+					TLSConfig: &monitoring.TLSConfig{
+						InsecureSkipVerify: true,
+					},
 					BasicAuth: &monitoring.BasicAuth{
-						Username: common.SecretKeySelector{
-							LocalObjectReference: common.LocalObjectReference{
+						Username: corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
 								Name: secretName,
 							},
 							Key: "username",
 						},
-						Password: common.SecretKeySelector{
-							LocalObjectReference: common.LocalObjectReference{
+						Password: corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
 								Name: secretName,
 							},
 							Key: "password",

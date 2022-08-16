@@ -70,8 +70,8 @@ ci-init:                ## Initialize CI environment
 	# nothing there yet
 
 gen:                              ## Generate code
-	./bin/controller-gen object paths=./service/k8sclient/internal/monitoring
-	./bin/controller-gen object paths=./service/k8sclient/common/
+	./bin/controller-gen object:headerFile=./boiler/boilerplate.go.txt paths=./service/k8sclient/internal/monitoring
+	./bin/controller-gen object:headerFile=./boiler/boilerplate.go.txt paths=./service/k8sclient/common/
 	go generate ./catalog
 	mv catalog/locales/en/out.gotext.json catalog/locales/en/messages.gotext.json
 	# add blank line at EOF
