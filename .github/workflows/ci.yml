@@ -33,7 +33,7 @@ jobs:
 
         include:
           - go-version: tip
-            kubernetes_version: "1.23.6"
+            kubernetes_version: "" # latest supported version in minikube (in pare with k8s releases)
             build_tags: ""
             os: ubuntu-latest
             may-fail: true
@@ -131,7 +131,7 @@ jobs:
 
       - name: Start development environment
         run: |
-          sudo -E make env-up
+          make env-up
           make env-check
 
       - name: Run tests
