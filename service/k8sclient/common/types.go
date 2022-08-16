@@ -106,13 +106,6 @@ const (
 	PullIfNotPresent PullPolicy = "IfNotPresent"
 )
 
-// PodList holds a list of pods objects.
-type PodList struct {
-	TypeMeta // anonymous for embedding
-
-	Items []Pod `json:"items"`
-}
-
 // PodDisruptionBudgetSpec POD disruption budget specs.
 type PodDisruptionBudgetSpec struct {
 	MinAvailable   *int `json:"minAvailable,omitempty"`
@@ -141,13 +134,6 @@ const (
 	// record, with no exposing or proxying of any pods involved.
 	ServiceTypeExternalName ServiceType = "ExternalName"
 )
-
-// NodeList holds a list of node objects.
-type NodeList struct {
-	TypeMeta // anonymous for embedding
-
-	Items []Node `json:"items,omitempty"`
-}
 
 // NodeFileSystemSummary holds a summary of Node's filesystem.
 type NodeFileSystemSummary struct {
