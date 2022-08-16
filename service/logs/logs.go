@@ -23,7 +23,6 @@ import (
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
-	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -33,7 +32,6 @@ import (
 // Service provides API for getting logs. By logs is meant containers' logs
 // and pod's events.
 type Service struct {
-	p             *message.Printer
 	defaultSource source
 	sources       []source
 }
@@ -44,9 +42,8 @@ type source interface {
 }
 
 // NewService creates a new instance of Service.
-func NewService(p *message.Printer) *Service {
+func NewService() *Service {
 	return &Service{
-		p:             p,
 		defaultSource: source(new(allLogsSource)),
 		sources:       []source{},
 	}
@@ -57,7 +54,7 @@ func NewService(p *message.Printer) *Service {
 func (s *Service) GetLogs(ctx context.Context, req *controllerv1beta1.GetLogsRequest) (*controllerv1beta1.GetLogsResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
-		return nil, status.Error(codes.Internal, s.p.Sprintf("Cannot initialize K8s client: %s", err))
+		return nil, status.Error(codes.Internal, "Cannot initialize K8s client: "+err.Error())
 	}
 	defer client.Cleanup() //nolint:errcheck
 
