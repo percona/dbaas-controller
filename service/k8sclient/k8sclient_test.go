@@ -870,7 +870,7 @@ func printLogs(t *testing.T, ctx context.Context, client *K8sClient, name string
 }
 
 func TestGetAllClusterResources(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	ctx := app.Context()
 
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -926,7 +926,7 @@ func TestGetAllClusterResources(t *testing.T) {
 }
 
 func TestVMAgentSpec(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	expected := `{
   "kind": "VMAgent",
   "apiVersion": "operator.victoriametrics.com/v1beta1",
@@ -991,7 +991,7 @@ func TestVMAgentSpec(t *testing.T) {
 }
 
 func TestGetClusterState(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	type getClusterStateTestCase struct {
 		matchingError           error
 		cluster                 common.DatabaseCluster

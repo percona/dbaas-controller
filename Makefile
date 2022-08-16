@@ -69,13 +69,6 @@ init:                             ## Install development tools
 ci-init:                ## Initialize CI environment
 	# nothing there yet
 
-gen:                              ## Generate code
-	go generate ./catalog
-	mv catalog/locales/en/out.gotext.json catalog/locales/en/messages.gotext.json
-	# add blank line at EOF
-	echo >> catalog/locales/en/messages.gotext.json
-	make format
-
 format:                           ## Format source code
 	bin/gofumpt -l -w .
 	bin/goimports -local github.com/percona-platform/dbaas-controller -l -w .

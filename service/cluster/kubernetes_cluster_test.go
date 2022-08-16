@@ -22,8 +22,6 @@ import (
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 
 	"github.com/percona-platform/dbaas-controller/utils/testutil"
@@ -33,8 +31,7 @@ func TestKubernetesClusterServiceCheckConnection(t *testing.T) {
 	t.Parallel()
 	t.Run("Wrong kube config", func(t *testing.T) {
 		t.Parallel()
-		i18nPrinter := message.NewPrinter(language.English)
-		k := NewKubernetesClusterService(i18nPrinter)
+		k := NewKubernetesClusterService()
 		kubeConfig := `{
 			"kind": "Config",
 			"apiVersion": "v1",

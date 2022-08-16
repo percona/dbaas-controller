@@ -66,6 +66,11 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
+      - name: Setup kubectl
+        shell: bash
+        run: |
+          wget https://storage.googleapis.com/kubernetes-release/release/v1.23.6/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl
+
       - name: Set up Go tip
         if: matrix.go-version == 'tip'
         env:
@@ -279,7 +284,7 @@ jobs:
         run: |
           make init
           mkdir -p "${DBAAS_TOOLS_PATH}"
-          echo "${DBAAS_TOOLS_PATH}" >> $GITHUB_PATH          
+          echo "${DBAAS_TOOLS_PATH}" >> $GITHUB_PATH
           curl -o aws-iam-authenticator https://s3.us-west-2.amazonaws.com/amazon-eks/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
           chmod +x ./aws-iam-authenticator
           mv aws-iam-authenticator "${DBAAS_TOOLS_PATH}"
@@ -324,7 +329,7 @@ jobs:
           flags: crosscover
           env_vars: GO_VERSION,KUBERNETES_VERSION
           fail_ci_if_error: false
-      
+
       - name: Report Kubernetes resources count and state
         if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1'
         run: |

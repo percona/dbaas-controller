@@ -21,7 +21,6 @@ import (
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
-	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -30,20 +29,18 @@ import (
 )
 
 // PSMDBClusterService implements methods of gRPC server and other business logic related to PSMDB clusters.
-type PSMDBClusterService struct {
-	p *message.Printer
-}
+type PSMDBClusterService struct{}
 
 // NewPSMDBClusterService returns new PSMDBClusterService instance.
-func NewPSMDBClusterService(p *message.Printer) *PSMDBClusterService {
-	return &PSMDBClusterService{p: p}
+func NewPSMDBClusterService() *PSMDBClusterService {
+	return &PSMDBClusterService{}
 }
 
 // ListPSMDBClusters returns a list of PSMDB clusters.
 func (s *PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *controllerv1beta1.ListPSMDBClustersRequest) (*controllerv1beta1.ListPSMDBClustersResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
-		return nil, status.Error(codes.Internal, s.p.Sprintf("Cannot initialize K8s client: %s", err))
+		return nil, status.Error(codes.Internal, "Cannot initialize K8s client: "+err.Error())
 	}
 	defer client.Cleanup() //nolint:errcheck
 
