@@ -33,7 +33,7 @@ jobs:
 
         include:
           - go-version: tip
-            kubernetes_version: ""
+            kubernetes_version: "1.23.6"
             build_tags: ""
             os: ubuntu-latest
             may-fail: true
