@@ -207,6 +207,8 @@ type pod struct {
 }
 
 func TestK8sClient(t *testing.T) {
+	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
+
 	ctx := app.Context()
 
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -296,6 +298,9 @@ func TestK8sClient(t *testing.T) {
 	var pmm *PMM
 	t.Run("PXC", func(t *testing.T) {
 		t.Parallel()
+		if perconaTestOperator != "pxc" && perconaTestOperator != "" {
+			t.Skip("skipping because of environment variable")
+		}
 		name := "test-cluster-pxc"
 		_ = client.DeletePXCCluster(ctx, name)
 
@@ -305,14 +310,24 @@ func TestK8sClient(t *testing.T) {
 
 		l.Info("No PXC Clusters running")
 
-		err := client.CreatePXCCluster(ctx, &PXCParams{
+		err = client.CreatePXCCluster(ctx, &PXCParams{
 			Name: name,
 			Size: 1,
 			PXC: &PXC{
 				DiskSize: "1000000000",
 				Image:    "percona/percona-xtradb-cluster:8.0.20-11.1",
+				ComputeResources: &ComputeResources{
+					CPUM:        "400m",
+					MemoryBytes: "600M",
+				},
 			},
-			ProxySQL:          &ProxySQL{DiskSize: "1000000000"},
+			ProxySQL: &ProxySQL{
+				DiskSize: "1000000000",
+				ComputeResources: &ComputeResources{
+					CPUM:        "250m",
+					MemoryBytes: "500M",
+				},
+			},
 			PMM:               pmm,
 			VersionServiceURL: "https://check.percona.com",
 		})
@@ -329,6 +344,16 @@ func TestK8sClient(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, ClusterStateChanging, cluster.State)
 		})
+		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+
+		t.Run("All pods are ready", func(t *testing.T) {
+			cluster, err := getPXCCluster(ctx, client, name)
+			require.NoError(t, err)
+			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
+			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
+		})
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
 			err = client.CreatePXCCluster(ctx, &PXCParams{
@@ -340,17 +365,6 @@ func TestK8sClient(t *testing.T) {
 			})
 			require.Error(t, err)
 			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
-		})
-
-		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
-			return cluster != nil && cluster.State == ClusterStateReady
-		})
-
-		t.Run("All pods are ready", func(t *testing.T) {
-			cluster, err := getPXCCluster(ctx, client, name)
-			require.NoError(t, err)
-			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
-			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
 		})
 
 		t.Run("Get logs", func(t *testing.T) {
@@ -415,10 +429,10 @@ func TestK8sClient(t *testing.T) {
 		t.Run("Upgrade PXC", func(t *testing.T) {
 			err = client.UpdatePXCCluster(ctx, &PXCParams{
 				Name: name,
-				Size: 1,
+				Size: 3,
 				PXC: &PXC{
 					DiskSize: "1000000000",
-					Image:    "percona/percona-xtradb-cluster:8.0.20-11.2",
+					Image:    "percona/percona-xtradb-cluster:8.0.25-15.1",
 				},
 				ProxySQL:          &ProxySQL{DiskSize: "1000000000"},
 				PMM:               pmm,
@@ -437,7 +451,7 @@ func TestK8sClient(t *testing.T) {
 
 			cluster, err := getPXCCluster(ctx, client, name)
 			require.NoError(t, err)
-			assert.Equal(t, "percona/percona-xtradb-cluster:8.0.20-11.2", cluster.PXC.Image)
+			assert.Equal(t, "percona/percona-xtradb-cluster:8.0.25-15.1", cluster.PXC.Image)
 		})
 
 		err = client.RestartPXCCluster(ctx, name)
@@ -477,15 +491,26 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("Create PXC with HAProxy", func(t *testing.T) {
 		t.Parallel()
+		if perconaTestOperator != "haproxy-pxc" && perconaTestOperator != "" {
+			t.Skip("skipping because of environment variable")
+		}
 		clusterName := "test-pxc-haproxy"
-		err := client.CreatePXCCluster(ctx, &PXCParams{
-			Name:    clusterName,
-			Size:    1,
-			PXC:     &PXC{DiskSize: "1000000000"},
-			HAProxy: new(HAProxy),
-			PMM:     pmm,
+		err = client.CreatePXCCluster(ctx, &PXCParams{
+			Name: clusterName,
+			Size: 1,
+			PXC: &PXC{
+				DiskSize: "1000000000",
+			},
+			HAProxy: &HAProxy{
+				ComputeResources: &ComputeResources{
+					MemoryBytes: "500M",
+				},
+			},
+			PMM: pmm,
 		})
 		require.NoError(t, err)
+		l.Info("PXC Cluster is created")
+
 		assertListPXCCluster(ctx, t, client, clusterName, func(cluster *PXCCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
@@ -493,7 +518,7 @@ func TestK8sClient(t *testing.T) {
 		// Test listing.
 		clusters, err := client.ListPXCClusters(ctx)
 		require.NoError(t, err)
-		assert.Conditionf(t,
+		require.Conditionf(t,
 			func(clusters []PXCCluster, clusterName string) assert.Comparison {
 				return func() bool {
 					for _, cluster := range clusters {
@@ -514,6 +539,9 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("PSMDB", func(t *testing.T) {
 		t.Parallel()
+		if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
+			t.Skip("skipping because of environment variable")
+		}
 		name := "test-cluster-psmdb"
 		_ = client.DeletePSMDBCluster(ctx, name)
 
@@ -522,13 +550,15 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		l.Info("No PSMDB Clusters running")
-
-		err := client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name:       name,
-			Size:       3,
-			Replicaset: &Replicaset{DiskSize: "1000000000"},
-			PMM:        pmm,
+		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
+			Name: name,
+			Size: 3,
+			Replicaset: &Replicaset{
+				DiskSize: "1000000000",
+			},
+			PMM: pmm,
 		})
+
 		require.NoError(t, err)
 
 		l.Info("PSMDB Cluster is created")
@@ -635,16 +665,6 @@ func TestK8sClient(t *testing.T) {
 		l.Info("PSMDB Cluster is deleted")
 	})
 
-	t.Run("CheckOperators", func(t *testing.T) {
-		t.Parallel()
-		operators, err := client.CheckOperators(ctx)
-		require.NoError(t, err)
-		require.NotNil(t, operators)
-		_, err = goversion.NewVersion(operators.PsmdbOperatorVersion)
-		require.NoError(t, err)
-		_, err = goversion.NewVersion(operators.PXCOperatorVersion)
-		require.NoError(t, err)
-	})
 }
 
 // ErrNoSuchCluster indicates that no cluster with given name was found.
@@ -684,15 +704,24 @@ func assertListPXCCluster(ctx context.Context, t *testing.T, client *K8sClient, 
 	t.Helper()
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
-	for {
-		time.Sleep(5 * time.Second)
-		cluster, err := getPXCCluster(timeoutCtx, client, name)
-		if !errors.Is(err, ErrNoSuchCluster) {
-			require.NoError(t, err)
-		}
+	ticker := time.NewTicker(500 * time.Millisecond)
 
-		if conditionFunc(cluster) {
-			break
+	for {
+		select {
+		case <-timeoutCtx.Done():
+			clusters, _ := client.ListPXCClusters(ctx)
+			t.Log(clusters)
+			printLogs(t, ctx, client, name)
+			t.Errorf("PXC cluster did not get to the right state")
+			return
+		case <-ticker.C:
+			cluster, err := getPXCCluster(ctx, client, name)
+			if !errors.Is(err, ErrNoSuchCluster) {
+				require.NoError(t, err)
+			}
+			if conditionFunc(cluster) {
+				break
+			}
 		}
 	}
 }
@@ -701,15 +730,24 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 	t.Helper()
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
-	for {
-		time.Sleep(1 * time.Second)
-		cluster, err := getPSMDBCluster(timeoutCtx, client, name)
-		if !errors.Is(err, ErrNoSuchCluster) {
-			require.NoError(t, err)
-		}
+	ticker := time.NewTicker(500 * time.Millisecond)
 
-		if conditionFunc(cluster) {
-			break
+	for {
+		select {
+		case <-timeoutCtx.Done():
+			clusters, _ := client.ListPSMDBClusters(ctx)
+			t.Log(clusters)
+			printLogs(t, ctx, client, name)
+			t.Errorf("PSMDB cluster did not get to the right state")
+			return
+		case <-ticker.C:
+			cluster, err := getPSMDBCluster(ctx, client, name)
+			if !errors.Is(err, ErrNoSuchCluster) {
+				require.NoError(t, err)
+			}
+			if conditionFunc(cluster) {
+				break
+			}
 		}
 	}
 }
@@ -1237,4 +1275,24 @@ func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (in
 	}
 
 	return count, nil
+}
+func printLogs(t *testing.T, ctx context.Context, client *K8sClient, name string) {
+
+	t.Helper()
+
+	pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+name)
+	require.NoError(t, err)
+
+	for _, ppod := range pods.Items {
+		for _, container := range ppod.Spec.Containers {
+
+			t.Log("========================= ")
+			t.Log("Container = ", ppod.Name, container)
+
+			logs, _ := client.GetLogs(ctx, ppod.Status.ContainerStatuses, ppod.Name, container.Name)
+			for _, l := range logs {
+				t.Log(l)
+			}
+		}
+	}
 }
