@@ -349,7 +349,6 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	if err != nil {
 		spew.Dump("Error")
 		spew.Dump(err)
-		return nil, nil
 	}
 	return &K8sClient{
 		kubeCtl: kubeCtl,
