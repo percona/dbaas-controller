@@ -307,7 +307,6 @@ jobs:
            echo "${BASE64_KUBECONFIG}" > "${PATH_TO_KUBECONFIG}"
            export RANDOM_STRING=$(cat /proc/sys/kernel/random/uuid)
            export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
-           make eks-delete-crds
            make eks-setup-test-namespace NAMESPACE="${NAMESPACE}"
            echo "::set-output name=done::1"
         env:
