@@ -33,7 +33,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	goversion "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -1176,7 +1175,6 @@ func TestGetClusterState(t *testing.T) {
 		tt := test
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
 			t.Parallel()
-			spew.Dump(tt)
 			clusterState := c.getClusterState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
 				return tt.crAndPodsVersionMatches, tt.matchingError
 			})

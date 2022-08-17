@@ -18,7 +18,6 @@ package kube
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 
 	corev1 "k8s.io/api/core/v1"
@@ -306,7 +305,6 @@ func (c *Client) GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVo
 func (c *Client) GetPods(ctx context.Context, namespace, labelSelector string) (*corev1.PodList, error) {
 	options := metav1.ListOptions{}
 	if labelSelector != "" {
-		fmt.Println(labelSelector)
 		parsed, err := metav1.ParseToLabelSelector(labelSelector)
 		if err != nil {
 			return nil, err
