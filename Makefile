@@ -152,6 +152,16 @@ eks-cleanup-namespace:
 	kubectl ${KUBECTL_ARGS} delete perconaservermongodb --all
 	kubectl ${KUBECTL_ARGS} delete perconaservermongodbbackup --all
 
+eks-delete-crds:
+	kubectl ${KUBECTL_ARGS} delete crd perconaservermongodbs.psmdb.percona.com
+	kubectl ${KUBECTL_ARGS} delete crd perconaservermongodbrestores.psmdb.percona.com
+	kubectl ${KUBECTL_ARGS} delete crd perconaservermongodbbackups.psmdb.percona.com
+	kubectl ${KUBECTL_ARGS} delete crd perconaxtradbbackups.pxc.percona.com
+	kubectl ${KUBECTL_ARGS} delete crd perconaxtradbclusterbackups.pxc.percona.com
+	kubectl ${KUBECTL_ARGS} delete crd perconaxtradbclusterrestores.pxc.percona.com
+	kubectl ${KUBECTL_ARGS} delete crd perconaxtradbclusters.pxc.percona.com
+
+
 eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage.
 	# Delete the PXC operator
 	kubectl ${KUBECTL_ARGS} delete deployment percona-xtradb-cluster-operator
