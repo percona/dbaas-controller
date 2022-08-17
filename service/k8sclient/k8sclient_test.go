@@ -665,7 +665,6 @@ func TestK8sClient(t *testing.T) {
 		})
 		l.Info("PSMDB Cluster is deleted")
 	})
-
 }
 
 // ErrNoSuchCluster indicates that no cluster with given name was found.
@@ -1277,8 +1276,8 @@ func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (in
 
 	return count, nil
 }
-func printLogs(t *testing.T, ctx context.Context, client *K8sClient, name string) {
 
+func printLogs(t *testing.T, ctx context.Context, client *K8sClient, name string) {
 	t.Helper()
 
 	pods, err := client.GetPods(ctx, "", "app.kubernetes.io/instance="+name)
