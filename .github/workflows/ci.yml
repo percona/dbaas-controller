@@ -69,11 +69,6 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Setup kubectl
-        shell: bash
-        run: |
-          wget https://storage.googleapis.com/kubernetes-release/release/v1.23.6/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl
-
       - name: Set up Go tip
         if: matrix.go-version == 'tip'
         env:
