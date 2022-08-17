@@ -30,6 +30,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 )
 
 func getHeader() string {
@@ -81,7 +82,7 @@ func checkHeader(path string, header string) bool {
 		return true
 	}
 
-	if header != string(actual) {
+	if !strings.Contains(string(actual), header[0:len(header)/2]) {
 		log.Print(path)
 		return false
 	}
