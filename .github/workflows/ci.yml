@@ -158,8 +158,18 @@ jobs:
           fail_ci_if_error: false
 
       - name: Collect debugdata
-        if: ${{ always() }}
-        run: make collect-debugdata
+        if: ${{ failure() }}
+        run: |
+          make collect-debugdata
+          minikube logs --length=100
+          minikube kubectl -- get all
+          minikube kubectl -- describe pods
+          minikube kubectl -- describe pv,pvc
+          minikube kubectl -- get events --sort-by=lastTimestamp
+          minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-xtradb-cluster-operator'
+          minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-xtradb-cluster'
+          minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator'
+          minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb'
 
       - name: Upload debugdata
         if: ${{ always() }}
@@ -193,7 +203,7 @@ jobs:
 
   test-on-eks:
     name: Test on EKS
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
@@ -201,13 +211,16 @@ jobs:
         go-version:
           - 1.18.x
         build_tags: [""]
+        test_operator: ["pxc", "haproxy-pxc", "psmdb"]
         os: [ubuntu-latest]
         may-fail: [false]
+        version_service_url: ["https://check.percona.com/versions/v1"]
         include:
-          - go-version: tip
+          - go-version: 1.18.x
             build_tags: ""
             os: ubuntu-latest
             may-fail: true
+            version_service_url: "https://check-dev.percona.com/versions/v1"
 
     continue-on-error: ${{ matrix.may-fail }}
     runs-on: ${{ matrix.os }}
@@ -216,8 +229,11 @@ jobs:
       # no `-mod=readonly` to test PRs made by @dependabot;
       # `git diff --exit-code` step below still checks what we need
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
+      PERCONA_TEST_VERSION_SERVICE_URL: ${{ matrix.version_service_url }}
+      PERCONA_TEST_DBAAS_OPERATOR: ${{ matrix.test_operator }}
       # Set DELETE_NAMESPACE to false when you want to debug in EKS cluster after job is done.
       DELETE_NAMESPACE: true
+      DBAAS_TOOLS_PATH: "/opt/dbaas-tools/bin"
     steps:
       - name: Set up Go release
         if: matrix.go-version != 'tip'
@@ -285,8 +301,10 @@ jobs:
           echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
           chmod +x kubectl
           cp kubectl "${DBAAS_TOOLS_PATH}/kubectl-1.23"
+          cp kubectl "${DBAAS_TOOLS_PATH}/kubectl"
+          rm kubectl
+          rm kubectl.sha256
         env:
-          DBAAS_TOOLS_PATH: "/opt/dbaas-tools/bin"
           KUBECTL_VERSION: 1.23.6
 
       - name: Initialize CI environment
@@ -334,6 +352,12 @@ jobs:
           echo "Pods: $(kubectl get pod | tail +2 | wc -l)"
           echo "State of all pods:"
           kubectl describe pods
+          kubectl describe pv,pvc
+          kubectl get events --sort-by=lastTimestamp
+          kubectl logs --all-containers --timestamps --selector='name=percona-xtradb-cluster-operator'
+          kubectl logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-xtradb-cluster'
+          kubectl logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator'
+          kubectl logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb'
 
       - name: Delete the test namespace
         if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1' && env.DELETE_NAMESPACE
