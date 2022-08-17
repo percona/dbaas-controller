@@ -369,7 +369,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("Get logs", func(t *testing.T) {
-			pods, err := client.GetPods(ctx, "app.kubernetes.io/instance="+name)
+			pods, err := client.GetPods(ctx, "", "app.kubernetes.io/instance="+name)
 			require.NoError(t, err)
 
 			expectedPods := []pod{
@@ -1281,7 +1281,7 @@ func printLogs(t *testing.T, ctx context.Context, client *K8sClient, name string
 
 	t.Helper()
 
-	pods, err := client.GetPods(ctx, "app.kubernetes.io/instance="+name)
+	pods, err := client.GetPods(ctx, "", "app.kubernetes.io/instance="+name)
 	require.NoError(t, err)
 
 	for _, ppod := range pods.Items {
