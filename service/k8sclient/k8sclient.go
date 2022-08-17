@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
+	"github.com/davecgh/go-spew/spew"
 	goversion "github.com/hashicorp/go-version"
 	pmmversion "github.com/percona/pmm/version"
 	"github.com/pkg/errors"
@@ -346,7 +347,9 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	}
 	kube, err := kube.NewFromKubeConfigObject(kubeconfig)
 	if err != nil {
-		return nil, err
+		spew.Dump("Error")
+		spew.Dump(err)
+		return nil, nil
 	}
 	return &K8sClient{
 		kubeCtl: kubeCtl,
