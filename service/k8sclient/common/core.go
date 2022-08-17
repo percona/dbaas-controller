@@ -58,7 +58,7 @@ const (
 
 // IsContainerInState returns true if container is in give state, otherwise false.
 func IsContainerInState(containerStatuses []corev1.ContainerStatus, state ContainerState, containerName string) bool {
-	var containerState = make(map[string]interface{})
+	containerState := make(map[string]interface{})
 	for _, status := range containerStatuses {
 		data, _ := json.Marshal(status.State)
 		json.Unmarshal(data, &containerState)

@@ -20,11 +20,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const containerStateTestInput string = `
