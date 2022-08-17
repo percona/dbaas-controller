@@ -133,6 +133,7 @@ collect-debugdata:                ## Collect debugdata
 	rm -fr debugdata
 	mkdir debugdata
 	minikube logs --length=100 > ./debugdata/minikube.txt
+	minikube kubectl -- get all > ./debugdata/all.txt
 	minikube kubectl -- describe pods > ./debugdata/pods.txt
 	minikube kubectl -- describe pv,pvc > ./debugdata/pv-pvc.txt
 	minikube kubectl -- get events --sort-by=lastTimestamp > ./debugdata/events.txt
