@@ -72,10 +72,6 @@ ci-init:                ## Initialize CI environment
 gen:                              ## Generate code
 	./bin/controller-gen object:headerFile=./boiler/boilerplate.go.txt paths=./service/k8sclient/internal/monitoring
 	./bin/controller-gen object:headerFile=./boiler/boilerplate.go.txt paths=./service/k8sclient/common/
-	go generate ./catalog
-	mv catalog/locales/en/out.gotext.json catalog/locales/en/messages.gotext.json
-	# add blank line at EOF
-	echo >> catalog/locales/en/messages.gotext.json
 	make format
 
 format:                           ## Format source code
