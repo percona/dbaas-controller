@@ -247,6 +247,7 @@ func TestK8sClient(t *testing.T) {
 		psmdbVersion = value
 	}
 
+	t.Log(pxcVersion)
 	err = client.ApplyOperator(ctx, pxcVersion, app.DefaultPXCOperatorURLTemplate)
 	require.NoError(t, err)
 
