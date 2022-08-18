@@ -818,7 +818,7 @@ func (c *K8sClient) getClusterState(ctx context.Context, cluster common.Database
 
 // getDeletingClusters returns clusters which are not fully deleted yet.
 func (c *K8sClient) getDeletingClusters(ctx context.Context, managedBy string, runningClusters map[string]struct{}) ([]Cluster, error) {
-	list, err := c.kube.GetPods(ctx, "default", "")
+	list, err := c.kube.GetPods(ctx, "", "")
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
