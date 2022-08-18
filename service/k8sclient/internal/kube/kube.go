@@ -41,8 +41,8 @@ import (
 )
 
 const (
-	defaultApiUriPath  = "/api"
-	defaultApisUriPath = "/apis"
+	defaultAPIURIPath  = "/api"
+	defaultAPIsURIPath = "/apis"
 )
 
 type configGetter struct {
@@ -58,7 +58,7 @@ func NewConfigGetter(kubeconfig string) *configGetter {
 	return &configGetter{kubeconfig: kubeconfig}
 }
 
-// LoadFromString takes a kubeconfig and deserializes the contents into Config object
+// LoadFromString takes a kubeconfig and deserializes the contents into Config object.
 func (g *configGetter) loadFromString() (*clientcmdapi.Config, error) {
 	config, err := clientcmd.Load([]byte(g.kubeconfig))
 	if err != nil {
@@ -101,18 +101,6 @@ func NewFromIncluster() (*Client, error) {
 	return &Client{clientset: clientset, restConfig: c}, nil
 }
 
-func NewFromKubeConfig(kubeConfigPath string) (*Client, error) {
-	config, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
-	if err != nil {
-		return nil, err
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	return &Client{clientset: clientset, restConfig: config}, nil
-}
-
 func NewFromKubeConfigObject(kubeconfig string) (*Client, error) {
 	config, err := clientcmd.BuildConfigFromKubeconfigGetter("", NewConfigGetter(kubeconfig).loadFromString)
 	if err != nil {
@@ -132,15 +120,14 @@ func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) 
 	cfg.ContentConfig = resource.UnstructuredPlusDefaultContentConfig()
 	cfg.GroupVersion = &gv
 	if len(gv.Group) == 0 {
-		cfg.APIPath = defaultApiUriPath
+		cfg.APIPath = defaultAPIURIPath
 	} else {
-		cfg.APIPath = defaultApisUriPath
+		cfg.APIPath = defaultAPIsURIPath
 	}
 	return rest.RESTClientFor(cfg)
 }
 
-func (c *Client) Delete(ctx context.Context, rawObj interface{}) error {
-	obj := rawObj.(runtime.Object)
+func (c *Client) Delete(ctx context.Context, obj runtime.Object) error {
 	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
 	if err != nil {
 		return err
@@ -166,8 +153,7 @@ func (c *Client) Delete(ctx context.Context, rawObj interface{}) error {
 	return err
 }
 
-func (c *Client) Apply(ctx context.Context, rawObj interface{}) error {
-	obj := rawObj.(runtime.Object)
+func (c *Client) Apply(ctx context.Context, obj runtime.Object) error {
 	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
 	if err != nil {
 		return err

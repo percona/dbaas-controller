@@ -60,8 +60,13 @@ const (
 func IsContainerInState(containerStatuses []corev1.ContainerStatus, state ContainerState, containerName string) bool {
 	containerState := make(map[string]interface{})
 	for _, status := range containerStatuses {
-		data, _ := json.Marshal(status.State)
-		json.Unmarshal(data, &containerState)
+		data, err := json.Marshal(status.State)
+		if err != nil {
+			return false
+		}
+		if err := json.Unmarshal(data, &containerState); err != nil {
+			return false
+		}
 		if _, ok := containerState[string(state)]; ok {
 			return true
 		}
