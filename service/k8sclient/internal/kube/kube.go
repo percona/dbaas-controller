@@ -291,7 +291,12 @@ func (c *Client) GetStorageClasses(ctx context.Context) (*v1.StorageClassList, e
 }
 
 func (c *Client) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
-	return c.clientset.CoreV1().Secrets("default").Get(ctx, name, metav1.GetOptions{})
+	namespace := "default"
+	if space := os.Getenv("NAMESPACE"); space != "" {
+		namespace = space
+	}
+
+	return c.clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
 func (c *Client) GetAPIVersions(ctx context.Context) ([]string, error) {
@@ -335,8 +340,12 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 		options.Container = container
 	}
 	buf := new(bytes.Buffer)
+	namespace := "default"
+	if space := os.Getenv("NAMESPACE"); space != "" {
+		namespace = space
+	}
 
-	req := c.clientset.CoreV1().Pods("default").GetLogs(pod, options)
+	req := c.clientset.CoreV1().Pods(namespace).GetLogs(pod, options)
 	podLogs, err := req.Stream(ctx)
 	if err != nil {
 		return buf.String(), err
