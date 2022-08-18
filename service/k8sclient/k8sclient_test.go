@@ -808,7 +808,7 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 			return
 		default:
 		}
-		list, err := client.GetPods(ctx, "-n"+consumedResourcesTestNamespace, "hello1", "hello2")
+		list, err := client.GetPods(ctx, consumedResourcesTestNamespace, "app.kubernetes.io/name=hello1", "app.kubernetes.io/instance=hello2")
 		require.NoError(t, err)
 		var failed, succeeded bool
 		for _, pod := range list.Items {
@@ -1274,7 +1274,7 @@ func TestCreateVMOperator(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	time.Sleep(90 * time.Second) // Give it some time to deploy
+	time.Sleep(30 * time.Second) // Give it some time to deploy
 	count, err := getDeploymentCount(ctx, client, "vmagent")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
