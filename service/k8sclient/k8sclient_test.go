@@ -954,8 +954,11 @@ func TestVMAgentSpec(t *testing.T) {
 	assert.Equal(t, expected, inBuf.String())
 }
 
-func TestGetClusterState(t *testing.T) {
+func TestGetPXCClusterState(t *testing.T) {
 	// t.Parallel()
+	if perconaTestOperator != "pxc" && perconaTestOperator != "" {
+		t.Skip("skipping because of environment variable")
+	}
 	type getClusterStateTestCase struct {
 		matchingError           error
 		cluster                 common.DatabaseCluster
@@ -1084,7 +1087,33 @@ func TestGetClusterState(t *testing.T) {
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
+	}
+	ctx := context.Background()
+	c, _ := New(ctx, "")
+	for i, test := range testCases {
+		tt := test
+		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
+			t.Parallel()
+			clusterState := c.getClusterState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
+				return tt.crAndPodsVersionMatches, tt.matchingError
+			})
+			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
+		})
+	}
+}
 
+func TestGetPSMDBClusterState(t *testing.T) {
+	// t.Parallel()
+	if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
+		t.Skip("skipping because of environment variable")
+	}
+	type getClusterStateTestCase struct {
+		matchingError           error
+		cluster                 common.DatabaseCluster
+		expectedState           ClusterState
+		crAndPodsVersionMatches bool
+	}
+	testCases := []getClusterStateTestCase{
 		// PSMDB
 		{
 			expectedState: ClusterStateInvalid,
