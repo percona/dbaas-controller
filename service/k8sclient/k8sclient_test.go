@@ -33,7 +33,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	goversion "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -728,7 +727,6 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 	for {
 		time.Sleep(time.Second)
 		cluster, err := getPSMDBCluster(ctx, client, name)
-		spew.Dump(cluster)
 		if !errors.Is(err, ErrNoSuchCluster) {
 			require.NoError(t, err)
 		}
