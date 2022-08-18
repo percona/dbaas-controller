@@ -956,6 +956,7 @@ func TestVMAgentSpec(t *testing.T) {
 
 func TestGetPXCClusterState(t *testing.T) {
 	// t.Parallel()
+	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
 	if perconaTestOperator != "pxc" {
 		t.Skip("skipping because of environment variable")
 	}
@@ -1104,6 +1105,7 @@ func TestGetPXCClusterState(t *testing.T) {
 
 func TestGetPSMDBClusterState(t *testing.T) {
 	// t.Parallel()
+	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
 	if perconaTestOperator != "psmdb" {
 		t.Skip("skipping because of environment variable")
 	}
