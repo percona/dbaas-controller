@@ -316,7 +316,7 @@ jobs:
       - name: Run tests
         if: steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1'
         run: |
-          export NAMESPACE=steps.setupenv.outputs.namespace
+          export NAMESPACE=${{ steps.setupenv.outputs.namespace }}
           echo $NAMESPACE
           go clean -testcache
           make test-crosscover
