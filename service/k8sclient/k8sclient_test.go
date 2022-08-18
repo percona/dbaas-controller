@@ -813,7 +813,7 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 		var failed, succeeded bool
 		for _, pod := range list.Items {
 			if pod.Name == "hello1" {
-				succeeded = pod.Status.Phase == corev1.PodRunning
+				succeeded = pod.Status.Phase == corev1.PodSucceeded
 				continue
 			}
 			if pod.Name == "hello2" {
