@@ -24,12 +24,13 @@ import (
 	"testing"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	dbaascontroller "github.com/percona-platform/dbaas-controller"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
+
+	dbaascontroller "github.com/percona-platform/dbaas-controller"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
 func TestGetLatestVersion(t *testing.T) {
