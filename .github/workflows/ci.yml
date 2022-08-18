@@ -309,12 +309,14 @@ jobs:
            export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
            make eks-setup-test-namespace NAMESPACE="${NAMESPACE}"
            echo "::set-output name=done::1"
+           echo "::set-output name=namespace::$NAMESPACE"
         env:
            BASE64_KUBECONFIG: ${{secrets.BASE64_KUBECONFIG}}
 
       - name: Run tests
         if: steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1'
         run: |
+          export NAMESPACE=steps.setupenv.outputs.namespace
           echo $NAMESPACE
           go clean -testcache
           make test-crosscover
