@@ -1274,7 +1274,7 @@ func TestCreateVMOperator(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	time.Sleep(30 * time.Second) // Give it some time to deploy
+	time.Sleep(90 * time.Second) // Give it some time to deploy
 	count, err := getDeploymentCount(ctx, client, "vmagent")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
