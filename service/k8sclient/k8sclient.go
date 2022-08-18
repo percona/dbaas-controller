@@ -1868,7 +1868,7 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 	}
 
 	vmagent := vmAgentSpec(params, secretName)
-	return c.kube.Apply(ctx, vmagent.DeepCopyObject())
+	return c.kube.Apply(ctx, vmagent)
 }
 
 // RemoveVMOperator deletes the VM Operator installed when the cluster was registered.
@@ -1891,8 +1891,8 @@ func (c *K8sClient) RemoveVMOperator(ctx context.Context) error {
 	return nil
 }
 
-func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
-	return monitoring.VMAgent{
+func vmAgentSpec(params *PMM, secretName string) *monitoring.VMAgent {
+	return &monitoring.VMAgent{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "VMAgent",
 			APIVersion: "operator.victoriametrics.com/v1beta1",
