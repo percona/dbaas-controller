@@ -33,6 +33,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	goversion "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -704,24 +705,16 @@ func assertListPXCCluster(ctx context.Context, t *testing.T, client *K8sClient, 
 	t.Helper()
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
-	ticker := time.NewTicker(500 * time.Millisecond)
 
 	for {
-		select {
-		case <-timeoutCtx.Done():
-			clusters, _ := client.ListPXCClusters(ctx)
-			t.Log(clusters)
-			printLogs(t, ctx, client, name)
-			t.Errorf("PXC cluster did not get to the right state")
-			return
-		case <-ticker.C:
-			cluster, err := getPXCCluster(ctx, client, name)
-			if !errors.Is(err, ErrNoSuchCluster) {
-				require.NoError(t, err)
-			}
-			if conditionFunc(cluster) {
-				break
-			}
+		time.Sleep(5 * time.Second)
+
+		cluster, err := getPXCCluster(ctx, client, name)
+		if !errors.Is(err, ErrNoSuchCluster) {
+			require.NoError(t, err)
+		}
+		if conditionFunc(cluster) {
+			break
 		}
 	}
 }
@@ -733,21 +726,14 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 	ticker := time.NewTicker(500 * time.Millisecond)
 
 	for {
-		select {
-		case <-timeoutCtx.Done():
-			clusters, _ := client.ListPSMDBClusters(ctx)
-			t.Log(clusters)
-			printLogs(t, ctx, client, name)
-			t.Errorf("PSMDB cluster did not get to the right state")
-			return
-		case <-ticker.C:
-			cluster, err := getPSMDBCluster(ctx, client, name)
-			if !errors.Is(err, ErrNoSuchCluster) {
-				require.NoError(t, err)
-			}
-			if conditionFunc(cluster) {
-				break
-			}
+		time.Sleep(time.Second)
+		cluster, err := getPSMDBCluster(ctx, client, name)
+		spew.Dump(cluster)
+		if !errors.Is(err, ErrNoSuchCluster) {
+			require.NoError(t, err)
+		}
+		if conditionFunc(cluster) {
+			break
 		}
 	}
 }
