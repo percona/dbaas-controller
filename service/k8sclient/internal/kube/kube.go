@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"os"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
@@ -231,6 +232,9 @@ func retrievesMetaFromObject(obj runtime.Object) (namespace, name string, err er
 	}
 	if namespace == "" {
 		namespace = "default"
+		if space := os.Getenv("NAMESPACE"); space != "" {
+			namespace = space
+		}
 	}
 	return
 }
