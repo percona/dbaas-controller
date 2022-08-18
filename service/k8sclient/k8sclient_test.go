@@ -808,7 +808,7 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 			return
 		default:
 		}
-		list, err := client.GetPods(ctx, consumedResourcesTestNamespace, "app.kubernetes.io/name=hello1,app.kubernetes.io/instance=hello2")
+		list, err := client.GetPods(ctx, consumedResourcesTestNamespace)
 		require.NoError(t, err)
 		var failed, succeeded bool
 		for _, pod := range list.Items {
