@@ -22,7 +22,6 @@ import (
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
-	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -33,13 +32,12 @@ import (
 const psmdbOperatorDeploymentName = "percona-server-mongodb-operator"
 
 type PSMDBOperatorService struct {
-	p                    *message.Printer
 	manifestsURLTemplate string
 }
 
 // NewPSMDBOperatorService returns new PSMDBOperatorService instance.
-func NewPSMDBOperatorService(p *message.Printer, url string) *PSMDBOperatorService {
-	return &PSMDBOperatorService{p: p, manifestsURLTemplate: url}
+func NewPSMDBOperatorService(url string) *PSMDBOperatorService {
+	return &PSMDBOperatorService{manifestsURLTemplate: url}
 }
 
 func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *controllerv1beta1.InstallPSMDBOperatorRequest) (*controllerv1beta1.InstallPSMDBOperatorResponse, error) {
