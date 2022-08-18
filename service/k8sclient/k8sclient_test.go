@@ -207,7 +207,7 @@ type pod struct {
 }
 
 func TestK8sClient(t *testing.T) {
-	// perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
+	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
 
 	ctx := app.Context()
 
@@ -299,9 +299,9 @@ func TestK8sClient(t *testing.T) {
 	var pmm *PMM
 	t.Run("PXC", func(t *testing.T) {
 		t.Parallel()
-		// if perconaTestOperator != "pxc" && perconaTestOperator != "" {
-		// 	t.Skip("skipping because of environment variable")
-		// }
+		if perconaTestOperator != "pxc" && perconaTestOperator != "" {
+			t.Skip("skipping because of environment variable")
+		}
 		name := "test-cluster-pxc"
 		_ = client.DeletePXCCluster(ctx, name)
 
@@ -492,9 +492,9 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("Create PXC with HAProxy", func(t *testing.T) {
 		t.Parallel()
-		// if perconaTestOperator != "haproxy-pxc" && perconaTestOperator != "" {
-		// 	t.Skip("skipping because of environment variable")
-		// }
+		if perconaTestOperator != "haproxy-pxc" && perconaTestOperator != "" {
+			t.Skip("skipping because of environment variable")
+		}
 		clusterName := "test-pxc-haproxy"
 		err = client.CreatePXCCluster(ctx, &PXCParams{
 			Name: clusterName,
@@ -540,9 +540,9 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("PSMDB", func(t *testing.T) {
 		t.Parallel()
-		// if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
-		// 	t.Skip("skipping because of environment variable")
-		// }
+		if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
+			t.Skip("skipping because of environment variable")
+		}
 		name := "test-cluster-psmdb"
 		_ = client.DeletePSMDBCluster(ctx, name)
 
