@@ -344,7 +344,7 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	kube, err := kube.NewFromKubeConfigObject(kubeconfig)
+	kube, err := kube.NewFromKubeConfigString(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
