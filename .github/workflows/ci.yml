@@ -94,6 +94,10 @@ jobs:
 
       # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
       # https://minikube.sigs.k8s.io/docs/drivers/none/
+      - name: Configure minikube
+        run: |
+          sudo apt install -y conntrack
+
       - name: Configure minikube with action
         id: minikube
         with:
