@@ -208,8 +208,8 @@ type pod struct {
 
 func TestK8sClient(t *testing.T) {
 	var (
-		pxcImage        = "percona/percona-xtradb-cluster:8.0.20-11.1"
-		pxcUpgradeImage = "percona/percona-xtradb-cluster:8.0.20-11.2"
+		pxcImage        = "percona/percona-xtradb-cluster:8.0.23-14.1"
+		pxcUpgradeImage = "percona/percona-xtradb-cluster:8.0.25-15.1"
 	)
 
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
@@ -384,6 +384,22 @@ func TestK8sClient(t *testing.T) {
 				},
 				{
 					name:       name + "-pxc-0",
+					containers: []string{"pxc", "pmm-client", "pxc-init"},
+				},
+				{
+					name:       name + "-proxysql-1",
+					containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
+				},
+				{
+					name:       name + "-pxc-1",
+					containers: []string{"pxc", "pmm-client", "pxc-init"},
+				},
+				{
+					name:       name + "-proxysql-2",
+					containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
+				},
+				{
+					name:       name + "-pxc-2",
 					containers: []string{"pxc", "pmm-client", "pxc-init"},
 				},
 			}
