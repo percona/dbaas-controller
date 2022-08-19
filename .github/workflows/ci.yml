@@ -14,185 +14,185 @@ on:
 
 jobs:
   test:
-    name: Test
-    timeout-minutes: 30
+    # name: Test
+    # timeout-minutes: 30
 
-    strategy:
-      fail-fast: false
-      matrix:
-        go-version:
-          - 1.18.x
-        kubernetes_version:
-          # latest supported version in minikube (in pare with k8s releases)
-          - ""
-          # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
-          - v1.22.6
-        versions:
-          - {psmdb: "", pxc: ""}
-          - {psmdb: "1.11.0", pxc: "1.10.0"}
-        test_operator: ["pxc", "haproxy-pxc", "psmdb"]
-        build_tags: [""]
-        os: [ubuntu-latest]
-        may-fail: [false]
-        version_service_url: ["https://check.percona.com/versions/v1"]
+    # strategy:
+    #   fail-fast: false
+    #   matrix:
+    #     go-version:
+    #       - 1.18.x
+    #     kubernetes_version:
+    #       # latest supported version in minikube (in pare with k8s releases)
+    #       - ""
+    #       # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
+    #       - v1.22.6
+    #     versions:
+    #       - {psmdb: "", pxc: ""}
+    #       - {psmdb: "1.11.0", pxc: "1.10.0"}
+    #     test_operator: ["pxc", "haproxy-pxc", "psmdb"]
+    #     build_tags: [""]
+    #     os: [ubuntu-latest]
+    #     may-fail: [false]
+    #     version_service_url: ["https://check.percona.com/versions/v1"]
 
-        include:
-          - go-version: 1.18.x
-            kubernetes_version: "" # latest supported version in minikube (in pare with k8s releases)
-            build_tags: ""
-            os: ubuntu-latest
-            may-fail: true
-            version_service_url: "https://check-dev.percona.com/versions/v1"
+    #     include:
+    #       - go-version: 1.18.x
+    #         kubernetes_version: "" # latest supported version in minikube (in pare with k8s releases)
+    #         build_tags: ""
+    #         os: ubuntu-latest
+    #         may-fail: true
+    #         version_service_url: "https://check-dev.percona.com/versions/v1"
 
-    continue-on-error: ${{ matrix.may-fail }}
-    runs-on: ${{ matrix.os }}
+    # continue-on-error: ${{ matrix.may-fail }}
+    # runs-on: ${{ matrix.os }}
 
-    env:
-      # no `-mod=readonly` to test PRs made by @dependabot;
-      # `git diff --exit-code` step below still checks what we need
-      GOFLAGS: -v -tags='${{ matrix.build_tags }}'
-      KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
-      VERSION_SERVICE_URL: ${{ matrix.version_service_url }}
-      PERCONA_TEST_PXC_OPERATOR_VERSION: ${{ matrix.versions.pxc }}
-      PERCONA_TEST_PSMDB_OPERATOR_VERSION: ${{ matrix.versions.psmdb }}
-      PERCONA_TEST_DBAAS_OPERATOR: ${{ matrix.test_operator }}
-      MINIKUBE_IN_STYLE: 1
-      CHANGE_MINIKUBE_NONE_USER: true
+    # env:
+    #   # no `-mod=readonly` to test PRs made by @dependabot;
+    #   # `git diff --exit-code` step below still checks what we need
+    #   GOFLAGS: -v -tags='${{ matrix.build_tags }}'
+    #   KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
+    #   VERSION_SERVICE_URL: ${{ matrix.version_service_url }}
+    #   PERCONA_TEST_PXC_OPERATOR_VERSION: ${{ matrix.versions.pxc }}
+    #   PERCONA_TEST_PSMDB_OPERATOR_VERSION: ${{ matrix.versions.psmdb }}
+    #   PERCONA_TEST_DBAAS_OPERATOR: ${{ matrix.test_operator }}
+    #   MINIKUBE_IN_STYLE: 1
+    #   CHANGE_MINIKUBE_NONE_USER: true
 
-    steps:
-      - name: Set up Go release
-        if: matrix.go-version != 'tip'
-        env:
-          # to avoid error due to `go version` accepting -v flag with an argument since 1.15
-          GOFLAGS: ""
-        uses: percona-platform/setup-go@v2
-        with:
-          go-version: ${{ matrix.go-version }}
+    # steps:
+    #   - name: Set up Go release
+    #     if: matrix.go-version != 'tip'
+    #     env:
+    #       # to avoid error due to `go version` accepting -v flag with an argument since 1.15
+    #       GOFLAGS: ""
+    #     uses: percona-platform/setup-go@v2
+    #     with:
+    #       go-version: ${{ matrix.go-version }}
 
-      - name: Set up Go tip
-        if: matrix.go-version == 'tip'
-        env:
-          # to avoid error due to `go version` accepting -v flag with an argument since 1.15
-          GOFLAGS: ""
-        run: |
-          git clone --depth=1 https://go.googlesource.com/go $HOME/gotip
-          cd $HOME/gotip/src
-          ./make.bash
-          echo "GOROOT=$HOME/gotip" >> $GITHUB_ENV
-          echo "$HOME/gotip/bin" >> $GITHUB_PATH
+    #   - name: Set up Go tip
+    #     if: matrix.go-version == 'tip'
+    #     env:
+    #       # to avoid error due to `go version` accepting -v flag with an argument since 1.15
+    #       GOFLAGS: ""
+    #     run: |
+    #       git clone --depth=1 https://go.googlesource.com/go $HOME/gotip
+    #       cd $HOME/gotip/src
+    #       ./make.bash
+    #       echo "GOROOT=$HOME/gotip" >> $GITHUB_ENV
+    #       echo "$HOME/gotip/bin" >> $GITHUB_PATH
 
-      - name: Set GO_VERSION environment variable
-        env:
-          # to avoid error due to `go version` accepting -v flag with an argument since 1.15
-          GOFLAGS: ""
-        run: |
-          go version
-          echo "GO_VERSION=$(go version)" >> $GITHUB_ENV
+    #   - name: Set GO_VERSION environment variable
+    #     env:
+    #       # to avoid error due to `go version` accepting -v flag with an argument since 1.15
+    #       GOFLAGS: ""
+    #     run: |
+    #       go version
+    #       echo "GO_VERSION=$(go version)" >> $GITHUB_ENV
 
-      - name: Check out code into the Go module directory
-        uses: percona-platform/checkout@v2
+    #   - name: Check out code into the Go module directory
+    #     uses: percona-platform/checkout@v2
 
-      # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
-      # https://minikube.sigs.k8s.io/docs/drivers/none/
-      - name: Configure minikube
-        run: |
-          sudo apt install -y conntrack
+    #   # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
+    #   # https://minikube.sigs.k8s.io/docs/drivers/none/
+    #   - name: Configure minikube
+    #     run: |
+    #       sudo apt install -y conntrack
 
-      - name: Configure minikube with action
-        id: minikube
-        with:
-          kubernetes-version: ${{ matrix.kubernetes_version }}
-          cpus: '2'
-          memory: '5700'
-        uses: percona-platform/setup-minikube@master
+    #   - name: Configure minikube with action
+    #     id: minikube
+    #     with:
+    #       kubernetes-version: ${{ matrix.kubernetes_version }}
+    #       cpus: '2'
+    #       memory: '5700'
+    #     uses: percona-platform/setup-minikube@master
 
-      - name: Enable Go modules cache
-        uses: percona-platform/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-
+    #   - name: Enable Go modules cache
+    #     uses: percona-platform/cache@v2
+    #     with:
+    #       path: ~/go/pkg/mod
+    #       key: ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-${{ hashFiles('**/go.sum') }}
+    #       restore-keys: |
+    #         ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-
 
-      - name: Enable Go build cache
-        uses: percona-platform/cache@v2
-        with:
-          path: ~/.cache/go-build
-          key: ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-${{ hashFiles('**') }}
-          restore-keys: |
-            ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-
-            ${{ matrix.os }}-go-${{ matrix.go-version }}-build-
+    #   - name: Enable Go build cache
+    #     uses: percona-platform/cache@v2
+    #     with:
+    #       path: ~/.cache/go-build
+    #       key: ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-${{ hashFiles('**') }}
+    #       restore-keys: |
+    #         ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-
+    #         ${{ matrix.os }}-go-${{ matrix.go-version }}-build-
 
-      - name: Download Go modules
-        run: go mod download
+    #   - name: Download Go modules
+    #     run: go mod download
 
-      - name: Install tools
-        run: make init
+    #   - name: Install tools
+    #     run: make init
 
-      - name: Initialize CI environment
-        run: make ci-init
+    #   - name: Initialize CI environment
+    #     run: make ci-init
 
-      - name: Start development environment
-        run: |
-          make env-up
-          make env-check
+    #   - name: Start development environment
+    #     run: |
+    #       make env-up
+    #       make env-check
 
-      - name: Run tests
-        run: |
-          go clean -testcache
-          make test-crosscover
+    #   - name: Run tests
+    #     run: |
+    #       go clean -testcache
+    #       make test-crosscover
 
-      - name: Upload coverage results
-        uses: percona-platform/codecov-action@v1
-        with:
-          file: crosscover.out
-          flags: crosscover
-          env_vars: GO_VERSION,KUBERNETES_VERSION
-          fail_ci_if_error: false
+    #   - name: Upload coverage results
+    #     uses: percona-platform/codecov-action@v1
+    #     with:
+    #       file: crosscover.out
+    #       flags: crosscover
+    #       env_vars: GO_VERSION,KUBERNETES_VERSION
+    #       fail_ci_if_error: false
 
-      - name: Collect debugdata
-        if: ${{ failure() }}
-        run: |
-          make collect-debugdata
-          minikube logs --length=100
-          minikube kubectl -- get all
-          minikube kubectl -- describe pods
-          minikube kubectl -- describe pv,pvc
-          minikube kubectl -- get events --sort-by=lastTimestamp
-          minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-xtradb-cluster-operator'
-          minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-xtradb-cluster'
-          minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator'
-          minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb'
+    #   - name: Collect debugdata
+    #     if: ${{ failure() }}
+    #     run: |
+    #       make collect-debugdata
+    #       minikube logs --length=100
+    #       minikube kubectl -- get all
+    #       minikube kubectl -- describe pods
+    #       minikube kubectl -- describe pv,pvc
+    #       minikube kubectl -- get events --sort-by=lastTimestamp
+    #       minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-xtradb-cluster-operator'
+    #       minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-xtradb-cluster'
+    #       minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator'
+    #       minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb'
 
-      - name: Upload debugdata
-        if: ${{ always() }}
-        uses: percona-platform/upload-artifact@v2
-        with:
-          name: debugdata
-          path: ./debugdata
+    #   - name: Upload debugdata
+    #     if: ${{ always() }}
+    #     uses: percona-platform/upload-artifact@v2
+    #     with:
+    #       name: debugdata
+    #       path: ./debugdata
 
-      # - name: Setup tmate session on failure
-      #   if: ${{ failure() }}
-      #   uses: percona-platform/action-tmate@v2
+    #   # - name: Setup tmate session on failure
+    #   #   if: ${{ failure() }}
+    #   #   uses: percona-platform/action-tmate@v2
 
-      - name: Check that there are no source code changes
-        run: |
-          # Break job if any files were changed during its run (code generation, etc), except go.sum.
-          # `go mod tidy` could remove old checksums from that file, and that's okay on CI,
-          # and actually expected for PRs made by @dependabot.
-          # Checksums of actually used modules are checked by previous `go` subcommands.
-          pushd tools && go mod tidy && git checkout go.sum
-          popd        && go mod tidy && git checkout go.sum
-          git diff --exit-code
+    #   - name: Check that there are no source code changes
+    #     run: |
+    #       # Break job if any files were changed during its run (code generation, etc), except go.sum.
+    #       # `go mod tidy` could remove old checksums from that file, and that's okay on CI,
+    #       # and actually expected for PRs made by @dependabot.
+    #       # Checksums of actually used modules are checked by previous `go` subcommands.
+    #       pushd tools && go mod tidy && git checkout go.sum
+    #       popd        && go mod tidy && git checkout go.sum
+    #       git diff --exit-code
 
-      - name: Run debug commands on failure
-        if: ${{ failure() }}
-        run: |
-          env
-          go version
-          go env
-          pwd
-          git status
+    #   - name: Run debug commands on failure
+    #     if: ${{ failure() }}
+    #     run: |
+    #       env
+    #       go version
+    #       go env
+    #       pwd
+    #       git status
 
   test-on-eks:
     name: Test on EKS
