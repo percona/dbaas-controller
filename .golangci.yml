@@ -38,6 +38,7 @@ linters:
     - unused            # too many false positives
     - nlreturn          # too annoying
     - exhaustruct       # too annoying
+    - exhaustivestruct  # too annoying
     - wrapcheck         # we don't wrap errors
 
 issues:

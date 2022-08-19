@@ -94,9 +94,6 @@ type VersionServiceResponse struct {
 
 var errNoVersionsFound error = errors.New("no versions to compare current version with found")
 
-var pxcImage = "percona/percona-xtradb-cluster:8.0.23-14.1"
-var pxcUpgradeImage = "percona/percona-xtradb-cluster:8.0.25-15.1"
-
 func latestRecommended(m map[string]componentVersion) (*goversion.Version, error) {
 	if len(m) == 0 {
 		return nil, errNoVersionsFound
@@ -210,6 +207,11 @@ type pod struct {
 }
 
 func TestK8sClient(t *testing.T) {
+	var (
+		pxcImage        = "percona/percona-xtradb-cluster:8.0.23-14.1"
+		pxcUpgradeImage = "percona/percona-xtradb-cluster:8.0.25-15.1"
+	)
+
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
 
 	ctx := app.Context()
@@ -301,8 +303,8 @@ func TestK8sClient(t *testing.T) {
 
 	var pmm *PMM
 	t.Run("PXC", func(t *testing.T) {
-		t.Parallel()
-		if perconaTestOperator != "pxc" {
+		// t.Parallel()
+		if perconaTestOperator != "pxc" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
 		}
 		name := "test-cluster-pxc"
@@ -495,7 +497,7 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("Create PXC with HAProxy", func(t *testing.T) {
 		t.Parallel()
-		if perconaTestOperator != "haproxy-pxc" {
+		if perconaTestOperator != "haproxy-pxc" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
 		}
 		clusterName := "test-pxc-haproxy"
@@ -543,7 +545,7 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("PSMDB", func(t *testing.T) {
 		t.Parallel()
-		if perconaTestOperator != "psmdb" {
+		if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
 		}
 		name := "test-cluster-psmdb"
@@ -960,7 +962,7 @@ func TestVMAgentSpec(t *testing.T) {
 func TestGetPXCClusterState(t *testing.T) {
 	// t.Parallel()
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
-	if perconaTestOperator != "pxc" {
+	if perconaTestOperator != "pxc" && perconaTestOperator != "" {
 		t.Skip("skipping because of environment variable")
 	}
 	type getClusterStateTestCase struct {
@@ -1109,7 +1111,7 @@ func TestGetPXCClusterState(t *testing.T) {
 func TestGetPSMDBClusterState(t *testing.T) {
 	t.Parallel()
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
-	if perconaTestOperator != "psmdb" {
+	if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
 		t.Skip("skipping because of environment variable")
 	}
 	type getClusterStateTestCase struct {
