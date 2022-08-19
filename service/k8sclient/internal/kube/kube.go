@@ -221,6 +221,9 @@ func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
 		}
 
 		obj, _, err := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(rawObj.Raw, nil, nil)
+		if err != nil {
+			return nil, err
+		}
 		unstructuredMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
 		if err != nil {
 			return nil, err
