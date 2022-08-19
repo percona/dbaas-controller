@@ -26,8 +26,6 @@ import (
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
 
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
@@ -60,10 +58,8 @@ func TestInstallOlmOperator(t *testing.T) {
 	_, err = olms.InstallOLMOperator(ctx, req)
 	assert.NoError(t, err)
 
-	i18nPrinter := message.NewPrinter(language.English)
-
 	DefaultPSMDBOperatorURLTemplate := "https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v%s/deploy/%s"
-	psmdbOperatorService := NewPSMDBOperatorService(i18nPrinter, DefaultPSMDBOperatorURLTemplate)
+	psmdbOperatorService := NewPSMDBOperatorService(DefaultPSMDBOperatorURLTemplate)
 	_, err = psmdbOperatorService.InstallPSMDBOperator(ctx, &controllerv1beta1.InstallPSMDBOperatorRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: string(kubeconfig),
@@ -73,7 +69,7 @@ func TestInstallOlmOperator(t *testing.T) {
 	assert.NoError(t, err)
 
 	DefaultPXCOperatorURLTemplate := "https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/v%s/deploy/%s"
-	pxcOperatorService := NewPXCOperatorService(i18nPrinter, DefaultPXCOperatorURLTemplate)
+	pxcOperatorService := NewPXCOperatorService(DefaultPXCOperatorURLTemplate)
 	_, err = pxcOperatorService.InstallPXCOperator(ctx, &controllerv1beta1.InstallPXCOperatorRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: string(kubeconfig),
