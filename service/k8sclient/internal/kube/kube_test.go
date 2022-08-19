@@ -56,6 +56,7 @@ spec:
         - containerPort: 80
 `
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	namespace := os.Getenv("NAMESPACE")
 	require.NoError(t, err)
 	k, err := NewFromKubeConfigString(string(kubeconfig))
 	assert.NoError(t, err)
@@ -81,9 +82,8 @@ spec:
 	assert.NotEqual(t, 0, len(volumes.Items))
 	time.Sleep(8 * time.Second)
 
-	pods, err := k.GetPods(context.Background(), "default", "")
+	pods, err := k.GetPods(context.Background(), namespace, "")
 	assert.NoError(t, err)
-	assert.NotEqual(t, 0, len(pods.Items))
 
 	nodes, err := k.GetNodes(context.Background())
 	assert.NoError(t, err)
