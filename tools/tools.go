@@ -26,6 +26,7 @@ import (
 	_ "golang.org/x/text/cmd/gotext"
 	_ "golang.org/x/tools/cmd/goimports"
 	_ "mvdan.cc/gofumpt"
+	_ "sigs.k8s.io/controller-tools/cmd/controller-gen"
 )
 
 //go:generate go build -o ../bin/check-license ../.github/check-license.go
