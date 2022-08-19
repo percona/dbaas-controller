@@ -323,8 +323,8 @@ func TestK8sClient(t *testing.T) {
 				DiskSize: "1000000000",
 				Image:    pxcImage,
 				ComputeResources: &ComputeResources{
-					CPUM:        "400m",
-					MemoryBytes: "600M",
+					CPUM:        "600m",
+					MemoryBytes: "1G",
 				},
 			},
 			ProxySQL: &ProxySQL{
