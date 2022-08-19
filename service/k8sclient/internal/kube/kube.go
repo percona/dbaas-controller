@@ -68,13 +68,13 @@ func (g *configGetter) loadFromString() (*clientcmdapi.Config, error) {
 	}
 
 	if config.AuthInfos == nil {
-		config.AuthInfos = map[string]*clientcmdapi.AuthInfo{}
+		config.AuthInfos = make(map[string]*clientcmdapi.AuthInfo)
 	}
 	if config.Clusters == nil {
-		config.Clusters = map[string]*clientcmdapi.Cluster{}
+		config.Clusters = make(map[string]*clientcmdapi.Cluster)
 	}
 	if config.Contexts == nil {
-		config.Contexts = map[string]*clientcmdapi.Context{}
+		config.Contexts = make(map[string]*clientcmdapi.Context)
 	}
 
 	return config, nil
@@ -211,7 +211,7 @@ func (c *Client) ApplyFile(ctx context.Context, fileBytes []byte) error {
 }
 
 func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
-	objs := make([]runtime.Object, 0)
+	objs := []runtime.Object{}
 	decoder := yamlutil.NewYAMLOrJSONDecoder(bytes.NewReader(f), 100)
 	var err error
 	for {
@@ -288,7 +288,7 @@ func (c *Client) GetNodes(ctx context.Context) (*corev1.NodeList, error) {
 
 // GetLogs returns logs for pod
 func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, error) {
-	options := &corev1.PodLogOptions{}
+	options := new(corev1.PodLogOptions)
 	if container != "" {
 		options.Container = container
 	}
