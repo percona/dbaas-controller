@@ -77,9 +77,8 @@ spec:
 	assert.NoError(t, err)
 	assert.NotEqual(t, 0, len(versions))
 
-	volumes, err := k.GetPersistentVolumes(context.Background())
+	_, err = k.GetPersistentVolumes(context.Background())
 	assert.NoError(t, err)
-	assert.NotEqual(t, 0, len(volumes.Items))
 	time.Sleep(8 * time.Second)
 
 	pods, err := k.GetPods(context.Background(), namespace, "")
@@ -95,5 +94,4 @@ spec:
 
 	assert.NoError(t, k.DeleteFile(context.Background(), []byte(deployment)))
 	time.Sleep(time.Second)
-
 }
