@@ -10,7 +10,6 @@ linters-settings:
       - errors
       # use "github.com/golang/protobuf/proto" instead
       - github.com/gogo/protobuf/proto
-      # Use service/k8sclient/internal/... instead
       - github.com/percona/percona-server-mongodb-operator
       - github.com/percona/percona-xtradb-cluster-operator
 

@@ -45,6 +45,7 @@ const (
 	defaultAPIsURIPath = "/apis"
 )
 
+// configGetter stores kubeconfig string to convert it to the final object
 type configGetter struct {
 	kubeconfig string
 }
@@ -54,26 +55,16 @@ type Client struct {
 	restConfig *rest.Config
 }
 
+// NewConfigGetter creates a new configGetter struct
 func NewConfigGetter(kubeconfig string) *configGetter {
 	return &configGetter{kubeconfig: kubeconfig}
 }
 
-// LoadFromString takes a kubeconfig and deserializes the contents into Config object.
+// loadFromString takes a kubeconfig and deserializes the contents into Config object.
 func (g *configGetter) loadFromString() (*clientcmdapi.Config, error) {
 	config, err := clientcmd.Load([]byte(g.kubeconfig))
 	if err != nil {
 		return nil, err
-	}
-
-	// set LocationOfOrigin on every Cluster, User, and Context
-	for key, obj := range config.AuthInfos {
-		config.AuthInfos[key] = obj
-	}
-	for key, obj := range config.Clusters {
-		config.Clusters[key] = obj
-	}
-	for key, obj := range config.Contexts {
-		config.Contexts[key] = obj
 	}
 
 	if config.AuthInfos == nil {
@@ -89,6 +80,10 @@ func (g *configGetter) loadFromString() (*clientcmdapi.Config, error) {
 	return config, nil
 }
 
+// NewFromIncluster returns a client object which uses the service account
+// kubernetes gives to pods. It's intended for clients that expect to be
+// running inside a pod running on kubernetes. It will return ErrNotInCluster
+// if called from a process not running in a kubernetes environment.
 func NewFromIncluster() (*Client, error) {
 	c, err := rest.InClusterConfig()
 	if err != nil {
@@ -101,7 +96,9 @@ func NewFromIncluster() (*Client, error) {
 	return &Client{clientset: clientset, restConfig: c}, nil
 }
 
-func NewFromKubeConfigObject(kubeconfig string) (*Client, error) {
+// NewFromKubeConfigString creates a new client for the given config string.
+// It's intended for clients that expect to be running outside of a cluster
+func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	config, err := clientcmd.BuildConfigFromKubeconfigGetter("", NewConfigGetter(kubeconfig).loadFromString)
 	if err != nil {
 		return nil, err
@@ -127,6 +124,7 @@ func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) 
 	return rest.RESTClientFor(cfg)
 }
 
+// Delete deletes object from the k8s cluster
 func (c *Client) Delete(ctx context.Context, obj runtime.Object) error {
 	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
 	if err != nil {
@@ -153,6 +151,7 @@ func (c *Client) Delete(ctx context.Context, obj runtime.Object) error {
 	return err
 }
 
+// Apply applies object against the k8s cluster
 func (c *Client) Apply(ctx context.Context, obj runtime.Object) error {
 	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
 	if err != nil {
@@ -179,6 +178,8 @@ func (c *Client) Apply(ctx context.Context, obj runtime.Object) error {
 	return err
 }
 
+// DeleteFile accepts manifest file contents parses into []runtime.Object
+// and deletes them from the cluster
 func (c *Client) DeleteFile(ctx context.Context, fileBytes []byte) error {
 	objs, err := c.getObjects(fileBytes)
 	if err != nil {
@@ -193,6 +194,8 @@ func (c *Client) DeleteFile(ctx context.Context, fileBytes []byte) error {
 	return nil
 }
 
+// ApplyFile accepts manifest file contents, parses into []runtime.Object
+// and applies them against the cluster
 func (c *Client) ApplyFile(ctx context.Context, fileBytes []byte) error {
 	objs, err := c.getObjects(fileBytes)
 	if err != nil {
@@ -205,6 +208,106 @@ func (c *Client) ApplyFile(ctx context.Context, fileBytes []byte) error {
 		}
 	}
 	return nil
+}
+
+func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
+	objs := make([]runtime.Object, 0)
+	decoder := yamlutil.NewYAMLOrJSONDecoder(bytes.NewReader(f), 100)
+	var err error
+	for {
+		var rawObj runtime.RawExtension
+		if err = decoder.Decode(&rawObj); err != nil {
+			break
+		}
+
+		obj, _, err := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(rawObj.Raw, nil, nil)
+		unstructuredMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		if err != nil {
+			return nil, err
+		}
+
+		objs = append(objs, &unstructured.Unstructured{Object: unstructuredMap})
+	}
+
+	return objs, nil
+}
+
+// GetStorageClasses returns all storage classes available in the cluster
+func (c *Client) GetStorageClasses(ctx context.Context) (*v1.StorageClassList, error) {
+	return c.clientset.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
+}
+
+// GetSecret returns k8s secret by provided name
+func (c *Client) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
+	namespace := "default"
+	if space := os.Getenv("NAMESPACE"); space != "" {
+		namespace = space
+	}
+
+	return c.clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
+// GetAPIVersions returns apiversions
+func (c *Client) GetAPIVersions(ctx context.Context) ([]string, error) {
+	var versions []string
+	groupList, err := c.clientset.Discovery().ServerGroups()
+	if err != nil {
+		return versions, err
+	}
+	versions = metav1.ExtractGroupVersions(groupList)
+	return versions, nil
+}
+
+// GetPersistentVolumes returns Persistent Volumes avaiable in the cluster
+func (c *Client) GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error) {
+	return c.clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
+}
+
+// GetPods returns list of pods
+func (c *Client) GetPods(ctx context.Context, namespace, labelSelector string) (*corev1.PodList, error) {
+	options := metav1.ListOptions{}
+	if labelSelector != "" {
+		parsed, err := metav1.ParseToLabelSelector(labelSelector)
+		if err != nil {
+			return nil, err
+		}
+		selector, err := parsed.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		options.LabelSelector = string(selector)
+		options.LabelSelector = labelSelector
+	}
+	return c.clientset.CoreV1().Pods(namespace).List(ctx, options)
+}
+
+// GetNodes returns list of nodes
+func (c *Client) GetNodes(ctx context.Context) (*corev1.NodeList, error) {
+	return c.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+}
+
+// GetLogs returns logs for pod
+func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, error) {
+	options := &corev1.PodLogOptions{}
+	if container != "" {
+		options.Container = container
+	}
+	buf := new(bytes.Buffer)
+	namespace := "default"
+	if space := os.Getenv("NAMESPACE"); space != "" {
+		namespace = space
+	}
+
+	req := c.clientset.CoreV1().Pods(namespace).GetLogs(pod, options)
+	podLogs, err := req.Stream(ctx)
+	if err != nil {
+		return buf.String(), err
+	}
+	_, err = io.Copy(buf, podLogs)
+	if err != nil {
+		return buf.String(), err
+	}
+	return buf.String(), nil
 }
 
 func retrievesMetaFromObject(obj runtime.Object) (namespace, name string, err error) {
@@ -248,97 +351,4 @@ func deleteObject(helper *resource.Helper, namespace, name string) error {
 		}
 	}
 	return nil
-}
-
-func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
-	objs := make([]runtime.Object, 0)
-	decoder := yamlutil.NewYAMLOrJSONDecoder(bytes.NewReader(f), 100)
-	var err error
-	for {
-		var rawObj runtime.RawExtension
-		if err = decoder.Decode(&rawObj); err != nil {
-			break
-		}
-
-		obj, _, err := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(rawObj.Raw, nil, nil)
-		unstructuredMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
-		if err != nil {
-			return nil, err
-		}
-
-		objs = append(objs, &unstructured.Unstructured{Object: unstructuredMap})
-	}
-
-	return objs, nil
-}
-
-func (c *Client) GetStorageClasses(ctx context.Context) (*v1.StorageClassList, error) {
-	return c.clientset.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
-}
-
-func (c *Client) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
-	namespace := "default"
-	if space := os.Getenv("NAMESPACE"); space != "" {
-		namespace = space
-	}
-
-	return c.clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
-}
-
-func (c *Client) GetAPIVersions(ctx context.Context) ([]string, error) {
-	var versions []string
-	groupList, err := c.clientset.Discovery().ServerGroups()
-	if err != nil {
-		return versions, err
-	}
-	versions = metav1.ExtractGroupVersions(groupList)
-	return versions, nil
-}
-
-func (c *Client) GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error) {
-	return c.clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
-}
-
-func (c *Client) GetPods(ctx context.Context, namespace, labelSelector string) (*corev1.PodList, error) {
-	options := metav1.ListOptions{}
-	if labelSelector != "" {
-		parsed, err := metav1.ParseToLabelSelector(labelSelector)
-		if err != nil {
-			return nil, err
-		}
-		selector, err := parsed.Marshal()
-		if err != nil {
-			return nil, err
-		}
-		options.LabelSelector = string(selector)
-		options.LabelSelector = labelSelector
-	}
-	return c.clientset.CoreV1().Pods(namespace).List(ctx, options)
-}
-
-func (c *Client) GetNodes(ctx context.Context) (*corev1.NodeList, error) {
-	return c.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-}
-
-func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, error) {
-	options := &corev1.PodLogOptions{}
-	if container != "" {
-		options.Container = container
-	}
-	buf := new(bytes.Buffer)
-	namespace := "default"
-	if space := os.Getenv("NAMESPACE"); space != "" {
-		namespace = space
-	}
-
-	req := c.clientset.CoreV1().Pods(namespace).GetLogs(pod, options)
-	podLogs, err := req.Stream(ctx)
-	if err != nil {
-		return buf.String(), err
-	}
-	_, err = io.Copy(buf, podLogs)
-	if err != nil {
-		return buf.String(), err
-	}
-	return buf.String(), nil
 }
