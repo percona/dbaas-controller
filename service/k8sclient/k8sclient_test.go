@@ -94,6 +94,9 @@ type VersionServiceResponse struct {
 
 var errNoVersionsFound error = errors.New("no versions to compare current version with found")
 
+var pxcImage = "percona/percona-xtradb-cluster:8.0.23-14.1"
+var pxcUpgradeImage = "percona/percona-xtradb-cluster:8.0.25-15.1"
+
 func latestRecommended(m map[string]componentVersion) (*goversion.Version, error) {
 	if len(m) == 0 {
 		return nil, errNoVersionsFound
@@ -316,7 +319,7 @@ func TestK8sClient(t *testing.T) {
 			Size: 1,
 			PXC: &PXC{
 				DiskSize: "1000000000",
-				Image:    "percona/percona-xtradb-cluster:8.0.20-11.1",
+				Image:    pxcImage,
 				ComputeResources: &ComputeResources{
 					CPUM:        "400m",
 					MemoryBytes: "600M",
@@ -433,7 +436,7 @@ func TestK8sClient(t *testing.T) {
 				Size: 3,
 				PXC: &PXC{
 					DiskSize: "1000000000",
-					Image:    "percona/percona-xtradb-cluster:8.0.25-15.1",
+					Image:    pxcUpgradeImage,
 				},
 				ProxySQL:          &ProxySQL{DiskSize: "1000000000"},
 				PMM:               pmm,
@@ -452,7 +455,7 @@ func TestK8sClient(t *testing.T) {
 
 			cluster, err := getPXCCluster(ctx, client, name)
 			require.NoError(t, err)
-			assert.Equal(t, "percona/percona-xtradb-cluster:8.0.25-15.1", cluster.PXC.Image)
+			assert.Equal(t, pxcUpgradeImage, cluster.PXC.Image)
 		})
 
 		err = client.RestartPXCCluster(ctx, name)
@@ -1104,7 +1107,7 @@ func TestGetPXCClusterState(t *testing.T) {
 }
 
 func TestGetPSMDBClusterState(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
 	if perconaTestOperator != "psmdb" {
 		t.Skip("skipping because of environment variable")
