@@ -208,8 +208,8 @@ type pod struct {
 
 func TestK8sClient(t *testing.T) {
 	var (
-		pxcImage        = "percona/percona-xtradb-cluster:8.0.23-14.1"
-		pxcUpgradeImage = "percona/percona-xtradb-cluster:8.0.25-15.1"
+		pxcImage        = "percona/percona-xtradb-cluster:8.0.20-11.1"
+		pxcUpgradeImage = "percona/percona-xtradb-cluster:8.0.20-11.2"
 	)
 
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
@@ -303,7 +303,7 @@ func TestK8sClient(t *testing.T) {
 
 	var pmm *PMM
 	t.Run("PXC", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 		if perconaTestOperator != "pxc" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
 		}
@@ -960,7 +960,7 @@ func TestVMAgentSpec(t *testing.T) {
 }
 
 func TestGetPXCClusterState(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
 	if perconaTestOperator != "pxc" && perconaTestOperator != "" {
 		t.Skip("skipping because of environment variable")
@@ -1095,7 +1095,10 @@ func TestGetPXCClusterState(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	c, _ := New(ctx, "")
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+	c, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
 	for i, test := range testCases {
 		tt := test
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
@@ -1244,7 +1247,11 @@ func TestGetPSMDBClusterState(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	c, _ := New(ctx, "")
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+
+	c, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
 	for i, test := range testCases {
 		tt := test
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
