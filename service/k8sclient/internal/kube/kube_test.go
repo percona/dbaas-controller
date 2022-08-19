@@ -29,6 +29,6 @@ import (
 func TestKubeClient(t *testing.T) {
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
 	require.NoError(t, err)
-	_, err = NewFromKubeConfigObject(string(kubeconfig))
+	_, err = NewFromKubeConfigString(string(kubeconfig))
 	assert.NoError(t, err)
 }

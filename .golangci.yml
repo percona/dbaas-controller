@@ -37,7 +37,7 @@ linters:
     - wsl               # too annoying
     - unused            # too many false positives
     - nlreturn          # too annoying
-    - exhaustivestruct  # too annoying
+    - exhaustruct       # too annoying
     - wrapcheck         # we don't wrap errors
 
 issues:

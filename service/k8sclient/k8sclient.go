@@ -302,7 +302,7 @@ func init() {
 		return
 	}
 
-	v, err := goversion.NewVersion(pmmversion.PMMVersion)
+	v, err := goversion.NewVersion(pmmversion.PMMVersion) // nolint: varnamelen
 	if err != nil {
 		logger.Get(context.Background()).Warnf("failed to decide what version of pmm-client to use: %s", err)
 		logger.Get(context.Background()).Warnf("Using %q for pmm client image", pmmClientImage)
@@ -386,7 +386,7 @@ func (c *K8sClient) ListPXCClusters(ctx context.Context) ([]PXCCluster, error) {
 
 // CreateSecret creates secret resource to use as credential source for clusters.
 func (c *K8sClient) CreateSecret(ctx context.Context, secretName string, data map[string][]byte) error {
-	secret := &corev1.Secret{
+	secret := &corev1.Secret{ //nolint: exhaustruct
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: k8sAPIVersion,
 			Kind:       k8sMetaKindSecret,
@@ -1650,6 +1650,7 @@ func (c *K8sClient) GetConsumedCPUAndMemory(ctx context.Context, namespace strin
 
 // GetConsumedDiskBytes returns consumed bytes. The strategy differs based on k8s cluster type.
 func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType KubernetesClusterType, volumes *corev1.PersistentVolumeList) (consumedBytes uint64, err error) {
+	//nolint: cyclop
 	switch clusterType {
 	case MinikubeClusterType:
 		nodes, err := c.getWorkerNodes(ctx)
