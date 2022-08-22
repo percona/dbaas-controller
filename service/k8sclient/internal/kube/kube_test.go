@@ -24,8 +24,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 func TestKubeClient(t *testing.T) {
@@ -94,4 +97,34 @@ spec:
 
 	assert.NoError(t, k.DeleteFile(context.Background(), []byte(deployment)))
 	time.Sleep(time.Second)
+}
+
+func TestInCluster(t *testing.T) {
+	_, err := NewFromIncluster()
+	require.Error(t, err)
+}
+
+func TestConfigGetter(t *testing.T) {
+	g := NewConfigGetter("")
+	c, err := g.loadFromString()
+	require.NoError(t, err)
+	expected := &clientcmdapi.Config{
+		Preferences: clientcmdapi.Preferences{
+			Extensions: make(map[string]runtime.Object),
+		},
+		AuthInfos:  make(map[string]*clientcmdapi.AuthInfo),
+		Clusters:   make(map[string]*clientcmdapi.Cluster),
+		Contexts:   make(map[string]*clientcmdapi.Context),
+		Extensions: make(map[string]runtime.Object),
+	}
+	require.Equal(t, expected, c)
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+	g = NewConfigGetter(string(kubeconfig))
+	c, err = g.loadFromString()
+	spew.Dump(c)
+	require.NoError(t, err)
+	assert.NotEqual(t, 0, len(c.AuthInfos))
+	assert.NotEqual(t, 0, len(c.Clusters))
+	assert.NotEqual(t, 0, len(c.Contexts))
 }
