@@ -1282,6 +1282,11 @@ func TestGetPSMDBClusterState(t *testing.T) {
 
 //nolint:paralleltest
 func TestCreateVMOperator(t *testing.T) {
+	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
+	if perconaTestOperator != "haproxy-pxc" {
+		t.Skip("skipping because of environment variable")
+	}
+
 	ctx := app.Context()
 
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
