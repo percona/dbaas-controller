@@ -99,11 +99,13 @@ spec:
 }
 
 func TestInCluster(t *testing.T) {
+	t.Parallel()
 	_, err := NewFromIncluster()
 	require.Error(t, err)
 }
 
 func TestConfigGetter(t *testing.T) {
+	t.Parallel()
 	g := NewConfigGetter("")
 	c, err := g.loadFromString()
 	require.NoError(t, err)
