@@ -26,6 +26,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -127,4 +129,37 @@ func TestConfigGetter(t *testing.T) {
 	assert.NotEqual(t, 0, len(c.AuthInfos))
 	assert.NotEqual(t, 0, len(c.Clusters))
 	assert.NotEqual(t, 0, len(c.Contexts))
+}
+
+func TestGetSecret(t *testing.T) {
+	t.Parallel()
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+	k, err := NewFromKubeConfigString(string(kubeconfig))
+	require.NoError(t, err)
+	secret := &corev1.Secret{ //nolint: exhaustruct
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "supersecret",
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"username": []byte("hello"),
+			"password": []byte("pa$$w0rd"),
+		},
+	}
+	err = k.Apply(context.Background(), secret)
+	assert.NoError(t, err)
+
+	s, err := k.GetSecret(context.Background(), "supersecret")
+	assert.NoError(t, err)
+	assert.Equal(t, secret.Data["username"], s.Data["username"])
+	assert.Equal(t, secret.Data["password"], s.Data["password"])
+
+	err = k.Delete(context.Background(), secret)
+	assert.NoError(t, err)
+
 }
