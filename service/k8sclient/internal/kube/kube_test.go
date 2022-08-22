@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -122,7 +121,6 @@ func TestConfigGetter(t *testing.T) {
 	require.NoError(t, err)
 	g = NewConfigGetter(string(kubeconfig))
 	c, err = g.loadFromString()
-	spew.Dump(c)
 	require.NoError(t, err)
 	assert.NotEqual(t, 0, len(c.AuthInfos))
 	assert.NotEqual(t, 0, len(c.Clusters))
