@@ -206,7 +206,7 @@ type pod struct {
 }
 
 func TestPSMDBCluster(t *testing.T) {
-	runPSMDBTests(t, "1.11.0")
+	runPSMDBTests(t, "1.12.0")
 	// Not working on CI.
 	// runPSMDBTests(t, "1.12.0")
 }
