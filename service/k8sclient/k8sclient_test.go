@@ -1278,8 +1278,8 @@ func TestGetPSMDBClusterState(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest
 func TestCreateVMOperator(t *testing.T) {
+	t.Parallel()
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
 	if perconaTestOperator != "haproxy-pxc" && perconaTestOperator != "" {
 		t.Skip("skipping because of environment variable")
@@ -1342,7 +1342,7 @@ func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (in
 func printLogs(t *testing.T, ctx context.Context, client *K8sClient, name string) {
 	t.Helper()
 
-	pods, err := client.GetPods(ctx, "", "app.kubernetes.io/instance="+name)
+	pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+name)
 	require.NoError(t, err)
 
 	for _, ppod := range pods.Items {
