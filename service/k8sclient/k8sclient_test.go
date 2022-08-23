@@ -303,7 +303,7 @@ func TestK8sClient(t *testing.T) {
 	var pmm *PMM
 	t.Run("PXC", func(t *testing.T) {
 		t.Parallel()
-		if perconaTestOperator != "pxc" {
+		if perconaTestOperator != "pxc" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
 		}
 		name := "test-cluster-pxc"
@@ -512,7 +512,7 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("Create PXC with HAProxy", func(t *testing.T) {
 		t.Parallel()
-		if perconaTestOperator != "haproxy-pxc" {
+		if perconaTestOperator != "haproxy-pxc" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
 		}
 		clusterName := "test-pxc-haproxy"
@@ -560,7 +560,7 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("PSMDB", func(t *testing.T) {
 		t.Parallel()
-		if perconaTestOperator != "psmdb" {
+		if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
 		}
 		name := "test-cluster-psmdb"
@@ -976,7 +976,7 @@ func TestVMAgentSpec(t *testing.T) {
 func TestGetPXCClusterState(t *testing.T) {
 	t.Parallel()
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
-	if perconaTestOperator != "pxc" {
+	if perconaTestOperator != "pxc" && perconaTestOperator != "" {
 		t.Skip("skipping because of environment variable")
 	}
 	type getClusterStateTestCase struct {
@@ -1128,7 +1128,7 @@ func TestGetPXCClusterState(t *testing.T) {
 func TestGetPSMDBClusterState(t *testing.T) {
 	t.Parallel()
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
-	if perconaTestOperator != "psmdb" {
+	if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
 		t.Skip("skipping because of environment variable")
 	}
 	type getClusterStateTestCase struct {
@@ -1281,7 +1281,7 @@ func TestGetPSMDBClusterState(t *testing.T) {
 //nolint:paralleltest
 func TestCreateVMOperator(t *testing.T) {
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
-	if perconaTestOperator != "haproxy-pxc" {
+	if perconaTestOperator != "haproxy-pxc" && perconaTestOperator != "" {
 		t.Skip("skipping because of environment variable")
 	}
 
