@@ -30,13 +30,13 @@ import (
 
 	"github.com/AlekSi/pointer"
 	goversion "github.com/hashicorp/go-version"
-	"github.com/imdario/mergo"
 	pmmversion "github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/imdario/mergo"
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
@@ -474,17 +474,19 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 			AllowUnsafeConfig: true,
 			SecretsName:       secretName,
 
-			PXC: &pxc.PodSpec{
-				Size:            &params.Size,
-				Resources:       c.setComputeResources(params.PXC.ComputeResources),
-				Image:           pxcImage,
-				ImagePullPolicy: pullPolicy,
-				VolumeSpec:      c.volumeSpec(params.PXC.DiskSize),
-				Affinity: &pxc.PodAffinity{
-					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
-				},
-				PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
-					MaxUnavailable: pointer.ToInt(1),
+			PXC: &pxc.PXCSpec{
+				PodSpec: &pxc.PodSpec{
+					Size:            &params.Size,
+					Resources:       c.setComputeResources(params.PXC.ComputeResources),
+					Image:           pxcImage,
+					ImagePullPolicy: pullPolicy,
+					VolumeSpec:      c.volumeSpec(params.PXC.DiskSize),
+					Affinity: &pxc.PodAffinity{
+						TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
+					},
+					PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
+						MaxUnavailable: pointer.ToInt(1),
+					},
 				},
 			},
 
@@ -510,12 +512,12 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 			},
 		},
 	}
-	bytes, err := ioutil.ReadAll(pxcCRFile)
+	bytes, err := ioutil.ReadFile(pxcCRFile)
 	if err != nil {
 		return err
 	}
 	crSpec := new(pxc.PerconaXtraDBCluster)
-	err := yaml.Unmarshal(bytes, crSpec)
+	err = yaml.Unmarshal(bytes, crSpec)
 	if err != nil {
 		return err
 	}
@@ -1859,8 +1861,10 @@ func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVers
 		clusterPatch := &pxc.PerconaXtraDBCluster{
 			Spec: &pxc.PerconaXtraDBClusterSpec{
 				CRVersion: newVersion,
-				PXC: &pxc.PodSpec{
-					Image: strings.Replace(cluster.Spec.PXC.Image, oldVersion, newVersion, 1),
+				PXC: &pxc.PXCSpec{
+					PodSpec: &pxc.PodSpec{
+						Image: strings.Replace(cluster.Spec.PXC.Image, oldVersion, newVersion, 1),
+					},
 				},
 				Backup: &pxc.PXCScheduledBackup{
 					Image: strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1),
