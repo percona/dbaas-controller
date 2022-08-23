@@ -914,7 +914,7 @@ func TestVMAgentSpec(t *testing.T) {
   "kind": "VMAgent",
   "apiVersion": "operator.victoriametrics.com/v1beta1",
   "metadata": {
-    "name": "pmm-vmagent-rws-basic-auth",
+    "name": "pmm-vmagent-rws-basic-auth"
   },
   "spec": {
     "serviceScrapeNamespaceSelector": {},
