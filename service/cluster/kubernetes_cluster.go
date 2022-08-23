@@ -33,7 +33,7 @@ type KubernetesClusterService struct{}
 
 // NewKubernetesClusterService returns new KubernetesClusterService instance.
 func NewKubernetesClusterService() *KubernetesClusterService {
-	return &KubernetesClusterService{}
+	return new(KubernetesClusterService)
 }
 
 // CheckKubernetesClusterConnection checks connection with kubernetes cluster.
