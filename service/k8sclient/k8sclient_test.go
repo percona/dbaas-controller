@@ -206,7 +206,7 @@ type pod struct {
 }
 
 func TestPSMDBCluster(t *testing.T) {
-	runPSMDBTests(t, "1.10.0")
+	runPSMDBTests(t, "1.11.0")
 	runPSMDBTests(t, "1.12.0")
 }
 
