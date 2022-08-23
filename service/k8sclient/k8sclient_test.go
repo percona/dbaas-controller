@@ -853,7 +853,7 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 }
 
 func TestGetAllClusterResources(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	ctx := app.Context()
 
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -909,7 +909,7 @@ func TestGetAllClusterResources(t *testing.T) {
 }
 
 func TestVMAgentSpec(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	expected := `{
   "kind": "VMAgent",
   "apiVersion": "operator.victoriametrics.com/v1beta1",
@@ -1281,7 +1281,7 @@ func TestGetPSMDBClusterState(t *testing.T) {
 func TestCreateVMOperator(t *testing.T) {
 	t.Parallel()
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
-	if perconaTestOperator != "haproxy-pxc" && perconaTestOperator != "" {
+	if perconaTestOperator != "" {
 		t.Skip("skipping because of environment variable")
 	}
 
