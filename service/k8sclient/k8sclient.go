@@ -30,13 +30,13 @@ import (
 
 	"github.com/AlekSi/pointer"
 	goversion "github.com/hashicorp/go-version"
+	"github.com/imdario/mergo"
 	pmmversion "github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/imdario/mergo"
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
@@ -91,8 +91,8 @@ const (
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
 	pullPolicy              = common.PullIfNotPresent
-	pxcCRFile               = "/srv/dbaas/pxc.cr.yml"
-	psmdbCRFile             = "/srv/dbaas/psmdb.cr.yml"
+	pxcCRFile               = "/srv/dbaas/crs/pxc.cr.yml"
+	psmdbCRFile             = "/srv/dbaas/crs/psmdb.cr.yml"
 )
 
 // KubernetesClusterType represents kubernetes cluster type(eg: EKS, Minikube).
@@ -513,20 +513,23 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 		},
 	}
 	bytes, err := ioutil.ReadFile(pxcCRFile)
-	if err != nil {
-		return err
+	// Ignore error if we failed to open cr file
+	if err == nil {
+		crSpec := new(pxc.PerconaXtraDBCluster)
+		err = yaml.Unmarshal(bytes, crSpec)
+		if err != nil {
+			return err
+		}
+		if err := mergo.Merge(res, crSpec, mergo.WithOverride); err != nil {
+			return err
+		}
+		res.ObjectMeta.Name = params.Name
+		res.Spec.PXC.PodSpec.Size = &params.Size
+		res.Spec.PXC.PodSpec.Resources = c.setComputeResources(params.PXC.ComputeResources)
+		res.Spec.PXC.PodSpec.VolumeSpec = c.volumeSpec(params.PXC.DiskSize)
+		res.Spec.Backup.Storages[storageName].Volume = c.volumeSpec(params.PXC.DiskSize)
 	}
-	crSpec := new(pxc.PerconaXtraDBCluster)
-	err = yaml.Unmarshal(bytes, crSpec)
-	if err != nil {
-		return err
-	}
-	if err := mergo.Merge(res, crSpec, mergo.WithOverride); err != nil {
-		return err
-	}
-	res.ObjectMeta.Name = params.Name
-	res.Spec.PXC.Size = &params.Size
-	res.Spec.PXC.VolumeSpec = c.volumeSpec(params.PXC.DiskSize)
+
 	if params.PMM != nil {
 		res.Spec.PMM = &pxc.PMMSpec{
 			Enabled:         true,
