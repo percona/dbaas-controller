@@ -1211,7 +1211,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 		return nil, errors.Wrap(err, "couldn't get percona server MongoDB clusters")
 	}
 
-	res := make([]PSMDBCluster, 0)
+	res := []PSMDBCluster{}
 
 	crVersion, err := getCRVersion(buf)
 	if err != nil {
