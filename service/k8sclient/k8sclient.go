@@ -30,7 +30,6 @@ import (
 
 	"github.com/AlekSi/pointer"
 	goversion "github.com/hashicorp/go-version"
-	"github.com/hashicorp/go-version"
 	pmmversion "github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
@@ -319,6 +318,8 @@ var (
 	// ErrNotFound should be returned when referenced resource does not exist
 	// inside Kubernetes cluster.
 	ErrNotFound error = errors.New("resource was not found in Kubernetes cluster")
+	// v112 is used to select the structure we use to call kubectl depending on the version number.
+	v112, _ = goversion.NewVersion("1.12.0")
 )
 
 var pmmClientImage string
@@ -980,7 +981,6 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return err
 	}
 
-	v1_11_99, _ := version.NewVersion("1.11.99")
 	psmdbOperatorVersion, err := goversion.NewVersion(extra.operators.PsmdbOperatorVersion)
 	if err != nil {
 		return errors.Wrap(err, "cannot get the PSMDB operator version")
@@ -1002,7 +1002,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	var res interface{}
 
 	switch {
-	case !psmdbOperatorVersion.LessThan(v1_11_99):
+	case psmdbOperatorVersion.GreaterThanOrEqual(v112):
 		res = c.makeReq112Plus(params, extra)
 	default:
 		res = c.makeReq(params, extra)
@@ -1213,20 +1213,18 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 		return nil, errors.Wrap(err, "cannot determine the CR version in list PSMDB clusters call")
 	}
 
-	v112, _ := goversion.NewVersion("1.11.99")
-
 	res := make([]PSMDBCluster, 0)
 
 	switch {
 	case crVersion == nil: // empty list from kubectl get.
 		return res, nil
-	case !crVersion.LessThan(v112):
+	case crVersion.GreaterThanOrEqual(v112):
 		res, err = c.buildPSMDBDBList112(ctx, buf)
 	default:
 		res, err = c.buildPSMDBDBList110(ctx, buf)
 	}
 
-	return res, nil
+	return res, err
 }
 
 func (c *K8sClient) buildPSMDBDBList110(ctx context.Context, buf []byte) ([]PSMDBCluster, error) {
