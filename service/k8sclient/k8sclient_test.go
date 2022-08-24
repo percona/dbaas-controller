@@ -245,7 +245,11 @@ func TestK8sClient(t *testing.T) {
 	pxcVersion := pxcOperator.String()
 	if value := os.Getenv("PERCONA_TEST_PXC_OPERATOR_VERSION"); value != "" {
 		pxcVersion = value
-		pxcOperator, _ = goversion.NewVersion(value)
+		// Keep this value for the future to not to forget to update the pxcOperator variable
+		// with the version from the environment. Currently we don't have different structures
+		// for different operator versions like PSMDB but we might need them. If this value is
+		// not updated here, test migth fail because the pxcVersion will be different to pxcOperator.String().
+		pxcOperator, _ = goversion.NewVersion(value) //nolint:staticcheck
 	}
 	psmdbVersion := psmdbOperator.String()
 	if value := os.Getenv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); value != "" {
