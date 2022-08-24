@@ -43,6 +43,7 @@ import (
 const (
 	defaultAPIURIPath  = "/api"
 	defaultAPIsURIPath = "/apis"
+	defaultBurstLimit  = 300
 )
 
 // configGetter stores kubeconfig string to convert it to the final object
@@ -103,8 +104,7 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	config.QPS = 350
-	config.Burst = 500
+	config.Burst = defaultBurstLimit
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
