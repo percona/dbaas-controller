@@ -47,6 +47,30 @@ func TestInstallOlmOperator(t *testing.T) {
 
 	ctx := context.Background()
 
+	t.Cleanup(func() {
+		// Cleanup the cluster
+		req := &controllerv1beta1.InstallOLMOperatorRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: string(kubeconfig),
+			},
+		}
+		client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+		assert.NoError(t, err)
+		defer client.Cleanup() //nolint:errcheck
+
+		files := []string{
+			"deploy/olm/pxc/percona-xtradb-cluster-operator.yaml",
+			"deploy/olm/psmdb/percona-server-mongodb-operator.yaml",
+			"deploy/olm/crds.yaml",
+		}
+
+		for _, file := range files {
+			t.Logf("deleting %q\n", file)
+			yamlFile, _ := dbaascontroller.DeployDir.ReadFile(file)
+			err := client.Delete(ctx, yamlFile)
+			assert.NoError(t, err)
+		}
+	})
 	req := &controllerv1beta1.InstallOLMOperatorRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: string(kubeconfig),
