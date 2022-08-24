@@ -1213,7 +1213,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 		return nil, errors.Wrap(err, "cannot determine the CR version in list PSMDB clusters call")
 	}
 
-	res := make([]PSMDBCluster, 0)
+	res := []PSMDBCluster{}
 
 	switch {
 	case crVersion == nil: // empty list from kubectl get.
