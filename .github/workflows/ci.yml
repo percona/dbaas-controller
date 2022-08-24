@@ -321,11 +321,11 @@ jobs:
         if: steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1'
         run: |
           export NAMESPACE=${{ steps.setupenv.outputs.namespace }}
-          echo $NAMESPACE
           go clean -testcache
           make test-crosscover
 
       - name: Upload coverage results
+        if: env.PERCONA_TEST_DBAAS_OPERATOR == ''
         uses: percona-platform/codecov-action@v1
         with:
           file: crosscover.out
