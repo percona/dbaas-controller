@@ -101,6 +101,7 @@ func latestRecommended(m map[string]componentVersion) (*goversion.Version, error
 	latest := goversion.Must(goversion.NewVersion("0.0.0"))
 	spew.Dump(m)
 	for version, c := range m {
+		_ = c
 		parsedVersion, err := goversion.NewVersion(version)
 		if err != nil {
 			return nil, err
