@@ -515,7 +515,7 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 	bytes, err := ioutil.ReadFile(pxcCRFile)
 	// Ignore error if we failed to open cr file
 	if err == nil {
-		c.log.Debug("Overriding default PXC CR")
+		c.l.Debug("Overriding default PXC CR")
 		crSpec := new(pxc.PerconaXtraDBCluster)
 		err = yaml.Unmarshal(bytes, crSpec)
 		if err != nil {
