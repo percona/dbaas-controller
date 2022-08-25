@@ -33,6 +33,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	goversion "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -98,6 +99,7 @@ func latestRecommended(m map[string]componentVersion) (*goversion.Version, error
 		return nil, errNoVersionsFound
 	}
 	latest := goversion.Must(goversion.NewVersion("0.0.0"))
+	spew.Dump(m)
 	for version, c := range m {
 		parsedVersion, err := goversion.NewVersion(version)
 		if err != nil {
