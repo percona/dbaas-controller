@@ -99,7 +99,6 @@ func latestRecommended(m map[string]componentVersion, status string) (*goversion
 	}
 	latest := goversion.Must(goversion.NewVersion("0.0.0"))
 	for version, c := range m {
-		_ = c
 		parsedVersion, err := goversion.NewVersion(version)
 		if err != nil {
 			return nil, err
@@ -193,7 +192,7 @@ func (c *VersionServiceClient) LatestOperatorVersion(ctx context.Context, pmmVer
 	if err != nil {
 		return nil, nil, err
 	}
-	latestPXCOperator, err := latestRecommended(pmmVersionDeps.Matrix.PXCOperator, status)
+	latestPXCOperator, err := latestRecommended(pmmVersionDeps.Matrix.PXCOperator, "recommended")
 	if err != nil {
 		return nil, nil, err
 	}
