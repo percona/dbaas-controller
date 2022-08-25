@@ -22,7 +22,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -76,14 +76,14 @@ const (
 	pxcAPIVersionTemplate           = pxcAPINamespace + "/v%s"
 	pxcProxySQLDefaultImageTemplate = "percona/percona-xtradb-cluster-operator:%s-proxysql"
 	pxcHAProxyDefaultImageTemplate  = "percona/percona-xtradb-cluster-operator:%s-haproxy"
-	pxcSecretNameTmpl               = "dbaas-%s-pxc-secrets"
+	pxcSecretNameTmpl               = "dbaas-%s-pxc-secrets" //nolint:gosec
 	pxcInternalSecretTmpl           = "internal-%s"
 
 	psmdbBackupImageTemplate = "percona/percona-server-mongodb-operator:%s-backup"
 	psmdbDefaultImage        = "percona/percona-server-mongodb:4.2.8-8"
 	psmdbAPINamespace        = "psmdb.percona.com"
 	psmdbAPIVersionTemplate  = psmdbAPINamespace + "/v%s"
-	psmdbSecretNameTmpl      = "dbaas-%s-psmdb-secrets"
+	psmdbSecretNameTmpl      = "dbaas-%s-psmdb-secrets" //nolint:gosec
 	stabePMMClientImage      = "percona/pmm-client:2"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
@@ -113,7 +113,7 @@ const (
 
 const (
 	clusterWithSameNameExistsErrTemplate = "Cluster '%s' already exists"
-	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials"
+	canNotGetCredentialsErrTemplate      = "cannot get %s cluster credentials" //nolint:gosec
 )
 
 // Operator represents kubernetes operator.
@@ -177,12 +177,12 @@ type PXCParams struct {
 	Size              int32
 	Suspend           bool
 	Resume            bool
+	Expose            bool
+	VersionServiceURL string
 	PXC               *PXC
 	ProxySQL          *ProxySQL
 	PMM               *PMM
 	HAProxy           *HAProxy
-	Expose            bool
-	VersionServiceURL string
 }
 
 // Cluster contains common information related to cluster.
@@ -195,13 +195,13 @@ type PSMDBParams struct {
 	Name              string
 	Image             string
 	BackupImage       string
+	VersionServiceURL string
 	Size              int32
 	Suspend           bool
 	Resume            bool
+	Expose            bool
 	Replicaset        *Replicaset
 	PMM               *PMM
-	Expose            bool
-	VersionServiceURL string
 }
 
 type appStatus struct {
@@ -215,28 +215,28 @@ type DetailedState []appStatus
 // PXCCluster contains information related to pxc cluster.
 type PXCCluster struct {
 	Name          string
-	Size          int32
-	State         ClusterState
 	Message       string
+	Size          int32
+	Pause         bool
+	Exposed       bool
+	State         ClusterState
+	DetailedState DetailedState
 	PXC           *PXC
 	ProxySQL      *ProxySQL
 	HAProxy       *HAProxy
-	Pause         bool
-	DetailedState DetailedState
-	Exposed       bool
 }
 
 // PSMDBCluster contains information related to psmdb cluster.
 type PSMDBCluster struct {
 	Name          string
-	Pause         bool
-	Size          int32
-	State         ClusterState
-	Message       string
-	Replicaset    *Replicaset
-	DetailedState DetailedState
-	Exposed       bool
 	Image         string
+	Message       string
+	Size          int32
+	Pause         bool
+	Exposed       bool
+	State         ClusterState
+	DetailedState DetailedState
+	Replicaset    *Replicaset
 }
 
 // PSMDBCredentials represents PSMDB connection credentials.
@@ -318,8 +318,11 @@ var (
 	// ErrNotFound should be returned when referenced resource does not exist
 	// inside Kubernetes cluster.
 	ErrNotFound error = errors.New("resource was not found in Kubernetes cluster")
-	// v112 is used to select the structure we use to call kubectl depending on the version number.
-	v112, _ = goversion.NewVersion("1.12.0")
+	// ErrEmptyResponse is a sentinel error to state it is not possible to get the CR version
+	// since the response was empty.
+	ErrEmptyResponse = errors.New("cannot get the CR version. Empty response")
+	// v112 used to select the correct structure for different operator versions.
+	v112, _ = goversion.NewVersion("1.12") //nolint:gochecknoglobals
 )
 
 var pmmClientImage string
@@ -1195,7 +1198,7 @@ func getCRVersion(buf []byte) (*goversion.Version, error) {
 	}
 
 	if len(mols.Items) < 1 {
-		return nil, nil
+		return nil, ErrEmptyResponse
 	}
 
 	return goversion.NewVersion(mols.Items[0].Spec.CrVersion)
@@ -1208,12 +1211,15 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 		return nil, errors.Wrap(err, "couldn't get percona server MongoDB clusters")
 	}
 
+	res := []PSMDBCluster{}
+
 	crVersion, err := getCRVersion(buf)
 	if err != nil {
+		if errors.Is(err, ErrEmptyResponse) {
+			return res, nil
+		}
 		return nil, errors.Wrap(err, "cannot determine the CR version in list PSMDB clusters call")
 	}
-
-	res := []PSMDBCluster{}
 
 	switch {
 	case crVersion == nil: // empty list from kubectl get.
@@ -1414,7 +1420,8 @@ func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 // figures out the version. Returns empty string if operator API is not installed.
 func (c *K8sClient) getLatestOperatorAPIVersion(installedVersions []string, apiPrefix string) string {
 	lastVersion, _ := goversion.NewVersion("v0.0.0")
-	zeroVersion := lastVersion
+	foundGreatherVersion := false
+
 	for _, apiVersion := range installedVersions {
 		if !strings.HasPrefix(apiVersion, apiPrefix) {
 			continue
@@ -1432,9 +1439,10 @@ func (c *K8sClient) getLatestOperatorAPIVersion(installedVersions []string, apiP
 		}
 		if newVersion.GreaterThan(lastVersion) {
 			lastVersion = newVersion
+			foundGreatherVersion = true
 		}
 	}
-	if lastVersion != zeroVersion { // comparing pointers
+	if foundGreatherVersion {
 		return lastVersion.String()
 	}
 	return ""
@@ -1760,7 +1768,7 @@ func (c *K8sClient) fetchOperatorManifest(ctx context.Context, manifestURL strin
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.Errorf("failed to fetch operator manifests, http request ended with status %q", resp.Status)
 	}
-	return ioutil.ReadAll(resp.Body)
+	return io.ReadAll(resp.Body)
 }
 
 // ApplyOperator applies bundle.yaml which installs CRDs, RBAC and operator's deployment.
@@ -2134,7 +2142,7 @@ func (c *K8sClient) makeReq(params *PSMDBParams, extra extraCRParams) *psmdb.Per
 	return res
 }
 
-func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB112 {
+func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB112 { //nolint:funlen
 	req := &psmdb.PerconaServerMongoDB112{
 		APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
 		Kind:       psmdb.PerconaServerMongoDBKind,

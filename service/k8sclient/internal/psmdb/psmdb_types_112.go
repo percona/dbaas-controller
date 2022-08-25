@@ -21,14 +21,14 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
-// PerconaServerMongoDBList holds a list of PSMDB objects.
+// PerconaServerMongoDBList112 holds a list of PSMDB objects.
 type PerconaServerMongoDBList112 struct {
 	common.TypeMeta // anonymous for embedding
 
 	Items []PerconaServerMongoDB112 `json:"items"`
 }
 
-// Ensure it implements the DatabaseCluster interface
+// Ensure it implements the DatabaseCluster interface.
 var _ common.DatabaseCluster = (*PerconaServerMongoDB112)(nil)
 
 // PerconaServerMongoDB112 is the Schema for the perconaservermongodbs 1.12+ API.
@@ -57,17 +57,18 @@ type PSMDB112Spec struct {
 	CRVersion                 string            `json:"crVersion,omitempty"`
 	Image                     string            `json:"image,omitempty"`
 	ImagePullPolicy           string            `json:"imagePullPolicy,omitempty"`
-	AllowUnsafeConfigurations bool              `json:"allowUnsafeConfigurations,omitempty"`
 	UpdateStrategy            string            `json:"updateStrategy,omitempty"`
+	AllowUnsafeConfigurations bool              `json:"allowUnsafeConfigurations,omitempty"`
+	Pause                     bool              `json:"pause"`
 	UpgradeOptions            *UpgradeOptions   `json:"upgradeOptions,omitempty"`
 	Secrets                   *SecretsSpec      `json:"secrets,omitempty"`
 	PMM                       *PmmSpec          `json:"pmm,omitempty"`
 	Replsets                  []*ReplsetSpec112 `json:"replsets,omitempty"`
 	Sharding                  *ShardingSpec112  `json:"sharding,omitempty"`
 	Backup                    *BackupSpec       `json:"backup,omitempty"`
-	Pause                     bool              `json:"pause"`
 }
 
+// ShardingSpec112 holds fields to configure the shards.
 type ShardingSpec112 struct {
 	Enabled            bool                          `json:"enabled"`
 	ConfigsvrReplSet   *ReplsetSpec                  `json:"configsvrReplSet"`
@@ -81,6 +82,7 @@ type ExposeSpec struct {
 	ExposeType common.ServiceType `json:"exposeType"`
 }
 
+// ReplsetSpec112 holds information about the replicasets.
 type ReplsetSpec112 struct {
 	Affinity            *PodAffinity                    `json:"affinity,omitempty"` // Operator 1.12+
 	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
@@ -102,7 +104,7 @@ type ReplsetSpec112 struct {
 	MultiAZ
 }
 
-// ReplsetMongosSpec holds the fields to describe replicaset's Mongos specs.
+// ReplsetMongosSpec112 holds the fields to describe replicaset's Mongos specs.
 type ReplsetMongosSpec112 struct {
 	Expose              ExposeSpec                      `json:"expose,omitempty"`
 	Size                int32                           `json:"size"`
@@ -156,7 +158,7 @@ func (p *PerconaServerMongoDB112) Pause() bool {
 	return p.Spec.Pause
 }
 
-// State has been deprecated in 1.12+
+// State returns the cluster state.
 func (p *PerconaServerMongoDB112) State() common.AppState {
 	if p.Status == nil {
 		return common.AppStateUnknown
