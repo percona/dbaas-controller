@@ -1345,7 +1345,7 @@ func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (in
 func printLogs(t *testing.T, ctx context.Context, client *K8sClient, name string) {
 	t.Helper()
 
-	pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+name)
+	pods, err := client.GetPods(ctx, "app.kubernetes.io/instance="+name)
 	require.NoError(t, err)
 
 	for _, ppod := range pods.Items {
