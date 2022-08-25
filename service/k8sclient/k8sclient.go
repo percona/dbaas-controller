@@ -1242,6 +1242,7 @@ func (c *K8sClient) buildPSMDBDBList110(ctx context.Context, buf []byte) ([]PSMD
 
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
+
 		val := PSMDBCluster{
 			Name:  cluster.Name,
 			Size:  cluster.Spec.Replsets[0].Size,
