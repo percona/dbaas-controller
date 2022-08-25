@@ -107,6 +107,15 @@ env-up-start:
 	fi
 	minikube config view
 	minikube start
+local-env-up:
+	if [ $(KUBERNETES_VERSION) ]; then \
+		minikube config set kubernetes-version $(KUBERNETES_VERSION); \
+	fi
+	minikube config view
+	minikube start --nodes=4 --cpus=3 --memory=2200mb
+	minikube addons enable storage-provisioner
+	kubectl delete storageclass standard
+	kubectl apply -f kubevirt-hostpath-provisioner.yaml
 
 env-check:
 	# none driver in CI needs to run this under different user permissions
@@ -156,6 +165,6 @@ eks-delete-current-namespace:
 	NAMESPACE=$$(kubectl config view --minify --output 'jsonpath={..namespace}'); \
 	if [ "$$NAMESPACE" != "default" ]; then kubectl delete ns "$$NAMESPACE"; fi
 
-deploy-to-pmm-server:
+deploy-to-pmm-server: install     ## Deploy DBaaS controller to a running ${PMM_CONTAINER} container.
 	docker cp bin/dbaas-controller ${PMM_CONTAINER}:/usr/sbin/dbaas-controller
 	docker exec ${PMM_CONTAINER} supervisorctl restart dbaas-controller
