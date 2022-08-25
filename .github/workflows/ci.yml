@@ -352,7 +352,6 @@ jobs:
       - name: Delete the test namespace
         if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1' && env.DELETE_NAMESPACE
         run: |
-          make eks-cleanup-crd
           make eks-cleanup-namespace
           make eks-delete-operators
           make eks-delete-current-namespace
