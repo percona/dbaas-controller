@@ -213,6 +213,7 @@ jobs:
             build_tags: ""
             os: ubuntu-latest
             may-fail: true
+            test_operator: ""
             version_service_url: "https://check-dev.percona.com/versions/v1"
 
     continue-on-error: ${{ matrix.may-fail }}
