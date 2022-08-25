@@ -312,6 +312,7 @@ jobs:
            export RANDOM_STRING=$(cat /proc/sys/kernel/random/uuid)
            export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
            make eks-setup-test-namespace NAMESPACE="${NAMESPACE}"
+           kubectl -n ${NAMESPACE} get crd
            echo "::set-output name=done::1"
            echo "::set-output name=namespace::$NAMESPACE"
         env:
