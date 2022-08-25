@@ -55,7 +55,8 @@ const expected = `
             },
             "affinity": {
                 "antiAffinityTopologyKey": "none"
-            }
+            },
+            "expose": {}
         },
         "proxysql": {
             "size": 3,
