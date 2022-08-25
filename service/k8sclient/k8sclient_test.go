@@ -105,7 +105,7 @@ func latestRecommended(m map[string]componentVersion) (*goversion.Version, error
 		if err != nil {
 			return nil, err
 		}
-		if parsedVersion.GreaterThan(latest) && c.Status == "recommended" {
+		if parsedVersion.GreaterThan(latest) {
 			latest = parsedVersion
 		}
 	}
