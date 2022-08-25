@@ -245,19 +245,13 @@ func TestK8sClient(t *testing.T) {
 	pxcVersion := pxcOperator.String()
 	if value := os.Getenv("PERCONA_TEST_PXC_OPERATOR_VERSION"); value != "" {
 		pxcVersion = value
-		// Keep this value for the future to not to forget to update the pxcOperator variable
-		// with the version from the environment. Currently we don't have different structures
-		// for different operator versions like PSMDB but we might need them. If this value is
-		// not updated here, test migth fail because the pxcVersion will be different to pxcOperator.String().
-		pxcOperator, _ = goversion.NewVersion(value) //nolint:staticcheck
 	}
 	psmdbVersion := psmdbOperator.String()
 	if value := os.Getenv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); value != "" {
 		psmdbVersion = value
-		psmdbOperator, _ = goversion.NewVersion(value)
 	}
 
-	t.Logf("PXC version: %s", pxcVersion)
+	t.Log(pxcVersion)
 	err = client.ApplyOperator(ctx, pxcVersion, app.DefaultPXCOperatorURLTemplate)
 	require.NoError(t, err)
 
@@ -577,21 +571,10 @@ func TestK8sClient(t *testing.T) {
 			return cluster == nil
 		})
 
-		// For versions prior 1.12, use an empty string and the create method will use a template
-		// to generate the backup image name.
-		// Starting with operator 1.12, we need to get the backup image name from the version service.
-		// To avoid instantiating the component service, for v1.12+ use this image.
-		var psmdbBackupImage string
-		t.Logf("psmdb operator: %s", psmdbOperator.String())
-		if psmdbOperator.GreaterThanOrEqual(v112) {
-			psmdbBackupImage = "percona/percona-server-mongodb-operator:1.10.0-backup"
-		}
-
 		l.Info("No PSMDB Clusters running")
 		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name:        name,
-			BackupImage: psmdbBackupImage,
-			Size:        3,
+			Name: name,
+			Size: 3,
 			Replicaset: &Replicaset{
 				DiskSize: "1000000000",
 			},
