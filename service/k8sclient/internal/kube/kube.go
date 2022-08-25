@@ -43,7 +43,7 @@ import (
 const (
 	defaultAPIURIPath  = "/api"
 	defaultAPIsURIPath = "/apis"
-	defaultBurstLimit  = 300
+	defaultBurstLimit  = 350
 )
 
 // configGetter stores kubeconfig string to convert it to the final object
