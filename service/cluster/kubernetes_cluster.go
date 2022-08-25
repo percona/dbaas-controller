@@ -20,7 +20,6 @@ import (
 	"context"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -30,20 +29,18 @@ import (
 )
 
 // KubernetesClusterService implements methods of gRPC server and other business logic related to kubernetes clusters.
-type KubernetesClusterService struct {
-	p *message.Printer
-}
+type KubernetesClusterService struct{}
 
 // NewKubernetesClusterService returns new KubernetesClusterService instance.
-func NewKubernetesClusterService(p *message.Printer) *KubernetesClusterService {
-	return &KubernetesClusterService{p: p}
+func NewKubernetesClusterService() *KubernetesClusterService {
+	return new(KubernetesClusterService)
 }
 
 // CheckKubernetesClusterConnection checks connection with kubernetes cluster.
 func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.Context, req *controllerv1beta1.CheckKubernetesClusterConnectionRequest) (*controllerv1beta1.CheckKubernetesClusterConnectionResponse, error) {
 	k8Client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
+		return nil, status.Error(codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: "+err.Error())
 	}
 	defer k8Client.Cleanup() //nolint:errcheck
 
@@ -71,7 +68,7 @@ func (k KubernetesClusterService) CheckKubernetesClusterConnection(ctx context.C
 func (k KubernetesClusterService) GetResources(ctx context.Context, req *controllerv1beta1.GetResourcesRequest) (*controllerv1beta1.GetResourcesResponse, error) {
 	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
+		return nil, status.Error(codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: "+err.Error())
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
 
@@ -133,7 +130,7 @@ func (k KubernetesClusterService) GetResources(ctx context.Context, req *control
 func (k KubernetesClusterService) StartMonitoring(ctx context.Context, req *controllerv1beta1.StartMonitoringRequest) (*controllerv1beta1.StartMonitoringResponse, error) {
 	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
+		return nil, status.Error(codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: "+err.Error())
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
 
@@ -153,7 +150,7 @@ func (k KubernetesClusterService) StartMonitoring(ctx context.Context, req *cont
 func (k KubernetesClusterService) StopMonitoring(ctx context.Context, req *controllerv1beta1.StopMonitoringRequest) (*controllerv1beta1.StopMonitoringResponse, error) {
 	k8sClient, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, k.p.Sprintf("Unable to connect to Kubernetes cluster: %s", err))
+		return nil, status.Error(codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: "+err.Error())
 	}
 	defer k8sClient.Cleanup() //nolint:errcheck
 
