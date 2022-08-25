@@ -1780,6 +1780,16 @@ func (c *K8sClient) ApplyOperator(ctx context.Context, version string, manifests
 	return c.kubeCtl.Apply(ctx, bundle)
 }
 
+// ApplyOperator applies bundle.yaml which installs CRDs, RBAC and operator's deployment.
+func (c *K8sClient) DeleteOperator(ctx context.Context, version string, manifestsURLTemplate string) error {
+	bundleURL := fmt.Sprintf(manifestsURLTemplate, version, "bundle.yaml")
+	bundle, err := c.fetchOperatorManifest(ctx, bundleURL)
+	if err != nil {
+		return errors.Wrap(err, "failed to install operator")
+	}
+	return c.kubeCtl.Delete(ctx, bundle)
+}
+
 // PatchAllPSMDBClusters replaces images versions and CrVersion after update of the operator to match version
 // of the installed operator.
 func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVersion string) error {

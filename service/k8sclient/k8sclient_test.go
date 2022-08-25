@@ -692,6 +692,13 @@ func TestK8sClient(t *testing.T) {
 		})
 		l.Info("PSMDB Cluster is deleted")
 	})
+	err = client.DeleteOperator(ctx, pxcVersion, app.DefaultPXCOperatorURLTemplate)
+	require.NoError(t, err)
+
+	t.Log(psmdbVersion)
+	t.Log(latestPMMVersion.String())
+	err = client.DeleteOperator(ctx, psmdbVersion, app.DefaultPSMDBOperatorURLTemplate)
+	require.NoError(t, err)
 }
 
 // ErrNoSuchCluster indicates that no cluster with given name was found.
