@@ -515,6 +515,7 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 	bytes, err := ioutil.ReadFile(pxcCRFile)
 	// Ignore error if we failed to open cr file
 	if err == nil {
+		c.log.Debug("Overriding default PXC CR")
 		crSpec := new(pxc.PerconaXtraDBCluster)
 		err = yaml.Unmarshal(bytes, crSpec)
 		if err != nil {
@@ -528,6 +529,8 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 		res.Spec.PXC.PodSpec.Resources = c.setComputeResources(params.PXC.ComputeResources)
 		res.Spec.PXC.PodSpec.VolumeSpec = c.volumeSpec(params.PXC.DiskSize)
 		res.Spec.Backup.Storages[storageName].Volume = c.volumeSpec(params.PXC.DiskSize)
+	} else {
+		c.l.Debugf("failed reading file: %v", err)
 	}
 
 	if params.PMM != nil {
