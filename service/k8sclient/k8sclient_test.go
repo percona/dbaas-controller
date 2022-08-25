@@ -33,7 +33,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	goversion "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -94,19 +93,18 @@ type VersionServiceResponse struct {
 
 var errNoVersionsFound error = errors.New("no versions to compare current version with found")
 
-func latestRecommended(m map[string]componentVersion) (*goversion.Version, error) {
+func latestRecommended(m map[string]componentVersion, status string) (*goversion.Version, error) {
 	if len(m) == 0 {
 		return nil, errNoVersionsFound
 	}
 	latest := goversion.Must(goversion.NewVersion("0.0.0"))
-	spew.Dump(m)
 	for version, c := range m {
 		_ = c
 		parsedVersion, err := goversion.NewVersion(version)
 		if err != nil {
 			return nil, err
 		}
-		if parsedVersion.GreaterThan(latest) {
+		if parsedVersion.GreaterThan(latest) && c.Status == status {
 			latest = parsedVersion
 		}
 	}
@@ -186,11 +184,16 @@ func (c *VersionServiceClient) LatestOperatorVersion(ctx context.Context, pmmVer
 		return nil, nil, nil // no deps for the PMM version passed to c.Matrix
 	}
 	pmmVersionDeps := resp.Versions[0]
-	latestPSMDBOperator, err := latestRecommended(pmmVersionDeps.Matrix.PSMDBOperator)
+	status := "recommended"
+	if os.Getenv("PERCONA_TEST_DBAAS_OPERATOR") == "" {
+		// Run all tests against newest versions of operators
+		status = "available"
+	}
+	latestPSMDBOperator, err := latestRecommended(pmmVersionDeps.Matrix.PSMDBOperator, status)
 	if err != nil {
 		return nil, nil, err
 	}
-	latestPXCOperator, err := latestRecommended(pmmVersionDeps.Matrix.PXCOperator)
+	latestPXCOperator, err := latestRecommended(pmmVersionDeps.Matrix.PXCOperator, status)
 	if err != nil {
 		return nil, nil, err
 	}
