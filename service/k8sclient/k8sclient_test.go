@@ -256,6 +256,7 @@ func TestK8sClient(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log(psmdbVersion)
+	t.Log(latestPMMVersion.String())
 	err = client.ApplyOperator(ctx, psmdbVersion, app.DefaultPSMDBOperatorURLTemplate)
 	require.NoError(t, err)
 

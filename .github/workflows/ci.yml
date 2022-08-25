@@ -208,6 +208,8 @@ jobs:
         os: [ubuntu-latest]
         may-fail: [false]
         version_service_url: ["https://check.percona.com/versions/v1"]
+        versions:
+          - {psmdb: "1.12.0"}
         include:
           - go-version: 1.18.x
             build_tags: ""
@@ -224,6 +226,7 @@ jobs:
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
       PERCONA_TEST_VERSION_SERVICE_URL: ${{ matrix.version_service_url }}
       PERCONA_TEST_DBAAS_OPERATOR: ${{ matrix.test_operator }}
+      PERCONA_TEST_PSMDB_OPERATOR_VERSION: ${{ matrix.versions.psmdb }}
       # Set DELETE_NAMESPACE to false when you want to debug in EKS cluster after job is done.
       DELETE_NAMESPACE: true
       DBAAS_TOOLS_PATH: "/opt/dbaas-tools/bin"
@@ -352,6 +355,7 @@ jobs:
       - name: Delete the test namespace
         if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1' && env.DELETE_NAMESPACE
         run: |
+          make eks-cleanup-crd
           make eks-cleanup-namespace
           make eks-delete-operators
           make eks-delete-current-namespace

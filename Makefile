@@ -149,6 +149,9 @@ eks-setup-test-namespace:
 	kubectl ${KUBECTL_ARGS} create ns "${NAMESPACE}"
 	kubectl ${KUBECTL_ARGS} config set-context --current --namespace="${NAMESPACE}"
 
+eks-cleanup-crd:
+	kubectl ${KUBECTL_ARGS} delete crd perconaservermongodbbackups.psmdb.percona.com perconaservermongodbrestores.psmdb.percona.com perconaservermongodbs.psmdb.percona.com
+
 eks-cleanup-namespace:
 	kubectl ${KUBECTL_ARGS} delete perconaxtradbcluster --all
 	kubectl ${KUBECTL_ARGS} delete perconaxtradbclusterbackup --all
