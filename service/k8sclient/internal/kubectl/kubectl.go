@@ -233,6 +233,22 @@ func (k *KubeCtl) Get(ctx context.Context, kind string, name string, res interfa
 	return json.Unmarshal(stdout, res)
 }
 
+// Get executes `kubectl get` with given object kind and optional name,
+// and decodes resource into `res`.
+func (k *KubeCtl) GetRaw(ctx context.Context, kind string, name string) ([]byte, error) {
+	args := []string{"get", "-o=json", kind}
+	if name != "" {
+		args = append(args, name)
+	}
+
+	stdout, err := run(ctx, k.cmd, args, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return stdout, nil
+}
+
 // Apply executes `kubectl apply` with given resource.
 func (k *KubeCtl) Apply(ctx context.Context, res interface{}) error {
 	_, err := run(ctx, k.cmd, []string{"apply", "-f", "-"}, res)

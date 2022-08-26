@@ -67,9 +67,17 @@ type componentsParams struct {
 	productVersion string
 }
 
+// componentVersion contains info about exact component version.
+type componentVersion struct {
+	ImagePath string `json:"imagePath"`
+	ImageHash string `json:"imageHash"`
+	Status    string `json:"status"`
+	Critical  bool   `json:"critical"`
+}
+
 type matrix struct {
-	PXCOperator   map[string]interface{} `json:"pxcOperator,omitempty"`
-	PSMDBOperator map[string]interface{} `json:"psmdbOperator,omitempty"`
+	PXCOperator   map[string]componentVersion `json:"pxcOperator,omitempty"`
+	PSMDBOperator map[string]componentVersion `json:"psmdbOperator,omitempty"`
 }
 
 type Version struct {
@@ -85,17 +93,17 @@ type VersionServiceResponse struct {
 
 var errNoVersionsFound error = errors.New("no versions to compare current version with found")
 
-func latest(m map[string]interface{}) (*goversion.Version, error) {
+func latestRecommended(m map[string]componentVersion) (*goversion.Version, error) {
 	if len(m) == 0 {
 		return nil, errNoVersionsFound
 	}
 	latest := goversion.Must(goversion.NewVersion("0.0.0"))
-	for version := range m {
+	for version, c := range m {
 		parsedVersion, err := goversion.NewVersion(version)
 		if err != nil {
 			return nil, err
 		}
-		if parsedVersion.GreaterThan(latest) {
+		if parsedVersion.GreaterThan(latest) && c.Status == "recommended" {
 			latest = parsedVersion
 		}
 	}
@@ -175,11 +183,11 @@ func (c *VersionServiceClient) LatestOperatorVersion(ctx context.Context, pmmVer
 		return nil, nil, nil // no deps for the PMM version passed to c.Matrix
 	}
 	pmmVersionDeps := resp.Versions[0]
-	latestPSMDBOperator, err := latest(pmmVersionDeps.Matrix.PSMDBOperator)
+	latestPSMDBOperator, err := latestRecommended(pmmVersionDeps.Matrix.PSMDBOperator)
 	if err != nil {
 		return nil, nil, err
 	}
-	latestPXCOperator, err := latest(pmmVersionDeps.Matrix.PXCOperator)
+	latestPXCOperator, err := latestRecommended(pmmVersionDeps.Matrix.PXCOperator)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -198,6 +206,13 @@ type pod struct {
 }
 
 func TestK8sClient(t *testing.T) {
+	var (
+		pxcImage        = "percona/percona-xtradb-cluster:8.0.23-14.1"
+		pxcUpgradeImage = "percona/percona-xtradb-cluster:8.0.25-15.1"
+	)
+
+	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
+
 	ctx := app.Context()
 
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -212,23 +227,37 @@ func TestK8sClient(t *testing.T) {
 	})
 
 	l := logger.Get(ctx)
+	versionServiceURL := "https://check-dev.percona.com/versions/v1"
+	if value := os.Getenv("PERCONA_TEST_VERSION_SERVICE_URL"); value != "" {
+		versionServiceURL = value
+	}
+	versionService := NewVersionServiceClient(versionServiceURL)
 
-	versionService := NewVersionServiceClient("https://check-dev.percona.com/versions/v1")
 	pmmVersions, err := versionService.Matrix(ctx, componentsParams{product: "pmm-server"})
 	require.NoError(t, err)
 	latestPMMVersion, err := latestProduct(pmmVersions.Versions)
 	require.NoError(t, err)
-	pxc, psmdb, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
+	pxcOperator, psmdbOperator, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
 	require.NoError(t, err)
 
 	// There is an error with Operator version 1.12
 	// See https://jira.percona.com/browse/PMM-10012
-	psmdb, _ = goversion.NewVersion("1.10.0")
+	pxcVersion := pxcOperator.String()
+	if value := os.Getenv("PERCONA_TEST_PXC_OPERATOR_VERSION"); value != "" {
+		pxcVersion = value
+	}
+	psmdbVersion := psmdbOperator.String()
+	if value := os.Getenv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); value != "" {
+		psmdbVersion = value
+		psmdbOperator, _ = goversion.NewVersion(value)
+	}
 
-	err = client.ApplyOperator(ctx, pxc.String(), app.DefaultPXCOperatorURLTemplate)
+	t.Log(pxcVersion)
+	err = client.ApplyOperator(ctx, pxcVersion, app.DefaultPXCOperatorURLTemplate)
 	require.NoError(t, err)
 
-	err = client.ApplyOperator(ctx, psmdb.String(), app.DefaultPSMDBOperatorURLTemplate)
+	t.Log(psmdbVersion)
+	err = client.ApplyOperator(ctx, psmdbVersion, app.DefaultPSMDBOperatorURLTemplate)
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
@@ -254,6 +283,17 @@ func TestK8sClient(t *testing.T) {
 	err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
 	require.NoError(t, err)
 
+	t.Run("CheckOperators", func(t *testing.T) {
+		t.Parallel()
+		operators, err := client.CheckOperators(ctx)
+		require.NoError(t, err)
+		require.NotNil(t, operators)
+		_, err = goversion.NewVersion(operators.PsmdbOperatorVersion)
+		require.NoError(t, err)
+		_, err = goversion.NewVersion(operators.PXCOperatorVersion)
+		require.NoError(t, err)
+	})
+
 	t.Run("Get non-existing clusters", func(t *testing.T) {
 		t.Parallel()
 		_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdb")
@@ -265,6 +305,9 @@ func TestK8sClient(t *testing.T) {
 	var pmm *PMM
 	t.Run("PXC", func(t *testing.T) {
 		t.Parallel()
+		if perconaTestOperator != "pxc" && perconaTestOperator != "" {
+			t.Skip("skipping because of environment variable")
+		}
 		name := "test-cluster-pxc"
 		_ = client.DeletePXCCluster(ctx, name)
 
@@ -274,14 +317,24 @@ func TestK8sClient(t *testing.T) {
 
 		l.Info("No PXC Clusters running")
 
-		err := client.CreatePXCCluster(ctx, &PXCParams{
+		err = client.CreatePXCCluster(ctx, &PXCParams{
 			Name: name,
 			Size: 1,
 			PXC: &PXC{
 				DiskSize: "1000000000",
-				Image:    "percona/percona-xtradb-cluster:8.0.20-11.1",
+				Image:    pxcImage,
+				ComputeResources: &ComputeResources{
+					CPUM:        "600m",
+					MemoryBytes: "1G",
+				},
 			},
-			ProxySQL:          &ProxySQL{DiskSize: "1000000000"},
+			ProxySQL: &ProxySQL{
+				DiskSize: "1000000000",
+				ComputeResources: &ComputeResources{
+					CPUM:        "250m",
+					MemoryBytes: "500M",
+				},
+			},
 			PMM:               pmm,
 			VersionServiceURL: "https://check.percona.com",
 		})
@@ -298,6 +351,16 @@ func TestK8sClient(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, ClusterStateChanging, cluster.State)
 		})
+		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
+			return cluster != nil && cluster.State == ClusterStateReady
+		})
+
+		t.Run("All pods are ready", func(t *testing.T) {
+			cluster, err := getPXCCluster(ctx, client, name)
+			require.NoError(t, err)
+			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
+			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
+		})
 
 		t.Run("Create cluster with the same name", func(t *testing.T) {
 			err = client.CreatePXCCluster(ctx, &PXCParams{
@@ -311,17 +374,6 @@ func TestK8sClient(t *testing.T) {
 			assert.Equal(t, err.Error(), fmt.Sprintf(clusterWithSameNameExistsErrTemplate, name))
 		})
 
-		assertListPXCCluster(ctx, t, client, name, func(cluster *PXCCluster) bool {
-			return cluster != nil && cluster.State == ClusterStateReady
-		})
-
-		t.Run("All pods are ready", func(t *testing.T) {
-			cluster, err := getPXCCluster(ctx, client, name)
-			require.NoError(t, err)
-			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
-			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
-		})
-
 		t.Run("Get logs", func(t *testing.T) {
 			pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+name)
 			require.NoError(t, err)
@@ -333,6 +385,22 @@ func TestK8sClient(t *testing.T) {
 				},
 				{
 					name:       name + "-pxc-0",
+					containers: []string{"pxc", "pmm-client", "pxc-init"},
+				},
+				{
+					name:       name + "-proxysql-1",
+					containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
+				},
+				{
+					name:       name + "-pxc-1",
+					containers: []string{"pxc", "pmm-client", "pxc-init"},
+				},
+				{
+					name:       name + "-proxysql-2",
+					containers: []string{"pmm-client", "proxysql", "pxc-monit", "proxysql-monit"},
+				},
+				{
+					name:       name + "-pxc-2",
 					containers: []string{"pxc", "pmm-client", "pxc-init"},
 				},
 			}
@@ -384,10 +452,10 @@ func TestK8sClient(t *testing.T) {
 		t.Run("Upgrade PXC", func(t *testing.T) {
 			err = client.UpdatePXCCluster(ctx, &PXCParams{
 				Name: name,
-				Size: 1,
+				Size: 3,
 				PXC: &PXC{
 					DiskSize: "1000000000",
-					Image:    "percona/percona-xtradb-cluster:8.0.20-11.2",
+					Image:    pxcUpgradeImage,
 				},
 				ProxySQL:          &ProxySQL{DiskSize: "1000000000"},
 				PMM:               pmm,
@@ -406,7 +474,7 @@ func TestK8sClient(t *testing.T) {
 
 			cluster, err := getPXCCluster(ctx, client, name)
 			require.NoError(t, err)
-			assert.Equal(t, "percona/percona-xtradb-cluster:8.0.20-11.2", cluster.PXC.Image)
+			assert.Equal(t, pxcUpgradeImage, cluster.PXC.Image)
 		})
 
 		err = client.RestartPXCCluster(ctx, name)
@@ -446,15 +514,26 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("Create PXC with HAProxy", func(t *testing.T) {
 		t.Parallel()
+		if perconaTestOperator != "haproxy-pxc" && perconaTestOperator != "" {
+			t.Skip("skipping because of environment variable")
+		}
 		clusterName := "test-pxc-haproxy"
-		err := client.CreatePXCCluster(ctx, &PXCParams{
-			Name:    clusterName,
-			Size:    1,
-			PXC:     &PXC{DiskSize: "1000000000"},
-			HAProxy: new(HAProxy),
-			PMM:     pmm,
+		err = client.CreatePXCCluster(ctx, &PXCParams{
+			Name: clusterName,
+			Size: 1,
+			PXC: &PXC{
+				DiskSize: "1000000000",
+			},
+			HAProxy: &HAProxy{
+				ComputeResources: &ComputeResources{
+					MemoryBytes: "500M",
+				},
+			},
+			PMM: pmm,
 		})
 		require.NoError(t, err)
+		l.Info("PXC Cluster is created")
+
 		assertListPXCCluster(ctx, t, client, clusterName, func(cluster *PXCCluster) bool {
 			return cluster != nil && cluster.State == ClusterStateReady
 		})
@@ -462,7 +541,7 @@ func TestK8sClient(t *testing.T) {
 		// Test listing.
 		clusters, err := client.ListPXCClusters(ctx)
 		require.NoError(t, err)
-		assert.Conditionf(t,
+		require.Conditionf(t,
 			func(clusters []PXCCluster, clusterName string) assert.Comparison {
 				return func() bool {
 					for _, cluster := range clusters {
@@ -483,6 +562,9 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("PSMDB", func(t *testing.T) {
 		t.Parallel()
+		if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
+			t.Skip("skipping because of environment variable")
+		}
 		name := "test-cluster-psmdb"
 		_ = client.DeletePSMDBCluster(ctx, name)
 
@@ -490,14 +572,24 @@ func TestK8sClient(t *testing.T) {
 			return cluster == nil
 		})
 
-		l.Info("No PSMDB Clusters running")
+		// Starting with operator 1.12, the image for the backup container comes from the components service.
+		// To not to instantiate the components service and the dependencies, use this image name.
+		var backupImage string
+		if psmdbOperator.GreaterThanOrEqual(v112) {
+			backupImage = "percona/percona-backup-mongodb:1.7.0"
+		}
 
-		err := client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name:       name,
-			Size:       3,
-			Replicaset: &Replicaset{DiskSize: "1000000000"},
-			PMM:        pmm,
+		l.Info("No PSMDB Clusters running")
+		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
+			Name: name,
+			Size: 3,
+			Replicaset: &Replicaset{
+				DiskSize: "1000000000",
+			},
+			PMM:         pmm,
+			BackupImage: backupImage,
 		})
+
 		require.NoError(t, err)
 
 		l.Info("PSMDB Cluster is created")
@@ -603,17 +695,6 @@ func TestK8sClient(t *testing.T) {
 		})
 		l.Info("PSMDB Cluster is deleted")
 	})
-
-	t.Run("CheckOperators", func(t *testing.T) {
-		t.Parallel()
-		operators, err := client.CheckOperators(ctx)
-		require.NoError(t, err)
-		require.NotNil(t, operators)
-		_, err = goversion.NewVersion(operators.PsmdbOperatorVersion)
-		require.NoError(t, err)
-		_, err = goversion.NewVersion(operators.PXCOperatorVersion)
-		require.NoError(t, err)
-	})
 }
 
 // ErrNoSuchCluster indicates that no cluster with given name was found.
@@ -653,15 +734,24 @@ func assertListPXCCluster(ctx context.Context, t *testing.T, client *K8sClient, 
 	t.Helper()
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
-	for {
-		time.Sleep(5 * time.Second)
-		cluster, err := getPXCCluster(timeoutCtx, client, name)
-		if !errors.Is(err, ErrNoSuchCluster) {
-			require.NoError(t, err)
-		}
+	ticker := time.NewTicker(500 * time.Millisecond)
 
-		if conditionFunc(cluster) {
-			break
+	for {
+		select {
+		case <-timeoutCtx.Done():
+			clusters, _ := client.ListPXCClusters(ctx)
+			t.Log(clusters)
+			printLogs(t, ctx, client, name)
+			t.Errorf("PXC cluster did not get to the right state")
+			return
+		case <-ticker.C:
+			cluster, err := getPXCCluster(ctx, client, name)
+			if !errors.Is(err, ErrNoSuchCluster) {
+				require.NoError(t, err)
+			}
+			if conditionFunc(cluster) {
+				return
+			}
 		}
 	}
 }
@@ -670,15 +760,24 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 	t.Helper()
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
-	for {
-		time.Sleep(1 * time.Second)
-		cluster, err := getPSMDBCluster(timeoutCtx, client, name)
-		if !errors.Is(err, ErrNoSuchCluster) {
-			require.NoError(t, err)
-		}
+	ticker := time.NewTicker(500 * time.Millisecond)
 
-		if conditionFunc(cluster) {
-			break
+	for {
+		select {
+		case <-timeoutCtx.Done():
+			clusters, _ := client.ListPSMDBClusters(ctx)
+			t.Log(clusters)
+			printLogs(t, ctx, client, name)
+			t.Errorf("PSMDB cluster did not get to the right state")
+			return
+		case <-ticker.C:
+			cluster, err := getPSMDBCluster(ctx, client, name)
+			if !errors.Is(err, ErrNoSuchCluster) {
+				require.NoError(t, err)
+			}
+			if conditionFunc(cluster) {
+				return
+			}
 		}
 	}
 }
@@ -739,7 +838,7 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 			return
 		default:
 		}
-		list, err := client.GetPods(ctx, "-n"+consumedResourcesTestNamespace, "hello1", "hello2")
+		list, err := client.GetPods(ctx, "-n", consumedResourcesTestNamespace, "hello1", "hello2")
 		require.NoError(t, err)
 		var failed, succeeded bool
 		for _, pod := range list.Items {
@@ -884,8 +983,12 @@ func TestVMAgentSpec(t *testing.T) {
 	assert.Equal(t, expected, inBuf.String())
 }
 
-func TestGetClusterState(t *testing.T) {
+func TestGetPXCClusterState(t *testing.T) {
 	t.Parallel()
+	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
+	if perconaTestOperator != "pxc" && perconaTestOperator != "" {
+		t.Skip("skipping because of environment variable")
+	}
 	type getClusterStateTestCase struct {
 		matchingError           error
 		cluster                 common.DatabaseCluster
@@ -1014,7 +1117,37 @@ func TestGetClusterState(t *testing.T) {
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
+	}
+	ctx := context.Background()
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+	c, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
+	for i, test := range testCases {
+		tt := test
+		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
+			t.Parallel()
+			clusterState := c.getClusterState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
+				return tt.crAndPodsVersionMatches, tt.matchingError
+			})
+			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
+		})
+	}
+}
 
+func TestGetPSMDBClusterState(t *testing.T) {
+	t.Parallel()
+	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
+	if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
+		t.Skip("skipping because of environment variable")
+	}
+	type getClusterStateTestCase struct {
+		matchingError           error
+		cluster                 common.DatabaseCluster
+		expectedState           ClusterState
+		crAndPodsVersionMatches bool
+	}
+	testCases := []getClusterStateTestCase{
 		// PSMDB
 		{
 			expectedState: ClusterStateInvalid,
@@ -1138,7 +1271,11 @@ func TestGetClusterState(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	c, _ := New(ctx, "")
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+
+	c, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
 	for i, test := range testCases {
 		tt := test
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
@@ -1151,8 +1288,13 @@ func TestGetClusterState(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest
 func TestCreateVMOperator(t *testing.T) {
+	t.Parallel()
+	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
+	if perconaTestOperator != "" {
+		t.Skip("skipping because of environment variable")
+	}
+
 	ctx := app.Context()
 
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -1205,4 +1347,23 @@ func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (in
 	}
 
 	return count, nil
+}
+
+func printLogs(t *testing.T, ctx context.Context, client *K8sClient, name string) {
+	t.Helper()
+
+	pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+name)
+	require.NoError(t, err)
+
+	for _, ppod := range pods.Items {
+		for _, container := range ppod.Spec.Containers {
+			t.Log("========================= ")
+			t.Log("Container = ", ppod.Name, container)
+
+			logs, _ := client.GetLogs(ctx, ppod.Status.ContainerStatuses, ppod.Name, container.Name)
+			for _, l := range logs {
+				t.Log(l)
+			}
+		}
+	}
 }
