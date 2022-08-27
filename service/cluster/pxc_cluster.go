@@ -166,6 +166,9 @@ func (s *PXCClusterService) GetPXCCluster(ctx context.Context, req *controllerv1
 
 	PSMDBCluster, err := client.GetPXCCluster(ctx, req.Name)
 	if err != nil {
+		if errors.Is(err, k8sclient.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
 		return nil, err
 	}
 	cluster, err := s.convertPXCCluster(*PSMDBCluster)

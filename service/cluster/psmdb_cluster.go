@@ -73,6 +73,9 @@ func (s *PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *controll
 
 	PSMDBCluster, err := client.GetPSMDBCluster(ctx, req.Name)
 	if err != nil {
+		if errors.Is(err, k8sclient.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
 		return nil, err
 	}
 	cluster, err := s.convertPSMDBCluster(*PSMDBCluster)

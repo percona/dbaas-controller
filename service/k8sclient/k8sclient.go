@@ -429,6 +429,24 @@ func (c *K8sClient) GetPXCCluster(ctx context.Context, name string) (*PXCCluster
 	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, pxc.PerconaXtraDBClusterKind, name, &cluster)
 	if err != nil {
+		if err == kubectl.ErrNotFound {
+			list, e := c.getPodsList(ctx, "percona-xtradb-cluster-operator", name)
+			if e != nil {
+				return nil, e
+			}
+
+			if len(list.Items) > 0 {
+				return &PXCCluster{
+					Name:          name,
+					State:         ClusterStateDeleting,
+					PXC:           new(PXC),
+					ProxySQL:      new(ProxySQL),
+					HAProxy:       new(HAProxy),
+					DetailedState: []appStatus{},
+				}, nil
+			}
+			return nil, errors.Wrap(ErrNotFound, "PXC cluster not found")
+		}
 		return nil, err
 	}
 
@@ -883,21 +901,15 @@ func (c *K8sClient) getClusterState(ctx context.Context, cluster common.Database
 
 // getDeletingClusters returns clusters which are not fully deleted yet.
 func (c *K8sClient) getDeletingClusters(ctx context.Context, managedBy string, runningClusters map[string]struct{}) ([]Cluster, error) {
-	var list common.PodList
-
-	err := c.kubeCtl.Get(ctx, "pods", "", &list)
+	list, err := c.getPodsList(ctx, managedBy, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
 
-	res := []Cluster{}
+	var res []Cluster
 	for _, pod := range list.Items {
 		clusterName := pod.Labels["app.kubernetes.io/instance"]
 		if _, ok := runningClusters[clusterName]; ok {
-			continue
-		}
-
-		if pod.Labels["app.kubernetes.io/managed-by"] != managedBy {
 			continue
 		}
 
@@ -955,14 +967,28 @@ func (c *K8sClient) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, erro
 }
 
 func (c *K8sClient) GetPSMDBCluster(ctx context.Context, name string) (*PSMDBCluster, error) {
-	var cluster psmdb.PerconaServerMongoDB
-	err := c.kubeCtl.Get(ctx, psmdb.PerconaServerMongoDBKind, name, &cluster)
+	buf, err := c.kubeCtl.GetRaw(ctx, psmdb.PerconaServerMongoDBKind, name)
 	if err != nil {
+		if errors.Is(err, kubectl.ErrNotFound) {
+			list, err := c.getPodsList(ctx, "percona-server-mongodb-operator", name)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(list.Items) > 0 {
+				return &PSMDBCluster{
+					Name:          name,
+					State:         ClusterStateDeleting,
+					Replicaset:    new(Replicaset),
+					DetailedState: []appStatus{},
+				}, nil
+			}
+			return nil, errors.Wrap(ErrNotFound, "PSMDB cluster not found")
+		}
 		return nil, err
 	}
 
-	val := c.convertPSMDBCluster(ctx, cluster)
-	return &val, nil
+	return c.convertPSMDBCluster(ctx, buf)
 }
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
@@ -1214,64 +1240,58 @@ func (c *K8sClient) crVersionMatchesPodsVersion(ctx context.Context, cluster com
 }
 
 func getCRVersion(buf []byte) (*goversion.Version, error) {
-	var mols psmdb.MinimumObjectListSpec
+	var item psmdb.MinimumObjectItemSpec
 
-	if err := json.Unmarshal(buf, &mols); err != nil {
+	if err := json.Unmarshal(buf, &item); err != nil {
 		return nil, errors.Wrap(err, "cannot decode response to get CR version spec")
 	}
 
-	if len(mols.Items) < 1 {
-		return nil, ErrEmptyResponse
-	}
-
-	return goversion.NewVersion(mols.Items[0].Spec.CrVersion)
+	return goversion.NewVersion(item.Spec.CrVersion)
 }
 
 // getPSMDBClusters returns Percona Server for MongoDB clusters.
 func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error) {
-	buf, err := c.kubeCtl.GetRaw(ctx, psmdb.PerconaServerMongoDBKind, "")
+	list := psmdb.MinimumObjectListSpec{}
+	err := c.kubeCtl.Get(ctx, psmdb.PerconaServerMongoDBKind, "", &list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get percona server MongoDB clusters")
 	}
 
-	res := []PSMDBCluster{}
-
-	crVersion, err := getCRVersion(buf)
-	if err != nil {
-		if errors.Is(err, ErrEmptyResponse) {
-			return res, nil
+	var res []PSMDBCluster
+	for _, item := range list.Items {
+		cluster, err := c.convertPSMDBCluster(ctx, item)
+		if err != nil {
+			c.l.Warn(err)
+			continue
 		}
-		return nil, errors.Wrap(err, "cannot determine the CR version in list PSMDB clusters call")
-	}
-
-	switch {
-	case crVersion == nil: // empty list from kubectl get.
-		return res, nil
-	case crVersion.GreaterThanOrEqual(v112):
-		res, err = c.buildPSMDBDBList112(ctx, buf)
-	default:
-		res, err = c.buildPSMDBDBList110(ctx, buf)
+		res = append(res, *cluster)
 	}
 
 	return res, err
 }
 
-func (c *K8sClient) buildPSMDBDBList110(ctx context.Context, buf []byte) ([]PSMDBCluster, error) {
-	var list psmdb.PerconaServerMongoDBList
+func (c *K8sClient) convertPSMDBCluster(ctx context.Context, item []byte) (*PSMDBCluster, error) {
+	crVersion, err := getCRVersion(item)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot determine the CR version in list PSMDB clusters call")
+	}
+	var cluster *PSMDBCluster
+	switch {
+	case crVersion.GreaterThanOrEqual(v112):
+		cluster, err = c.buildPSMDBDBItem112(ctx, item)
+	default:
+		cluster, err = c.buildPSMDBDBItem110(ctx, item)
+	}
+	return cluster, err
+}
 
-	if err := json.Unmarshal(buf, &list); err != nil {
+func (c *K8sClient) buildPSMDBDBItem110(ctx context.Context, buf []byte) (*PSMDBCluster, error) {
+	var cluster psmdb.PerconaServerMongoDB
+
+	if err := json.Unmarshal(buf, &cluster); err != nil {
 		return nil, err
 	}
 
-	res := make([]PSMDBCluster, len(list.Items))
-	for i, cluster := range list.Items {
-		val := c.convertPSMDBCluster(ctx, cluster)
-		res[i] = val
-	}
-	return res, nil
-}
-
-func (c *K8sClient) convertPSMDBCluster(ctx context.Context, cluster psmdb.PerconaServerMongoDB) PSMDBCluster {
 	val := PSMDBCluster{
 		Name:  cluster.Name,
 		Size:  cluster.Spec.Replsets[0].Size,
@@ -1304,38 +1324,54 @@ func (c *K8sClient) convertPSMDBCluster(ctx context.Context, cluster psmdb.Perco
 	}
 
 	val.State = c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
-	return val
+
+	return &val, nil
 }
 
-func (c *K8sClient) buildPSMDBDBList112(ctx context.Context, buf []byte) ([]PSMDBCluster, error) {
-	var list psmdb.PerconaServerMongoDBList112
+func (c *K8sClient) buildPSMDBDBItem112(ctx context.Context, buf []byte) (*PSMDBCluster, error) {
+	var cluster psmdb.PerconaServerMongoDB112
 
-	if err := json.Unmarshal(buf, &list); err != nil {
+	if err := json.Unmarshal(buf, &cluster); err != nil {
 		return nil, err
 	}
 
-	res := make([]PSMDBCluster, len(list.Items))
-	for i, cluster := range list.Items {
+	exposed := cluster.Spec.Sharding.Mongos.Expose.ExposeType == common.ServiceTypeLoadBalancer ||
+		cluster.Spec.Sharding.Mongos.Expose.ExposeType == common.ServiceTypeExternalName
 
-		exposed := cluster.Spec.Sharding.Mongos.Expose.ExposeType == common.ServiceTypeLoadBalancer ||
-			cluster.Spec.Sharding.Mongos.Expose.ExposeType == common.ServiceTypeExternalName
+	val := PSMDBCluster{
+		Name:  cluster.Name,
+		Size:  cluster.Spec.Replsets[0].Size,
+		Pause: cluster.Spec.Pause,
+		Replicaset: &Replicaset{
+			DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
+			ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
+		},
+		Exposed: exposed,
+		Image:   cluster.Spec.Image,
+	}
 
-		val := PSMDBCluster{
-			Name:  cluster.Name,
-			Size:  cluster.Spec.Replsets[0].Size,
-			Pause: cluster.Spec.Pause,
-			Replicaset: &Replicaset{
-				DiskSize:         c.getDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
-				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
-			},
-			Exposed: exposed,
-			Image:   cluster.Spec.Image,
+	if cluster.Status != nil {
+		message := cluster.Status.Message
+		conditions := cluster.Status.Conditions
+		if message == "" && len(conditions) > 0 {
+			message = conditions[len(conditions)-1].Message
 		}
 
-		val.State = c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
-		res[i] = val
+		status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
+		for _, rs := range cluster.Status.Replsets {
+			status = append(status, appStatus{rs.Size, rs.Ready})
+		}
+		status = append(status, appStatus{
+			size:  cluster.Status.Mongos.Size,
+			ready: cluster.Status.Mongos.Ready,
+		})
+		val.DetailedState = status
+		val.Message = message
 	}
-	return res, nil
+
+	val.State = c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
+
+	return &val, nil
 }
 
 // getDeletingPSMDBClusters returns Percona Server for MongoDB clusters which are not fully deleted yet.
@@ -1361,6 +1397,26 @@ func (c *K8sClient) getDeletingPSMDBClusters(ctx context.Context, clusters []PSM
 		}
 	}
 	return pxcClusters, nil
+}
+
+func (c *K8sClient) getPodsList(ctx context.Context, managedBy string, clusterName string) (*common.PodList, error) {
+	args := []string{"get", "pods", "-o=json", "--selector=app.kubernetes.io/managed-by=" + managedBy}
+	if clusterName != "" {
+		args = append(args, "--selector=app.kubernetes.io/instance="+clusterName)
+	}
+
+	stdout, err := c.kubeCtl.Run(ctx, args, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var list common.PodList
+
+	err = json.Unmarshal(stdout, &list)
+	if err != nil {
+		return nil, err
+	}
+	return &list, nil
 }
 
 func (c *K8sClient) getComputeResources(resources *common.PodResources) *ComputeResources {

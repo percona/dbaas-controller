@@ -225,4 +225,186 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 		require.NoError(t, e)
 		require.JSONEq(t, expected, string(actual))
 	})
+
+	t.Run("check marshal", func(t *testing.T) {
+		input := `{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "psmdb.percona.com/v1",
+            "kind": "PerconaServerMongoDB",
+            "metadata": {
+                "annotations": {
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"psmdb.percona.com/v1-12-0\",\"kind\":\"PerconaServerMongoDB\",\"metadata\":{\"annotations\":{},\"finalizers\":[\"delete-psmdb-pvc\"],\"name\":\"mongodb-xcso1v\",\"namespace\":\"default\"},\"spec\":{\"backup\":{\"enabled\":true,\"image\":\"percona/percona-server-mongodb-operator:1.12.0-backup\",\"serviceAccountName\":\"percona-server-mongodb-operator\"},\"crVersion\":\"1.12.0\",\"image\":\"percona/percona-server-mongodb:5.0.7-6\",\"pause\":false,\"pmm\":{\"enabled\":true,\"image\":\"perconalab/pmm-client:dev-latest\",\"resources\":{\"requests\":{\"cpu\":\"500m\",\"memory\":\"300M\"}},\"serverHost\":\"localhost\"},\"replsets\":[{\"arbiter\":{\"affinity\":{\"antiAffinityTopologyKey\":\"kubernetes.io/hostname\"},\"enabled\":false,\"size\":1},\"configuration\":\"      operationProfiling:\\n        mode: slowOp\\n\",\"expose\":{\"enabled\":false,\"exposeType\":\"\"},\"name\":\"rs0\",\"podDisruptionBudget\":{\"maxUnavailable\":1},\"resources\":{\"limits\":{\"cpu\":\"1000m\",\"memory\":\"2000000000\"}},\"size\":3,\"volumeSpec\":{\"persistentVolumeClaim\":{\"resources\":{\"requests\":{\"storage\":\"25000000000\"}}}}}],\"secrets\":{\"users\":\"dbaas-mongodb-xcso1v-psmdb-secrets\"},\"sharding\":{\"configsvrReplSet\":{\"affinity\":{\"antiAffinityTopologyKey\":\"kubernetes.io/hostname\"},\"arbiter\":{\"affinity\":{\"antiAffinityTopologyKey\":\"kubernetes.io/hostname\"},\"enabled\":false,\"size\":1},\"expose\":{\"enabled\":false,\"exposeType\":\"\"},\"size\":3,\"volumeSpec\":{\"persistentVolumeClaim\":{\"resources\":{\"requests\":{\"storage\":\"25000000000\"}}}}},\"enabled\":true,\"expose\":null,\"mongos\":{\"affinity\":{\"antiAffinityTopologyKey\":\"kubernetes.io/hostname\"},\"expose\":{\"exposeType\":\"LoadBalancer\"},\"resources\":{\"limits\":{\"cpu\":\"1000m\",\"memory\":\"2000000000\"}},\"size\":3},\"operationProfiling\":null},\"updateStrategy\":\"RollingUpdate\"}}\n"
+                },
+                "creationTimestamp": "2022-08-27T15:16:37Z",
+                "finalizers": [
+                    "delete-psmdb-pvc"
+                ],
+                "generation": 1,
+                "name": "mongodb-xcso1v",
+                "namespace": "default",
+                "resourceVersion": "29905208",
+                "uid": "b0ee8194-085b-4f3e-bda2-c6e5a303f2da"
+            },
+            "spec": {
+                "backup": {
+                    "enabled": true,
+                    "image": "percona/percona-server-mongodb-operator:1.12.0-backup",
+                    "serviceAccountName": "percona-server-mongodb-operator"
+                },
+                "crVersion": "1.12.0",
+                "image": "percona/percona-server-mongodb:5.0.7-6",
+                "pause": false,
+                "pmm": {
+                    "enabled": true,
+                    "image": "perconalab/pmm-client:dev-latest",
+                    "resources": {
+                        "requests": {
+                            "cpu": "500m",
+                            "memory": "300M"
+                        }
+                    },
+                    "serverHost": "localhost"
+                },
+                "replsets": [
+                    {
+                        "arbiter": {
+                            "affinity": {
+                                "antiAffinityTopologyKey": "kubernetes.io/hostname"
+                            },
+                            "enabled": false,
+                            "size": 1
+                        },
+                        "configuration": "      operationProfiling:\n        mode: slowOp\n",
+                        "expose": {
+                            "enabled": false,
+                            "exposeType": ""
+                        },
+                        "name": "rs0",
+                        "podDisruptionBudget": {
+                            "maxUnavailable": 1
+                        },
+                        "resources": {
+                            "limits": {
+                                "cpu": "1000m",
+                                "memory": "2000000000"
+                            }
+                        },
+                        "size": 3,
+                        "volumeSpec": {
+                            "persistentVolumeClaim": {
+                                "resources": {
+                                    "requests": {
+                                        "storage": "25000000000"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
+                "secrets": {
+                    "users": "dbaas-mongodb-xcso1v-psmdb-secrets"
+                },
+                "sharding": {
+                    "configsvrReplSet": {
+                        "affinity": {
+                            "antiAffinityTopologyKey": "kubernetes.io/hostname"
+                        },
+                        "arbiter": {
+                            "affinity": {
+                                "antiAffinityTopologyKey": "kubernetes.io/hostname"
+                            },
+                            "enabled": false,
+                            "size": 1
+                        },
+                        "expose": {
+                            "enabled": false,
+                            "exposeType": ""
+                        },
+                        "size": 3,
+                        "volumeSpec": {
+                            "persistentVolumeClaim": {
+                                "resources": {
+                                    "requests": {
+                                        "storage": "25000000000"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "enabled": true,
+                    "mongos": {
+                        "affinity": {
+                            "antiAffinityTopologyKey": "kubernetes.io/hostname"
+                        },
+                        "expose": {
+                            "exposeType": "LoadBalancer"
+                        },
+                        "resources": {
+                            "limits": {
+                                "cpu": "1000m",
+                                "memory": "2000000000"
+                            }
+                        },
+                        "size": 3
+                    }
+                },
+                "updateStrategy": "RollingUpdate"
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2022-08-27T15:16:41Z",
+                        "status": "True",
+                        "type": "initializing"
+                    },
+                    {
+                        "lastTransitionTime": "2022-08-27T15:16:41Z",
+                        "reason": "MongosReady",
+                        "status": "True",
+                        "type": "ready"
+                    },
+                    {
+                        "lastTransitionTime": "2022-08-27T15:16:41Z",
+                        "status": "True",
+                        "type": "initializing"
+                    }
+                ],
+                "mongos": {
+                    "ready": 0,
+                    "size": 0,
+                    "status": "ready"
+                },
+                "observedGeneration": 1,
+                "ready": 0,
+                "replsets": {
+                    "cfg": {
+                        "message": "backup-agent: Back-off pulling image \"percona/percona-server-mongodb-operator:1.12.0-backup\"; mongod: back-off 5m0s restarting failed container=mongod pod=mongodb-xcso1v-cfg-0_default(913473ef-a7b4-4312-ba3f-84a3c05b30a9); ",
+                        "ready": 0,
+                        "size": 3,
+                        "status": "initializing"
+                    },
+                    "rs0": {
+                        "message": "backup-agent: Back-off pulling image \"percona/percona-server-mongodb-operator:1.12.0-backup\"; mongod: back-off 5m0s restarting failed container=mongod pod=mongodb-xcso1v-rs0-0_default(e196e010-3664-4ad6-8320-70bc78b75c1d); ",
+                        "ready": 0,
+                        "size": 3,
+                        "status": "initializing"
+                    }
+                },
+                "size": 6,
+                "state": "initializing"
+            }
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": "",
+        "selfLink": ""
+    }
+}`
+		var list MinimumObjectListSpec
+		err := json.Unmarshal([]byte(input), &list)
+		require.NoError(t, err)
+	})
 }

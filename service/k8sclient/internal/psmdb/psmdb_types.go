@@ -18,6 +18,7 @@
 package psmdb
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
@@ -113,29 +114,32 @@ const (
 	platformOpenshift  platform = "openshift"
 )
 
-// ObjectHeader is the kubectl get response header. It is a partial PSMDB object only used to
-// parse the CR version so we can decode the response into the appropriate stuct type.
-type MinimumObjectListSpec struct {
+// MinimumObjectItemSpec is partial object only used to
+// parse the CR version, so we can decode the response into the appropriate struct type
+type MinimumObjectItemSpec struct {
 	APIVersion string `json:"apiVersion"`
-	Items      []struct {
-		APIVersion string `json:"apiVersion"`
-		Kind       string `json:"kind"`
-		Metadata   struct {
-			Annotations struct {
-				KubectlKubernetesIoLastAppliedConfiguration string `json:"kubectl.kubernetes.io/last-applied-configuration"`
-			} `json:"annotations"`
-			CreationTimestamp time.Time `json:"creationTimestamp"`
-			Finalizers        []string  `json:"finalizers"`
-			Generation        int       `json:"generation"`
-			Name              string    `json:"name"`
-			Namespace         string    `json:"namespace"`
-			ResourceVersion   string    `json:"resourceVersion"`
-			UID               string    `json:"uid"`
-		} `json:"metadata"`
-		Spec struct {
-			CrVersion string `json:"crVersion"`
-		} `json:"spec"`
-	} `json:"items"`
+	Kind       string `json:"kind"`
+	Metadata   struct {
+		Annotations struct {
+			KubectlKubernetesIoLastAppliedConfiguration string `json:"kubectl.kubernetes.io/last-applied-configuration"`
+		} `json:"annotations"`
+		CreationTimestamp time.Time `json:"creationTimestamp"`
+		Finalizers        []string  `json:"finalizers"`
+		Generation        int       `json:"generation"`
+		Name              string    `json:"name"`
+		Namespace         string    `json:"namespace"`
+		ResourceVersion   string    `json:"resourceVersion"`
+		UID               string    `json:"uid"`
+	} `json:"metadata"`
+	Spec struct {
+		CrVersion string `json:"crVersion"`
+	} `json:"spec"`
+}
+
+// MinimumObjectListSpec is the kubectl get response header. It is a partial object which contains list of other objects.
+type MinimumObjectListSpec struct {
+	APIVersion string            `json:"apiVersion"`
+	Items      []json.RawMessage `json:"items"`
 }
 
 type ShardingSpec struct {
