@@ -115,21 +115,19 @@ const (
 )
 
 // MinimumObjectItemSpec is partial object only used to
-// parse the CR version, so we can decode the response into the appropriate struct type
+// parse the CR version, so we can decode the response into the appropriate struct type.
 type MinimumObjectItemSpec struct {
 	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`
 	Metadata   struct {
-		Annotations struct {
-			KubectlKubernetesIoLastAppliedConfiguration string `json:"kubectl.kubernetes.io/last-applied-configuration"`
-		} `json:"annotations"`
-		CreationTimestamp time.Time `json:"creationTimestamp"`
-		Finalizers        []string  `json:"finalizers"`
-		Generation        int       `json:"generation"`
-		Name              string    `json:"name"`
-		Namespace         string    `json:"namespace"`
-		ResourceVersion   string    `json:"resourceVersion"`
-		UID               string    `json:"uid"`
+		Annotations       map[string]string `json:"annotations"`
+		CreationTimestamp time.Time         `json:"creationTimestamp"`
+		Finalizers        []string          `json:"finalizers"`
+		Generation        int               `json:"generation"`
+		Name              string            `json:"name"`
+		Namespace         string            `json:"namespace"`
+		ResourceVersion   string            `json:"resourceVersion"`
+		UID               string            `json:"uid"`
 	} `json:"metadata"`
 	Spec struct {
 		CrVersion string `json:"crVersion"`

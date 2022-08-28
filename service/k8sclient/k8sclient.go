@@ -425,11 +425,12 @@ func (c *K8sClient) ListPXCClusters(ctx context.Context) ([]PXCCluster, error) {
 	return res, nil
 }
 
+// GetPXCCluster returns Percona XtraDB cluster with provided name.
 func (c *K8sClient) GetPXCCluster(ctx context.Context, name string) (*PXCCluster, error) {
 	var cluster pxc.PerconaXtraDBCluster
 	err := c.kubeCtl.Get(ctx, pxc.PerconaXtraDBClusterKind, name, &cluster)
 	if err != nil {
-		if err == kubectl.ErrNotFound {
+		if errors.Is(err, kubectl.ErrNotFound) {
 			list, e := c.getPodsList(ctx, "percona-xtradb-cluster-operator", name)
 			if e != nil {
 				return nil, e
@@ -853,12 +854,14 @@ func (c *K8sClient) convertPXCCluster(ctx context.Context, cluster pxc.PerconaXt
 		val.ProxySQL = &ProxySQL{
 			DiskSize:         c.getDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
 			ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
+			Image:            cluster.Spec.ProxySQL.Image,
 		}
 		val.Exposed = cluster.Spec.ProxySQL.ServiceType != "" &&
 			cluster.Spec.ProxySQL.ServiceType != common.ServiceTypeClusterIP
 	} else if cluster.Spec.HAProxy != nil {
 		val.HAProxy = &HAProxy{
 			ComputeResources: c.getComputeResources(cluster.Spec.HAProxy.Resources),
+			Image:            cluster.Spec.HAProxy.Image,
 		}
 		val.Exposed = cluster.Spec.HAProxy.ServiceType != "" &&
 			cluster.Spec.HAProxy.ServiceType != common.ServiceTypeClusterIP
@@ -966,6 +969,7 @@ func (c *K8sClient) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, erro
 	return res, nil
 }
 
+// GetPSMDBCluster returns PSMDB cluster with provided name.
 func (c *K8sClient) GetPSMDBCluster(ctx context.Context, name string) (*PSMDBCluster, error) {
 	buf, err := c.kubeCtl.GetRaw(ctx, psmdb.PerconaServerMongoDBKind, name)
 	if err != nil {
@@ -1251,7 +1255,7 @@ func getCRVersion(buf []byte) (*goversion.Version, error) {
 
 // getPSMDBClusters returns Percona Server for MongoDB clusters.
 func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error) {
-	list := psmdb.MinimumObjectListSpec{}
+	var list psmdb.MinimumObjectListSpec
 	err := c.kubeCtl.Get(ctx, psmdb.PerconaServerMongoDBKind, "", &list)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get percona server MongoDB clusters")

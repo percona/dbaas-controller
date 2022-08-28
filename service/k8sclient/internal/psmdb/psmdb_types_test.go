@@ -226,7 +226,8 @@ func TestPSMDBTypesMarshal(t *testing.T) {
 		require.JSONEq(t, expected, string(actual))
 	})
 
-	t.Run("check marshal", func(t *testing.T) {
+	t.Run("check marshal PSMDB 1.12", func(t *testing.T) {
+		t.Parallel()
 		input := `{
     "apiVersion": "v1",
     "items": [
