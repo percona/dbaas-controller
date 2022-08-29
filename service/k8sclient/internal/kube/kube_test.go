@@ -161,5 +161,4 @@ func TestGetSecret(t *testing.T) {
 
 	err = k.Delete(context.Background(), secret)
 	assert.NoError(t, err)
-
 }
