@@ -18,6 +18,8 @@
 package psmdb
 
 import (
+	"time"
+
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
@@ -27,6 +29,9 @@ const (
 	// PerconaServerMongoDBKind is a name of CRD for mongodb clusters.
 	PerconaServerMongoDBKind = "PerconaServerMongoDB"
 )
+
+// Ensure it implements the DatabaseCluster interface
+var _ common.DatabaseCluster = (*PerconaServerMongoDB)(nil)
 
 // PerconaServerMongoDB is the Schema for the perconaservermongodbs API.
 type PerconaServerMongoDB struct {
@@ -107,6 +112,31 @@ const (
 	platformKubernetes platform = "kubernetes"
 	platformOpenshift  platform = "openshift"
 )
+
+// ObjectHeader is the kubectl get response header. It is a partial PSMDB object only used to
+// parse the CR version so we can decode the response into the appropriate stuct type.
+type MinimumObjectListSpec struct {
+	APIVersion string `json:"apiVersion"`
+	Items      []struct {
+		APIVersion string `json:"apiVersion"`
+		Kind       string `json:"kind"`
+		Metadata   struct {
+			Annotations struct {
+				KubectlKubernetesIoLastAppliedConfiguration string `json:"kubectl.kubernetes.io/last-applied-configuration"`
+			} `json:"annotations"`
+			CreationTimestamp time.Time `json:"creationTimestamp"`
+			Finalizers        []string  `json:"finalizers"`
+			Generation        int       `json:"generation"`
+			Name              string    `json:"name"`
+			Namespace         string    `json:"namespace"`
+			ResourceVersion   string    `json:"resourceVersion"`
+			UID               string    `json:"uid"`
+		} `json:"metadata"`
+		Spec struct {
+			CrVersion string `json:"crVersion"`
+		} `json:"spec"`
+	} `json:"items"`
+}
 
 type ShardingSpec struct {
 	Enabled            bool                          `json:"enabled"`

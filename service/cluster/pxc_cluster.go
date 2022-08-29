@@ -74,7 +74,7 @@ func setComputeResources(inputResources *k8sclient.ComputeResources, outputResou
 func (s *PXCClusterService) ListPXCClusters(ctx context.Context, req *controllerv1beta1.ListPXCClustersRequest) (*controllerv1beta1.ListPXCClustersResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Cannot initialize K8s client: "+err.Error())
+		return nil, status.Errorf(codes.Internal, "Cannot initialize K8s client: %s", err)
 	}
 	defer client.Cleanup() //nolint:errcheck
 
