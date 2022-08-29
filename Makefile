@@ -59,8 +59,8 @@ release-component-version:
 	@echo $(COMPONENT_VERSION)
 
 release:                          ## Build dbaas-controller release binaries.
-	env CGO_ENABLED=0 go build -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
-	$(PMM_RELEASE_PATH)/dbaas-controller --version
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
+	# $(PMM_RELEASE_PATH)/dbaas-controller --version
 
 init:                             ## Install development tools
 	rm -rf ./bin
@@ -81,7 +81,7 @@ check:                            ## Run checks/linters for the whole project
 	bin/golangci-lint run
 
 install:                          ## Install binaries
-	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
 test:                             ## Run tests
 	go test $(PMM_TEST_FLAGS) -race -timeout=30m ./...
@@ -165,6 +165,6 @@ eks-delete-current-namespace:
 	NAMESPACE=$$(kubectl config view --minify --output 'jsonpath={..namespace}'); \
 	if [ "$$NAMESPACE" != "default" ]; then kubectl delete ns "$$NAMESPACE"; fi
 
-deploy-to-pmm-server: install     ## Deploy DBaaS controller to a running ${PMM_CONTAINER} container.
+deploy-to-pmm-server: release     ## Deploy DBaaS controller to a running ${PMM_CONTAINER} container.
 	docker cp bin/dbaas-controller ${PMM_CONTAINER}:/usr/sbin/dbaas-controller
 	docker exec ${PMM_CONTAINER} supervisorctl restart dbaas-controller
