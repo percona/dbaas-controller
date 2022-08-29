@@ -54,6 +54,7 @@ type configGetter struct {
 type Client struct {
 	clientset  *kubernetes.Clientset
 	restConfig *rest.Config
+	namespace  string
 }
 
 // NewConfigGetter creates a new configGetter struct
@@ -109,7 +110,11 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{clientset: clientset, restConfig: config}, nil
+	namespace := "default"
+	if space := os.Getenv("NAMESPACE"); space != "" {
+		namespace = space
+	}
+	return &Client{clientset: clientset, restConfig: config, namespace: namespace}, nil
 }
 
 func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) {
@@ -138,7 +143,7 @@ func (c *Client) Delete(ctx context.Context, obj runtime.Object) error {
 	if err != nil {
 		return err
 	}
-	namespace, name, err := retrievesMetaFromObject(obj)
+	namespace, name, err := c.retrieveMetaFromObject(obj)
 	if err != nil {
 		return err
 	}
@@ -165,7 +170,7 @@ func (c *Client) Apply(ctx context.Context, obj runtime.Object) error {
 	if err != nil {
 		return err
 	}
-	namespace, name, err := retrievesMetaFromObject(obj)
+	namespace, name, err := c.retrieveMetaFromObject(obj)
 	if err != nil {
 		return err
 	}
@@ -242,12 +247,7 @@ func (c *Client) GetStorageClasses(ctx context.Context) (*v1.StorageClassList, e
 
 // GetSecret returns k8s secret by provided name
 func (c *Client) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
-	namespace := "default"
-	if space := os.Getenv("NAMESPACE"); space != "" {
-		namespace = space
-	}
-
-	return c.clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+	return c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
 // GetAPIVersions returns apiversions
@@ -296,12 +296,8 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 		options.Container = container
 	}
 	buf := new(bytes.Buffer)
-	namespace := "default"
-	if space := os.Getenv("NAMESPACE"); space != "" {
-		namespace = space
-	}
 
-	req := c.clientset.CoreV1().Pods(namespace).GetLogs(pod, options)
+	req := c.clientset.CoreV1().Pods(c.namespace).GetLogs(pod, options)
 	podLogs, err := req.Stream(ctx)
 	if err != nil {
 		return buf.String(), err
@@ -313,7 +309,7 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 	return buf.String(), nil
 }
 
-func retrievesMetaFromObject(obj runtime.Object) (namespace, name string, err error) {
+func (c *Client) retrieveMetaFromObject(obj runtime.Object) (namespace, name string, err error) {
 	name, err = meta.NewAccessor().Name(obj)
 	if err != nil {
 		return
@@ -323,10 +319,7 @@ func retrievesMetaFromObject(obj runtime.Object) (namespace, name string, err er
 		return
 	}
 	if namespace == "" {
-		namespace = "default"
-		if space := os.Getenv("NAMESPACE"); space != "" {
-			namespace = space
-		}
+		namespace = c.namespace
 	}
 	return
 }
