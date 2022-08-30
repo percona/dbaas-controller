@@ -81,7 +81,7 @@ check:                            ## Run checks/linters for the whole project
 	bin/golangci-lint run
 
 install:                          ## Install binaries
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
+	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
 test:                             ## Run tests
 	go test $(PMM_TEST_FLAGS) -race -timeout=30m ./...
