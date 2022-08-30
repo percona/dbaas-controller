@@ -2163,7 +2163,7 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOp
 	bytes, err := ioutil.ReadFile(pxcCRFile)
 	if err == nil {
 		c.l.Debug("found pxc cr template")
-		err = yaml.Unmarshal(bytes, spec)
+		err = c.unmarshalTemplate(bytes, spec)
 		if err != nil {
 			return nil, err
 		}
@@ -2171,7 +2171,7 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOp
 
 	}
 	c.l.Debug("failed openint cr template file. Fallback to defaults")
-	return c.getDefaultPXCSpec(params, secretName, pxcOperatorVersion, storageName, serviceType)
+	return c.getDefaultPXCSpec(params, secretName, pxcOperatorVersion, storageName, serviceType), nil
 
 }
 func (c *K8sClient) overrideSpec(spec *pxc.PerconaXtraDBCluster, params *PXCParams, storageName string) *pxc.PerconaXtraDBCluster {
@@ -2198,7 +2198,7 @@ func (c *K8sClient) overrideSpec(spec *pxc.PerconaXtraDBCluster, params *PXCPara
 	return spec
 }
 
-func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperatorVersion, storageName string, serviceType common.ServiceType) (*pxc.PerconaXtraDBCluster, error) {
+func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperatorVersion, storageName string, serviceType common.ServiceType) *pxc.PerconaXtraDBCluster {
 	pxcImage := pxcDefaultImage
 	if params.PXC.Image != "" {
 		pxcImage = params.PXC.Image
@@ -2302,5 +2302,33 @@ func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperator
 	podSpec.Affinity = &pxc.PodAffinity{
 		TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
 	}
-	return spec, nil
+	return spec
+}
+func (c *K8sClient) unmarshalTemplate(body []byte, out interface{}) error {
+	var yamlObj interface{}
+	err := yaml.Unmarshal(body, &yamlObj)
+	if err != nil {
+		return err
+	}
+	yamlObj = convert(yamlObj)
+	jsonData, err := json.Marshal(yamlObj)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(jsonData, out)
+}
+func convert(i interface{}) interface{} {
+	switch x := i.(type) {
+	case map[interface{}]interface{}:
+		m2 := map[string]interface{}{}
+		for k, v := range x {
+			m2[k.(string)] = convert(v)
+		}
+		return m2
+	case []interface{}:
+		for i, v := range x {
+			x[i] = convert(v)
+		}
+	}
+	return i
 }
