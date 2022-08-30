@@ -2158,10 +2158,6 @@ func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraCRParams) *ps
 	return req
 }
 func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOperatorVersion, storageName string, serviceType common.ServiceType) (*pxc.PerconaXtraDBCluster, error) {
-	pxcImage := pxcDefaultImage
-	if params.PXC.Image != "" {
-		pxcImage = params.PXC.Image
-	}
 	var spec *pxc.PerconaXtraDBCluster
 
 	bytes, err := ioutil.ReadFile(pxcCRFile)
@@ -2171,63 +2167,14 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOp
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		c.l.Debug("failed openint cr template file. Fallback to defaults")
+		return c.overrideSpec(spec, params, storageName), nil
 
-		spec = &pxc.PerconaXtraDBCluster{
-			TypeMeta: common.TypeMeta{
-				APIVersion: c.getAPIVersionForPXCOperator(pxcOperatorVersion),
-				Kind:       pxc.PerconaXtraDBClusterKind,
-			},
-			ObjectMeta: common.ObjectMeta{
-				Name:       params.Name,
-				Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
-			},
-			Spec: &pxc.PerconaXtraDBClusterSpec{
-				UpdateStrategy:    updateStrategyRollingUpdate,
-				CRVersion:         pxcOperatorVersion,
-				AllowUnsafeConfig: true,
-				SecretsName:       secretName,
-
-				PXC: &pxc.PXCSpec{
-					PodSpec: &pxc.PodSpec{
-						Size:            &params.Size,
-						Resources:       c.setComputeResources(params.PXC.ComputeResources),
-						Image:           pxcImage,
-						ImagePullPolicy: pullPolicy,
-						VolumeSpec:      c.volumeSpec(params.PXC.DiskSize),
-						Affinity: &pxc.PodAffinity{
-							TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
-						},
-						PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
-							MaxUnavailable: pointer.ToInt(1),
-						},
-					},
-				},
-
-				PMM: &pxc.PMMSpec{
-					Enabled: false,
-				},
-
-				Backup: &pxc.PXCScheduledBackup{
-					Image: fmt.Sprintf(pxcBackupImageTemplate, pxcOperatorVersion),
-					Schedule: []pxc.PXCScheduledBackupSchedule{{
-						Name:        "test",
-						Schedule:    "*/30 * * * *",
-						Keep:        3,
-						StorageName: storageName,
-					}},
-					Storages: map[string]*pxc.BackupStorageSpec{
-						storageName: {
-							Type:   pxc.BackupStorageFilesystem,
-							Volume: c.volumeSpec(params.PXC.DiskSize),
-						},
-					},
-					ServiceAccountName: "percona-xtradb-cluster-operator",
-				},
-			},
-		}
 	}
+	c.l.Debug("failed openint cr template file. Fallback to defaults")
+	return c.getDefaultPXCSpec(params, secretName, pxcOperatorVersion, storageName, serviceType)
+
+}
+func (c *K8sClient) overrideSpec(spec *pxc.PerconaXtraDBCluster, params *PXCParams, storageName string) *pxc.PerconaXtraDBCluster {
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.PXC.PodSpec.Size = &params.Size
 	spec.Spec.PXC.PodSpec.Resources = c.setComputeResources(params.PXC.ComputeResources)
@@ -2235,6 +2182,79 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOp
 	spec.Spec.Backup.Storages[storageName].Volume = c.volumeSpec(params.PXC.DiskSize)
 	if !params.Expose {
 		spec.Spec.PXC.Expose = pxc.ServiceExpose{Enabled: false}
+	}
+	if params.ProxySQL != nil && spec.Spec.ProxySQL != nil {
+		spec.Spec.ProxySQL.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
+		spec.Spec.ProxySQL.VolumeSpec = c.volumeSpec(params.ProxySQL.DiskSize)
+	}
+	if params.HAProxy != nil && spec.Spec.HAProxy != nil {
+		spec.Spec.HAProxy.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
+		spec.Spec.HAProxy.VolumeSpec = c.volumeSpec(params.ProxySQL.DiskSize)
+		if params.HAProxy.Image != "" {
+			spec.Spec.HAProxy.Image = params.HAProxy.Image
+		}
+	}
+
+	return spec
+}
+
+func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperatorVersion, storageName string, serviceType common.ServiceType) (*pxc.PerconaXtraDBCluster, error) {
+	pxcImage := pxcDefaultImage
+	if params.PXC.Image != "" {
+		pxcImage = params.PXC.Image
+	}
+	spec := &pxc.PerconaXtraDBCluster{
+		TypeMeta: common.TypeMeta{
+			APIVersion: c.getAPIVersionForPXCOperator(pxcOperatorVersion),
+			Kind:       pxc.PerconaXtraDBClusterKind,
+		},
+		ObjectMeta: common.ObjectMeta{
+			Name:       params.Name,
+			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
+		},
+		Spec: &pxc.PerconaXtraDBClusterSpec{
+			UpdateStrategy:    updateStrategyRollingUpdate,
+			CRVersion:         pxcOperatorVersion,
+			AllowUnsafeConfig: true,
+			SecretsName:       secretName,
+
+			PXC: &pxc.PXCSpec{
+				PodSpec: &pxc.PodSpec{
+					Size:            &params.Size,
+					Resources:       c.setComputeResources(params.PXC.ComputeResources),
+					Image:           pxcImage,
+					ImagePullPolicy: pullPolicy,
+					VolumeSpec:      c.volumeSpec(params.PXC.DiskSize),
+					Affinity: &pxc.PodAffinity{
+						TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
+					},
+					PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
+						MaxUnavailable: pointer.ToInt(1),
+					},
+				},
+			},
+
+			PMM: &pxc.PMMSpec{
+				Enabled: false,
+			},
+
+			Backup: &pxc.PXCScheduledBackup{
+				Image: fmt.Sprintf(pxcBackupImageTemplate, pxcOperatorVersion),
+				Schedule: []pxc.PXCScheduledBackupSchedule{{
+					Name:        "test",
+					Schedule:    "*/30 * * * *",
+					Keep:        3,
+					StorageName: storageName,
+				}},
+				Storages: map[string]*pxc.BackupStorageSpec{
+					storageName: {
+						Type:   pxc.BackupStorageFilesystem,
+						Volume: c.volumeSpec(params.PXC.DiskSize),
+					},
+				},
+				ServiceAccountName: "percona-xtradb-cluster-operator",
+			},
+		},
 	}
 
 	if params.PMM != nil {
