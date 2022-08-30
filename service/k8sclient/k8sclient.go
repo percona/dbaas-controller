@@ -2167,19 +2167,44 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOp
 		if err != nil {
 			return nil, err
 		}
-		return c.overrideSpec(spec, params, storageName), nil
+		return c.overrideSpec(spec, params, storageName, pxcOperatorVersion), nil
 
 	}
 	c.l.Debug("failed openint cr template file. Fallback to defaults")
 	return c.getDefaultPXCSpec(params, secretName, pxcOperatorVersion, storageName, serviceType), nil
 
 }
-func (c *K8sClient) overrideSpec(spec *pxc.PerconaXtraDBCluster, params *PXCParams, storageName string) *pxc.PerconaXtraDBCluster {
+func (c *K8sClient) overrideSpec(spec *pxc.PerconaXtraDBCluster, params *PXCParams, storageName, pxcOperatorVersion string) *pxc.PerconaXtraDBCluster {
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.PXC.PodSpec.Size = &params.Size
 	spec.Spec.PXC.PodSpec.Resources = c.setComputeResources(params.PXC.ComputeResources)
 	spec.Spec.PXC.PodSpec.VolumeSpec = c.volumeSpec(params.PXC.DiskSize)
-	//spec.Spec.Backup.Storages[storageName].Volume = c.volumeSpec(params.PXC.DiskSize)
+	if spec.Spec.Backup == nil {
+		spec.Spec.Backup = &pxc.PXCScheduledBackup{
+			Image: fmt.Sprintf(pxcBackupImageTemplate, pxcOperatorVersion),
+			Schedule: []pxc.PXCScheduledBackupSchedule{{
+				Name:        "test",
+				Schedule:    "*/30 * * * *",
+				Keep:        3,
+				StorageName: storageName,
+			}},
+			Storages: map[string]*pxc.BackupStorageSpec{
+				storageName: {
+					Type:   pxc.BackupStorageFilesystem,
+					Volume: c.volumeSpec(params.PXC.DiskSize),
+				},
+			},
+			ServiceAccountName: "percona-xtradb-cluster-operator",
+		}
+	}
+	if len(spec.Spec.Backup.Storages) == 0 {
+		spec.Spec.Backup.Storages = map[string]*pxc.BackupStorageSpec{
+			storageName: {
+				Type:   pxc.BackupStorageFilesystem,
+				Volume: c.volumeSpec(params.PXC.DiskSize),
+			},
+		}
+	}
 	if !params.Expose {
 		spec.Spec.PXC.Expose = pxc.ServiceExpose{Enabled: false}
 	}
