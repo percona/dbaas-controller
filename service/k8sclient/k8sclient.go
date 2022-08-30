@@ -2158,7 +2158,7 @@ func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraCRParams) *ps
 	return req
 }
 func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOperatorVersion, storageName string, serviceType common.ServiceType) (*pxc.PerconaXtraDBCluster, error) {
-	var spec *pxc.PerconaXtraDBCluster
+	spec := new(pxc.PerconaXtraDBCluster)
 
 	bytes, err := ioutil.ReadFile(pxcCRFile)
 	if err == nil {
@@ -2179,7 +2179,7 @@ func (c *K8sClient) overrideSpec(spec *pxc.PerconaXtraDBCluster, params *PXCPara
 	spec.Spec.PXC.PodSpec.Size = &params.Size
 	spec.Spec.PXC.PodSpec.Resources = c.setComputeResources(params.PXC.ComputeResources)
 	spec.Spec.PXC.PodSpec.VolumeSpec = c.volumeSpec(params.PXC.DiskSize)
-	spec.Spec.Backup.Storages[storageName].Volume = c.volumeSpec(params.PXC.DiskSize)
+	//spec.Spec.Backup.Storages[storageName].Volume = c.volumeSpec(params.PXC.DiskSize)
 	if !params.Expose {
 		spec.Spec.PXC.Expose = pxc.ServiceExpose{Enabled: false}
 	}
@@ -2188,8 +2188,7 @@ func (c *K8sClient) overrideSpec(spec *pxc.PerconaXtraDBCluster, params *PXCPara
 		spec.Spec.ProxySQL.VolumeSpec = c.volumeSpec(params.ProxySQL.DiskSize)
 	}
 	if params.HAProxy != nil && spec.Spec.HAProxy != nil {
-		spec.Spec.HAProxy.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
-		spec.Spec.HAProxy.VolumeSpec = c.volumeSpec(params.ProxySQL.DiskSize)
+		spec.Spec.HAProxy.Resources = c.setComputeResources(params.HAProxy.ComputeResources)
 		if params.HAProxy.Image != "" {
 			spec.Spec.HAProxy.Image = params.HAProxy.Image
 		}
