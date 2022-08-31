@@ -22,9 +22,12 @@ import (
 	"os"
 	"testing"
 
+	goversion "github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 )
@@ -174,4 +177,45 @@ spec:
 		assert.False(t, spec.Spec.PXC.Expose.Enabled)
 		assert.Equal(t, 0, len(spec.Spec.PXC.Expose.Annotations))
 	})
+}
+func TestPSMDBSpec(t *testing.T) {
+	t.Parallel()
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+	ctx := app.Context()
+
+	client, err := New(ctx, string(kubeconfig))
+	assert.NoError(t, err)
+	params := &PSMDBParams{
+		Name: "psmdb-cluster",
+		Size: 3,
+		Replicaset: &Replicaset{
+			DiskSize: "1000000000",
+		},
+		PMM:         new(PMM),
+		BackupImage: "percona/percona-backup-mongodb:1.7.0",
+	}
+	extra := extraCRParams{
+		expose: psmdb.Expose{
+			Enabled:    true,
+			ExposeType: common.ServiceTypeLoadBalancer,
+		},
+	}
+	operator, _ := goversion.NewVersion("1.12.0")
+	extra.operators = &Operators{
+		PsmdbOperatorVersion: "1.12.0",
+	}
+	assert.NoError(t, err)
+	t.Run("should fallback to default spec once template does not exist", func(t *testing.T) {
+		t.Parallel()
+		spec, err := client.createPSMDBSpec(operator, params, extra)
+		assert.NoError(t, err)
+		defaultSpec := client.getPSMDBSpec112Plus(params, extra)
+		assert.Equal(t, defaultSpec, spec)
+		params.Expose = false
+		spec = client.overridePSMDBSpec(spec, params, extra)
+		assert.False(t, spec.Spec.Sharding.Mongos.Expose.Enabled)
+		assert.Empty(t, spec.Spec.Sharding.Mongos.Expose.ExposeType)
+	})
+
 }

@@ -2153,7 +2153,7 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 	return req
 }
 
-func (c *K8sClient) createPSMDBSpec(operator *goversion.Version, params *PSMDBParams, extra extraCRParams) (interface{}, error) {
+func (c *K8sClient) createPSMDBSpec(operator *goversion.Version, params *PSMDBParams, extra extraCRParams) (*psmdb.PerconaServerMongoDB, error) {
 	spec := new(psmdb.PerconaServerMongoDB)
 	bytes, err := ioutil.ReadFile(psmdbCRFile)
 	if err == nil {
@@ -2189,7 +2189,26 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOp
 	return c.getDefaultPXCSpec(params, secretName, pxcOperatorVersion, storageName, serviceType), nil
 
 }
-func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *PSMDBParams, extra extraCRParams) interface{} {
+func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB {
+	spec.ObjectMeta.Name = params.Name
+	spec.Spec.Sharding.ConfigsvrReplSet.Size = params.Size
+	spec.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+	spec.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+	spec.Spec.Sharding.ConfigsvrReplSet.VolumeSpec = c.volumeSpec(params.Replicaset.DiskSize)
+	if spec.Spec.Backup == nil {
+		spec.Spec.Backup = &psmdb.BackupSpec{
+			Enabled:            true,
+			Image:              fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion),
+			ServiceAccountName: "percona-server-mongodb-operator",
+		}
+	}
+	if !params.Expose {
+		spec.Spec.Sharding.Mongos.Expose.Enabled = false
+		spec.Spec.Sharding.Mongos.Expose.ExposeType = ""
+		if spec.Spec.Sharding.Expose != nil {
+			spec.Spec.Sharding.Expose.Enabled = false
+		}
+	}
 	return spec
 }
 func (c *K8sClient) overridePXCSpec(spec *pxc.PerconaXtraDBCluster, params *PXCParams, storageName, pxcOperatorVersion string) *pxc.PerconaXtraDBCluster {
