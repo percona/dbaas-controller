@@ -35,7 +35,7 @@ var _ common.DatabaseCluster = (*PerconaServerMongoDB)(nil)
 
 // PerconaServerMongoDB is the Schema for the perconaservermongodbs API.
 type PerconaServerMongoDB struct {
-	common.TypeMeta   // anonymous for embedding
+	common.TypeMeta   `json:",inline"`
 	common.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   *PerconaServerMongoDBSpec   `json:"spec,omitempty"`
@@ -143,6 +143,7 @@ type ShardingSpec struct {
 	ConfigsvrReplSet   *ReplsetSpec                  `json:"configsvrReplSet"`
 	Mongos             *ReplsetSpec                  `json:"mongos"`
 	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
+	Expose             *Expose                       `json:"expose"`
 }
 
 // UpgradeOptions specify how and to what version we update.
@@ -158,10 +159,11 @@ type PerconaServerMongoDBSpec struct {
 	UpgradeOptions          *common.UpgradeOptions `json:"upgradeOptions,omitempty"`
 	CRVersion               string                 `json:"crVersion,omitempty"`
 	Pause                   bool                   `json:"pause"`
-	UnsafeConf              bool                   `json:"allowUnsafeConfigurations"`
+	UnsafeConf              bool                   `json:"allowUnsafeConfigurations,omitempty"`
 	RunUID                  int64                  `json:"runUid,omitempty"`
 	Platform                *platform              `json:"platform,omitempty"`
 	Image                   string                 `json:"image,omitempty"`
+	ImagePullPolicy         string                 `json:"imagePullPolicy,omitempty"`
 	Mongod                  *MongodSpec            `json:"mongod,omitempty"`
 	Replsets                []*ReplsetSpec         `json:"replsets,omitempty"`
 	Secrets                 *SecretsSpec           `json:"secrets,omitempty"`
@@ -254,12 +256,20 @@ type PodAffinity struct {
 
 // Expose holds information about how the cluster is exposed to the worl via ingress.
 type Expose struct {
-	Enabled    bool               `json:"enabled"`
+	Enabled    bool               `json:"enabled,omitempty"`
 	ExposeType common.ServiceType `json:"exposeType"`
 }
 
 // ReplsetSpec defines replicaton set specification.
 type ReplsetSpec struct {
+	Affinity  *PodAffinity `json:"affinity,omitempty"`  // Operator 1.12+
+	Nonvoting *Nonvoting   `json:"nonvoting,omitempty"` // Operator 1.12+
+	// ConfigurationOptions options that will be passed as defined in MongoDB configuration file.
+	// See https://github.com/percona/percona-server-mongodb-operator/blob/b304b6c5bb0df2e6e7dac637d23f10fbcbd4800e/pkg/apis/psmdb/v1/psmdb_types.go#L353-L367
+	// It must be a multi line string with indentation to produce a map, like:
+	// operationProfiling:
+	//     mode: slowOp
+	Configuration       string                          `json:"configuration,omitempty"` // Operator 1.12+
 	Expose              Expose                          `json:"expose,omitempty"`
 	Size                int32                           `json:"size"`
 	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
@@ -497,4 +507,14 @@ type Arbiter struct {
 	Enabled bool  `json:"enabled"`
 	Size    int32 `json:"size"`
 	MultiAZ
+}
+
+// Nonvoting Non voting members.
+type Nonvoting struct {
+	Enabled             bool                            `json:"enabled,omitempty"`
+	Size                int                             `json:"size,omitempty"`
+	Affinity            *PodAffinity                    `json:"affinity,omitempty"`
+	PodDisruptionBudget *common.PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+	Resources           common.ResourceRequirements     `json:"resources,omitempty"`
+	VolumeSpec          *common.VolumeSpec              `json:"volumeSpec,omitempty"`
 }

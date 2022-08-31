@@ -1189,7 +1189,7 @@ func (c *K8sClient) buildPSMDBDBList110(ctx context.Context, buf []byte) ([]PSMD
 }
 
 func (c *K8sClient) buildPSMDBDBList112(ctx context.Context, buf []byte) ([]PSMDBCluster, error) {
-	var list psmdb.PerconaServerMongoDBList112
+	var list psmdb.PerconaServerMongoDBList
 
 	if err := json.Unmarshal(buf, &list); err != nil {
 		return nil, err
@@ -2052,10 +2052,8 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 	return res
 }
 
-func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB112 { //nolint:funlen
-	req := &psmdb.PerconaServerMongoDB112{
-		APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
-		Kind:       psmdb.PerconaServerMongoDBKind,
+func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB { //nolint:funlen
+	req := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
 			APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
 			Kind:       psmdb.PerconaServerMongoDBKind,
@@ -2064,14 +2062,14 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 			Name:       params.Name,
 			Finalizers: []string{"delete-psmdb-pvc"},
 		},
-		Spec: &psmdb.PSMDB112Spec{
+		Spec: &psmdb.PerconaServerMongoDBSpec{
 			UpdateStrategy: updateStrategyRollingUpdate,
 			CRVersion:      extra.operators.PsmdbOperatorVersion,
 			Image:          extra.psmdbImage,
 			Secrets: &psmdb.SecretsSpec{
 				Users: extra.secretName,
 			},
-			Sharding: &psmdb.ShardingSpec112{
+			Sharding: &psmdb.ShardingSpec{
 				Enabled: true,
 				ConfigsvrReplSet: &psmdb.ReplsetSpec{
 					Size:       3,
@@ -2088,17 +2086,17 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 					},
 					Expose: extra.expose,
 				},
-				Mongos: &psmdb.ReplsetMongosSpec112{
+				Mongos: &psmdb.ReplsetSpec{
 					Size: params.Size,
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: extra.affinity,
 					},
-					Expose: psmdb.ExposeSpec{
+					Expose: psmdb.Expose{
 						ExposeType: common.ServiceTypeLoadBalancer,
 					},
 				},
 			},
-			Replsets: []*psmdb.ReplsetSpec112{
+			Replsets: []*psmdb.ReplsetSpec{
 				{
 					Name:      "rs0",
 					Size:      params.Size,
