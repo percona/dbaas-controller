@@ -141,7 +141,7 @@ type MinimumObjectListSpec struct {
 type ShardingSpec struct {
 	Enabled            bool                          `json:"enabled"`
 	ConfigsvrReplSet   *ReplsetSpec                  `json:"configsvrReplSet"`
-	Mongos             *ReplsetSpec                  `json:"mongos"`
+	Mongos             *MongosSpec                   `json:"mongos"`
 	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
 	Expose             *Expose                       `json:"expose"`
 }
@@ -159,7 +159,7 @@ type PerconaServerMongoDBSpec struct {
 	UpgradeOptions          *common.UpgradeOptions `json:"upgradeOptions,omitempty"`
 	CRVersion               string                 `json:"crVersion,omitempty"`
 	Pause                   bool                   `json:"pause"`
-	UnsafeConf              bool                   `json:"allowUnsafeConfigurations,omitempty"`
+	UnsafeConf              bool                   `json:"allowUnsafeConfigurations"`
 	RunUID                  int64                  `json:"runUid,omitempty"`
 	Platform                *platform              `json:"platform,omitempty"`
 	Image                   string                 `json:"image,omitempty"`
@@ -256,8 +256,16 @@ type PodAffinity struct {
 
 // Expose holds information about how the cluster is exposed to the worl via ingress.
 type Expose struct {
-	Enabled    bool               `json:"enabled,omitempty"`
-	ExposeType common.ServiceType `json:"exposeType"`
+	Enabled                  bool               `json:"enabled"`
+	ExposeType               common.ServiceType `json:"exposeType,omitempty"`
+	LoadBalancerSourceRanges []string           `json:"loadBalancerSourceRanges,omitempty"`
+	ServiceAnnotations       map[string]string  `json:"serviceAnnotations,omitempty"`
+}
+type MongosExpose struct {
+	ExposeType               common.ServiceType `json:"exposeType,omitempty"`
+	ServicePerPod            bool               `json:"servicePerPod,omitempty"`
+	LoadBalancerSourceRanges []string           `json:"loadBalancerSourceRanges,omitempty"`
+	ServiceAnnotations       map[string]string  `json:"serviceAnnotations,omitempty"`
 }
 
 // ReplsetSpec defines replicaton set specification.
@@ -295,9 +303,19 @@ type SecretsSpec struct {
 
 // MongosSpec defines MongoDB specification.
 type MongosSpec struct {
-	*common.PodResources `json:"resources,omitempty"`
-	Port                 int32 `json:"port,omitempty"`
-	HostPort             int32 `json:"hostPort,omitempty"`
+	MultiAZ `json:",inline"`
+
+	Port                     int32                   `json:"port,omitempty"`
+	HostPort                 int32                   `json:"hostPort,omitempty"`
+	SetParameter             *MongosSpecSetParameter `json:"setParameter,omitempty"`
+	AuditLog                 *MongoSpecAuditLog      `json:"auditLog,omitempty"`
+	Expose                   MongosExpose            `json:"expose,omitempty"`
+	Size                     int32                   `json:"size,omitempty"`
+	ReadinessProbe           map[string]interface{}  `json:"readinessProbe,omitempty"`
+	LivenessProbe            *livenessProbeExtended  `json:"livenessProbe,omitempty"`
+	PodSecurityContext       map[string]interface{}  `json:"podSecurityContext,omitempty"`
+	ContainerSecurityContext map[string]interface{}  `json:"containerSecurityContext,omitempty"`
+	Configuration            MongoConfiguration      `json:"configuration,omitempty"`
 }
 
 // MongodSpec defines mongod specification.
@@ -518,3 +536,23 @@ type Nonvoting struct {
 	Resources           common.ResourceRequirements     `json:"resources,omitempty"`
 	VolumeSpec          *common.VolumeSpec              `json:"volumeSpec,omitempty"`
 }
+type AuditLogDestination string
+
+var AuditLogDestinationFile AuditLogDestination = "file"
+
+type AuditLogFormat string
+
+var (
+	AuditLogFormatBSON AuditLogFormat = "BSON"
+	AuditLogFormatJSON AuditLogFormat = "JSON"
+)
+
+type MongoSpecAuditLog struct {
+	Destination AuditLogDestination `json:"destination,omitempty"`
+	Format      AuditLogFormat      `json:"format,omitempty"`
+	Filter      string              `json:"filter,omitempty"`
+}
+type MongosSpecSetParameter struct {
+	CursorTimeoutMillis int `json:"cursorTimeoutMillis,omitempty"`
+}
+type MongoConfiguration string
