@@ -2170,8 +2170,8 @@ func (c *K8sClient) createPSMDBSpec(operator *goversion.Version, params *PSMDBPa
 	default:
 		return c.getPSMDBSpec(params, extra), nil
 	}
-
 }
+
 func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOperatorVersion, storageName string, serviceType common.ServiceType) (*pxc.PerconaXtraDBCluster, error) {
 	spec := new(pxc.PerconaXtraDBCluster)
 
@@ -2187,8 +2187,8 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOp
 	}
 	c.l.Debug("failed openint cr template file. Fallback to defaults")
 	return c.getDefaultPXCSpec(params, secretName, pxcOperatorVersion, storageName, serviceType), nil
-
 }
+
 func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB {
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.Sharding.ConfigsvrReplSet.Size = params.Size
@@ -2211,6 +2211,7 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *
 	}
 	return spec
 }
+
 func (c *K8sClient) overridePXCSpec(spec *pxc.PerconaXtraDBCluster, params *PXCParams, storageName, pxcOperatorVersion string) *pxc.PerconaXtraDBCluster {
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.PXC.PodSpec.Size = &params.Size
@@ -2365,6 +2366,7 @@ func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperator
 	}
 	return spec
 }
+
 func (c *K8sClient) unmarshalTemplate(body []byte, out interface{}) error {
 	var yamlObj interface{}
 	err := yaml.Unmarshal(body, &yamlObj)
@@ -2378,6 +2380,7 @@ func (c *K8sClient) unmarshalTemplate(body []byte, out interface{}) error {
 	}
 	return json.Unmarshal(jsonData, out)
 }
+
 func convert(i interface{}) interface{} {
 	switch x := i.(type) {
 	case map[interface{}]interface{}:

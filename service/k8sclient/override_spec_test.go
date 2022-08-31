@@ -178,6 +178,7 @@ spec:
 		assert.Equal(t, 0, len(spec.Spec.PXC.Expose.Annotations))
 	})
 }
+
 func TestPSMDBSpec(t *testing.T) {
 	t.Parallel()
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -217,5 +218,4 @@ func TestPSMDBSpec(t *testing.T) {
 		assert.False(t, spec.Spec.Sharding.Mongos.Expose.Enabled)
 		assert.Empty(t, spec.Spec.Sharding.Mongos.Expose.ExposeType)
 	})
-
 }
