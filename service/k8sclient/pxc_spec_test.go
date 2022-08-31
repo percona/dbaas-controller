@@ -22,10 +22,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
-	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
+	"github.com/percona-platform/dbaas-controller/utils/app"
 )
 
 func TestPXCSpec(t *testing.T) {
@@ -172,7 +173,5 @@ spec:
 		spec = client.overridePXCSpec(spec, params, "pxc-backup-storage-cns", "1.11.0")
 		assert.False(t, spec.Spec.PXC.Expose.Enabled)
 		assert.Equal(t, 0, len(spec.Spec.PXC.Expose.Annotations))
-
 	})
-
 }
