@@ -919,9 +919,9 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 
 	switch {
 	case psmdbOperatorVersion.GreaterThanOrEqual(v112):
-		res = c.makeReq112Plus(params, extra)
+		res = c.getPSMDBSpec112Plus(params, extra)
 	default:
-		res = c.makeReq(params, extra)
+		res = c.getPSMDBSpec(params, extra)
 	}
 
 	if params.PMM != nil {
@@ -1915,7 +1915,7 @@ func vmAgentSpec(params *PMM, secretName string) monitoring.VMAgent {
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 // func (c *K8sClient) CreatePSMDBClusterOld(ctx context.Context, params *PSMDBParams) error {
-func (c *K8sClient) makeReq(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB {
+func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB {
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
 			APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
@@ -2057,7 +2057,7 @@ func (c *K8sClient) makeReq(params *PSMDBParams, extra extraCRParams) *psmdb.Per
 	return res
 }
 
-func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB112 { //nolint:funlen
+func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB112 { //nolint:funlen
 	req := &psmdb.PerconaServerMongoDB112{
 		APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
 		Kind:       psmdb.PerconaServerMongoDBKind,
