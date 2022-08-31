@@ -159,7 +159,7 @@ spec:
   updateStrategy: RollingUpdate
 `
 		t.Parallel()
-		spec := &pxc.PerconaXtraDBCluster{}
+		spec := new(pxc.PerconaXtraDBCluster)
 		err := client.unmarshalTemplate([]byte(rawSpec), spec)
 		mysqlConfig := "[mysqld]\nsql-mode = 'ONLY_FULL_GROUP_BY,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'\ninnodb_buffer_pool_size=1G\nskip_name_resolve\ninnodb_log_file_size=2G\n"
 		assert.NoError(t, err)

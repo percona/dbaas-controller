@@ -1166,7 +1166,7 @@ func (c *K8sClient) buildPSMDBDBList110(ctx context.Context, buf []byte) ([]PSMD
 		if cluster.Status != nil {
 			message := cluster.Status.Message
 			conditions := cluster.Status.Conditions
-			if message == "" && len(conditions) > 0 {
+			if len(message) == 0 && len(conditions) > 0 {
 				message = conditions[len(conditions)-1].Message
 			}
 
@@ -2362,7 +2362,7 @@ func (c *K8sClient) unmarshalTemplate(body []byte, out interface{}) error {
 func convert(i interface{}) interface{} {
 	switch x := i.(type) {
 	case map[interface{}]interface{}:
-		m2 := map[string]interface{}{}
+		m2 := make(map[string]interface{}{})
 		for k, v := range x {
 			m2[k.(string)] = convert(v)
 		}
