@@ -915,26 +915,21 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		extra.backupImage = fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion)
 	}
 
-	var res interface{}
-
-	switch {
-	case psmdbOperatorVersion.GreaterThanOrEqual(v112):
-		res = c.getPSMDBSpec112Plus(params, extra)
-	default:
-		res = c.getPSMDBSpec(params, extra)
-	}
-
 	if params.PMM != nil {
 		extra.secrets["PMM_SERVER_USER"] = []byte(params.PMM.Login)
 		extra.secrets["PMM_SERVER_PASSWORD"] = []byte(params.PMM.Password)
 	}
 
+	spec, err := c.createPSMDBSpec(psmdbOperatorVersion, params, extra)
+	if err != nil {
+		return err
+	}
 	err = c.CreateSecret(ctx, extra.secretName, extra.secrets)
 	if err != nil {
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
 
-	return c.kubeCtl.Apply(ctx, res)
+	return c.kubeCtl.Apply(ctx, spec)
 }
 
 // UpdatePSMDBCluster changes size, stops, resumes or upgrades provided percona server for mongodb cluster.
@@ -2157,6 +2152,26 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 
 	return req
 }
+
+func (c *K8sClient) createPSMDBSpec(operator *goversion.Version, params *PSMDBParams, extra extraCRParams) (interface{}, error) {
+	spec := new(psmdb.PerconaServerMongoDB)
+	bytes, err := ioutil.ReadFile(psmdbCRFile)
+	if err == nil {
+		err = c.unmarshalTemplate(bytes, spec)
+		if err != nil {
+			return nil, err
+		}
+		return c.overridePSMDBSpec(spec, params, extra), nil
+	}
+
+	switch {
+	case operator.GreaterThanOrEqual(v112):
+		return c.getPSMDBSpec112Plus(params, extra), nil
+	default:
+		return c.getPSMDBSpec(params, extra), nil
+	}
+
+}
 func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOperatorVersion, storageName string, serviceType common.ServiceType) (*pxc.PerconaXtraDBCluster, error) {
 	spec := new(pxc.PerconaXtraDBCluster)
 
@@ -2173,6 +2188,9 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOp
 	c.l.Debug("failed openint cr template file. Fallback to defaults")
 	return c.getDefaultPXCSpec(params, secretName, pxcOperatorVersion, storageName, serviceType), nil
 
+}
+func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *PSMDBParams, extra extraCRParams) interface{} {
+	return spec
 }
 func (c *K8sClient) overrideSpec(spec *pxc.PerconaXtraDBCluster, params *PXCParams, storageName, pxcOperatorVersion string) *pxc.PerconaXtraDBCluster {
 	spec.ObjectMeta.Name = params.Name
