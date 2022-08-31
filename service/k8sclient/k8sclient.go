@@ -1166,7 +1166,7 @@ func (c *K8sClient) buildPSMDBDBList110(ctx context.Context, buf []byte) ([]PSMD
 		if cluster.Status != nil {
 			message := cluster.Status.Message
 			conditions := cluster.Status.Conditions
-			if len(message) == 0 && len(conditions) > 0 {
+			if len(message) != 0 && message == "" && len(conditions) > 0 {
 				message = conditions[len(conditions)-1].Message
 			}
 
