@@ -1979,7 +1979,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 						Affinity: extra.affinity,
 					},
 				},
-				Mongos: &psmdb.ReplsetSpec{
+				Mongos: &psmdb.MongosSpec{
 					Arbiter: psmdb.Arbiter{
 						Enabled: false,
 						Size:    1,
@@ -1991,7 +1991,9 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: extra.affinity,
 					},
-					Expose: extra.expose,
+					Expose: psmdb.MongosExpose{
+						ExposeType: extra.expose.ExposeType,
+					},
 				},
 				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
 					Mode: psmdb.OperationProfilingModeSlowOp,
@@ -2086,12 +2088,12 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 					},
 					Expose: extra.expose,
 				},
-				Mongos: &psmdb.ReplsetSpec{
+				Mongos: &psmdb.MongosSpec{
 					Size: params.Size,
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: extra.affinity,
 					},
-					Expose: psmdb.Expose{
+					Expose: psmdb.MongosExpose{
 						ExposeType: common.ServiceTypeLoadBalancer,
 					},
 				},
@@ -2180,7 +2182,7 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOp
 		if err != nil {
 			return nil, err
 		}
-		return c.overrideSpec(spec, params, storageName, pxcOperatorVersion), nil
+		return c.overridePXCSpec(spec, params, storageName, pxcOperatorVersion), nil
 
 	}
 	c.l.Debug("failed openint cr template file. Fallback to defaults")
@@ -2190,7 +2192,7 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName, pxcOp
 func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *PSMDBParams, extra extraCRParams) interface{} {
 	return spec
 }
-func (c *K8sClient) overrideSpec(spec *pxc.PerconaXtraDBCluster, params *PXCParams, storageName, pxcOperatorVersion string) *pxc.PerconaXtraDBCluster {
+func (c *K8sClient) overridePXCSpec(spec *pxc.PerconaXtraDBCluster, params *PXCParams, storageName, pxcOperatorVersion string) *pxc.PerconaXtraDBCluster {
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.PXC.PodSpec.Size = &params.Size
 	spec.Spec.PXC.PodSpec.Resources = c.setComputeResources(params.PXC.ComputeResources)

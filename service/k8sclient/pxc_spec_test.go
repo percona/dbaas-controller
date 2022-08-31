@@ -147,12 +147,12 @@ spec:
 		mysqlConfig := "[mysqld]\nsql-mode = 'ONLY_FULL_GROUP_BY,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'\ninnodb_buffer_pool_size=1G\nskip_name_resolve\ninnodb_log_file_size=2G\n"
 		assert.NoError(t, err)
 		params.Expose = true
-		spec = client.overrideSpec(spec, params, "pxc-backup-storage-cns")
+		spec = client.overridePXCSpec(spec, params, "pxc-backup-storage-cns", "1.11.0")
 		assert.Equal(t, mysqlConfig, spec.Spec.PXC.Configuration)
 		assert.True(t, spec.Spec.PXC.Expose.Enabled)
 		assert.NotEqual(t, 0, len(spec.Spec.PXC.Expose.Annotations))
 		params.Expose = false
-		spec = client.overrideSpec(spec, params, "pxc-backup-storage-cns")
+		spec = client.overridePXCSpec(spec, params, "pxc-backup-storage-cns", "1.11.0")
 		assert.False(t, spec.Spec.PXC.Expose.Enabled)
 		assert.Equal(t, 0, len(spec.Spec.PXC.Expose.Annotations))
 

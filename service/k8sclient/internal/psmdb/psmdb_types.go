@@ -262,6 +262,7 @@ type Expose struct {
 	ServiceAnnotations       map[string]string  `json:"serviceAnnotations,omitempty"`
 }
 type MongosExpose struct {
+	Enabled                  bool               `json:"enabled,omitempty"`
 	ExposeType               common.ServiceType `json:"exposeType,omitempty"`
 	ServicePerPod            bool               `json:"servicePerPod,omitempty"`
 	LoadBalancerSourceRanges []string           `json:"loadBalancerSourceRanges,omitempty"`
@@ -305,6 +306,7 @@ type SecretsSpec struct {
 type MongosSpec struct {
 	MultiAZ `json:",inline"`
 
+	Arbiter                  Arbiter                 `json:"arbiter,omitempty"`
 	Port                     int32                   `json:"port,omitempty"`
 	HostPort                 int32                   `json:"hostPort,omitempty"`
 	SetParameter             *MongosSpecSetParameter `json:"setParameter,omitempty"`
@@ -316,6 +318,7 @@ type MongosSpec struct {
 	PodSecurityContext       map[string]interface{}  `json:"podSecurityContext,omitempty"`
 	ContainerSecurityContext map[string]interface{}  `json:"containerSecurityContext,omitempty"`
 	Configuration            MongoConfiguration      `json:"configuration,omitempty"`
+	Resources                *common.PodResources    `json:"resources,omitempty"`
 }
 
 // MongodSpec defines mongod specification.
