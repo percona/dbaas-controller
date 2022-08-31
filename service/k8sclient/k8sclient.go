@@ -2362,7 +2362,7 @@ func (c *K8sClient) unmarshalTemplate(body []byte, out interface{}) error {
 func convert(i interface{}) interface{} {
 	switch x := i.(type) {
 	case map[interface{}]interface{}:
-		m2 := make(map[string]interface{}{})
+		m2 := make(map[string]interface{})
 		for k, v := range x {
 			m2[k.(string)] = convert(v)
 		}
