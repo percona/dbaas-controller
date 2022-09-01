@@ -2209,6 +2209,21 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *
 			spec.Spec.Sharding.Expose.Enabled = false
 		}
 	}
+	// Always override PMM spec
+	if params.PMM != nil {
+		spec.Spec.PMM = &psmdb.PmmSpec{
+			Enabled:    true,
+			ServerHost: params.PMM.PublicAddress,
+			Image:      pmmClientImage,
+			Resources: &common.PodResources{
+				Requests: &common.ResourcesList{
+					Memory: "300M",
+					CPU:    "500m",
+				},
+			},
+		}
+	}
+
 	return spec
 }
 
@@ -2216,7 +2231,13 @@ func (c *K8sClient) overridePXCSpec(spec *pxc.PerconaXtraDBCluster, params *PXCP
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.PXC.PodSpec.Size = &params.Size
 	spec.Spec.PXC.PodSpec.Resources = c.setComputeResources(params.PXC.ComputeResources)
-	spec.Spec.PXC.PodSpec.VolumeSpec = c.volumeSpec(params.PXC.DiskSize)
+	if spec.Spec.PXC.PodSpec.VolumeSpec != nil && spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim != nil && spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.StorageClassName != "" {
+		spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.Resources.Requests = common.ResourceList{
+			common.ResourceStorage: params.PXC.DiskSize,
+		}
+	} else {
+		spec.Spec.PXC.PodSpec.VolumeSpec = c.volumeSpec(params.PXC.DiskSize)
+	}
 	if spec.Spec.Backup == nil {
 		spec.Spec.Backup = &pxc.PXCScheduledBackup{
 			Image: fmt.Sprintf(pxcBackupImageTemplate, pxcOperatorVersion),
@@ -2254,6 +2275,22 @@ func (c *K8sClient) overridePXCSpec(spec *pxc.PerconaXtraDBCluster, params *PXCP
 		spec.Spec.HAProxy.Resources = c.setComputeResources(params.HAProxy.ComputeResources)
 		if params.HAProxy.Image != "" {
 			spec.Spec.HAProxy.Image = params.HAProxy.Image
+		}
+	}
+	// Always override defaults for PMM by specified by user
+	if params.PMM != nil {
+		spec.Spec.PMM = &pxc.PMMSpec{
+			Enabled:         true,
+			ServerHost:      params.PMM.PublicAddress,
+			ServerUser:      params.PMM.Login,
+			Image:           pmmClientImage,
+			ImagePullPolicy: pullPolicy,
+			Resources: &common.PodResources{
+				Requests: &common.ResourcesList{
+					Memory: "300M",
+					CPU:    "500m",
+				},
+			},
 		}
 	}
 

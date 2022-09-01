@@ -37,6 +37,7 @@ type VolumeSpec struct {
 // PersistentVolumeClaimSpec describes the common attributes of storage devices
 // and allows a Source for provider-specific attributes.
 type PersistentVolumeClaimSpec struct {
+	StorageClassName string `json:"storageClassName,omitempty"`
 	// Resources represents the minimum resources the volume should have.
 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
 	Resources ResourceRequirements `json:"resources,omitempty"`
