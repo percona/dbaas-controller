@@ -31,7 +31,7 @@ dbaas-controller's Kubernetes client is fully configured with kubeconfig file. I
 
 When it made a lot of sense to start with kubectl CLI, number of months later (Apr 2022) it is not anymore as it means we probably need to update it quite often and maybe support number of those binaries in our code. Also it is against k8s tools skew version policies to maintain old binaries in our code.
 
-Also client-go library advanced, it is support number of auth and also quite good compatibility matrix:
+Also client-go advanced, it now supports several authentication mechanisms and also a quite good compatibility matrix:
 
 - kubeconfig support
 - Authenticating inside the cluster
