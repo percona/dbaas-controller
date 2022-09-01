@@ -17,7 +17,7 @@ We're looking forward to your contributions and hope to hear from you soon on ou
 
 ## Submitting Bug Reports
 
-If you find a bug in Percona Monitoring and Management  or one of the related projects, you should submit a report to that project's [JIRA](https://jira.percona.com) issue tracker. Some of related project also have GitHub Issues enabled, so you also could submit there.
+If you find a bug in Percona Monitoring and Management  or one of the related projects, you can submit a report to that project's [JIRA](https://jira.percona.com) issue tracker. Some of the related projects also have GitHub Issues enabled, so you can also submit there.
 
 Your first step should be [to search](https://jira.percona.com/issues/?jql=project=PMM) the existing set of open tickets for a similar report. If you find that someone else has already reported your problem, then you can upvote that report to increase its visibility.
 
