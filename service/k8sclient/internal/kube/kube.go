@@ -107,6 +107,7 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	config.QPS = defaultBurstLimit
 	config.Burst = defaultBurstLimit
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
