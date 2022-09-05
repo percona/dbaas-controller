@@ -20,6 +20,7 @@ package kube
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 
@@ -44,6 +45,7 @@ const (
 	defaultAPIURIPath  = "/api"
 	defaultAPIsURIPath = "/apis"
 	defaultBurstLimit  = 350
+	dbaasToolPath      = "/opt/dbaas-tools/bin"
 )
 
 // configGetter stores kubeconfig string to convert it to the final object
@@ -114,6 +116,9 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	if space := os.Getenv("NAMESPACE"); space != "" {
 		namespace = space
 	}
+	// Set PATH variable to make aws-iam-authenticator executable
+	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
+	os.Setenv("PATH", path)
 	return &Client{clientset: clientset, restConfig: config, namespace: namespace}, nil
 }
 
