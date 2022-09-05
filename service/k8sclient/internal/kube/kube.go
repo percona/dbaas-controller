@@ -44,6 +44,7 @@ import (
 const (
 	defaultAPIURIPath  = "/api"
 	defaultAPIsURIPath = "/apis"
+	defaultQPSLimit    = 300
 	defaultBurstLimit  = 350
 	dbaasToolPath      = "/opt/dbaas-tools/bin"
 )
@@ -107,7 +108,7 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	config.QPS = defaultBurstLimit
+	config.QPS = defaultQPSLimit
 	config.Burst = defaultBurstLimit
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
