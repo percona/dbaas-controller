@@ -63,8 +63,9 @@ func TestPXCSpec(t *testing.T) {
 	}
 	t.Run("should fallback to default spec once template does not exist", func(t *testing.T) {
 		t.Parallel()
+		secret := "secret"
 
-		spec, err := client.createPXCSpecFromParams(params, "secret", "1.11.0", "storage", "")
+		spec, err := client.createPXCSpecFromParams(params, &secret, "1.11.0", "storage", "")
 		assert.NoError(t, err)
 		defaultSpec := client.getDefaultPXCSpec(params, "secret", "1.11.0", "storage", "")
 		assert.Equal(t, defaultSpec, spec)
@@ -211,7 +212,7 @@ func TestPSMDBSpec(t *testing.T) {
 	assert.NoError(t, err)
 	t.Run("should fallback to default spec once template does not exist", func(t *testing.T) {
 		t.Parallel()
-		spec, err := client.createPSMDBSpec(operator, params, extra)
+		spec, err := client.createPSMDBSpec(operator, params, &extra)
 		assert.NoError(t, err)
 		defaultSpec := client.getPSMDBSpec112Plus(params, extra)
 		assert.Equal(t, defaultSpec, spec)
