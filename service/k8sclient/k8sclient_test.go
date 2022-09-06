@@ -249,6 +249,7 @@ func TestK8sClient(t *testing.T) {
 	psmdbVersion := psmdbOperator.String()
 	if value := os.Getenv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); value != "" {
 		psmdbVersion = value
+		psmdbOperator, _ = goversion.NewVersion(value)
 	}
 
 	t.Log(pxcVersion)
@@ -571,6 +572,13 @@ func TestK8sClient(t *testing.T) {
 			return cluster == nil
 		})
 
+		// Starting with operator 1.12, the image for the backup container comes from the components service.
+		// To not to instantiate the components service and the dependencies, use this image name.
+		var backupImage string
+		if psmdbOperator.GreaterThanOrEqual(v112) {
+			backupImage = "percona/percona-backup-mongodb:1.7.0"
+		}
+
 		l.Info("No PSMDB Clusters running")
 		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
 			Name: name,
@@ -578,7 +586,8 @@ func TestK8sClient(t *testing.T) {
 			Replicaset: &Replicaset{
 				DiskSize: "1000000000",
 			},
-			PMM: pmm,
+			PMM:         pmm,
+			BackupImage: backupImage,
 		})
 
 		require.NoError(t, err)
