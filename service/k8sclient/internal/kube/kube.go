@@ -44,7 +44,7 @@ import (
 const (
 	defaultAPIURIPath  = "/api"
 	defaultAPIsURIPath = "/apis"
-	defaultQPSLimit    = 300
+	defaultQPSLimit    = 150
 	defaultBurstLimit  = 350
 	dbaasToolPath      = "/opt/dbaas-tools/bin"
 )
