@@ -2164,6 +2164,9 @@ func (c *K8sClient) createPSMDBSpec(operator *goversion.Version, params *PSMDBPa
 		if spec.Spec.Secrets.Users != "" {
 			extra.secretName = spec.Spec.Secrets.Users
 		}
+		if spec.Spec.Secrets.Users == "" {
+			spec.Spec.Secrets.Users = extra.secretName
+		}
 		return c.overridePSMDBSpec(spec, params, *extra), nil
 	}
 
@@ -2187,6 +2190,9 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName *strin
 		}
 		if spec.Spec.SecretsName != "" {
 			*secretName = spec.Spec.SecretsName
+		}
+		if spec.Spec.SecretsName == "" {
+			spec.Spec.SecretsName = *secretName
 		}
 		return c.overridePXCSpec(spec, params, storageName, pxcOperatorVersion), nil
 
