@@ -59,8 +59,8 @@ release-component-version:
 	@echo $(COMPONENT_VERSION)
 
 release:                          ## Build dbaas-controller release binaries.
-	env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build  -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
-	#$(PMM_RELEASE_PATH)/dbaas-controller --version
+	env CGO_ENABLED=0 go build -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
+	$(PMM_RELEASE_PATH)/dbaas-controller --version
 
 init:                             ## Install development tools
 	rm -rf ./bin
@@ -68,11 +68,6 @@ init:                             ## Install development tools
 
 ci-init:                ## Initialize CI environment
 	# nothing there yet
-
-gen:                              ## Generate code
-	./bin/controller-gen object:headerFile=./boiler/boilerplate.go.txt paths=./service/k8sclient/internal/monitoring
-	./bin/controller-gen object:headerFile=./boiler/boilerplate.go.txt paths=./service/k8sclient/common/
-	make format
 
 format:                           ## Format source code
 	bin/gofumpt -l -w .
@@ -89,7 +84,7 @@ install:                          ## Install binaries
 	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
 test:                             ## Run tests
-	go test $(PMM_TEST_FLAGS) -race -p 1 -v -timeout=30m ./...
+	go test $(PMM_TEST_FLAGS) -race -p 1 -timeout=30m ./...
 
 test-cover:                       ## Run tests and collect per-package coverage information
 	go test -race -timeout=30m -count=1 -p 1 -coverprofile=cover.out -covermode=atomic ./...
@@ -142,7 +137,6 @@ collect-debugdata:                ## Collect debugdata
 	rm -fr debugdata
 	mkdir debugdata
 	minikube logs --length=100 > ./debugdata/minikube.txt
-	minikube kubectl -- get all > ./debugdata/all.txt
 	minikube kubectl -- describe pods > ./debugdata/pods.txt
 	minikube kubectl -- describe pv,pvc > ./debugdata/pv-pvc.txt
 	minikube kubectl -- get events --sort-by=lastTimestamp > ./debugdata/events.txt
@@ -161,16 +155,6 @@ eks-cleanup-namespace:
 	kubectl ${KUBECTL_ARGS} delete perconaservermongodb --all
 	kubectl ${KUBECTL_ARGS} delete perconaservermongodbbackup --all
 
-eks-delete-crds:
-	kubectl ${KUBECTL_ARGS} delete crd perconaservermongodbs.psmdb.percona.com
-	kubectl ${KUBECTL_ARGS} delete crd perconaservermongodbrestores.psmdb.percona.com
-	kubectl ${KUBECTL_ARGS} delete crd perconaservermongodbbackups.psmdb.percona.com
-	kubectl ${KUBECTL_ARGS} delete crd perconaxtradbbackups.pxc.percona.com
-	kubectl ${KUBECTL_ARGS} delete crd perconaxtradbclusterbackups.pxc.percona.com
-	kubectl ${KUBECTL_ARGS} delete crd perconaxtradbclusterrestores.pxc.percona.com
-	kubectl ${KUBECTL_ARGS} delete crd perconaxtradbclusters.pxc.percona.com
-
-
 eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage.
 	# Delete the PXC operator
 	kubectl ${KUBECTL_ARGS} delete deployment percona-xtradb-cluster-operator
@@ -181,6 +165,6 @@ eks-delete-current-namespace:
 	NAMESPACE=$$(kubectl config view --minify --output 'jsonpath={..namespace}'); \
 	if [ "$$NAMESPACE" != "default" ]; then kubectl delete ns "$$NAMESPACE"; fi
 
-deploy-to-pmm-server: release     ## Deploy DBaaS controller to a running ${PMM_CONTAINER} container.
+deploy-to-pmm-server: install     ## Deploy DBaaS controller to a running ${PMM_CONTAINER} container.
 	docker cp bin/dbaas-controller ${PMM_CONTAINER}:/usr/sbin/dbaas-controller
 	docker exec ${PMM_CONTAINER} supervisorctl restart dbaas-controller
