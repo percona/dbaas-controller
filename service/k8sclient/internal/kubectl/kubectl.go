@@ -38,7 +38,8 @@ import (
 const (
 	dbaasToolPath           = "/opt/dbaas-tools/bin"
 	defaultPmmServerKubectl = dbaasToolPath + "/kubectl-1.23"
-	defaultDevEnvKubectl    = "minikube kubectl --"
+	// defaultDevEnvKubectl    = "minikube kubectl --"
+	defaultDevEnvKubectl = "kubectl"
 )
 
 // PatchType tells what kind of patch we want to perform.
