@@ -688,6 +688,24 @@ func TestK8sClient(t *testing.T) {
 			return false
 		})
 
+		// Test listing.
+		clusters, err := client.ListPSMDBClusters(ctx)
+		require.NoError(t, err)
+		require.Conditionf(t,
+			func(clusters []PSMDBCluster, clusterName string) assert.Comparison {
+				return func() bool {
+					for _, cluster := range clusters {
+						if cluster.Name == clusterName {
+							return true
+						}
+					}
+					return false
+				}
+			}(clusters, name),
+			"cluster '%s' was not found",
+			name,
+		)
+
 		err = client.DeletePSMDBCluster(ctx, name)
 		require.NoError(t, err)
 
