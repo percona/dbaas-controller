@@ -1543,8 +1543,7 @@ func (c *K8sClient) GetPersistentVolumes(ctx context.Context) (*corev1.Persisten
 // GetPods returns list of pods based on given filters. Filters are args to
 // kubectl command. For example "your-label=value,next-label=value".
 func (c *K8sClient) GetPods(ctx context.Context, namespace string, filters ...string) (*corev1.PodList, error) {
-	podList, err := c.kube.GetPods(ctx, namespace, strings.Join(filters, ","))
-	return podList, err
+	return c.kube.GetPods(ctx, namespace, strings.Join(filters, ","))
 }
 
 // GetLogs returns logs as slice of log lines - strings - for given pod's container.

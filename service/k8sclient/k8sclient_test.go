@@ -357,7 +357,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("All pods are ready", func(t *testing.T) {
-			cluster, err := client.GetPSMDBCluster(ctx, name)
+			cluster, err := client.GetPXCCluster(ctx, name)
 			require.NoError(t, err)
 			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
 			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
