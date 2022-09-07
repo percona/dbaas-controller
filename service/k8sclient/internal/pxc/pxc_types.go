@@ -207,7 +207,7 @@ type PodSpec struct { //nolint:maligned
 	ServiceType                   common.ServiceType              `json:"serviceType,omitempty"`
 }
 
-// PXCSpec hold PXC's exported fields representing the pxc configuration
+// PXCSpec hold PXC's exported fields representing the pxc configuration.
 type PXCSpec struct {
 	AutoRecovery        *bool                `json:"autoRecovery,omitempty"`
 	ReplicationChannels []ReplicationChannel `json:"replicationChannels,omitempty"`
@@ -215,7 +215,7 @@ type PXCSpec struct {
 	*PodSpec            `json:",inline"`
 }
 
-// ServiceExpose hold exported fields representing the PXC exposing on managed services
+// ServiceExpose hold exported fields representing the PXC exposing on managed services.
 type ServiceExpose struct {
 	Enabled                  bool               `json:"enabled,omitempty"`
 	Type                     common.ServiceType `json:"type,omitempty"`
@@ -224,7 +224,7 @@ type ServiceExpose struct {
 	TrafficPolicy            string             `json:"trafficPolicy,omitempty"`
 }
 
-// ReplicationChannel hold exported fields representing the PXC replication channels
+// ReplicationChannel hold exported fields representing the PXC replication channels.
 type ReplicationChannel struct {
 	Name        string                    `json:"name,omitempty"`
 	IsSource    bool                      `json:"isSource,omitempty"`
@@ -232,13 +232,13 @@ type ReplicationChannel struct {
 	Config      *ReplicationChannelConfig `json:"configuration,omitempty"`
 }
 
-// ReplicationChannelConfig hold exported fields representing the PXC replication channel configuration
+// ReplicationChannelConfig hold exported fields representing the PXC replication channel configuration.
 type ReplicationChannelConfig struct {
 	SourceRetryCount   uint `json:"sourceRetryCount,omitempty"`
 	SourceConnectRetry uint `json:"sourceConnectRetry,omitempty"`
 }
 
-// Replication source represents PXC replication source
+// Replication source represents PXC replication source.
 type ReplicationSource struct {
 	Host   string `json:"host,omitempty"`
 	Port   int    `json:"port,omitempty"`
