@@ -902,8 +902,7 @@ func (c *K8sClient) getClusterState(ctx context.Context, cluster common.Database
 
 // getDeletingClusters returns clusters which are not fully deleted yet.
 func (c *K8sClient) getDeletingClusters(ctx context.Context, managedBy string, runningClusters map[string]struct{}) ([]Cluster, error) {
-	list, err := c.kube.GetPods(ctx, "", "")
-	list, err := c.getPodsList(ctx, managedBy, "")
+	list, err := c.GetPods(ctx, "", "app.kubernetes.io/managed-by="+managedBy)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get kubernetes pods")
 	}
@@ -1406,24 +1405,12 @@ func (c *K8sClient) getDeletingPSMDBClusters(ctx context.Context, clusters []PSM
 	return pxcClusters, nil
 }
 
-func (c *K8sClient) getPodsList(ctx context.Context, managedBy string, clusterName string) (*common.PodList, error) {
-	args := []string{"get", "pods", "-o=json", "--selector=app.kubernetes.io/managed-by=" + managedBy}
+func (c *K8sClient) getPodsList(ctx context.Context, managedBy string, clusterName string) (*corev1.PodList, error) {
+	args := []string{"app.kubernetes.io/managed-by=" + managedBy}
 	if clusterName != "" {
-		args = append(args, "--selector=app.kubernetes.io/instance="+clusterName)
+		args = append(args, "app.kubernetes.io/instance="+clusterName)
 	}
-
-	stdout, err := c.kubeCtl.Run(ctx, args, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var list common.PodList
-
-	err = json.Unmarshal(stdout, &list)
-	if err != nil {
-		return nil, err
-	}
-	return &list, nil
+	return c.GetPods(ctx, "", args...)
 }
 
 func (c *K8sClient) getComputeResources(resources *common.PodResources) *ComputeResources {
@@ -1554,9 +1541,9 @@ func (c *K8sClient) GetPersistentVolumes(ctx context.Context) (*corev1.Persisten
 }
 
 // GetPods returns list of pods based on given filters. Filters are args to
-// kubectl command. For example "-lyour-label=value,next-label=value", "-ntest-namespace".
+// kubectl command. For example "your-label=value,next-label=value".
 func (c *K8sClient) GetPods(ctx context.Context, namespace string, filters ...string) (*corev1.PodList, error) {
-	podList, err := c.kube.GetPods(ctx, namespace, strings.Join(filters, ""))
+	podList, err := c.kube.GetPods(ctx, namespace, strings.Join(filters, ","))
 	return podList, err
 }
 
