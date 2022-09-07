@@ -836,8 +836,8 @@ github.com/reviewdog/errorformat v0.0.0-20220309155058-b075c45b6d9a h1:HIL+jTKsW
 github.com/reviewdog/errorformat v0.0.0-20220309155058-b075c45b6d9a/go.mod h1:AqhrP0G7F9YRROF10JQwdd4cNO8bdm6bY6KzcOc3Cp8=
 github.com/reviewdog/go-bitbucket v0.0.0-20201024094602-708c3f6a7de0 h1:XZ60Bp2UqwaJ6fDQExoFVrgs4nIzwBCy9ct6GCj9hH8=
 github.com/reviewdog/go-bitbucket v0.0.0-20201024094602-708c3f6a7de0/go.mod h1:5JbWAMFyq9hbISZawRyIe7QTcLaptvCIvmZnYo+1VvA=
-github.com/reviewdog/reviewdog v0.14.0 h1:A3SYqtx1IgpnpCzTx9m6QxlUegTltN0c0g5Ol/Lidyw=
-github.com/reviewdog/reviewdog v0.14.0/go.mod h1:no/4tG7dC6yLUTPqmO1puLrz8xfHJycVbSmUn2Aoygo=
+github.com/reviewdog/reviewdog v0.14.1 h1:+B2340ddsSC+tbSSTxb5oC24YPMLzQAlt4kVAmNS/3o=
+github.com/reviewdog/reviewdog v0.14.1/go.mod h1:408Nr2GPWc7Qozz0X1RZ/3b7EVQIPJ6XF6BssRJ8ZKY=
 github.com/rivo/uniseg v0.2.0 h1:S1pD9weZBuJdFmowNwbpi7BJ8TNftyUImj/0WQi72jY=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/rogpeppe/fastuuid v0.0.0-20150106093220-6724a57986af/go.mod h1:XWv6SoW27p1b0cqNHllgS5HIMJraePCO15w5zCzIWYg=

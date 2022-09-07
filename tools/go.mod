@@ -6,7 +6,7 @@ require (
 	github.com/daixiang0/gci v0.3.4
 	github.com/golangci/golangci-lint v1.46.2
 	github.com/quasilyte/go-consistent v0.0.0-20200404105227-766526bf1e96
-	github.com/reviewdog/reviewdog v0.14.0
+	github.com/reviewdog/reviewdog v0.14.1
 	golang.org/x/text v0.3.7
 	golang.org/x/tools v0.1.11-0.20220316014157-77aa08bb151a
 	mvdan.cc/gofumpt v0.3.1
