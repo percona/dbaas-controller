@@ -2202,6 +2202,7 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName *strin
 }
 
 func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB {
+	spec.Spec.Image = extra.psmdbImage
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.Sharding.ConfigsvrReplSet.Size = params.Size
 	spec.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
