@@ -160,3 +160,15 @@ func (k KubernetesClusterService) StopMonitoring(ctx context.Context, req *contr
 
 	return new(controllerv1beta1.StopMonitoringResponse), nil
 }
+
+func (k KubernetesClusterService) GetKubeconfig(ctx context.Context, req *controllerv1beta1.GetKubeconfigRequest) (*controllerv1beta1.GetKubeconfigResponse, error) {
+	k8sClient, err := k8sclient.NewIncluster(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: %s", err)
+	}
+	defer k8sClient.Cleanup()
+	kubeConfig := k8sclient.GenerateKubeConfig()
+	return &controllerv1beta1.GetKubeconfigResponse{
+		KubeConfig: kubeConfig,
+	}, nil
+}
