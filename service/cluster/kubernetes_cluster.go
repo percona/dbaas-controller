@@ -22,9 +22,9 @@ import (
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
 
@@ -74,7 +74,7 @@ func (k KubernetesClusterService) GetResources(ctx context.Context, req *control
 
 	// Get cluster type
 	clusterType := k8sClient.GetKubernetesClusterType(ctx)
-	var volumes *common.PersistentVolumeList
+	var volumes *corev1.PersistentVolumeList
 	if clusterType == k8sclient.AmazonEKSClusterType {
 		volumes, err = k8sClient.GetPersistentVolumes(ctx)
 		if err != nil {

@@ -22,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const containerStateTestInput string = `
@@ -51,13 +52,13 @@ const containerStateTestInput string = `
              }
          }
      }
-  ]        
+  ]
 }
 `
 
 func TestIsContainerInState(t *testing.T) {
 	t.Parallel()
-	ps := new(PodStatus)
+	ps := new(corev1.PodStatus)
 	require.NoError(t, json.Unmarshal([]byte(containerStateTestInput), ps))
 	assert.True(t, IsContainerInState(ps.ContainerStatuses, ContainerStateWaiting, "pmm-client"), "pmm-client is waiting but reported otherwise")
 	assert.False(t, IsContainerInState(ps.ContainerStatuses, ContainerState("fakestate"), "pmm-client"), "check for non-existing state should return false")
