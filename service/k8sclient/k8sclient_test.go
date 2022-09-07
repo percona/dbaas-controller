@@ -697,9 +697,6 @@ func TestK8sClient(t *testing.T) {
 	})
 }
 
-// ErrNoSuchCluster indicates that no cluster with given name was found.
-var ErrNoSuchCluster error = errors.New("no cluster found with given name")
-
 func assertListPXCCluster(ctx context.Context, t *testing.T, client *K8sClient, name string, conditionFunc func(cluster *PXCCluster) bool) {
 	t.Helper()
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
@@ -716,7 +713,7 @@ func assertListPXCCluster(ctx context.Context, t *testing.T, client *K8sClient, 
 			return
 		case <-ticker.C:
 			cluster, err := client.GetPXCCluster(ctx, name)
-			if !errors.Is(err, ErrNoSuchCluster) {
+			if !errors.Is(err, ErrNotFound) {
 				require.NoError(t, err)
 			}
 			if conditionFunc(cluster) {
@@ -742,7 +739,7 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 			return
 		case <-ticker.C:
 			cluster, err := client.GetPSMDBCluster(ctx, name)
-			if !errors.Is(err, ErrNoSuchCluster) {
+			if !errors.Is(err, ErrNotFound) {
 				require.NoError(t, err)
 			}
 			if conditionFunc(cluster) {
