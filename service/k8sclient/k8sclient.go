@@ -2240,6 +2240,9 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *
 }
 
 func (c *K8sClient) overridePXCSpec(spec *pxc.PerconaXtraDBCluster, params *PXCParams, storageName, pxcOperatorVersion string) *pxc.PerconaXtraDBCluster {
+	if params.PXC.Image != "" {
+		spec.Spec.PXC.PodSpec.Image = params.PXC.Image
+	}
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.PXC.PodSpec.Size = &params.Size
 	spec.Spec.PXC.PodSpec.Resources = c.setComputeResources(params.PXC.ComputeResources)
