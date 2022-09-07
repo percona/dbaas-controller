@@ -347,7 +347,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("Make sure PXC cluster is in changing state right after creation", func(t *testing.T) {
-			cluster, err := getPXCCluster(ctx, client, name)
+			cluster, err := client.GetPXCCluster(ctx, name)
 			require.NoError(t, err)
 			assert.Equal(t, ClusterStateChanging, cluster.State)
 		})
@@ -356,7 +356,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("All pods are ready", func(t *testing.T) {
-			cluster, err := getPXCCluster(ctx, client, name)
+			cluster, err := client.GetPSMDBCluster(ctx, name)
 			require.NoError(t, err)
 			assert.Equal(t, int32(2), cluster.DetailedState.CountReadyPods())
 			assert.Equal(t, int32(2), cluster.DetailedState.CountAllPods())
@@ -472,7 +472,7 @@ func TestK8sClient(t *testing.T) {
 			})
 			l.Infof("PXC cluster %q has been upgraded", name)
 
-			cluster, err := getPXCCluster(ctx, client, name)
+			cluster, err := client.GetPXCCluster(ctx, name)
 			require.NoError(t, err)
 			assert.Equal(t, pxcUpgradeImage, cluster.PXC.Image)
 		})
@@ -599,7 +599,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("Make sure PSMDB cluster is in changing state right after creation", func(t *testing.T) {
-			cluster, err := getPSMDBCluster(ctx, client, name)
+			cluster, err := client.GetPSMDBCluster(ctx, name)
 			require.NoError(t, err)
 			assert.Equal(t, ClusterStateChanging, cluster.State)
 		})
@@ -627,7 +627,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("All pods are ready", func(t *testing.T) {
-			cluster, err := getPSMDBCluster(ctx, client, name)
+			cluster, err := client.GetPSMDBCluster(ctx, name)
 			require.NoError(t, err)
 			assert.Equal(t, int32(9), cluster.DetailedState.CountReadyPods())
 			assert.Equal(t, int32(9), cluster.DetailedState.CountAllPods())
@@ -654,7 +654,7 @@ func TestK8sClient(t *testing.T) {
 			})
 			l.Infof("PSMDB Cluster %q has been upgraded", name)
 
-			cluster, err := getPSMDBCluster(ctx, client, name)
+			cluster, err := client.GetPSMDBCluster(ctx, name)
 			require.NoError(t, err)
 			assert.Equal(t, "percona/percona-server-mongodb:4.4.6-8", cluster.Image)
 		})
@@ -700,36 +700,6 @@ func TestK8sClient(t *testing.T) {
 // ErrNoSuchCluster indicates that no cluster with given name was found.
 var ErrNoSuchCluster error = errors.New("no cluster found with given name")
 
-func getPSMDBCluster(ctx context.Context, client *K8sClient, name string) (*PSMDBCluster, error) {
-	l := logger.Get(ctx)
-	clusters, err := client.ListPSMDBClusters(ctx)
-	if err != nil {
-		return nil, err
-	}
-	l.Debug(clusters)
-	for _, c := range clusters {
-		if c.Name == name {
-			return &c, nil
-		}
-	}
-	return nil, ErrNoSuchCluster
-}
-
-func getPXCCluster(ctx context.Context, client *K8sClient, name string) (*PXCCluster, error) {
-	l := logger.Get(ctx)
-	clusters, err := client.ListPXCClusters(ctx)
-	if err != nil {
-		return nil, err
-	}
-	l.Debug(clusters)
-	for _, c := range clusters {
-		if c.Name == name {
-			return &c, nil
-		}
-	}
-	return nil, ErrNoSuchCluster
-}
-
 func assertListPXCCluster(ctx context.Context, t *testing.T, client *K8sClient, name string, conditionFunc func(cluster *PXCCluster) bool) {
 	t.Helper()
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
@@ -745,7 +715,7 @@ func assertListPXCCluster(ctx context.Context, t *testing.T, client *K8sClient, 
 			t.Errorf("PXC cluster did not get to the right state")
 			return
 		case <-ticker.C:
-			cluster, err := getPXCCluster(ctx, client, name)
+			cluster, err := client.GetPXCCluster(ctx, name)
 			if !errors.Is(err, ErrNoSuchCluster) {
 				require.NoError(t, err)
 			}
@@ -771,7 +741,7 @@ func assertListPSMDBCluster(ctx context.Context, t *testing.T, client *K8sClient
 			t.Errorf("PSMDB cluster did not get to the right state")
 			return
 		case <-ticker.C:
-			cluster, err := getPSMDBCluster(ctx, client, name)
+			cluster, err := client.GetPSMDBCluster(ctx, name)
 			if !errors.Is(err, ErrNoSuchCluster) {
 				require.NoError(t, err)
 			}
