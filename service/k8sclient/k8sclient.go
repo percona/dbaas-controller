@@ -414,6 +414,7 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	}, nil
 }
 
+// NewIncluster returns new K8Client object
 func NewIncluster(ctx context.Context) (*K8sClient, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "K8sClient")
