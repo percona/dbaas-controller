@@ -441,7 +441,7 @@ func (c *K8sClient) Cleanup() error {
 }
 
 func (c *K8sClient) GetKubeconfig(ctx context.Context) string {
-	secret, err := c.kube.GetSecretsForServiceAccount(ctx, "", "")
+	secret, err := c.kube.GetSecretsForServiceAccount(ctx, "pmm-service-account")
 	if err != nil {
 		return ""
 	}

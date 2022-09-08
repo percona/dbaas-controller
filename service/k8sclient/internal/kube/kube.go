@@ -49,6 +49,9 @@ const (
 	defaultQPSLimit    = 100
 	defaultBurstLimit  = 150
 	dbaasToolPath      = "/opt/dbaas-tools/bin"
+	configKind         = "Config"
+	apiVersion         = "v1"
+	defaultName        = "default"
 )
 
 // configGetter stores kubeconfig string to convert it to the final object
@@ -319,12 +322,12 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 }
 
 // GetSecretsForServiceAccount returns secret by given service account name
-func (k *Client) GetSecretsForServiceAccount(ctx context.Context, namespace, accountName string) (*corev1.Secret, error) {
-	serviceAccount, err := k.clientset.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), accountName, metav1.GetOptions{})
+func (k *Client) GetSecretsForServiceAccount(ctx context.Context, accountName string) (*corev1.Secret, error) {
+	serviceAccount, err := k.clientset.CoreV1().ServiceAccounts("").Get(context.TODO(), accountName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return k.clientset.CoreV1().Secrets(namespace).Get(
+	return k.clientset.CoreV1().Secrets("").Get(
 		ctx,
 		serviceAccount.Secrets[0].Name,
 		metav1.GetOptions{})
@@ -333,13 +336,13 @@ func (k *Client) GetSecretsForServiceAccount(ctx context.Context, namespace, acc
 // GenerateKubeConfig generates kubeconfig
 func (k *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
 	c := &Config{
-		Kind:           "Config",
-		APIVersion:     "v1",
-		CurrentContext: "default",
+		Kind:           configKind,
+		APIVersion:     apiVersion,
+		CurrentContext: defaultName,
 	}
 	c.Clusters = []ClusterInfo{
 		{
-			Name: "default-cluster",
+			Name: defaultName,
 			Cluster: Cluster{
 				CertificateAuthorityData: secret.Data["ca.crt"],
 				Server:                   k.restConfig.Host,
@@ -348,11 +351,11 @@ func (k *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
 	}
 	c.Contexts = []ContextInfo{
 		{
-			Name: "default",
+			Name: defaultName,
 			Context: Context{
-				Cluster:   "default-cluster",
+				Cluster:   defaultName,
 				User:      "pmm-service-account",
-				Namespace: "default",
+				Namespace: defaultName,
 			},
 		},
 	}
