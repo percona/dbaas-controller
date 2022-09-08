@@ -35,6 +35,10 @@ const (
 	gibiByte uint64 = mibiByte * 1024
 	teraByte uint64 = gigaByte * 1000
 	tebiByte uint64 = gibiByte * 1024
+	petaByte uint64 = teraByte * 1000
+	pebiByte uint64 = tebiByte * 1024
+	exaByte  uint64 = petaByte * 1000
+	exbiByte uint64 = pebiByte * 1024
 )
 
 // StrToBytes converts string containing memory as string to number of bytes the string represents.
@@ -50,9 +54,16 @@ func StrToBytes(memory string) (uint64, error) {
 	if i >= 0 {
 		suffix = memory[i+1:]
 	}
+
+	// Resources units map for k8s
+	//
+	// Supports the following units
+	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory
+	//
+	// Support of 'm' unit can be redundant because it's used for CPU limits mostly
 	suffixMapping := map[string]float64{
 		"m":  0.001,
-		"K":  float64(kiloByte),
+		"k":  float64(kiloByte),
 		"Ki": float64(kibiByte),
 		"M":  float64(megaByte),
 		"Mi": float64(mibiByte),
@@ -60,11 +71,15 @@ func StrToBytes(memory string) (uint64, error) {
 		"Gi": float64(gibiByte),
 		"T":  float64(teraByte),
 		"Ti": float64(tebiByte),
+		"P":  float64(petaByte),
+		"Pi": float64(pebiByte),
+		"E":  float64(exaByte),
+		"Ei": float64(exbiByte),
 		"":   1.0,
 	}
 	coeficient, ok := suffixMapping[suffix]
 	if !ok {
-		return 0, errors.Errorf("suffix '%s' not supported", suffix)
+		return 0, errors.Errorf("suffix '%s' is not supported", suffix)
 	}
 
 	if suffix != "" {

@@ -4,6 +4,7 @@ on:
   schedule:
     # run every Saturday
     - cron: "0 12 * * 6"
+  workflow_dispatch:
 
 jobs:
   clean:
@@ -14,8 +15,8 @@ jobs:
       fail-fast: false
       matrix:
         go-version:
-          - 1.17.x
-          - tip
+          #- 1.17.x
+          - 1.18.x
         os: [ubuntu-latest]
 
     runs-on: ${{ matrix.os }}

@@ -22,7 +22,6 @@ import (
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
-	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -43,13 +42,12 @@ var dbClusterStatesMap = map[k8sclient.ClusterState]controllerv1beta1.DBClusterS
 }
 
 // PXCClusterService implements methods of gRPC server and other business logic related to PXC clusters.
-type PXCClusterService struct {
-	p *message.Printer
+type PXCClusterService struct { // p *message.Printer
 }
 
 // NewPXCClusterService returns new PXCClusterService instance.
-func NewPXCClusterService(p *message.Printer) *PXCClusterService {
-	return &PXCClusterService{p: p}
+func NewPXCClusterService() *PXCClusterService {
+	return new(PXCClusterService)
 }
 
 // setComputeResources converts input resources and sets them to output compute resources.
@@ -76,7 +74,7 @@ func setComputeResources(inputResources *k8sclient.ComputeResources, outputResou
 func (s *PXCClusterService) ListPXCClusters(ctx context.Context, req *controllerv1beta1.ListPXCClustersRequest) (*controllerv1beta1.ListPXCClustersResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
-		return nil, status.Error(codes.Internal, s.p.Sprintf("Cannot initialize K8s client: %s", err))
+		return nil, status.Errorf(codes.Internal, "Cannot initialize K8s client: %s", err)
 	}
 	defer client.Cleanup() //nolint:errcheck
 

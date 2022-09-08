@@ -20,7 +20,6 @@ import (
 	"context"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -30,13 +29,12 @@ import (
 const pxcOperatorDeploymentName = "percona-xtradb-cluster-operator"
 
 type PXCOperatorService struct {
-	p                    *message.Printer
 	manifestsURLTemplate string
 }
 
 // NewPXCOperatorService returns new PXCOperatorService instance.
-func NewPXCOperatorService(p *message.Printer, url string) *PXCOperatorService {
-	return &PXCOperatorService{p: p, manifestsURLTemplate: url}
+func NewPXCOperatorService(url string) *PXCOperatorService {
+	return &PXCOperatorService{manifestsURLTemplate: url}
 }
 
 func (x PXCOperatorService) InstallPXCOperator(ctx context.Context, req *controllerv1beta1.InstallPXCOperatorRequest) (*controllerv1beta1.InstallPXCOperatorResponse, error) {

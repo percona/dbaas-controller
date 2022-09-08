@@ -33,7 +33,7 @@ help:                             ## Display this help message
 	@echo "         - -i"
 	@echo ""
 
-KUBERNETES_VERSION ?= 1.21.0
+KUBERNETES_VERSION ?= 1.23.6
 
 # `cut` is used to remove first `v` from `git describe` output
 # PMM_RELEASE_XXX variables are overwritten during PMM Server build
@@ -69,13 +69,6 @@ init:                             ## Install development tools
 ci-init:                ## Initialize CI environment
 	# nothing there yet
 
-gen:                              ## Generate code
-	go generate ./catalog
-	mv catalog/locales/en/out.gotext.json catalog/locales/en/messages.gotext.json
-	# add blank line at EOF
-	echo >> catalog/locales/en/messages.gotext.json
-	make format
-
 format:                           ## Format source code
 	bin/gofumpt -l -w .
 	bin/goimports -local github.com/percona-platform/dbaas-controller -l -w .
@@ -91,10 +84,10 @@ install:                          ## Install binaries
 	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
 test:                             ## Run tests
-	go test -race -timeout=30m ./...
+	go test $(PMM_TEST_FLAGS) -race -p 1 -timeout=30m ./...
 
 test-cover:                       ## Run tests and collect per-package coverage information
-	go test -race -timeout=30m -count=1 -coverprofile=cover.out -covermode=atomic ./...
+	go test -race -timeout=30m -count=1 -p 1 -coverprofile=cover.out -covermode=atomic ./...
 
 test-crosscover:                  ## Run tests and collect cross-package coverage information
 	go test -race -timeout=30m -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
@@ -109,16 +102,30 @@ env-up:                           ## Start development environment
 	make env-up-start
 
 env-up-start:
-	minikube config set kubernetes-version $(KUBERNETES_VERSION)
+	if [ $(KUBERNETES_VERSION) ]; then \
+		minikube config set kubernetes-version $(KUBERNETES_VERSION); \
+	fi
 	minikube config view
 	minikube start
+local-env-up:
+	if [ $(KUBERNETES_VERSION) ]; then \
+		minikube config set kubernetes-version $(KUBERNETES_VERSION); \
+	fi
+	minikube config view
+	minikube start --nodes=4 --cpus=3 --memory=2200mb
+	minikube addons disable storage-provisioner
+	kubectl delete storageclass standard
+	kubectl apply -f kubevirt-hostpath-provisioner.yaml
+
+env-check:
+	# none driver in CI needs to run this under different user permissions
+	# https://minikube.sigs.k8s.io/docs/drivers/none/#other
 	minikube status
 	minikube profile list
 	minikube addons list
 	minikube kubectl -- version
 	minikube kubectl -- get nodes
 	minikube kubectl -- get pods
-
 
 env-down:
 	#
@@ -158,6 +165,6 @@ eks-delete-current-namespace:
 	NAMESPACE=$$(kubectl config view --minify --output 'jsonpath={..namespace}'); \
 	if [ "$$NAMESPACE" != "default" ]; then kubectl delete ns "$$NAMESPACE"; fi
 
-deploy-to-pmm-server:
+deploy-to-pmm-server: install     ## Deploy DBaaS controller to a running ${PMM_CONTAINER} container.
 	docker cp bin/dbaas-controller ${PMM_CONTAINER}:/usr/sbin/dbaas-controller
 	docker exec ${PMM_CONTAINER} supervisorctl restart dbaas-controller
