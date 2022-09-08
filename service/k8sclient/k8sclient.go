@@ -414,7 +414,7 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	}, nil
 }
 
-// NewIncluster returns new K8Client object
+// NewIncluster returns new K8Client object.
 func NewIncluster(ctx context.Context) (*K8sClient, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "K8sClient")
@@ -441,6 +441,7 @@ func (c *K8sClient) Cleanup() error {
 	return c.kubeCtl.Cleanup()
 }
 
+// GetKubeconfig generates kubeconfig compatible with kubectl for incluster created clients.
 func (c *K8sClient) GetKubeconfig(ctx context.Context) string {
 	secret, err := c.kube.GetSecretsForServiceAccount(ctx, "pmm-service-account")
 	if err != nil {
