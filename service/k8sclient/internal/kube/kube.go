@@ -322,34 +322,35 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 }
 
 // GetSecretsForServiceAccount returns secret by given service account name
-func (k *Client) GetSecretsForServiceAccount(ctx context.Context, accountName string) (*corev1.Secret, error) {
-	serviceAccount, err := k.clientset.CoreV1().ServiceAccounts("").Get(context.TODO(), accountName, metav1.GetOptions{})
+func (c *Client) GetSecretsForServiceAccount(ctx context.Context, accountName string) (*corev1.Secret, error) {
+	serviceAccount, err := c.clientset.CoreV1().ServiceAccounts("").Get(context.TODO(), accountName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return k.clientset.CoreV1().Secrets("").Get(
+	return c.clientset.CoreV1().Secrets("").Get(
 		ctx,
 		serviceAccount.Secrets[0].Name,
-		metav1.GetOptions{})
+		metav1.GetOptions{},
+	)
 }
 
 // GenerateKubeConfig generates kubeconfig
-func (k *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
-	c := &Config{
+func (c *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
+	conf := &Config{
 		Kind:           configKind,
 		APIVersion:     apiVersion,
 		CurrentContext: defaultName,
 	}
-	c.Clusters = []ClusterInfo{
+	conf.Clusters = []ClusterInfo{
 		{
 			Name: defaultName,
 			Cluster: Cluster{
 				CertificateAuthorityData: secret.Data["ca.crt"],
-				Server:                   k.restConfig.Host,
+				Server:                   c.restConfig.Host,
 			},
 		},
 	}
-	c.Contexts = []ContextInfo{
+	conf.Contexts = []ContextInfo{
 		{
 			Name: defaultName,
 			Context: Context{
@@ -359,7 +360,7 @@ func (k *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
 			},
 		},
 	}
-	c.Users = []UserInfo{
+	conf.Users = []UserInfo{
 		{
 			Name: "pmm-service-account",
 			User: User{
@@ -367,16 +368,16 @@ func (k *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
 			},
 		},
 	}
-	return k.marshalKubeConfig(c)
+	return c.marshalKubeConfig(conf)
 }
 
-func (k *Client) marshalKubeConfig(c *Config) ([]byte, error) {
-	conf, err := json.Marshal(&c)
+func (c *Client) marshalKubeConfig(conf *Config) ([]byte, error) {
+	config, err := json.Marshal(&conf)
 	if err != nil {
 		return nil, err
 	}
 	var jsonObj interface{}
-	err = yaml.Unmarshal(conf, &jsonObj)
+	err = yaml.Unmarshal(config, &jsonObj)
 	if err != nil {
 		return nil, err
 	}
