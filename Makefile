@@ -113,7 +113,7 @@ local-env-up:
 	fi
 	minikube config view
 	minikube start --nodes=4 --cpus=3 --memory=2200mb
-	minikube addons enable storage-provisioner
+	minikube addons disable storage-provisioner
 	kubectl delete storageclass standard
 	kubectl apply -f kubevirt-hostpath-provisioner.yaml
 
