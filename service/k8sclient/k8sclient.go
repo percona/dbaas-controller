@@ -414,9 +414,42 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	}, nil
 }
 
+func NewIncluster(ctx context.Context) (*K8sClient, error) {
+	l := logger.Get(ctx)
+	l = l.WithField("component", "K8sClient")
+
+	kube, err := kube.NewFromIncluster()
+	if err != nil {
+		return nil, err
+	}
+	return &K8sClient{
+		kube: kube,
+		l:    l,
+		client: &http.Client{
+			Timeout: time.Second * 5,
+			Transport: &http.Transport{
+				MaxIdleConns:    1,
+				IdleConnTimeout: 10 * time.Second,
+			},
+		},
+	}, nil
+}
+
 // Cleanup removes temporary files created by that object.
 func (c *K8sClient) Cleanup() error {
 	return c.kubeCtl.Cleanup()
+}
+
+func (c *K8sClient) GetKubeconfig(ctx context.Context) string {
+	secret, err := c.kube.GetSecretsForServiceAccount(ctx, "", "")
+	if err != nil {
+		return ""
+	}
+	kubeConfig, err := c.kube.GenerateKubeConfig(secret)
+	if err != nil {
+		return ""
+	}
+	return string(kubeConfig)
 }
 
 // ListPXCClusters returns list of Percona XtraDB clusters and their statuses.

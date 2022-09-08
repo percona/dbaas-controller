@@ -20,10 +20,12 @@ package kube
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -31,7 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	yamlSerializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes"
@@ -232,7 +234,7 @@ func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
 			break
 		}
 
-		obj, _, err := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(rawObj.Raw, nil, nil)
+		obj, _, err := yamlSerializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(rawObj.Raw, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -314,6 +316,68 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 		return buf.String(), err
 	}
 	return buf.String(), nil
+}
+
+// GetSecretsForServiceAccount returns secret by given service account name
+func (k *Client) GetSecretsForServiceAccount(ctx context.Context, namespace, accountName string) (*corev1.Secret, error) {
+	serviceAccount, err := k.clientset.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), accountName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return k.clientset.CoreV1().Secrets(namespace).Get(
+		ctx,
+		serviceAccount.Secrets[0].Name,
+		metav1.GetOptions{})
+}
+
+// GenerateKubeConfig generates kubeconfig
+func (k *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
+	c := &Config{
+		Kind:           "Config",
+		APIVersion:     "v1",
+		CurrentContext: "default",
+	}
+	c.Clusters = []ClusterInfo{
+		{
+			Name: "default-cluster",
+			Cluster: Cluster{
+				CertificateAuthorityData: secret.Data["ca.crt"],
+				Server:                   k.restConfig.Host,
+			},
+		},
+	}
+	c.Contexts = []ContextInfo{
+		{
+			Name: "default",
+			Context: Context{
+				Cluster:   "default-cluster",
+				User:      "pmm-service-account",
+				Namespace: "default",
+			},
+		},
+	}
+	c.Users = []UserInfo{
+		{
+			Name: "pmm-service-account",
+			User: User{
+				Token: string(secret.Data["token"]),
+			},
+		},
+	}
+	return k.marshalKubeConfig(c)
+}
+
+func (k *Client) marshalKubeConfig(c *Config) ([]byte, error) {
+	conf, err := json.Marshal(&c)
+	if err != nil {
+		return nil, err
+	}
+	var jsonObj interface{}
+	err = yaml.Unmarshal(conf, &jsonObj)
+	if err != nil {
+		return nil, err
+	}
+	return yaml.Marshal(jsonObj)
 }
 
 func (c *Client) retrieveMetaFromObject(obj runtime.Object) (namespace, name string, err error) {
