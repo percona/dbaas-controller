@@ -326,11 +326,11 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 
 // GetSecretsForServiceAccount returns secret by given service account name
 func (c *Client) GetSecretsForServiceAccount(ctx context.Context, accountName string) (*corev1.Secret, error) {
-	serviceAccount, err := c.clientset.CoreV1().ServiceAccounts("default").Get(context.TODO(), accountName, metav1.GetOptions{})
+	serviceAccount, err := c.clientset.CoreV1().ServiceAccounts("default").Get(ctx, accountName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return c.clientset.CoreV1().Secrets("").Get(
+	return c.clientset.CoreV1().Secrets("default").Get(
 		ctx,
 		serviceAccount.Secrets[0].Name,
 		metav1.GetOptions{},
