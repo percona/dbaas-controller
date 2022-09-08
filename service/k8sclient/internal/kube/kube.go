@@ -37,6 +37,7 @@ import (
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes"
+
 	// load all auth plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
@@ -325,7 +326,7 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 
 // GetSecretsForServiceAccount returns secret by given service account name
 func (c *Client) GetSecretsForServiceAccount(ctx context.Context, accountName string) (*corev1.Secret, error) {
-	serviceAccount, err := c.clientset.CoreV1().ServiceAccounts("").Get(context.TODO(), accountName, metav1.GetOptions{})
+	serviceAccount, err := c.clientset.CoreV1().ServiceAccounts("default").Get(context.TODO(), accountName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
