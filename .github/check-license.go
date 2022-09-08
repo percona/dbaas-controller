@@ -30,6 +30,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 )
 
 func getHeader() string {
@@ -81,7 +82,9 @@ func checkHeader(path string, header string) bool {
 		return true
 	}
 
-	if header != string(actual) {
+	// Sometimes source code has a license header, however it fails because
+	// generated files can contain build tags before the actual header
+	if !strings.Contains(string(actual), header[0:len(header)/2]) {
 		log.Print(path)
 		return false
 	}

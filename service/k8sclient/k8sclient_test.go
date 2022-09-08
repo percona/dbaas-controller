@@ -37,6 +37,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
@@ -375,7 +376,7 @@ func TestK8sClient(t *testing.T) {
 		})
 
 		t.Run("Get logs", func(t *testing.T) {
-			pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+name)
+			pods, err := client.GetPods(ctx, "", "app.kubernetes.io/instance="+name)
 			require.NoError(t, err)
 
 			expectedPods := []pod{
@@ -407,7 +408,7 @@ func TestK8sClient(t *testing.T) {
 			for _, ppod := range pods.Items {
 				var foundPod pod
 				assert.Conditionf(t,
-					func(ppod common.Pod) assert.Comparison {
+					func(ppod corev1.Pod) assert.Comparison {
 						return func() bool {
 							for _, expectedPod := range expectedPods {
 								if ppod.Name == expectedPod.name {
@@ -425,7 +426,7 @@ func TestK8sClient(t *testing.T) {
 				for _, container := range ppod.Spec.Containers {
 					assert.Conditionf(
 						t,
-						func(container common.ContainerSpec) assert.Comparison {
+						func(container corev1.Container) assert.Comparison {
 							return func() bool {
 								for _, expectedContainerName := range foundPod.containers {
 									if expectedContainerName == container.Name {
@@ -838,16 +839,16 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 			return
 		default:
 		}
-		list, err := client.GetPods(ctx, "-n", consumedResourcesTestNamespace, "hello1", "hello2")
+		list, err := client.GetPods(ctx, consumedResourcesTestNamespace)
 		require.NoError(t, err)
 		var failed, succeeded bool
 		for _, pod := range list.Items {
 			if pod.Name == "hello1" {
-				succeeded = pod.Status.Phase == common.PodPhaseSucceded
+				succeeded = pod.Status.Phase == corev1.PodSucceeded
 				continue
 			}
 			if pod.Name == "hello2" {
-				failed = pod.Status.Phase == common.PodPhaseFailed
+				failed = pod.Status.Phase == corev1.PodFailed
 			}
 		}
 
@@ -883,16 +884,16 @@ func TestGetAllClusterResources(t *testing.T) {
 	require.NotNil(t, nodes)
 	assert.Greater(t, len(nodes), 0)
 	for _, node := range nodes {
-		cpu, ok := node.Status.Allocatable[common.ResourceCPU]
-		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", common.ResourceCPU)
+		cpu, ok := node.Status.Allocatable[corev1.ResourceCPU]
+		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", corev1.ResourceCPU)
 		assert.NotEmpty(t, cpu)
-		memory, ok := node.Status.Allocatable[common.ResourceMemory]
-		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", common.ResourceMemory)
+		memory, ok := node.Status.Allocatable[corev1.ResourceMemory]
+		assert.Truef(t, ok, "no value in node.Status.Allocatable under key %s", corev1.ResourceMemory)
 		assert.NotEmpty(t, memory)
 	}
 
 	clusterType := client.GetKubernetesClusterType(ctx)
-	var volumes *common.PersistentVolumeList
+	var volumes *corev1.PersistentVolumeList
 	if clusterType == AmazonEKSClusterType {
 		volumes, err = client.GetPersistentVolumes(ctx)
 		require.NoError(t, err)
@@ -924,7 +925,8 @@ func TestVMAgentSpec(t *testing.T) {
   "kind": "VMAgent",
   "apiVersion": "operator.victoriametrics.com/v1beta1",
   "metadata": {
-    "name": "pmm-vmagent-rws-basic-auth"
+    "name": "pmm-vmagent-rws-basic-auth",
+    "creationTimestamp": null
   },
   "spec": {
     "serviceScrapeNamespaceSelector": {},
@@ -937,13 +939,13 @@ func TestVMAgentSpec(t *testing.T) {
     "staticScrapeNamespaceSelector": {},
     "replicaCount": 1,
     "resources": {
-      "requests": {
-        "memory": "350Mi",
-        "cpu": "250m"
-      },
       "limits": {
-        "memory": "850Mi",
-        "cpu": "500m"
+        "cpu": "500m",
+        "memory": "850Mi"
+      },
+      "requests": {
+        "cpu": "250m",
+        "memory": "350Mi"
       }
     },
     "extraArgs": {
@@ -1360,7 +1362,7 @@ func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (in
 func printLogs(t *testing.T, ctx context.Context, client *K8sClient, name string) {
 	t.Helper()
 
-	pods, err := client.GetPods(ctx, "-lapp.kubernetes.io/instance="+name)
+	pods, err := client.GetPods(ctx, "", "app.kubernetes.io/instance="+name)
 	require.NoError(t, err)
 
 	for _, ppod := range pods.Items {
