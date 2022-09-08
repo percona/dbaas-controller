@@ -14,14 +14,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+//go:build !saas
 // +build !saas
 
 package logger
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/grpclog"
@@ -60,7 +63,18 @@ func (l *logrusGrpcLoggerV2) V(level int) bool {
 
 // NewLogger returns new LogrusLogger.
 func NewLogger() Logger {
-	l := logrus.NewEntry(logrus.New())
+	// l := logrus.NewEntry(logrus.New())
+	formater := new(logrus.TextFormatter)
+	formater.TimestampFormat = time.StampNano
+	l := logrus.NewEntry(&logrus.Logger{
+		Out:          os.Stderr,
+		Formatter:    formater,
+		Hooks:        make(logrus.LevelHooks),
+		Level:        logrus.InfoLevel,
+		ExitFunc:     os.Exit,
+		ReportCaller: false,
+	})
+
 	return &LogrusLogger{
 		l: l,
 	}
@@ -85,6 +99,11 @@ func (z *LogrusLogger) GRPCLogger() grpclog.LoggerV2 {
 // WithField Add a single field to the Logger.
 func (z *LogrusLogger) WithField(key string, value interface{}) Logger {
 	return &LogrusLogger{l: z.l.WithField(key, value)}
+}
+
+// SetLevel sets log level.
+func (z *LogrusLogger) SetLevel(level Level) {
+	z.l.Level = logrus.Level(level)
 }
 
 func (z *LogrusLogger) Debug(args ...interface{}) { z.l.Debug(args...) } //nolint:golint

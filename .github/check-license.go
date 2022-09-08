@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+//go:build ignore
 // +build ignore
 
 // check-license checks that AGPL license header in all files matches header in this file.
@@ -29,6 +30,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 )
 
 func getHeader() string {
@@ -80,7 +82,9 @@ func checkHeader(path string, header string) bool {
 		return true
 	}
 
-	if header != string(actual) {
+	// Sometimes source code has a license header, however it fails because
+	// generated files can contain build tags before the actual header
+	if !strings.Contains(string(actual), header[0:len(header)/2]) {
 		log.Print(path)
 		return false
 	}
@@ -103,8 +107,8 @@ func main() {
 			return err
 		}
 		if info.IsDir() {
-			switch info.Name() {
-			case ".git", "vendor":
+			switch path {
+			case ".git":
 				return filepath.SkipDir
 			default:
 				return nil

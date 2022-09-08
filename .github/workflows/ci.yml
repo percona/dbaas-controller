@@ -13,30 +13,207 @@ on:
   pull_request:
 
 jobs:
-  test:
-    name: Test
-    timeout-minutes: 20
+  # test:
+  #    name: Test
+  #    timeout-minutes: 30
+
+  #    strategy:
+  #      fail-fast: false
+  #      matrix:
+  #        go-version:
+  #          - 1.18.x
+  #        kubernetes_version:
+  #          # latest supported version in minikube (in pare with k8s releases)
+  #          - ""
+  #          # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
+  #          - v1.22.6
+  #        versions:
+  #          - {psmdb: "", pxc: ""}
+  #          - {psmdb: "1.11.0", pxc: "1.10.0"}
+  #        test_operator: ["pxc", "haproxy-pxc", "psmdb"]
+  #        build_tags: [""]
+  #        os: [ubuntu-latest]
+  #        may-fail: [false]
+  #        version_service_url: ["https://check.percona.com/versions/v1"]
+
+  #        include:
+  #          - go-version: 1.18.x
+  #            kubernetes_version: "" # latest supported version in minikube (in pare with k8s releases)
+  #            build_tags: ""
+  #            os: ubuntu-latest
+  #            may-fail: true
+  #            version_service_url: "https://check-dev.percona.com/versions/v1"
+
+  #    continue-on-error: ${{ matrix.may-fail }}
+  #    runs-on: ${{ matrix.os }}
+
+  #    env:
+  #      # no `-mod=readonly` to test PRs made by @dependabot;
+  #      # `git diff --exit-code` step below still checks what we need
+  #      GOFLAGS: -v -tags='${{ matrix.build_tags }}'
+  #      KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
+  #      VERSION_SERVICE_URL: ${{ matrix.version_service_url }}
+  #      PERCONA_TEST_PXC_OPERATOR_VERSION: ${{ matrix.versions.pxc }}
+  #      PERCONA_TEST_PSMDB_OPERATOR_VERSION: ${{ matrix.versions.psmdb }}
+  #      PERCONA_TEST_DBAAS_OPERATOR: ${{ matrix.test_operator }}
+  #      MINIKUBE_IN_STYLE: 1
+  #      CHANGE_MINIKUBE_NONE_USER: true
+
+  #    steps:
+  #      - name: Set up Go release
+  #        if: matrix.go-version != 'tip'
+  #        env:
+  #          # to avoid error due to `go version` accepting -v flag with an argument since 1.15
+  #          GOFLAGS: ""
+  #        uses: percona-platform/setup-go@v2
+  #        with:
+  #          go-version: ${{ matrix.go-version }}
+
+  #      - name: Set up Go tip
+  #        if: matrix.go-version == 'tip'
+  #        env:
+  #          # to avoid error due to `go version` accepting -v flag with an argument since 1.15
+  #          GOFLAGS: ""
+  #        run: |
+  #          git clone --depth=1 https://go.googlesource.com/go $HOME/gotip
+  #          cd $HOME/gotip/src
+  #          ./make.bash
+  #          echo "GOROOT=$HOME/gotip" >> $GITHUB_ENV
+  #          echo "$HOME/gotip/bin" >> $GITHUB_PATH
+
+  #      - name: Set GO_VERSION environment variable
+  #        env:
+  #          # to avoid error due to `go version` accepting -v flag with an argument since 1.15
+  #          GOFLAGS: ""
+  #        run: |
+  #          go version
+  #          echo "GO_VERSION=$(go version)" >> $GITHUB_ENV
+
+  #      - name: Check out code into the Go module directory
+  #        uses: percona-platform/checkout@v2
+
+  #      # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
+  #      # https://minikube.sigs.k8s.io/docs/drivers/none/
+  #      - name: Configure minikube
+  #        run: |
+  #          sudo apt install -y conntrack
+
+  #      - name: Configure minikube with action
+  #        id: minikube
+  #        with:
+  #          kubernetes-version: ${{ matrix.kubernetes_version }}
+  #          cpus: '2'
+  #          memory: '5700'
+  #        uses: percona-platform/setup-minikube@master
+
+  #      - name: Enable Go modules cache
+  #        uses: percona-platform/cache@v2
+  #        with:
+  #          path: ~/go/pkg/mod
+  #          key: ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-${{ hashFiles('**/go.sum') }}
+  #          restore-keys: |
+  #            ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-
+
+  #      - name: Enable Go build cache
+  #        uses: percona-platform/cache@v2
+  #        with:
+  #          path: ~/.cache/go-build
+  #          key: ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-${{ hashFiles('**') }}
+  #          restore-keys: |
+  #            ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-
+  #            ${{ matrix.os }}-go-${{ matrix.go-version }}-build-
+
+  #      - name: Download Go modules
+  #        run: go mod download
+
+  #      - name: Install tools
+  #        run: make init
+
+  #      - name: Initialize CI environment
+  #        run: make ci-init
+
+  #      - name: Start development environment
+  #        run: |
+  #          make env-up
+  #          make env-check
+
+  #      - name: Run tests
+  #        run: |
+  #          go clean -testcache
+  #          make test-crosscover
+
+  #      - name: Upload coverage results
+  #        uses: percona-platform/codecov-action@v1
+  #        with:
+  #          file: crosscover.out
+  #          flags: crosscover
+  #          env_vars: GO_VERSION,KUBERNETES_VERSION
+  #          fail_ci_if_error: false
+
+  #      - name: Collect debugdata
+  #        if: ${{ failure() }}
+  #        run: |
+  #          make collect-debugdata
+  #          minikube logs --length=100
+  #          minikube kubectl -- get all
+  #          minikube kubectl -- describe pods
+  #          minikube kubectl -- describe pv,pvc
+  #          minikube kubectl -- get events --sort-by=lastTimestamp
+  #          minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-xtradb-cluster-operator'
+  #          minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-xtradb-cluster'
+  #          minikube kubectl -- logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator'
+  #          minikube kubectl -- logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb'
+
+  #      - name: Upload debugdata
+  #        if: ${{ always() }}
+  #        uses: percona-platform/upload-artifact@v2
+  #        with:
+  #          name: debugdata
+  #          path: ./debugdata
+
+  #      # - name: Setup tmate session on failure
+  #      #   if: ${{ failure() }}
+  #      #   uses: percona-platform/action-tmate@v2
+
+  #      - name: Check that there are no source code changes
+  #        run: |
+  #          # Break job if any files were changed during its run (code generation, etc), except go.sum.
+  #          # `go mod tidy` could remove old checksums from that file, and that's okay on CI,
+  #          # and actually expected for PRs made by @dependabot.
+  #          # Checksums of actually used modules are checked by previous `go` subcommands.
+  #          pushd tools && go mod tidy && git checkout go.sum
+  #          popd        && go mod tidy && git checkout go.sum
+  #          git diff --exit-code
+
+  #      - name: Run debug commands on failure
+  #        if: ${{ failure() }}
+  #        run: |
+  #          env
+  #          go version
+  #          go env
+  #          pwd
+  #          git status
+
+  test-on-eks:
+    name: Test on EKS
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
       matrix:
         go-version:
-          - 1.14.x
-          - 1.15.x
-        kubernetes_version:
-          # https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
-          - 1.15.11
-          - 1.16.8
-        build_tags: ["", "saas"]
+          - 1.18.x
+        build_tags: [""]
+        test_operator: ["pxc", "haproxy-pxc", "psmdb"]
         os: [ubuntu-latest]
         may-fail: [false]
-
+        version_service_url: ["https://check.percona.com/versions/v1"]
         include:
-          - go-version: tip
-            kubernetes_version: 1.16.8
+          - go-version: 1.18.x
             build_tags: ""
             os: ubuntu-latest
             may-fail: true
+            version_service_url: "https://check-dev.percona.com/versions/v1"
 
     continue-on-error: ${{ matrix.may-fail }}
     runs-on: ${{ matrix.os }}
@@ -45,17 +222,18 @@ jobs:
       # no `-mod=readonly` to test PRs made by @dependabot;
       # `git diff --exit-code` step below still checks what we need
       GOFLAGS: -v -tags='${{ matrix.build_tags }}'
-      KUBERNETES_VERSION: ${{ matrix.kubernetes_version }}
-      MINIKUBE_IN_STYLE: 1
-      CHANGE_MINIKUBE_NONE_USER: true
-
+      PERCONA_TEST_VERSION_SERVICE_URL: ${{ matrix.version_service_url }}
+      PERCONA_TEST_DBAAS_OPERATOR: ${{ matrix.test_operator }}
+      # Set DELETE_NAMESPACE to false when you want to debug in EKS cluster after job is done.
+      DELETE_NAMESPACE: true
+      DBAAS_TOOLS_PATH: "/opt/dbaas-tools/bin"
     steps:
       - name: Set up Go release
         if: matrix.go-version != 'tip'
         env:
           # to avoid error due to `go version` accepting -v flag with an argument since 1.15
           GOFLAGS: ""
-        uses: percona-platform/setup-go@v2.1.2
+        uses: percona-platform/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
 
@@ -68,8 +246,8 @@ jobs:
           git clone --depth=1 https://go.googlesource.com/go $HOME/gotip
           cd $HOME/gotip/src
           ./make.bash
-          echo "::set-env name=GOROOT::$HOME/gotip"
-          echo "::add-path::$HOME/gotip/bin"
+          echo "GOROOT=$HOME/gotip" >> $GITHUB_ENV
+          echo "$HOME/gotip/bin" >> $GITHUB_PATH
 
       - name: Set GO_VERSION environment variable
         env:
@@ -77,19 +255,10 @@ jobs:
           GOFLAGS: ""
         run: |
           go version
-          echo "::set-env name=GO_VERSION::$(go version)"
+          echo "GO_VERSION=$(go version)" >> $GITHUB_ENV
 
       - name: Check out code into the Go module directory
-        uses: percona-platform/checkout@v2.3.2
-
-      # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
-      # https://minikube.sigs.k8s.io/docs/drivers/none/
-      - name: Configure minikube
-        run: |
-          sudo apt install -y conntrack
-          sudo -E minikube config set driver none
-          sudo -E minikube config set cpus 2
-          sudo -E minikube config set memory 4096
+        uses: percona-platform/checkout@v2
 
       - name: Enable Go modules cache
         uses: percona-platform/cache@v2
@@ -112,47 +281,80 @@ jobs:
         run: go mod download
 
       - name: Install tools
-        run: make init
+        run: |
+          make init
+          mkdir -p "${DBAAS_TOOLS_PATH}"
+          echo "${DBAAS_TOOLS_PATH}" >> $GITHUB_PATH
+          curl -o aws-iam-authenticator https://s3.us-west-2.amazonaws.com/amazon-eks/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
+          chmod +x ./aws-iam-authenticator
+          mv aws-iam-authenticator "${DBAAS_TOOLS_PATH}"
+          # dbaas-controller tries to search for kubectl at certain path
+          curl -LO https://dl.k8s.io/release/v$KUBECTL_VERSION/bin/linux/amd64/kubectl
+          curl -LO "https://dl.k8s.io/v$KUBECTL_VERSION/bin/linux/amd64/kubectl.sha256"
+          echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+          chmod +x kubectl
+          cp kubectl "${DBAAS_TOOLS_PATH}/kubectl-1.23"
+          cp kubectl "${DBAAS_TOOLS_PATH}/kubectl"
+          rm kubectl
+          rm kubectl.sha256
+        env:
+          KUBECTL_VERSION: 1.23.6
 
       - name: Initialize CI environment
         run: make ci-init
 
-      - name: Generate code
-        run: make gen
-
-      - name: Install binaries
-        run: make release install
-
-      - name: Start development environment
-        run: sudo -E make env-up
+      - name: Setup environment for tests to run
+        id: setupenv
+        run: |
+           export PATH_TO_KUBECONFIG="${HOME}/.kube/config"
+           mkdir -p "${PATH_TO_KUBECONFIG%/*}"
+           echo "${BASE64_KUBECONFIG}" > "${PATH_TO_KUBECONFIG}"
+           export RANDOM_STRING=$(cat /proc/sys/kernel/random/uuid)
+           export NAMESPACE="dbaas-controller-test-${RANDOM_STRING}"
+           make eks-setup-test-namespace NAMESPACE="${NAMESPACE}"
+           echo "::set-output name=done::1"
+           echo "::set-output name=namespace::$NAMESPACE"
+        env:
+           BASE64_KUBECONFIG: ${{secrets.BASE64_KUBECONFIG}}
 
       - name: Run tests
+        if: steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1'
         run: |
+          export NAMESPACE=${{ steps.setupenv.outputs.namespace }}
           go clean -testcache
           make test-crosscover
 
       - name: Upload coverage results
-        uses: percona-platform/codecov-action@v1.0.13
+        if: env.PERCONA_TEST_DBAAS_OPERATOR == ''
+        uses: percona-platform/codecov-action@v1
         with:
           file: crosscover.out
           flags: crosscover
           env_vars: GO_VERSION,KUBERNETES_VERSION
           fail_ci_if_error: false
 
-      - name: Collect debugdata
-        if: ${{ always() }}
-        run: make collect-debugdata
+      - name: Report Kubernetes resources count and state
+        if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1'
+        run: |
+          echo "Kubernetes resources counts:"
+          echo "Namespaces: $(kubectl get ns | tail +2 | wc -l)"
+          echo "Persistent volumes: $(kubectl get pv | tail +2 | wc -l)"
+          echo "Pods: $(kubectl get pod | tail +2 | wc -l)"
+          echo "State of all pods:"
+          kubectl describe pods
+          kubectl describe pv,pvc
+          kubectl get events --sort-by=lastTimestamp
+          kubectl logs --all-containers --timestamps --selector='name=percona-xtradb-cluster-operator'
+          kubectl logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-xtradb-cluster'
+          kubectl logs --all-containers --timestamps --selector='name=percona-server-mongodb-operator'
+          kubectl logs --all-containers --timestamps --selector='app.kubernetes.io/name=percona-server-mongodb'
 
-      - name: Upload debugdata
-        if: ${{ always() }}
-        uses: percona-platform/upload-artifact@v2
-        with:
-          name: debugdata
-          path: ./debugdata
-
-      # - name: Setup tmate session on failure
-      #   if: ${{ failure() }}
-      #   uses: percona-platform/action-tmate@v2
+      - name: Delete the test namespace
+        if: always() && steps.setupenv.outputs.exit_code == 0 && steps.setupenv.outputs.done == '1' && env.DELETE_NAMESPACE
+        run: |
+          make eks-cleanup-namespace
+          make eks-delete-operators
+          make eks-delete-current-namespace
 
       - name: Check that there are no source code changes
         run: |
@@ -172,15 +374,16 @@ jobs:
           go env
           pwd
           git status
+          kubectl version --output=yaml
 
   check:
     name: Check
-    timeout-minutes: 5
+    timeout-minutes: 10
     if: github.event_name == 'pull_request'
 
     strategy:
       matrix:
-        go-version: [1.14.x]
+        go-version: [1.18.x]
         os: [ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
@@ -192,12 +395,12 @@ jobs:
 
     steps:
       - name: Set up Go ${{ matrix.go-version }}
-        uses: percona-platform/setup-go@v2.1.2
+        uses: percona-platform/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
 
       - name: Check out code into the Go module directory
-        uses: percona-platform/checkout@v2.3.2
+        uses: percona-platform/checkout@v2
         with:
           lfs: true
 
@@ -224,6 +427,12 @@ jobs:
       - name: Install tools
         run: make init
 
+      - name: Install binaries
+        run: make release install
+
+      - name: Check that API tests can be built
+        run: make test-api-build
+
       - name: Run checks/linters
         run: |
           bin/check-license
@@ -237,8 +446,9 @@ jobs:
           # run it like that until some of those issues/PRs are resolved:
           # * https://github.com/quasilyte/go-consistent/issues/33
           # * https://github.com/golangci/golangci-lint/issues/288
-          # * https://github.com/reviewdog/errorformat/pull/47 (once it is atually used by reviewdog)
-          bin/go-consistent -pedantic ./...
+          # * https://github.com/reviewdog/errorformat/pull/47 (once it is actually used by reviewdog)
+          bin/go-consistent -pedantic -exclude "tests" ./...
+          cd tests && ../bin/go-consistent -pedantic ./...
 
       - name: Check that there are no source code changes
         run: |

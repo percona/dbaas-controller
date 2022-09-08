@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+//go:build saas
 // +build saas
 
 package logger
@@ -34,7 +35,7 @@ func NewLogger() Logger {
 
 // SetupGlobal sets up global zap logger.
 func SetupGlobal() {
-	logger.SetupGlobal()
+	logger.SetupGlobal(nil)
 }
 
 // ZapLogger iz a wrapper for zap.SugaredLogger.
@@ -57,6 +58,11 @@ func (z *ZapLogger) GRPCLogger() grpclog.LoggerV2 {
 // to the child don't affect the parent, and vice versa.
 func (z *ZapLogger) WithField(key string, value interface{}) Logger {
 	return &ZapLogger{l: z.l.With(key, value)}
+}
+
+// SetLevel sets log level.
+func (z *ZapLogger) SetLevel(level Level) {
+	// TODO: implement it.
 }
 
 func (z *ZapLogger) Debug(args ...interface{}) { z.l.Debug(args...) } //nolint:golint

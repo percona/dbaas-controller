@@ -4,3 +4,4 @@
 /bin/
 /debugdata/
 *.out
+*.sw[o,p]

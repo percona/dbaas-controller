@@ -10,9 +10,17 @@ linters-settings:
       - errors
       # use "github.com/golang/protobuf/proto" instead
       - github.com/gogo/protobuf/proto
+      - github.com/percona/percona-server-mongodb-operator
+      - github.com/percona/percona-xtradb-cluster-operator
 
   goimports:
     local-prefixes: github.com/percona-platform/dbaas-controller
+
+  gci:
+    sections:
+      - standard # Captures all standard packages if they do not match another section.
+      - default # Contains all imports that could not be matched to another section type.
+      - prefix(github.com/percona-platform/dbaas-controller) # Groups all local imports.
 
   unused:
     check-exported: true
@@ -23,11 +31,15 @@ linters-settings:
 linters:
   enable-all: true
   disable:
-    - goerr113  # we use pkg/errors for stack traces
-    - gomnd     # too annoying
-    - lll       # gRPC types are long
-    - wsl       # too annoying
-    - unused    # too many false positives
+    - goerr113          # we use pkg/errors for stack traces
+    - gomnd             # too annoying
+    - lll               # gRPC types are long
+    - wsl               # too annoying
+    - unused            # too many false positives
+    - nlreturn          # too annoying
+    - exhaustruct       # too annoying
+    - exhaustivestruct  # too annoying
+    - wrapcheck         # we don't wrap errors
 
 issues:
   exclude-use-default: false

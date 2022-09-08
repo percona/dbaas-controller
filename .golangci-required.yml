@@ -10,14 +10,24 @@ linters-settings:
       - errors
       # use "github.com/golang/protobuf/proto" instead
       - github.com/gogo/protobuf/proto
+      - github.com/percona/percona-server-mongodb-operator
+      - github.com/percona/percona-xtradb-cluster-operator
 
   goimports:
     local-prefixes: github.com/percona-platform/dbaas-controller
 
+  gci:
+    sections:
+      - standard # Captures all standard packages if they do not match another section.
+      - default # Contains all imports that could not be matched to another section type.
+      - prefix(github.com/percona-platform/dbaas-controller) # Groups all local imports.
+
 linters:
   disable-all: true
   enable:
+    # keep sorted
     - depguard
+    - gci
     - goimports
     - govet
     - ineffassign

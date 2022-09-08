@@ -17,15 +17,16 @@
 package main
 
 import (
+	"log"
+
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/percona/pmm/version"
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
 	"google.golang.org/grpc/grpclog"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	_ "github.com/percona-platform/dbaas-controller/catalog" // load messages
 	"github.com/percona-platform/dbaas-controller/service/cluster"
+	"github.com/percona-platform/dbaas-controller/service/logs"
+	"github.com/percona-platform/dbaas-controller/service/operator"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 	"github.com/percona-platform/dbaas-controller/utils/servers"
@@ -36,20 +37,22 @@ func main() {
 		panic("dbaas-controller version is not set during build.")
 	}
 
-	logger.SetupGlobal()
-
-	ctx := app.Context()
-	l := logger.Get(ctx).WithField("component", "main")
-	defer l.Sync() //nolint:errcheck
-
 	flags, err := app.Setup(&app.SetupOpts{
 		Name: "dbaas-controller",
 	})
 	if err != nil {
-		l.Fatal(err)
+		log.Fatal(err)
 	}
 
 	kingpin.Parse()
+
+	logger.SetupGlobal()
+	ctx := app.Context()
+	l := logger.Get(ctx).WithField("component", "main")
+	defer l.Sync() //nolint:errcheck
+	if flags.LogDebug {
+		l.SetLevel(logger.DebugLevel)
+	}
 
 	l.Infof("Starting...")
 
@@ -63,8 +66,12 @@ func main() {
 		l.Fatalf("Failed to create gRPC server: %s.", err)
 	}
 
-	i18nPrinter := message.NewPrinter(language.English)
-	controllerv1beta1.RegisterXtraDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.New(i18nPrinter))
+	controllerv1beta1.RegisterPXCClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewPXCClusterService())
+	controllerv1beta1.RegisterPSMDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewPSMDBClusterService())
+	controllerv1beta1.RegisterKubernetesClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewKubernetesClusterService())
+	controllerv1beta1.RegisterLogsAPIServer(gRPCServer.GetUnderlyingServer(), logs.NewService())
+	controllerv1beta1.RegisterPXCOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewPXCOperatorService(flags.PXCOperatorURLTemplate))
+	controllerv1beta1.RegisterPSMDBOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewPSMDBOperatorService(flags.PSMDBOperatorURLTemplate))
 
 	go servers.RunDebugServer(ctx, &servers.RunDebugServerOpts{
 		Addr: flags.DebugAddr,

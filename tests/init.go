@@ -20,17 +20,17 @@ import (
 	"context"
 	"flag"
 	"math/rand"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"testing"
 	"time"
 
-	"google.golang.org/grpc"
-
 	dbaasClient "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+	"google.golang.org/grpc"
 )
 
 //nolint:gochecknoglobals
@@ -41,8 +41,20 @@ var (
 	// True if -debug or -trace flag is passed.
 	Debug bool
 
-	// XtraDBClusterAPIClient contains client for dbaas-controller API.
-	XtraDBClusterAPIClient dbaasClient.XtraDBClusterAPIClient
+	// PMM Server Params.
+	PMMServerParams *dbaasClient.PMMParams
+
+	// PXCClusterAPIClient contains client for dbaas-controller API related to XtraDB clusters.
+	PXCClusterAPIClient dbaasClient.PXCClusterAPIClient
+
+	// PSMDBClusterAPIClient contains client for dbaas-controller API related to PSMDB clusters.
+	PSMDBClusterAPIClient dbaasClient.PSMDBClusterAPIClient
+
+	// KubernetesClusterAPIClient contains client for dbaas-controller API related to Kubernetes clusters.
+	KubernetesClusterAPIClient dbaasClient.KubernetesClusterAPIClient
+
+	// LogsAPIClient contails client for dbaas-controller API related to database cluster's logs
+	LogsAPIClient dbaasClient.LogsAPIClient
 )
 
 //nolint:gochecknoinits
@@ -52,6 +64,7 @@ func init() {
 	debugF := flag.Bool("dbaas.debug", false, "Enable debug output [DBAAS_DEBUG].")
 	traceF := flag.Bool("dbaas.trace", false, "Enable trace output [DBAAS_TRACE].")
 	serverURLF := flag.String("dbaas.server-url", "127.0.0.1:20201", "DBaas Controller URL [DBAAS_SERVER_URL].")
+	pmmServerURLF := flag.String("pmm.server-url", "", "PMM Server URL in `https://username:password@pmm-server-host/` format") // FIXME: fix this once we start using CI.
 
 	testing.Init()
 	flag.Parse()
@@ -60,6 +73,7 @@ func init() {
 		"DBAAS_DEBUG":      flag.Lookup("dbaas.debug"),
 		"DBAAS_TRACE":      flag.Lookup("dbaas.trace"),
 		"DBAAS_SERVER_URL": flag.Lookup("dbaas.server-url"),
+		"PMM_SERVER_URL":   flag.Lookup("pmm.server-url"),
 	} {
 		env, ok := os.LookupEnv(envVar)
 		if ok {
@@ -78,6 +92,19 @@ func init() {
 		logrus.SetReportCaller(true)
 	}
 	Debug = *debugF || *traceF
+
+	if *pmmServerURLF != "" {
+		pmmServerURL, err := url.Parse(*pmmServerURLF)
+		if err != nil {
+			logrus.Fatalf("failed to parse PMM server URL: %s", err)
+		}
+		password, _ := pmmServerURL.User.Password()
+		PMMServerParams = &dbaasClient.PMMParams{
+			PublicAddress: pmmServerURL.Hostname(),
+			Login:         pmmServerURL.User.Username(),
+			Password:      password,
+		}
+	}
 
 	var cancel context.CancelFunc
 	Context, cancel = context.WithCancel(context.Background())
@@ -104,5 +131,8 @@ func init() {
 	if err != nil {
 		logrus.Fatalf("failed to dial server: %s", err)
 	}
-	XtraDBClusterAPIClient = dbaasClient.NewXtraDBClusterAPIClient(cc)
+	PXCClusterAPIClient = dbaasClient.NewPXCClusterAPIClient(cc)
+	PSMDBClusterAPIClient = dbaasClient.NewPSMDBClusterAPIClient(cc)
+	KubernetesClusterAPIClient = dbaasClient.NewKubernetesClusterAPIClient(cc)
+	LogsAPIClient = dbaasClient.NewLogsAPIClient(cc)
 }
