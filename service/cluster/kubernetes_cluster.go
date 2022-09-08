@@ -167,7 +167,6 @@ func (k KubernetesClusterService) GetKubeconfig(ctx context.Context, req *contro
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: %s", err)
 	}
-	defer client.Cleanup()
 	kubeConfig := client.GetKubeconfig(ctx)
 	return &controllerv1beta1.GetKubeconfigResponse{
 		Kubeconfig: kubeConfig,
