@@ -2183,6 +2183,9 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *
 			ServiceAccountName: "percona-server-mongodb-operator",
 		}
 	}
+	if spec.Spec.Backup.Image == "" {
+		spec.Spec.Backup.Image = fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion)
+	}
 	if !params.Expose {
 		spec.Spec.Sharding.Mongos.Expose.Enabled = false
 		spec.Spec.Sharding.Mongos.Expose.ExposeType = ""
@@ -2239,6 +2242,9 @@ func (c *K8sClient) overridePXCSpec(spec *pxc.PerconaXtraDBCluster, params *PXCP
 			},
 			ServiceAccountName: "percona-xtradb-cluster-operator",
 		}
+	}
+	if spec.Spec.Backup.Image == "" {
+		spec.Spec.Backup.Image = fmt.Sprintf(pxcBackupImageTemplate, pxcOperatorVersion)
 	}
 	if len(spec.Spec.Backup.Storages) == 0 {
 		spec.Spec.Backup.Storages = map[string]*pxc.BackupStorageSpec{
