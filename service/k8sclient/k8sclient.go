@@ -445,10 +445,12 @@ func (c *K8sClient) Cleanup() error {
 func (c *K8sClient) GetKubeconfig(ctx context.Context) string {
 	secret, err := c.kube.GetSecretsForServiceAccount(ctx, "pmm-service-account")
 	if err != nil {
+		c.l.Errorf("failed getting service account: %v", err)
 		return ""
 	}
 	kubeConfig, err := c.kube.GenerateKubeConfig(secret)
 	if err != nil {
+		c.l.Errorf("failed generating kubeconfig: %v", err)
 		return ""
 	}
 	return string(kubeConfig)
