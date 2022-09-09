@@ -582,8 +582,9 @@ func TestK8sClient(t *testing.T) {
 
 		l.Info("No PSMDB Clusters running")
 		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name: name,
-			Size: 3,
+			Image: "percona/percona-server-mongodb:4.4.5-7",
+			Name:  name,
+			Size:  3,
 			Replicaset: &Replicaset{
 				DiskSize: "1000000000",
 			},
