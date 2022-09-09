@@ -1948,13 +1948,6 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 					},
 				},
 				Mongos: &psmdb.MongosSpec{
-					Arbiter: psmdb.Arbiter{
-						Enabled: false,
-						Size:    1,
-						MultiAZ: psmdb.MultiAZ{
-							Affinity: extra.affinity,
-						},
-					},
 					Size: params.Size,
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: extra.affinity,
