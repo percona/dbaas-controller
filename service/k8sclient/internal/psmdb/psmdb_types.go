@@ -306,7 +306,6 @@ type SecretsSpec struct {
 type MongosSpec struct {
 	MultiAZ `json:",inline"`
 
-	Arbiter                  Arbiter                 `json:"arbiter,omitempty"`
 	Port                     int32                   `json:"port,omitempty"`
 	HostPort                 int32                   `json:"hostPort,omitempty"`
 	SetParameter             *MongosSpecSetParameter `json:"setParameter,omitempty"`
