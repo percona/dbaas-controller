@@ -1212,6 +1212,24 @@ func (c *K8sClient) buildPSMDBDBList112(ctx context.Context, buf []byte) ([]PSMD
 			Exposed: exposed,
 			Image:   cluster.Spec.Image,
 		}
+		if cluster.Status != nil {
+			message := cluster.Status.Message
+			conditions := cluster.Status.Conditions
+			if message == "" && len(conditions) != 0 {
+				message = conditions[len(conditions)-1].Message
+			}
+
+			status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
+			for _, rs := range cluster.Status.Replsets {
+				status = append(status, appStatus{rs.Size, rs.Ready})
+			}
+			status = append(status, appStatus{
+				size:  cluster.Status.Mongos.Size,
+				ready: cluster.Status.Mongos.Ready,
+			})
+			val.DetailedState = status
+			val.Message = message
+		}
 
 		val.State = c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
 		res[i] = val
