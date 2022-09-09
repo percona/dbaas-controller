@@ -1952,6 +1952,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 			Sharding: &psmdb.ShardingSpec{
 				Enabled: true,
 				ConfigsvrReplSet: &psmdb.ReplsetSpec{
+					Affinity:   extra.affinity,
 					Size:       3,
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
 					Arbiter: psmdb.Arbiter{
@@ -1981,6 +1982,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 			Replsets: []*psmdb.ReplsetSpec{
 				{
 					Name:      "rs0",
+					Affinity:  extra.affinity,
 					Size:      params.Size,
 					Resources: c.setComputeResources(params.Replicaset.ComputeResources),
 					Arbiter: psmdb.Arbiter{
@@ -2053,6 +2055,7 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 			Sharding: &psmdb.ShardingSpec{
 				Enabled: true,
 				ConfigsvrReplSet: &psmdb.ReplsetSpec{
+					Affinity:   extra.affinity,
 					Size:       3,
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
 					Arbiter: psmdb.Arbiter{
@@ -2080,6 +2083,7 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 			Replsets: []*psmdb.ReplsetSpec{
 				{
 					Name:      "rs0",
+					Affinity:  extra.affinity,
 					Size:      params.Size,
 					Resources: c.setComputeResources(params.Replicaset.ComputeResources),
 					Arbiter: psmdb.Arbiter{
