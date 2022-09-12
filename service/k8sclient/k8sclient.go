@@ -867,6 +867,10 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 
 	extra.affinity = new(psmdb.PodAffinity)
+	extra.expose = psmdb.Expose{
+		Enabled:    false,
+		ExposeType: common.ServiceTypeClusterIP,
+	}
 	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType {
 		extra.affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
 
@@ -886,6 +890,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		// > set affinity.antiAffinityTopologyKey key to "none"
 		// > (the Operator will be unable to spread the cluster on several nodes)
 		extra.affinity.TopologyKey = pointer.ToString(psmdb.AffinityOff)
+
 	}
 
 	extra.operators, err = c.CheckOperators(ctx)
@@ -2076,7 +2081,7 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 						Affinity: extra.affinity,
 					},
 					Expose: psmdb.MongosExpose{
-						ExposeType: common.ServiceTypeLoadBalancer,
+						ExposeType: extra.expose.ExposeType,
 					},
 				},
 			},
@@ -2203,10 +2208,7 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *
 	}
 	if !params.Expose {
 		spec.Spec.Sharding.Mongos.Expose.Enabled = false
-		spec.Spec.Sharding.Mongos.Expose.ExposeType = ""
-		if spec.Spec.Sharding.Expose != nil {
-			spec.Spec.Sharding.Expose.Enabled = false
-		}
+		spec.Spec.Sharding.Mongos.Expose.ExposeType = common.ServiceTypeClusterIP
 	}
 	// Always override PMM spec
 	if params.PMM != nil {
