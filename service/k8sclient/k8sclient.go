@@ -46,9 +46,9 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/monitoring"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/utils/convertors"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
+	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 )
 
 // ClusterState represents XtraDB cluster CR state.

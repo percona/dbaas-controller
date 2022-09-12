@@ -24,8 +24,12 @@ import (
 	"io"
 	"os"
 
+	pxcAPI "github.com/percona/percona-xtradb-cluster-operator/pkg/apis"
+	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -120,6 +124,8 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	}
 	// Set PATH variable to make aws-iam-authenticator executable
 	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
+	// Register types
+	pxcAPI.AddToScheme(scheme.Scheme)
 	os.Setenv("PATH", path)
 	return &Client{clientset: clientset, restConfig: config, namespace: namespace}, nil
 }
@@ -134,6 +140,10 @@ func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) 
 		cfg.APIPath = defaultAPIsURIPath
 	}
 	return rest.RESTClientFor(cfg)
+}
+func (c *Client) GetPXC(ctx context.Context, name string) (*pxcv1.PerconaXtraDBCluster, error) {
+
+	return nil, nil
 }
 
 // Delete deletes object from the k8s cluster
