@@ -34,6 +34,7 @@ import (
 	"time"
 
 	goversion "github.com/hashicorp/go-version"
+	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -993,7 +994,7 @@ func TestGetPXCClusterState(t *testing.T) {
 	}
 	type getClusterStateTestCase struct {
 		matchingError           error
-		cluster                 common.DatabaseCluster
+		cluster                 *pxcv1.PerconaXtraDBCluster
 		expectedState           ClusterState
 		crAndPodsVersionMatches bool
 	}
@@ -1003,27 +1004,27 @@ func TestGetPXCClusterState(t *testing.T) {
 			expectedState: ClusterStateInvalid,
 		},
 		{
-			cluster:       common.DatabaseCluster(nil),
+			cluster:       new(pxcv1.PerconaXtraDBCluster),
 			expectedState: ClusterStateInvalid,
 		},
 		// Initializing.
 		{
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		// Ready.
 		{
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateReady},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateReady},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateReady,
@@ -1031,55 +1032,55 @@ func TestGetPXCClusterState(t *testing.T) {
 		// Pausing related states.
 		{
 			// Cluster is being paused, pxc operator <= 1.8.0.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		{
 			// Cluster is being paused, pxc operator >= 1.9.0.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateStopping},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateStopping},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		{
 			// Cluster is paused = no cluster pods.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateReady},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateReady},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStatePaused,
 		},
 		{
 			// Cluster is paused = no cluster pods.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStatePaused},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStatePaused},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStatePaused,
 		},
 		{
 			// Cluster just got instructed to resume.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -1087,22 +1088,22 @@ func TestGetPXCClusterState(t *testing.T) {
 		// Upgrading.
 		{
 			// No failure during checking cr and pods version.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: false,
 			expectedState:           ClusterStateUpgrading,
 		},
 		{
 			// Checking cr and pods version failed.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: false,
 			matchingError:           errors.New("example error"),
@@ -1110,11 +1111,11 @@ func TestGetPXCClusterState(t *testing.T) {
 		},
 		{
 			// Not implemented state of the cluster.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: "notimplemented"},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: "notimplemented"},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -1129,7 +1130,7 @@ func TestGetPXCClusterState(t *testing.T) {
 		tt := test
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
 			t.Parallel()
-			clusterState := c.getClusterState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
+			clusterState := c.getPXCClusterState(ctx, tt.cluster, func(context.Context, *pxcv1.PerconaXtraDBCluster) (bool, error) {
 				return tt.crAndPodsVersionMatches, tt.matchingError
 			})
 			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
