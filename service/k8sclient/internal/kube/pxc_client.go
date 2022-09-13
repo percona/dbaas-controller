@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	PXCKind = "PerconaXtraDBCluster"
+	apiKind = "PerconaXtraDBCluster"
+	apiKind = "perconaxtradbclusters"
 )
 
 var (
@@ -80,7 +81,7 @@ func (c *pxcClient) List(ctx context.Context, opts metav1.ListOptions) (*pxcv1.P
 	err := c.restClient.
 		Get().
 		Namespace(c.namespace).
-		Resource(PXCKind).
+		Resource(apiKind).
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Do(ctx).
 		Into(result)
@@ -92,7 +93,7 @@ func (c *pxcClient) Get(ctx context.Context, name string, opts metav1.GetOptions
 	err := c.restClient.
 		Get().
 		Namespace(c.namespace).
-		Resource(PXCKind).
+		Resource(apiKind).
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Name(name).
 		Do(ctx).
@@ -105,7 +106,7 @@ func (c *pxcClient) Create(ctx context.Context, spec *pxcv1.PerconaXtraDBCluster
 	err := c.restClient.
 		Post().
 		Namespace(c.namespace).
-		Resource(PXCKind).
+		Resource(apiKind).
 		Body(spec).
 		Do(ctx).
 		Into(result)
@@ -117,7 +118,7 @@ func (c *pxcClient) Update(ctx context.Context, spec *pxcv1.PerconaXtraDBCluster
 	err := c.restClient.
 		Put().
 		Namespace(c.namespace).
-		Resource(PXCKind).
+		Resource(apiKind).
 		Do(ctx).
 		Into(result)
 	return result, err
@@ -137,7 +138,7 @@ func (c *pxcClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.I
 	return c.restClient.
 		Get().
 		Namespace(c.namespace).
-		Resource(PXCKind).
+		Resource(apiKind).
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Watch(ctx)
 }
