@@ -663,7 +663,7 @@ func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) KubernetesClus
 		if strings.Contains(class.Provisioner, "aws") {
 			return AmazonEKSClusterType
 		}
-		if strings.Contains(class.Provisioner, "minikube") {
+		if strings.Contains(class.Provisioner, "minikube") || strings.Contains(class.Provisioner, "kubevirt.io/hostpath-provisioner") || strings.Contains(class.Provisioner, "standard") {
 			return MinikubeClusterType
 		}
 	}
@@ -867,6 +867,10 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 
 	extra.affinity = new(psmdb.PodAffinity)
+	extra.expose = psmdb.Expose{
+		Enabled:    false,
+		ExposeType: common.ServiceTypeClusterIP,
+	}
 	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType {
 		extra.affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
 
@@ -886,6 +890,16 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		// > set affinity.antiAffinityTopologyKey key to "none"
 		// > (the Operator will be unable to spread the cluster on several nodes)
 		extra.affinity.TopologyKey = pointer.ToString(psmdb.AffinityOff)
+		if params.Expose {
+			// Expose services for minikube using NodePort
+			// This requires additional configuration for minikube and has limitations
+			// on MacOs
+			extra.expose = psmdb.Expose{
+				Enabled:    true,
+				ExposeType: common.ServiceTypeNodePort,
+			}
+		}
+
 	}
 
 	extra.operators, err = c.CheckOperators(ctx)
@@ -1980,6 +1994,8 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 				},
 			},
 			Replsets: []*psmdb.ReplsetSpec{
+				// Note: in case to support single node environments
+				// we need to expose primary mongodb node
 				{
 					Name:      "rs0",
 					Affinity:  extra.affinity,
@@ -2068,7 +2084,6 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: extra.affinity,
 					},
-					Expose: extra.expose,
 				},
 				Mongos: &psmdb.MongosSpec{
 					Size: params.Size,
@@ -2076,11 +2091,13 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 						Affinity: extra.affinity,
 					},
 					Expose: psmdb.MongosExpose{
-						ExposeType: common.ServiceTypeLoadBalancer,
+						ExposeType: extra.expose.ExposeType,
 					},
 				},
 			},
 			Replsets: []*psmdb.ReplsetSpec{
+				// Note: in case to support single node environments
+				// we need to expose primary mongodb node
 				{
 					Name:      "rs0",
 					Affinity:  extra.affinity,
@@ -2203,10 +2220,7 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *
 	}
 	if !params.Expose {
 		spec.Spec.Sharding.Mongos.Expose.Enabled = false
-		spec.Spec.Sharding.Mongos.Expose.ExposeType = ""
-		if spec.Spec.Sharding.Expose != nil {
-			spec.Spec.Sharding.Expose.Enabled = false
-		}
+		spec.Spec.Sharding.Mongos.Expose.ExposeType = common.ServiceTypeClusterIP
 	}
 	// Always override PMM spec
 	if params.PMM != nil {

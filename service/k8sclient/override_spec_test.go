@@ -219,6 +219,6 @@ func TestPSMDBSpec(t *testing.T) {
 		params.Expose = false
 		spec = client.overridePSMDBSpec(spec, params, extra)
 		assert.False(t, spec.Spec.Sharding.Mongos.Expose.Enabled)
-		assert.Empty(t, spec.Spec.Sharding.Mongos.Expose.ExposeType)
+		assert.Equal(t, common.ServiceTypeClusterIP, spec.Spec.Sharding.Mongos.Expose.ExposeType)
 	})
 }
