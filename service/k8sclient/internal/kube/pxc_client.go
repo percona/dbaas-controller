@@ -5,6 +5,7 @@ import (
 
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -13,6 +14,21 @@ import (
 const (
 	PXCKind = "PerconaXtraDBCluster"
 )
+
+var (
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
+	AddToScheme   = SchemeBuilder.AddToScheme
+)
+
+func addKnownTypes(scheme *runtime.Scheme) error {
+	scheme.AddKnownTypes(pxcv1.SchemeGroupVersion,
+		&pxcv1.PerconaXtraDBCluster{},
+		&pxcv1.PerconaXtraDBClusterList{},
+	)
+
+	metav1.AddToGroupVersion(scheme, pxcv1.SchemeGroupVersion)
+	return nil
+}
 
 type PerconaXtraDBClusterClientInterface interface {
 	PXCClusters(namespace string) PerconaXtraDBClusterInterface
@@ -28,6 +44,7 @@ func NewForConfig(c *rest.Config) (*PerconaXtraDBClusterClient, error) {
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
+	AddToScheme(scheme.Scheme)
 
 	client, err := rest.RESTClientFor(&config)
 	if err != nil {
