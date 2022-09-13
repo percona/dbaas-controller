@@ -1377,9 +1377,12 @@ func (c *K8sClient) setCoreComputeResources(res *ComputeResources) corev1.Resour
 	if res == nil {
 		return req
 	}
-	req.Limits = corev1.ResourceList{
-		corev1.ResourceCPU:    resource.MustParse(res.CPUM),
-		corev1.ResourceMemory: resource.MustParse(res.MemoryBytes),
+	req.Limits = corev1.ResourceList{}
+	if res.CPUM != "" {
+		req.Limits[corev1.ResourceCPU] = resource.MustParse(res.CPUM)
+	}
+	if res.MemoryBytes != "" {
+		req.Limits[corev1.ResourceMemory] = resource.MustParse(res.MemoryBytes)
 	}
 	return req
 }
