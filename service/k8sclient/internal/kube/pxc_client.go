@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	apiKind = "PerconaXtraDBCluster"
+	PXCKind = "PerconaXtraDBCluster"
 	apiKind = "perconaxtradbclusters"
 )
 
