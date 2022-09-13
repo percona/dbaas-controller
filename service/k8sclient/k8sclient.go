@@ -1994,6 +1994,8 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 				},
 			},
 			Replsets: []*psmdb.ReplsetSpec{
+				// Note: in case to support single node environments
+				// we need to expose primary mongodb node
 				{
 					Name:      "rs0",
 					Affinity:  extra.affinity,
@@ -2094,6 +2096,8 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 				},
 			},
 			Replsets: []*psmdb.ReplsetSpec{
+				// Note: in case to support single node environments
+				// we need to expose primary mongodb node
 				{
 					Name:      "rs0",
 					Affinity:  extra.affinity,
