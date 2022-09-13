@@ -891,9 +891,9 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		// > (the Operator will be unable to spread the cluster on several nodes)
 		extra.affinity.TopologyKey = pointer.ToString(psmdb.AffinityOff)
 		if params.Expose {
-			// This enables ingress for the cluster and exposes the cluster to the world.
-			// The cluster will have an internal IP and a world accessible hostname.
-			// This feature cannot be tested with minikube. Please use EKS for testing.
+			// Expose services for minikube using NodePort
+			// This requires additional configuration for minikube and has limitations
+			// on MacOs
 			extra.expose = psmdb.Expose{
 				Enabled:    true,
 				ExposeType: common.ServiceTypeNodePort,
