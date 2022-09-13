@@ -663,7 +663,7 @@ func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) KubernetesClus
 		if strings.Contains(class.Provisioner, "aws") {
 			return AmazonEKSClusterType
 		}
-		if strings.Contains(class.Provisioner, "minikube") {
+		if strings.Contains(class.Provisioner, "minikube") || strings.Contains(class.Provisioner, "kubevirt.io/hostpath-provisioner") || strings.Contains(class.Provisioner, "standard") {
 			return MinikubeClusterType
 		}
 	}
@@ -890,6 +890,15 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		// > set affinity.antiAffinityTopologyKey key to "none"
 		// > (the Operator will be unable to spread the cluster on several nodes)
 		extra.affinity.TopologyKey = pointer.ToString(psmdb.AffinityOff)
+		if params.Expose {
+			// This enables ingress for the cluster and exposes the cluster to the world.
+			// The cluster will have an internal IP and a world accessible hostname.
+			// This feature cannot be tested with minikube. Please use EKS for testing.
+			extra.expose = psmdb.Expose{
+				Enabled:    true,
+				ExposeType: common.ServiceTypeNodePort,
+			}
+		}
 
 	}
 
@@ -2073,7 +2082,6 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: extra.affinity,
 					},
-					Expose: extra.expose,
 				},
 				Mongos: &psmdb.MongosSpec{
 					Size: params.Size,
