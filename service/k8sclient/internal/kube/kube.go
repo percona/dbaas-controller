@@ -24,11 +24,9 @@ import (
 	"io"
 	"os"
 
-	pxcAPI "github.com/percona/percona-xtradb-cluster-operator/pkg/apis"
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,6 +58,7 @@ type configGetter struct {
 
 type Client struct {
 	clientset  *kubernetes.Clientset
+	pxcClient  *PerconaXtraDBClusterClient
 	restConfig *rest.Config
 	namespace  string
 }
@@ -102,7 +101,18 @@ func NewFromIncluster() (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{clientset: clientset, restConfig: c}, nil
+	pxcClient, err := NewForConfig(c)
+	if err != nil {
+		return nil, err
+	}
+	namespace := "default"
+	if space := os.Getenv("NAMESPACE"); space != "" {
+		namespace = space
+	}
+	// Set PATH variable to make aws-iam-authenticator executable
+	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
+	os.Setenv("PATH", path)
+	return &Client{clientset: clientset, restConfig: c, pxcClient: pxcClient, namespace: namespace}, nil
 }
 
 // NewFromKubeConfigString creates a new client for the given config string.
@@ -122,12 +132,14 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	if space := os.Getenv("NAMESPACE"); space != "" {
 		namespace = space
 	}
+	pxcClient, err := NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
 	// Set PATH variable to make aws-iam-authenticator executable
 	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
-	// Register types
-	pxcAPI.AddToScheme(scheme.Scheme)
 	os.Setenv("PATH", path)
-	return &Client{clientset: clientset, restConfig: config, namespace: namespace}, nil
+	return &Client{clientset: clientset, restConfig: config, namespace: namespace, pxcClient: pxcClient}, nil
 }
 
 func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) {
@@ -140,10 +152,6 @@ func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) 
 		cfg.APIPath = defaultAPIsURIPath
 	}
 	return rest.RESTClientFor(cfg)
-}
-func (c *Client) GetPXC(ctx context.Context, name string) (*pxcv1.PerconaXtraDBCluster, error) {
-
-	return nil, nil
 }
 
 // Delete deletes object from the k8s cluster
@@ -324,6 +332,16 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 		return buf.String(), err
 	}
 	return buf.String(), nil
+}
+
+func (c *Client) ListPXCClusters(ctx context.Context) (*pxcv1.PerconaXtraDBClusterList, error) {
+	return c.pxcClient.PXCClusters(c.namespace).List(ctx, metav1.ListOptions{})
+}
+func (c *Client) GetPXCCluster(ctx context.Context, name string) (*pxcv1.PerconaXtraDBCluster, error) {
+	return c.pxcClient.PXCClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
+}
+func (c *Client) DeletePXCCluster(ctx context.Context, name string) error {
+	return c.pxcClient.PXCClusters(c.namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
 
 func (c *Client) retrieveMetaFromObject(obj runtime.Object) (namespace, name string, err error) {
