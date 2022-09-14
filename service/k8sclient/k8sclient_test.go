@@ -34,6 +34,7 @@ import (
 	"time"
 
 	goversion "github.com/hashicorp/go-version"
+	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -41,7 +42,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
@@ -78,7 +78,7 @@ type componentVersion struct {
 
 type matrix struct {
 	PXCOperator   map[string]componentVersion `json:"pxcOperator,omitempty"`
-	PSMDBOperator map[string]componentVersion `json:"psmdbOperator,omitempty"`
+	PSMDBOperator map[string]componentVersion `json:"psmdbv1Operator,omitempty"`
 }
 
 type Version struct {
@@ -238,7 +238,7 @@ func TestK8sClient(t *testing.T) {
 	require.NoError(t, err)
 	latestPMMVersion, err := latestProduct(pmmVersions.Versions)
 	require.NoError(t, err)
-	pxcOperator, psmdbOperator, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
+	pxcOperator, psmdbv1Operator, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
 	require.NoError(t, err)
 
 	// There is an error with Operator version 1.12
@@ -247,18 +247,18 @@ func TestK8sClient(t *testing.T) {
 	if value := os.Getenv("PERCONA_TEST_PXC_OPERATOR_VERSION"); value != "" {
 		pxcVersion = value
 	}
-	psmdbVersion := psmdbOperator.String()
+	psmdbv1Version := psmdbv1Operator.String()
 	if value := os.Getenv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); value != "" {
-		psmdbVersion = value
-		psmdbOperator, _ = goversion.NewVersion(value)
+		psmdbv1Version = value
+		psmdbv1Operator, _ = goversion.NewVersion(value)
 	}
 
 	t.Log(pxcVersion)
 	err = client.ApplyOperator(ctx, pxcVersion, app.DefaultPXCOperatorURLTemplate)
 	require.NoError(t, err)
 
-	t.Log(psmdbVersion)
-	err = client.ApplyOperator(ctx, psmdbVersion, app.DefaultPSMDBOperatorURLTemplate)
+	t.Log(psmdbv1Version)
+	err = client.ApplyOperator(ctx, psmdbv1Version, app.DefaultPSMDBOperatorURLTemplate)
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
@@ -297,7 +297,7 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("Get non-existing clusters", func(t *testing.T) {
 		t.Parallel()
-		_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdb")
+		_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdbv1")
 		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
 		_, err = client.GetPXCClusterCredentials(ctx, "871f766d43f8e-pxc")
 		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
@@ -563,10 +563,10 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("PSMDB", func(t *testing.T) {
 		t.Parallel()
-		if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
+		if perconaTestOperator != "psmdbv1" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
 		}
-		name := "test-cluster-psmdb"
+		name := "test-cluster-psmdbv1"
 		_ = client.DeletePSMDBCluster(ctx, name)
 
 		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
@@ -576,7 +576,7 @@ func TestK8sClient(t *testing.T) {
 		// Starting with operator 1.12, the image for the backup container comes from the components service.
 		// To not to instantiate the components service and the dependencies, use this image name.
 		var backupImage string
-		if psmdbOperator.GreaterThanOrEqual(v112) {
+		if psmdbv1Operator.GreaterThanOrEqual(v112) {
 			backupImage = "percona/percona-backup-mongodb:1.7.0"
 		}
 
@@ -1004,7 +1004,7 @@ func TestGetPXCClusterState(t *testing.T) {
 			expectedState: ClusterStateInvalid,
 		},
 		{
-			cluster:       new(pxcv1.PerconaXtraDBCluster),
+			cluster:       &pxcv1.PerconaXtraDBCluster{},
 			expectedState: ClusterStateInvalid,
 		},
 		// Initializing.
@@ -1141,7 +1141,7 @@ func TestGetPXCClusterState(t *testing.T) {
 func TestGetPSMDBClusterState(t *testing.T) {
 	t.Parallel()
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
-	if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
+	if perconaTestOperator != "psmdbv1" && perconaTestOperator != "" {
 		t.Skip("skipping because of environment variable")
 	}
 	type getClusterStateTestCase struct {
@@ -1156,27 +1156,27 @@ func TestGetPSMDBClusterState(t *testing.T) {
 			expectedState: ClusterStateInvalid,
 		},
 		{
-			cluster:       new(psmdb.PerconaServerMongoDB),
+			cluster:       new(psmdbv1.PerconaServerMongoDB),
 			expectedState: ClusterStateInvalid,
 		},
 		// Initializing.
 		{
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: &psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+				Status: &psmdbv1.PerconaServerMongoDBStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		// Ready.
 		{
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: &psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateReady},
+				Status: &psmdbv1.PerconaServerMongoDBStatus{Status: common.AppStateReady},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateReady,
@@ -1184,55 +1184,55 @@ func TestGetPSMDBClusterState(t *testing.T) {
 		// Pausing related states.
 		{
 			// Cluster is being paused, pxc operator <= 1.8.0.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: &psmdbv1.PerconaServerMongoDBSpec{
 					Pause: true,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+				Status: &psmdbv1.PerconaServerMongoDBStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		{
 			// Cluster is being paused, pxc operator >= 1.9.0.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: &psmdbv1.PerconaServerMongoDBSpec{
 					Pause: true,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateStopping},
+				Status: &psmdbv1.PerconaServerMongoDBStatus{Status: common.AppStateStopping},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		{
 			// Cluster is paused = no cluster pods.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: &psmdbv1.PerconaServerMongoDBSpec{
 					Pause: true,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateReady},
+				Status: &psmdbv1.PerconaServerMongoDBStatus{Status: common.AppStateReady},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStatePaused,
 		},
 		{
 			// Cluster is paused = no cluster pods.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: &psmdbv1.PerconaServerMongoDBSpec{
 					Pause: true,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStatePaused},
+				Status: &psmdbv1.PerconaServerMongoDBStatus{Status: common.AppStatePaused},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStatePaused,
 		},
 		{
 			// Cluster just got instructed to resume.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: &psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+				Status: &psmdbv1.PerconaServerMongoDBStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -1240,22 +1240,22 @@ func TestGetPSMDBClusterState(t *testing.T) {
 		// Upgrading.
 		{
 			// No failure during checking cr and pods version.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: &psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+				Status: &psmdbv1.PerconaServerMongoDBStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: false,
 			expectedState:           ClusterStateUpgrading,
 		},
 		{
 			// Checking cr and pods version failed.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: &psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+				Status: &psmdbv1.PerconaServerMongoDBStatus{Status: common.AppStateInit},
 			},
 			crAndPodsVersionMatches: false,
 			matchingError:           errors.New("example error"),
@@ -1263,11 +1263,11 @@ func TestGetPSMDBClusterState(t *testing.T) {
 		},
 		{
 			// Not implemented state of the cluster.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: &psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: "notimplemented"},
+				Status: &psmdbv1.PerconaServerMongoDBStatus{Status: "notimplemented"},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,

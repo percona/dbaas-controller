@@ -23,13 +23,13 @@ import (
 	"testing"
 
 	goversion "github.com/hashicorp/go-version"
+	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
 	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 )
 
@@ -201,7 +201,7 @@ func TestPSMDBSpec(t *testing.T) {
 		BackupImage: "percona/percona-backup-mongodb:1.7.0",
 	}
 	extra := extraCRParams{
-		expose: psmdb.Expose{
+		expose: psmdbv1.Expose{
 			Enabled:    true,
 			ExposeType: common.ServiceTypeLoadBalancer,
 		},
