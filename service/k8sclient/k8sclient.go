@@ -30,6 +30,7 @@ import (
 	"time"
 
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
+	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/AlekSi/pointer"
 	goversion "github.com/hashicorp/go-version"
@@ -612,7 +613,7 @@ func (c *K8sClient) deleteSecret(ctx context.Context, secretName string) error {
 func (c *K8sClient) GetPXCClusterCredentials(ctx context.Context, name string) (*PXCCredentials, error) {
 	cluster, err := c.kube.GetPXCCluster(ctx, name)
 	if err != nil {
-		if errors.Is(err, kubectl.ErrNotFound) {
+		if apiErrors.IsNotFound(err) {
 			return nil, errors.Wrap(ErrNotFound, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))

@@ -171,7 +171,7 @@ spec:
 		params.Expose = true
 		spec = client.overridePXCSpec(spec, params, "pxc-backup-storage-cns", "1.11.0")
 		assert.Equal(t, mysqlConfig, spec.Spec.PXC.Configuration)
-		assert.Equal(t, "gp2-enc", spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.StorageClassName)
+		assert.Equal(t, "gp2-enc", *spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.StorageClassName)
 		assert.Equal(t, common.ResourceList{common.ResourceStorage: "1000000000"}, spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.Resources.Requests)
 		assert.True(t, spec.Spec.PXC.Expose.Enabled)
 		assert.NotEqual(t, 0, len(spec.Spec.PXC.Expose.Annotations))
