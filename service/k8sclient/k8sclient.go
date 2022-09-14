@@ -314,15 +314,6 @@ type extraCRParams struct {
 }
 
 // clustertatesMap matches pxc and psmdbv1 app states to cluster states.
-var clusterStatesMap = map[common.AppState]ClusterState{ //nolint:gochecknoglobals
-	common.AppStateInit:     ClusterStateChanging,
-	common.AppStateReady:    ClusterStateReady,
-	common.AppStateError:    ClusterStateFailed,
-	common.AppStatePaused:   ClusterStatePaused,
-	common.AppStateStopping: ClusterStateChanging,
-}
-
-// clustertatesMap matches pxc and psmdbv1 app states to cluster states.
 var clusterPXCStatesMap = map[pxcv1.AppState]ClusterState{ //nolint:gochecknoglobals
 	pxcv1.AppStateInit:     ClusterStateChanging,
 	pxcv1.AppStateReady:    ClusterStateReady,
@@ -532,7 +523,7 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 	// Only if cluster is paused, allow resuming it. All other modifications are forbinden.
 	if params.Resume && clusterState == ClusterStatePaused {
 		cluster.Spec.Pause = false
-		return c.kubeCtl.Apply(ctx, &cluster)
+		return c.kube.Apply(ctx, cluster)
 	}
 
 	// This is to prevent concurrent updates
@@ -971,7 +962,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
 
-	return c.kubeCtl.Apply(ctx, spec)
+	return c.kube.Apply(ctx, spec)
 }
 
 // UpdatePSMDBCluster changes size, stops, resumes or upgrades provided percona server for mongodb cluster.
@@ -984,7 +975,7 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	clusterState := c.getClusterState(ctx, cluster, c.crVersionMatchesPodsVersion)
 	if params.Resume && clusterState == ClusterStatePaused {
 		cluster.Spec.Pause = false
-		return c.kubeCtl.Apply(ctx, &cluster)
+		return c.kube.Apply(ctx, cluster)
 	}
 
 	// This is to prevent concurrent updates
@@ -1053,16 +1044,7 @@ func (c *K8sClient) changeImageInCluster(cluster *psmdbv1.PerconaServerMongoDB, 
 
 // DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
 func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
-	res := &psmdbv1.PerconaServerMongoDB{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: psmdbv1APINamespace + "/v1",
-			Kind:       kube.PSMDBKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
-	err := c.kubeCtl.Delete(ctx, res)
+	err := c.kube.DeletePSMDBCluster(ctx, name)
 	if err != nil {
 		return errors.Wrap(err, "cannot delete PSMDB")
 	}
@@ -1758,7 +1740,7 @@ func (c *K8sClient) ApplyOperator(ctx context.Context, version string, manifests
 	if err != nil {
 		return errors.Wrap(err, "failed to install operator")
 	}
-	return c.kubeCtl.Apply(ctx, bundle)
+	return c.kube.ApplyFile(ctx, bundle)
 }
 
 // PatchAllPSMDBClusters replaces images versions and CrVersion after update of the operator to match version
@@ -1837,7 +1819,7 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 		if err != nil {
 			return errors.Wrap(err, "failed to update operator")
 		}
-		err = c.kubeCtl.Apply(ctx, manifest)
+		err = c.kube.ApplyFile(ctx, manifest)
 		if err != nil {
 			return errors.Wrap(err, "failed to update operator")
 		}
