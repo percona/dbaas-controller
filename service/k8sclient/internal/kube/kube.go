@@ -24,6 +24,9 @@ import (
 	"io"
 	"os"
 
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube/psmdb"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube/pxc"
+	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
@@ -49,6 +52,8 @@ const (
 	defaultQPSLimit    = 100
 	defaultBurstLimit  = 150
 	dbaasToolPath      = "/opt/dbaas-tools/bin"
+	PXCKind            = pxc.PXCKind
+	PSMDBKind          = psmdb.PSMDBKind
 )
 
 // configGetter stores kubeconfig string to convert it to the final object
@@ -57,10 +62,11 @@ type configGetter struct {
 }
 
 type Client struct {
-	clientset  *kubernetes.Clientset
-	pxcClient  *PerconaXtraDBClusterClient
-	restConfig *rest.Config
-	namespace  string
+	clientset   *kubernetes.Clientset
+	pxcClient   *pxc.PerconaXtraDBClusterClient
+	psmdbClient *psmdb.PerconaServerMongoDBClient
+	restConfig  *rest.Config
+	namespace   string
 }
 
 // NewConfigGetter creates a new configGetter struct
@@ -101,7 +107,7 @@ func NewFromIncluster() (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	pxcClient, err := NewForConfig(c)
+	pxcClient, err := pxc.NewForConfig(c)
 	if err != nil {
 		return nil, err
 	}
@@ -109,10 +115,14 @@ func NewFromIncluster() (*Client, error) {
 	if space := os.Getenv("NAMESPACE"); space != "" {
 		namespace = space
 	}
+	psmdbClient, err := psmdb.NewForConfig(c)
+	if err != nil {
+		return nil, err
+	}
 	// Set PATH variable to make aws-iam-authenticator executable
 	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
 	os.Setenv("PATH", path)
-	return &Client{clientset: clientset, restConfig: c, pxcClient: pxcClient, namespace: namespace}, nil
+	return &Client{clientset: clientset, restConfig: c, pxcClient: pxcClient, namespace: namespace, psmdbClient: psmdbClient}, nil
 }
 
 // NewFromKubeConfigString creates a new client for the given config string.
@@ -132,14 +142,18 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	if space := os.Getenv("NAMESPACE"); space != "" {
 		namespace = space
 	}
-	pxcClient, err := NewForConfig(config)
+	pxcClient, err := pxc.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	psmdbClient, err := psmdb.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 	// Set PATH variable to make aws-iam-authenticator executable
 	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
 	os.Setenv("PATH", path)
-	return &Client{clientset: clientset, restConfig: config, namespace: namespace, pxcClient: pxcClient}, nil
+	return &Client{clientset: clientset, restConfig: config, namespace: namespace, pxcClient: pxcClient, psmdbClient: psmdbClient}, nil
 }
 
 func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) {
@@ -342,6 +356,16 @@ func (c *Client) GetPXCCluster(ctx context.Context, name string) (*pxcv1.Percona
 }
 func (c *Client) DeletePXCCluster(ctx context.Context, name string) error {
 	return c.pxcClient.PXCClusters(c.namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+func (c *Client) ListPSMDBClusters(ctx context.Context) (*psmdbv1.PerconaServerMongoDBList, error) {
+	return c.psmdbClient.PSMDBClusters(c.namespace).List(ctx, metav1.ListOptions{})
+}
+func (c *Client) GetPSMDBCluster(ctx context.Context, name string) (*psmdbv1.PerconaServerMongoDB, error) {
+	return c.psmdbClient.PSMDBClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
+}
+func (c *Client) DeletePSMDBCluster(ctx context.Context, name string) error {
+	return c.psmdbClient.PSMDBClusters(c.namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
 
 func (c *Client) retrieveMetaFromObject(obj runtime.Object) (namespace, name string, err error) {

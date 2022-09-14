@@ -1,4 +1,4 @@
-package kube
+package psmdb
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	PXCKind = "PerconaServerMongoDB"
-	apiKind = "perconaxtradbclusters"
+	PSMDBKind    = "PerconaServerMongoDB"
+	psmdbAPIKind = "perconaxtradbclusters"
 )
 
 var (
@@ -32,7 +32,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 }
 
 type PerconaServerMongoDBClientInterface interface {
-	PXCClusters(namespace string) PerconaServerMongoDBInterface
+	PSMDBClusters(namespace string) PerconaServerMongoDBInterface
 }
 
 type PerconaServerMongoDBClient struct {
@@ -55,8 +55,8 @@ func NewForConfig(c *rest.Config) (*PerconaServerMongoDBClient, error) {
 	return &PerconaServerMongoDBClient{restClient: client}, nil
 }
 
-func (c *PerconaServerMongoDBClient) PXCClusters(namespace string) PerconaServerMongoDBInterface {
-	return &pxcClient{
+func (c *PerconaServerMongoDBClient) PSMDBClusters(namespace string) PerconaServerMongoDBInterface {
+	return &psmdbClient{
 		restClient: c.restClient,
 		namespace:  namespace,
 	}
@@ -71,29 +71,29 @@ type PerconaServerMongoDBInterface interface {
 	Delete(ctx context.Context, name string, options metav1.DeleteOptions) error
 }
 
-type pxcClient struct {
+type psmdbClient struct {
 	restClient rest.Interface
 	namespace  string
 }
 
-func (c *pxcClient) List(ctx context.Context, opts metav1.ListOptions) (*psmdbv1.PerconaServerMongoDBList, error) {
+func (c *psmdbClient) List(ctx context.Context, opts metav1.ListOptions) (*psmdbv1.PerconaServerMongoDBList, error) {
 	result := &psmdbv1.PerconaServerMongoDBList{}
 	err := c.restClient.
 		Get().
 		Namespace(c.namespace).
-		Resource(apiKind).
+		Resource(psmdbAPIKind).
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Do(ctx).
 		Into(result)
 	return result, err
 }
 
-func (c *pxcClient) Get(ctx context.Context, name string, opts metav1.GetOptions) (*psmdbv1.PerconaServerMongoDB, error) {
+func (c *psmdbClient) Get(ctx context.Context, name string, opts metav1.GetOptions) (*psmdbv1.PerconaServerMongoDB, error) {
 	result := &psmdbv1.PerconaServerMongoDB{}
 	err := c.restClient.
 		Get().
 		Namespace(c.namespace).
-		Resource(apiKind).
+		Resource(psmdbAPIKind).
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Name(name).
 		Do(ctx).
@@ -101,30 +101,30 @@ func (c *pxcClient) Get(ctx context.Context, name string, opts metav1.GetOptions
 	return result, err
 }
 
-func (c *pxcClient) Create(ctx context.Context, spec *psmdbv1.PerconaServerMongoDB) (*psmdbv1.PerconaServerMongoDB, error) {
+func (c *psmdbClient) Create(ctx context.Context, spec *psmdbv1.PerconaServerMongoDB) (*psmdbv1.PerconaServerMongoDB, error) {
 	result := &psmdbv1.PerconaServerMongoDB{}
 	err := c.restClient.
 		Post().
 		Namespace(c.namespace).
-		Resource(apiKind).
+		Resource(psmdbAPIKind).
 		Body(spec).
 		Do(ctx).
 		Into(result)
 	return result, err
 }
 
-func (c *pxcClient) Update(ctx context.Context, spec *psmdbv1.PerconaServerMongoDB) (*psmdbv1.PerconaServerMongoDB, error) {
+func (c *psmdbClient) Update(ctx context.Context, spec *psmdbv1.PerconaServerMongoDB) (*psmdbv1.PerconaServerMongoDB, error) {
 	result := &psmdbv1.PerconaServerMongoDB{}
 	err := c.restClient.
 		Put().
 		Namespace(c.namespace).
-		Resource(apiKind).
+		Resource(psmdbAPIKind).
 		Do(ctx).
 		Into(result)
 	return result, err
 }
 
-func (c *pxcClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *psmdbClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.restClient.
 		Delete().
 		Namespace(c.namespace).
@@ -133,12 +133,12 @@ func (c *pxcClient) Delete(ctx context.Context, name string, opts metav1.DeleteO
 		Do(ctx).
 		Error()
 }
-func (c *pxcClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *psmdbClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.restClient.
 		Get().
 		Namespace(c.namespace).
-		Resource(apiKind).
+		Resource(psmdbAPIKind).
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Watch(ctx)
 }
