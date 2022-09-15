@@ -675,6 +675,7 @@ func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) KubernetesClus
 // RestartPXCCluster restarts Percona XtraDB cluster with provided name.
 // FIXME: https://jira.percona.com/browse/PMM-6980
 func (c *K8sClient) RestartPXCCluster(ctx context.Context, name string) error {
+	c.l.Info(name)
 	_, err := c.kube.RestartStatefulSet(ctx, name+"-"+"pxc")
 	if err != nil {
 		return err
