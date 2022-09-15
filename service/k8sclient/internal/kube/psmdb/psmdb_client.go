@@ -60,7 +60,7 @@ type PerconaServerMongoDBClient struct {
 
 func NewForConfig(c *rest.Config) (*PerconaServerMongoDBClient, error) {
 	config := *c
-	config.ContentConfig.GroupVersion = new(psmdbv1.SchemeGroupVersion)
+	config.ContentConfig.GroupVersion = &SchemeGroupVersion
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
