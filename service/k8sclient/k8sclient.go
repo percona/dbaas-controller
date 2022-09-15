@@ -687,8 +687,9 @@ func (c *K8sClient) RestartPXCCluster(ctx context.Context, name string) error {
 			return err
 		}
 	}
+	return nil
 
-	return errors.New("failed to restart pxc cluster proxy statefulset")
+	// return errors.New("failed to restart pxc cluster proxy statefulset")
 }
 
 // getPerconaXtraDBClusters returns Percona XtraDB clusters.
