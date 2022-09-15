@@ -1987,6 +1987,7 @@ func vmAgentSpec(params *PMM, secretName string) *monitoring.VMAgent {
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 // func (c *K8sClient) CreatePSMDBClusterOld(ctx context.Context, params *PSMDBParams) error {
 func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmdbv1.PerconaServerMongoDB {
+	maxUnavailable := intstr.FromInt(1)
 	res := &psmdbv1.PerconaServerMongoDB{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
@@ -2064,10 +2065,6 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 						ExposeType: extra.expose.ExposeType,
 					},
 				},
-				// FIXME
-				// OperationProfiling: psmdbv1.MongodSpecOperationProfiling{
-				// 	Mode: psmdbv1.OperationProfilingModeSlowOp,
-				// },
 			},
 			Replsets: []*psmdbv1.ReplsetSpec{
 				// Note: in case to support single node environments
@@ -2075,8 +2072,6 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 				{
 					Name: "rs0",
 					Size: params.Size,
-					// FIXME
-					//Resources: c.setCoreComputeResources(params.Replicaset.ComputeResources),
 					Arbiter: psmdbv1.Arbiter{
 						Enabled: false,
 						Size:    1,
@@ -2085,12 +2080,12 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 						},
 					},
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
-					// FIXME
-					// PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
-					// 	MaxUnavailable: pointer.ToInt(1),
-					// },
 					MultiAZ: psmdbv1.MultiAZ{
-						Affinity: extra.affinity,
+						PodDisruptionBudget: &psmdbv1.PodDisruptionBudgetSpec{
+							MaxUnavailable: &maxUnavailable,
+						},
+						Affinity:  extra.affinity,
+						Resources: c.setCoreComputeResources(params.Replicaset.ComputeResources),
 					},
 				},
 			},
@@ -2129,6 +2124,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 }
 
 func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams) *psmdbv1.PerconaServerMongoDB { //nolint:funlen
+	maxUnavailable := intstr.FromInt(1)
 	req := &psmdbv1.PerconaServerMongoDB{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
@@ -2186,16 +2182,14 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 						},
 					},
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
-					// FIXME
-					// PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
-					// 	MaxUnavailable: pointer.ToInt(1),
-					// },
 					MultiAZ: psmdbv1.MultiAZ{
+						PodDisruptionBudget: &psmdbv1.PodDisruptionBudgetSpec{
+							MaxUnavailable: &maxUnavailable,
+						},
 						Affinity: extra.affinity,
 					},
-					// FIXME
-					//Configuration: "      operationProfiling:\n" +
-					//	"        mode: " + string(psmdbv1.OperationProfilingModeSlowOp) + "\n",
+					Configuration: psmdbv1.MongoConfiguration("      operationProfiling:\n" +
+						"        mode: " + string(psmdbv1.OperationProfilingModeSlowOp) + "\n"),
 				},
 			},
 			PMM: psmdbv1.PMMSpec{
