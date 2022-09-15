@@ -1078,7 +1078,7 @@ func (c *K8sClient) RestartPSMDBCluster(ctx context.Context, name string) error 
 func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string) (*PSMDBCredentials, error) {
 	cluster, err := c.kube.GetPSMDBCluster(ctx, name)
 	if err != nil {
-		if errors.Is(err, kubectl.ErrNotFound) {
+		if apiErrors.IsNotFound(err) {
 			return nil, errors.Wrap(ErrNotFound, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
