@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -32,6 +33,7 @@ import (
 	goversion "github.com/hashicorp/go-version"
 	pmmversion "github.com/percona/pmm/version"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,6 +95,8 @@ const (
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
 	pullPolicy              = common.PullIfNotPresent
+	pxcCRFile               = "/srv/dbaas/crs/pxc.cr.yml"
+	psmdbCRFile             = "/srv/dbaas/crs/psmdb.cr.yml"
 )
 
 // KubernetesClusterType represents kubernetes cluster type(eg: EKS, Minikube).
@@ -475,112 +479,21 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 	if err != nil {
 		return err
 	}
-
-	pxcImage := pxcDefaultImage
-	if params.PXC.Image != "" {
-		pxcImage = params.PXC.Image
-	}
-
-	res := &pxc.PerconaXtraDBCluster{
-		TypeMeta: common.TypeMeta{
-			APIVersion: c.getAPIVersionForPXCOperator(operators.PXCOperatorVersion),
-			Kind:       pxc.PerconaXtraDBClusterKind,
-		},
-		ObjectMeta: common.ObjectMeta{
-			Name:       params.Name,
-			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
-		},
-		Spec: &pxc.PerconaXtraDBClusterSpec{
-			UpdateStrategy:    updateStrategyRollingUpdate,
-			CRVersion:         operators.PXCOperatorVersion,
-			AllowUnsafeConfig: true,
-			SecretsName:       secretName,
-
-			PXC: &pxc.PodSpec{
-				Size:            &params.Size,
-				Resources:       c.setComputeResources(params.PXC.ComputeResources),
-				Image:           pxcImage,
-				ImagePullPolicy: pullPolicy,
-				VolumeSpec:      c.volumeSpec(params.PXC.DiskSize),
-				Affinity: &pxc.PodAffinity{
-					TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
-				},
-				PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
-					MaxUnavailable: pointer.ToInt(1),
-				},
-			},
-
-			PMM: &pxc.PMMSpec{
-				Enabled: false,
-			},
-
-			Backup: &pxc.PXCScheduledBackup{
-				Image: fmt.Sprintf(pxcBackupImageTemplate, operators.PXCOperatorVersion),
-				Schedule: []pxc.PXCScheduledBackupSchedule{{
-					Name:        "test",
-					Schedule:    "*/30 * * * *",
-					Keep:        3,
-					StorageName: storageName,
-				}},
-				Storages: map[string]*pxc.BackupStorageSpec{
-					storageName: {
-						Type:   pxc.BackupStorageFilesystem,
-						Volume: c.volumeSpec(params.PXC.DiskSize),
-					},
-				},
-				ServiceAccountName: "percona-xtradb-cluster-operator",
-			},
-		},
-	}
 	if params.PMM != nil {
-		res.Spec.PMM = &pxc.PMMSpec{
-			Enabled:         true,
-			ServerHost:      params.PMM.PublicAddress,
-			ServerUser:      params.PMM.Login,
-			Image:           pmmClientImage,
-			ImagePullPolicy: pullPolicy,
-			Resources: &common.PodResources{
-				Requests: &common.ResourcesList{
-					Memory: "300M",
-					CPU:    "500m",
-				},
-			},
-		}
 		secrets["pmmserver"] = []byte(params.PMM.Password)
 	}
 
-	var podSpec *pxc.PodSpec
-	if params.ProxySQL != nil {
-		res.Spec.ProxySQL = new(pxc.PodSpec)
-		podSpec = res.Spec.ProxySQL
-		podSpec.Image = fmt.Sprintf(pxcProxySQLDefaultImageTemplate, operators.PXCOperatorVersion)
-		if params.ProxySQL.Image != "" {
-			podSpec.Image = params.ProxySQL.Image
-		}
-		podSpec.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
-		podSpec.VolumeSpec = c.volumeSpec(params.ProxySQL.DiskSize)
-	} else {
-		res.Spec.HAProxy = new(pxc.PodSpec)
-		podSpec = res.Spec.HAProxy
-		podSpec.Image = fmt.Sprintf(pxcHAProxyDefaultImageTemplate, operators.PXCOperatorVersion)
-		if params.HAProxy.Image != "" {
-			podSpec.Image = params.HAProxy.Image
-		}
-		podSpec.Resources = c.setComputeResources(params.HAProxy.ComputeResources)
-	}
-
+	var serviceType common.ServiceType
 	// This enables ingress for the cluster and exposes the cluster to the world.
 	// The cluster will have an internal IP and a world accessible hostname.
 	// This feature cannot be tested with minikube. Please use EKS for testing.
 	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType && params.Expose {
-		podSpec.ServiceType = common.ServiceTypeLoadBalancer
+		serviceType = common.ServiceTypeLoadBalancer
 	}
 
-	podSpec.Enabled = true
-	podSpec.ImagePullPolicy = pullPolicy
-	podSpec.Size = &params.Size
-	podSpec.Affinity = &pxc.PodAffinity{
-		TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
+	spec, err := c.createPXCSpecFromParams(params, &secretName, operators.PXCOperatorVersion, storageName, serviceType)
+	if err != nil {
+		return err
 	}
 
 	err = c.CreateSecret(ctx, secretName, secrets)
@@ -588,7 +501,7 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
 
-	return c.kubeCtl.Apply(ctx, res)
+	return c.kubeCtl.Apply(ctx, spec)
 }
 
 // UpdatePXCCluster changes size of provided Percona XtraDB cluster.
@@ -750,7 +663,7 @@ func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) KubernetesClus
 		if strings.Contains(class.Provisioner, "aws") {
 			return AmazonEKSClusterType
 		}
-		if strings.Contains(class.Provisioner, "minikube") {
+		if strings.Contains(class.Provisioner, "minikube") || strings.Contains(class.Provisioner, "kubevirt.io/hostpath-provisioner") || strings.Contains(class.Provisioner, "standard") {
 			return MinikubeClusterType
 		}
 	}
@@ -954,6 +867,10 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 
 	extra.affinity = new(psmdb.PodAffinity)
+	extra.expose = psmdb.Expose{
+		Enabled:    false,
+		ExposeType: common.ServiceTypeClusterIP,
+	}
 	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType {
 		extra.affinity.TopologyKey = pointer.ToString("kubernetes.io/hostname")
 
@@ -973,6 +890,16 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		// > set affinity.antiAffinityTopologyKey key to "none"
 		// > (the Operator will be unable to spread the cluster on several nodes)
 		extra.affinity.TopologyKey = pointer.ToString(psmdb.AffinityOff)
+		if params.Expose {
+			// Expose services for minikube using NodePort
+			// This requires additional configuration for minikube and has limitations
+			// on MacOs
+			extra.expose = psmdb.Expose{
+				Enabled:    true,
+				ExposeType: common.ServiceTypeNodePort,
+			}
+		}
+
 	}
 
 	extra.operators, err = c.CheckOperators(ctx)
@@ -998,26 +925,21 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		extra.backupImage = fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion)
 	}
 
-	var res interface{}
-
-	switch {
-	case psmdbOperatorVersion.GreaterThanOrEqual(v112):
-		res = c.makeReq112Plus(params, extra)
-	default:
-		res = c.makeReq(params, extra)
-	}
-
 	if params.PMM != nil {
 		extra.secrets["PMM_SERVER_USER"] = []byte(params.PMM.Login)
 		extra.secrets["PMM_SERVER_PASSWORD"] = []byte(params.PMM.Password)
 	}
 
+	spec, err := c.createPSMDBSpec(psmdbOperatorVersion, params, &extra)
+	if err != nil {
+		return err
+	}
 	err = c.CreateSecret(ctx, extra.secretName, extra.secrets)
 	if err != nil {
 		return errors.Wrap(err, "cannot create secret for PXC")
 	}
 
-	return c.kubeCtl.Apply(ctx, res)
+	return c.kubeCtl.Apply(ctx, spec)
 }
 
 // UpdatePSMDBCluster changes size, stops, resumes or upgrades provided percona server for mongodb cluster.
@@ -1258,7 +1180,7 @@ func (c *K8sClient) buildPSMDBDBList110(ctx context.Context, buf []byte) ([]PSMD
 		if cluster.Status != nil {
 			message := cluster.Status.Message
 			conditions := cluster.Status.Conditions
-			if message == "" && len(conditions) > 0 {
+			if message == "" && len(conditions) != 0 {
 				message = conditions[len(conditions)-1].Message
 			}
 
@@ -1281,7 +1203,7 @@ func (c *K8sClient) buildPSMDBDBList110(ctx context.Context, buf []byte) ([]PSMD
 }
 
 func (c *K8sClient) buildPSMDBDBList112(ctx context.Context, buf []byte) ([]PSMDBCluster, error) {
-	var list psmdb.PerconaServerMongoDBList112
+	var list psmdb.PerconaServerMongoDBList
 
 	if err := json.Unmarshal(buf, &list); err != nil {
 		return nil, err
@@ -1303,6 +1225,24 @@ func (c *K8sClient) buildPSMDBDBList112(ctx context.Context, buf []byte) ([]PSMD
 			},
 			Exposed: exposed,
 			Image:   cluster.Spec.Image,
+		}
+		if cluster.Status != nil {
+			message := cluster.Status.Message
+			conditions := cluster.Status.Conditions
+			if message == "" && len(conditions) != 0 {
+				message = conditions[len(conditions)-1].Message
+			}
+
+			status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
+			for _, rs := range cluster.Status.Replsets {
+				status = append(status, appStatus{rs.Size, rs.Ready})
+			}
+			status = append(status, appStatus{
+				size:  cluster.Status.Mongos.Size,
+				ready: cluster.Status.Mongos.Ready,
+			})
+			val.DetailedState = status
+			val.Message = message
 		}
 
 		val.State = c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
@@ -1786,8 +1726,10 @@ func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVers
 		clusterPatch := &pxc.PerconaXtraDBCluster{
 			Spec: &pxc.PerconaXtraDBClusterSpec{
 				CRVersion: newVersion,
-				PXC: &pxc.PodSpec{
-					Image: strings.Replace(cluster.Spec.PXC.Image, oldVersion, newVersion, 1),
+				PXC: &pxc.PXCSpec{
+					PodSpec: &pxc.PodSpec{
+						Image: strings.Replace(cluster.Spec.PXC.Image, oldVersion, newVersion, 1),
+					},
 				},
 				Backup: &pxc.PXCScheduledBackup{
 					Image: strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1),
@@ -1980,7 +1922,7 @@ func vmAgentSpec(params *PMM, secretName string) *monitoring.VMAgent {
 
 // CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
 // func (c *K8sClient) CreatePSMDBClusterOld(ctx context.Context, params *PSMDBParams) error {
-func (c *K8sClient) makeReq(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB {
+func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB {
 	res := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
 			APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
@@ -2036,6 +1978,7 @@ func (c *K8sClient) makeReq(params *PSMDBParams, extra extraCRParams) *psmdb.Per
 			Sharding: &psmdb.ShardingSpec{
 				Enabled: true,
 				ConfigsvrReplSet: &psmdb.ReplsetSpec{
+					Affinity:   extra.affinity,
 					Size:       3,
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
 					Arbiter: psmdb.Arbiter{
@@ -2049,27 +1992,25 @@ func (c *K8sClient) makeReq(params *PSMDBParams, extra extraCRParams) *psmdb.Per
 						Affinity: extra.affinity,
 					},
 				},
-				Mongos: &psmdb.ReplsetSpec{
-					Arbiter: psmdb.Arbiter{
-						Enabled: false,
-						Size:    1,
-						MultiAZ: psmdb.MultiAZ{
-							Affinity: extra.affinity,
-						},
-					},
+				Mongos: &psmdb.MongosSpec{
 					Size: params.Size,
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: extra.affinity,
 					},
-					Expose: extra.expose,
+					Expose: psmdb.MongosExpose{
+						ExposeType: extra.expose.ExposeType,
+					},
 				},
 				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
 					Mode: psmdb.OperationProfilingModeSlowOp,
 				},
 			},
 			Replsets: []*psmdb.ReplsetSpec{
+				// Note: in case to support single node environments
+				// we need to expose primary mongodb node
 				{
 					Name:      "rs0",
+					Affinity:  extra.affinity,
 					Size:      params.Size,
 					Resources: c.setComputeResources(params.Replicaset.ComputeResources),
 					Arbiter: psmdb.Arbiter{
@@ -2122,10 +2063,8 @@ func (c *K8sClient) makeReq(params *PSMDBParams, extra extraCRParams) *psmdb.Per
 	return res
 }
 
-func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB112 { //nolint:funlen
-	req := &psmdb.PerconaServerMongoDB112{
-		APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
-		Kind:       psmdb.PerconaServerMongoDBKind,
+func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB { //nolint:funlen
+	req := &psmdb.PerconaServerMongoDB{
 		TypeMeta: common.TypeMeta{
 			APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
 			Kind:       psmdb.PerconaServerMongoDBKind,
@@ -2134,16 +2073,17 @@ func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraCRParams) *ps
 			Name:       params.Name,
 			Finalizers: []string{"delete-psmdb-pvc"},
 		},
-		Spec: &psmdb.PSMDB112Spec{
+		Spec: &psmdb.PerconaServerMongoDBSpec{
 			UpdateStrategy: updateStrategyRollingUpdate,
 			CRVersion:      extra.operators.PsmdbOperatorVersion,
 			Image:          extra.psmdbImage,
 			Secrets: &psmdb.SecretsSpec{
 				Users: extra.secretName,
 			},
-			Sharding: &psmdb.ShardingSpec112{
+			Sharding: &psmdb.ShardingSpec{
 				Enabled: true,
 				ConfigsvrReplSet: &psmdb.ReplsetSpec{
+					Affinity:   extra.affinity,
 					Size:       3,
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
 					Arbiter: psmdb.Arbiter{
@@ -2156,21 +2096,23 @@ func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraCRParams) *ps
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: extra.affinity,
 					},
-					Expose: extra.expose,
 				},
-				Mongos: &psmdb.ReplsetMongosSpec112{
+				Mongos: &psmdb.MongosSpec{
 					Size: params.Size,
 					MultiAZ: psmdb.MultiAZ{
 						Affinity: extra.affinity,
 					},
-					Expose: psmdb.ExposeSpec{
-						ExposeType: common.ServiceTypeLoadBalancer,
+					Expose: psmdb.MongosExpose{
+						ExposeType: extra.expose.ExposeType,
 					},
 				},
 			},
-			Replsets: []*psmdb.ReplsetSpec112{
+			Replsets: []*psmdb.ReplsetSpec{
+				// Note: in case to support single node environments
+				// we need to expose primary mongodb node
 				{
 					Name:      "rs0",
+					Affinity:  extra.affinity,
 					Size:      params.Size,
 					Resources: c.setComputeResources(params.Replicaset.ComputeResources),
 					Arbiter: psmdb.Arbiter{
@@ -2221,4 +2163,304 @@ func (c *K8sClient) makeReq112Plus(params *PSMDBParams, extra extraCRParams) *ps
 	}
 
 	return req
+}
+
+func (c *K8sClient) createPSMDBSpec(operator *goversion.Version, params *PSMDBParams, extra *extraCRParams) (*psmdb.PerconaServerMongoDB, error) {
+	spec := new(psmdb.PerconaServerMongoDB)
+	bytes, err := ioutil.ReadFile(psmdbCRFile)
+	if err == nil {
+		err = c.unmarshalTemplate(bytes, spec)
+		if err != nil {
+			return nil, err
+		}
+		if spec.Spec.Secrets.Users != "" {
+			extra.secretName = spec.Spec.Secrets.Users
+		}
+		if spec.Spec.Secrets.Users == "" {
+			spec.Spec.Secrets.Users = extra.secretName
+		}
+		return c.overridePSMDBSpec(spec, params, *extra), nil
+	}
+
+	switch {
+	case operator.GreaterThanOrEqual(v112):
+		return c.getPSMDBSpec112Plus(params, *extra), nil
+	default:
+		return c.getPSMDBSpec(params, *extra), nil
+	}
+}
+
+func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName *string, pxcOperatorVersion, storageName string, serviceType common.ServiceType) (*pxc.PerconaXtraDBCluster, error) {
+	spec := new(pxc.PerconaXtraDBCluster)
+
+	bytes, err := ioutil.ReadFile(pxcCRFile)
+	if err == nil {
+		c.l.Debug("found pxc cr template")
+		err = c.unmarshalTemplate(bytes, spec)
+		if err != nil {
+			return nil, err
+		}
+		if spec.Spec.SecretsName != "" {
+			*secretName = spec.Spec.SecretsName
+		}
+		if spec.Spec.SecretsName == "" {
+			spec.Spec.SecretsName = *secretName
+		}
+		return c.overridePXCSpec(spec, params, storageName, pxcOperatorVersion), nil
+
+	}
+	c.l.Debug("failed openint cr template file. Fallback to defaults")
+	return c.getDefaultPXCSpec(params, *secretName, pxcOperatorVersion, storageName, serviceType), nil
+}
+
+func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *PSMDBParams, extra extraCRParams) *psmdb.PerconaServerMongoDB {
+	spec.Spec.Image = extra.psmdbImage
+	spec.ObjectMeta.Name = params.Name
+	spec.Spec.Sharding.ConfigsvrReplSet.Size = params.Size
+	spec.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+	spec.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+	spec.Spec.Sharding.ConfigsvrReplSet.VolumeSpec = c.volumeSpec(params.Replicaset.DiskSize)
+	if spec.Spec.Backup == nil {
+		spec.Spec.Backup = &psmdb.BackupSpec{
+			Enabled:            true,
+			Image:              fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion),
+			ServiceAccountName: "percona-server-mongodb-operator",
+		}
+	}
+	if spec.Spec.Backup.Image == "" {
+		spec.Spec.Backup.Image = fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion)
+	}
+	if !params.Expose {
+		spec.Spec.Sharding.Mongos.Expose.Enabled = false
+		spec.Spec.Sharding.Mongos.Expose.ExposeType = common.ServiceTypeClusterIP
+	}
+	// Always override PMM spec
+	if params.PMM != nil {
+		spec.Spec.PMM = &psmdb.PmmSpec{
+			Enabled:    true,
+			ServerHost: params.PMM.PublicAddress,
+			Image:      pmmClientImage,
+			Resources: &common.PodResources{
+				Requests: &common.ResourcesList{
+					Memory: "300M",
+					CPU:    "500m",
+				},
+			},
+		}
+	}
+
+	return spec
+}
+
+func (c *K8sClient) overridePXCSpec(spec *pxc.PerconaXtraDBCluster, params *PXCParams, storageName, pxcOperatorVersion string) *pxc.PerconaXtraDBCluster {
+	if params.PXC.Image != "" {
+		spec.Spec.PXC.PodSpec.Image = params.PXC.Image
+	}
+	spec.ObjectMeta.Name = params.Name
+	spec.Spec.PXC.PodSpec.Size = &params.Size
+	spec.Spec.PXC.PodSpec.Resources = c.setComputeResources(params.PXC.ComputeResources)
+	if spec.Spec.PXC.PodSpec.VolumeSpec != nil && spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim != nil && spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.StorageClassName != "" {
+		spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.Resources.Requests = common.ResourceList{
+			common.ResourceStorage: params.PXC.DiskSize,
+		}
+	} else {
+		spec.Spec.PXC.PodSpec.VolumeSpec = c.volumeSpec(params.PXC.DiskSize)
+	}
+	if spec.Spec.Backup == nil {
+		spec.Spec.Backup = &pxc.PXCScheduledBackup{
+			Image: fmt.Sprintf(pxcBackupImageTemplate, pxcOperatorVersion),
+			Schedule: []pxc.PXCScheduledBackupSchedule{{
+				Name:        "test",
+				Schedule:    "*/30 * * * *",
+				Keep:        3,
+				StorageName: storageName,
+			}},
+			Storages: map[string]*pxc.BackupStorageSpec{
+				storageName: {
+					Type:   pxc.BackupStorageFilesystem,
+					Volume: c.volumeSpec(params.PXC.DiskSize),
+				},
+			},
+			ServiceAccountName: "percona-xtradb-cluster-operator",
+		}
+	}
+	if spec.Spec.Backup.Image == "" {
+		spec.Spec.Backup.Image = fmt.Sprintf(pxcBackupImageTemplate, pxcOperatorVersion)
+	}
+	if len(spec.Spec.Backup.Storages) == 0 {
+		spec.Spec.Backup.Storages = map[string]*pxc.BackupStorageSpec{
+			storageName: {
+				Type:   pxc.BackupStorageFilesystem,
+				Volume: c.volumeSpec(params.PXC.DiskSize),
+			},
+		}
+	}
+	if !params.Expose {
+		spec.Spec.PXC.Expose = pxc.ServiceExpose{Enabled: false}
+	}
+	if params.ProxySQL != nil && spec.Spec.ProxySQL != nil {
+		spec.Spec.ProxySQL.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
+		spec.Spec.ProxySQL.VolumeSpec = c.volumeSpec(params.ProxySQL.DiskSize)
+	}
+	if params.HAProxy != nil && spec.Spec.HAProxy != nil {
+		spec.Spec.HAProxy.Resources = c.setComputeResources(params.HAProxy.ComputeResources)
+		if params.HAProxy.Image != "" {
+			spec.Spec.HAProxy.Image = params.HAProxy.Image
+		}
+	}
+	// Always override defaults for PMM by specified by user
+	if params.PMM != nil {
+		spec.Spec.PMM = &pxc.PMMSpec{
+			Enabled:         true,
+			ServerHost:      params.PMM.PublicAddress,
+			ServerUser:      params.PMM.Login,
+			Image:           pmmClientImage,
+			ImagePullPolicy: pullPolicy,
+			Resources: &common.PodResources{
+				Requests: &common.ResourcesList{
+					Memory: "300M",
+					CPU:    "500m",
+				},
+			},
+		}
+	}
+
+	return spec
+}
+
+func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperatorVersion, storageName string, serviceType common.ServiceType) *pxc.PerconaXtraDBCluster {
+	pxcImage := pxcDefaultImage
+	if params.PXC.Image != "" {
+		pxcImage = params.PXC.Image
+	}
+	spec := &pxc.PerconaXtraDBCluster{
+		TypeMeta: common.TypeMeta{
+			APIVersion: c.getAPIVersionForPXCOperator(pxcOperatorVersion),
+			Kind:       pxc.PerconaXtraDBClusterKind,
+		},
+		ObjectMeta: common.ObjectMeta{
+			Name:       params.Name,
+			Finalizers: []string{"delete-proxysql-pvc", "delete-pxc-pvc"},
+		},
+		Spec: &pxc.PerconaXtraDBClusterSpec{
+			UpdateStrategy:    updateStrategyRollingUpdate,
+			CRVersion:         pxcOperatorVersion,
+			AllowUnsafeConfig: true,
+			SecretsName:       secretName,
+
+			PXC: &pxc.PXCSpec{
+				PodSpec: &pxc.PodSpec{
+					Size:            &params.Size,
+					Resources:       c.setComputeResources(params.PXC.ComputeResources),
+					Image:           pxcImage,
+					ImagePullPolicy: pullPolicy,
+					VolumeSpec:      c.volumeSpec(params.PXC.DiskSize),
+					Affinity: &pxc.PodAffinity{
+						TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
+					},
+					PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
+						MaxUnavailable: pointer.ToInt(1),
+					},
+				},
+			},
+
+			PMM: &pxc.PMMSpec{
+				Enabled: false,
+			},
+
+			Backup: &pxc.PXCScheduledBackup{
+				Image: fmt.Sprintf(pxcBackupImageTemplate, pxcOperatorVersion),
+				Schedule: []pxc.PXCScheduledBackupSchedule{{
+					Name:        "test",
+					Schedule:    "*/30 * * * *",
+					Keep:        3,
+					StorageName: storageName,
+				}},
+				Storages: map[string]*pxc.BackupStorageSpec{
+					storageName: {
+						Type:   pxc.BackupStorageFilesystem,
+						Volume: c.volumeSpec(params.PXC.DiskSize),
+					},
+				},
+				ServiceAccountName: "percona-xtradb-cluster-operator",
+			},
+		},
+	}
+
+	if params.PMM != nil {
+		spec.Spec.PMM = &pxc.PMMSpec{
+			Enabled:         true,
+			ServerHost:      params.PMM.PublicAddress,
+			ServerUser:      params.PMM.Login,
+			Image:           pmmClientImage,
+			ImagePullPolicy: pullPolicy,
+			Resources: &common.PodResources{
+				Requests: &common.ResourcesList{
+					Memory: "300M",
+					CPU:    "500m",
+				},
+			},
+		}
+	}
+
+	var podSpec *pxc.PodSpec
+	if params.ProxySQL != nil {
+		spec.Spec.ProxySQL = new(pxc.PodSpec)
+		podSpec = spec.Spec.ProxySQL
+		podSpec.Image = fmt.Sprintf(pxcProxySQLDefaultImageTemplate, pxcOperatorVersion)
+		if params.ProxySQL.Image != "" {
+			podSpec.Image = params.ProxySQL.Image
+		}
+		podSpec.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
+		podSpec.VolumeSpec = c.volumeSpec(params.ProxySQL.DiskSize)
+	} else {
+		spec.Spec.HAProxy = new(pxc.PodSpec)
+		podSpec = spec.Spec.HAProxy
+		podSpec.Image = fmt.Sprintf(pxcHAProxyDefaultImageTemplate, pxcOperatorVersion)
+		if params.HAProxy.Image != "" {
+			podSpec.Image = params.HAProxy.Image
+		}
+		podSpec.Resources = c.setComputeResources(params.HAProxy.ComputeResources)
+	}
+	if len(serviceType) != 0 {
+		podSpec.ServiceType = serviceType
+	}
+
+	podSpec.Enabled = true
+	podSpec.ImagePullPolicy = pullPolicy
+	podSpec.Size = &params.Size
+	podSpec.Affinity = &pxc.PodAffinity{
+		TopologyKey: pointer.ToString(pxc.AffinityTopologyKeyOff),
+	}
+	return spec
+}
+
+func (c *K8sClient) unmarshalTemplate(body []byte, out interface{}) error {
+	var yamlObj interface{}
+	err := yaml.Unmarshal(body, &yamlObj)
+	if err != nil {
+		return err
+	}
+	yamlObj = convert(yamlObj)
+	jsonData, err := json.Marshal(yamlObj)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(jsonData, out)
+}
+
+func convert(i interface{}) interface{} {
+	switch x := i.(type) {
+	case map[interface{}]interface{}:
+		m2 := make(map[string]interface{})
+		for k, v := range x {
+			m2[k.(string)] = convert(v)
+		}
+		return m2
+	case []interface{}:
+		for i, v := range x {
+			x[i] = convert(v)
+		}
+	}
+	return i
 }
