@@ -240,6 +240,8 @@ func TestK8sClient(t *testing.T) {
 	require.NoError(t, err)
 	pxcOperator, psmdbv1Operator, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
 	require.NoError(t, err)
+	t.Log(versionServiceURL)
+	t.Log(latestPMMVersion.String())
 
 	// There is an error with Operator version 1.12
 	// See https://jira.percona.com/browse/PMM-10012
