@@ -672,14 +672,10 @@ func (c *K8sClient) GetKubernetesClusterType(ctx context.Context) KubernetesClus
 	return clusterTypeUnknown
 }
 
-func (c *K8sClient) restartDBClusterCmd(name, kind string) []string {
-	return []string{"rollout", "restart", "StatefulSets", fmt.Sprintf("%s-%s", name, kind)}
-}
-
 // RestartPXCCluster restarts Percona XtraDB cluster with provided name.
 // FIXME: https://jira.percona.com/browse/PMM-6980
 func (c *K8sClient) RestartPXCCluster(ctx context.Context, name string) error {
-	_, err := c.kubeCtl.Run(ctx, c.restartDBClusterCmd(name, "pxc"), nil)
+	_, err := c.kube.RestartStatefulSet(ctx, name+"-"+"pxc")
 	if err != nil {
 		return err
 	}
