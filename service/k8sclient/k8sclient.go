@@ -89,12 +89,12 @@ const (
 	pxcSecretNameTmpl               = "dbaas-%s-pxc-secrets" //nolint:gosec
 	pxcInternalSecretTmpl           = "internal-%s"
 
-	psmdbv1BackupImageTemplate = "percona/percona-server-mongodb-operator:%s-backup"
-	psmdbv1DefaultImage        = "percona/percona-server-mongodb:4.2.8-8"
-	psmdbv1APINamespace        = "psmdbv1.percona.com"
-	psmdbv1APIVersionTemplate  = psmdbv1APINamespace + "/v%s"
-	psmdbv1SecretNameTmpl      = "dbaas-%s-psmdbv1-secrets" //nolint:gosec
-	stabePMMClientImage        = "percona/pmm-client:2"
+	psmdbBackupImageTemplate = "percona/percona-server-mongodb-operator:%s-backup"
+	psmdbDefaultImage        = "percona/percona-server-mongodb:4.2.8-8"
+	psmdbAPINamespace        = "psmdb.percona.com"
+	psmdbAPIVersionTemplate  = psmdbAPINamespace + "/v%s"
+	psmdbSecretNameTmpl      = "dbaas-%s-psmdb-secrets" //nolint:gosec
+	stabePMMClientImage      = "percona/pmm-client:2"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
@@ -304,13 +304,13 @@ type StorageClass struct {
 }
 
 type extraCRParams struct {
-	secretName   string
-	secrets      map[string][]byte
-	psmdbv1Image string
-	backupImage  string
-	affinity     *psmdbv1.PodAffinity
-	expose       psmdbv1.Expose
-	operators    *Operators
+	secretName  string
+	secrets     map[string][]byte
+	psmdbImage  string
+	backupImage string
+	affinity    *psmdbv1.PodAffinity
+	expose      psmdbv1.Expose
+	operators   *Operators
 }
 
 // clustertatesMap matches pxc and psmdbv1 app states to cluster states.
@@ -568,7 +568,16 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 
 // DeletePXCCluster deletes Percona XtraDB cluster with provided name.
 func (c *K8sClient) DeletePXCCluster(ctx context.Context, name string) error {
-	err := c.kube.DeletePXCCluster(ctx, name)
+	spec := &pxcv1.PerconaXtraDBCluster{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: pxcAPINamespace + "/v1",
+			Kind:       kube.PXCKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+	err := c.kube.Delete(ctx, spec)
 	if err != nil {
 		return errors.Wrap(err, "cannot delete PXC")
 	}
@@ -883,7 +892,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 
 	extra := extraCRParams{}
-	extra.secretName = fmt.Sprintf(psmdbv1SecretNameTmpl, params.Name)
+	extra.secretName = fmt.Sprintf(psmdbSecretNameTmpl, params.Name)
 	extra.secrets, err = generatePSMDBPasswords()
 	if err != nil {
 		return err
@@ -935,9 +944,9 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return errors.Wrap(err, "cannot get the PSMDB operator version")
 	}
 
-	extra.psmdbv1Image = psmdbv1DefaultImage
+	extra.psmdbImage = psmdbDefaultImage
 	if params.Image != "" {
-		extra.psmdbv1Image = params.Image
+		extra.psmdbImage = params.Image
 	}
 
 	// Starting with operator 1.12, the image name doesn't follow a template rule anymore.
@@ -945,7 +954,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	// If it is empty, try the old format using
 	extra.backupImage = params.BackupImage
 	if extra.backupImage == "" {
-		extra.backupImage = fmt.Sprintf(psmdbv1BackupImageTemplate, extra.operators.PsmdbOperatorVersion)
+		extra.backupImage = fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion)
 	}
 
 	if params.PMM != nil {
@@ -1044,12 +1053,21 @@ func (c *K8sClient) changeImageInCluster(cluster *psmdbv1.PerconaServerMongoDB, 
 
 // DeletePSMDBCluster deletes percona server for mongodb cluster with provided name.
 func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
-	err := c.kube.DeletePSMDBCluster(ctx, name)
+	spec := &psmdbv1.PerconaServerMongoDB{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: psmdbAPINamespace + "/v1",
+			Kind:       kube.PSMDBKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+	err := c.kube.Delete(ctx, spec)
 	if err != nil {
 		return errors.Wrap(err, "cannot delete PSMDB")
 	}
 
-	err = c.deleteSecret(ctx, fmt.Sprintf(psmdbv1SecretNameTmpl, name))
+	err = c.deleteSecret(ctx, fmt.Sprintf(psmdbSecretNameTmpl, name))
 	if err != nil {
 		c.l.Errorf("cannot delete secret for %s: %v", name, err)
 	}
@@ -1093,7 +1111,7 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 
 	password := ""
 	username := ""
-	secret, err := c.kube.GetSecret(ctx, fmt.Sprintf(psmdbv1SecretNameTmpl, name))
+	secret, err := c.kube.GetSecret(ctx, fmt.Sprintf(psmdbSecretNameTmpl, name))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get PSMDB cluster secrets")
 	}
@@ -1407,7 +1425,7 @@ func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 
 	return &Operators{
 		PXCOperatorVersion:   c.getLatestOperatorAPIVersion(apiVersions, pxcAPINamespace),
-		PsmdbOperatorVersion: c.getLatestOperatorAPIVersion(apiVersions, psmdbv1APINamespace),
+		PsmdbOperatorVersion: c.getLatestOperatorAPIVersion(apiVersions, psmdbAPINamespace),
 	}, nil
 }
 
@@ -1707,7 +1725,7 @@ func (c *K8sClient) GetConsumedDiskBytes(ctx context.Context, clusterType Kubern
 }
 
 func (c *K8sClient) getAPIVersionForPSMDBOperator(version string) string {
-	return fmt.Sprintf(psmdbv1APIVersionTemplate, strings.ReplaceAll(version, ".", "-"))
+	return fmt.Sprintf(psmdbAPIVersionTemplate, strings.ReplaceAll(version, ".", "-"))
 }
 
 func (c *K8sClient) getAPIVersionForPXCOperator(version string) string {
@@ -1981,7 +1999,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 		Spec: psmdbv1.PerconaServerMongoDBSpec{
 			UpdateStrategy: updateStrategyRollingUpdate,
 			CRVersion:      extra.operators.PsmdbOperatorVersion,
-			Image:          extra.psmdbv1Image,
+			Image:          extra.psmdbImage,
 			Secrets: &psmdbv1.SecretsSpec{
 				Users: extra.secretName,
 			},
@@ -2083,7 +2101,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 
 			Backup: psmdbv1.BackupSpec{
 				Enabled:            true,
-				Image:              fmt.Sprintf(psmdbv1BackupImageTemplate, extra.operators.PsmdbOperatorVersion),
+				Image:              fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion),
 				ServiceAccountName: "percona-server-mongodb-operator",
 			},
 		},
@@ -2123,7 +2141,7 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 		Spec: psmdbv1.PerconaServerMongoDBSpec{
 			UpdateStrategy: updateStrategyRollingUpdate,
 			CRVersion:      extra.operators.PsmdbOperatorVersion,
-			Image:          extra.psmdbv1Image,
+			Image:          extra.psmdbImage,
 			Secrets: &psmdbv1.SecretsSpec{
 				Users: extra.secretName,
 			},
@@ -2261,7 +2279,7 @@ func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName *strin
 }
 
 func (c *K8sClient) overridePSMDBSpec(spec *psmdbv1.PerconaServerMongoDB, params *PSMDBParams, extra extraCRParams) *psmdbv1.PerconaServerMongoDB {
-	spec.Spec.Image = extra.psmdbv1Image
+	spec.Spec.Image = extra.psmdbImage
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.Sharding.ConfigsvrReplSet.Size = params.Size
 	spec.Spec.Replsets[0].Resources = c.setCoreComputeResources(params.Replicaset.ComputeResources)
@@ -2271,12 +2289,12 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdbv1.PerconaServerMongoDB, params
 	if spec.Spec.Backup.Image == "" {
 		spec.Spec.Backup = psmdbv1.BackupSpec{
 			Enabled:            true,
-			Image:              fmt.Sprintf(psmdbv1BackupImageTemplate, extra.operators.PsmdbOperatorVersion),
+			Image:              fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion),
 			ServiceAccountName: "percona-server-mongodb-operator",
 		}
 	}
 	if spec.Spec.Backup.Image == "" {
-		spec.Spec.Backup.Image = fmt.Sprintf(psmdbv1BackupImageTemplate, extra.operators.PsmdbOperatorVersion)
+		spec.Spec.Backup.Image = fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion)
 	}
 	if !params.Expose {
 		spec.Spec.Sharding.Mongos.Expose.ExposeType = corev1.ServiceTypeClusterIP
