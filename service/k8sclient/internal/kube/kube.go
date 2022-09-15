@@ -65,7 +65,7 @@ var restartTemplate = `{
         "template": {
             "metadata": {
                 "annotations": {
-                    "kubectl.kubernetes.io/restartedAt": %s
+                    "kubectl.kubernetes.io/restartedAt": "%s"
                 }
             }
         }
