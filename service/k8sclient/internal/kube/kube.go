@@ -153,8 +153,6 @@ func (c *Client) setup() error {
 	return c.initOperatorClients()
 }
 func (c *Client) initOperatorClients() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	pxcClient, err := pxc.NewForConfig(c.restConfig)
 	if err != nil {
 		return err

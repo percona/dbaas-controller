@@ -23,6 +23,7 @@ import (
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -34,12 +35,13 @@ const (
 )
 
 var (
-	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
-	AddToScheme   = SchemeBuilder.AddToScheme
+	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
+	SchemeGroupVersion = schema.GroupVersion{Group: "pxc.percona.com", Version: "v1"}
+	AddToScheme        = SchemeBuilder.AddToScheme
 )
 
 func addKnownTypes(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypes(pxcv1.SchemeGroupVersion,
+	scheme.AddKnownTypes(SchemeGroupVersion,
 		&pxcv1.PerconaXtraDBCluster{},
 		&pxcv1.PerconaXtraDBClusterList{},
 	)
