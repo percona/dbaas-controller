@@ -744,7 +744,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 	return res, nil
 }
 func (c *K8sClient) getPXCClusterState(ctx context.Context, cluster *pxcv1.PerconaXtraDBCluster, crAndPodsMatchFunc func(context.Context, *pxcv1.PerconaXtraDBCluster) (bool, error)) ClusterState {
-	if cluster == nil {
+	if cluster == new(pxcv1.PerconaXtraDBCluster) {
 		return ClusterStateInvalid
 	}
 	state := cluster.Status.Status
@@ -777,7 +777,7 @@ func (c *K8sClient) getPXCClusterState(ctx context.Context, cluster *pxcv1.Perco
 }
 
 func (c *K8sClient) getClusterState(ctx context.Context, cluster *psmdbv1.PerconaServerMongoDB, crAndPodsMatchFunc func(context.Context, *psmdbv1.PerconaServerMongoDB) (bool, error)) ClusterState {
-	if cluster == nil {
+	if cluster == new(psmdbv1.PerconaServerMongoDB) {
 		return ClusterStateInvalid
 	}
 	state := pxcv1.AppState(cluster.Status.State)
