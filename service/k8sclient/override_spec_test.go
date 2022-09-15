@@ -30,7 +30,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 )
 
@@ -220,6 +219,6 @@ func TestPSMDBSpec(t *testing.T) {
 		assert.Equal(t, defaultSpec, spec)
 		params.Expose = false
 		spec = client.overridePSMDBSpec(spec, params, extra)
-		assert.Equal(t, common.ServiceTypeClusterIP, spec.Spec.Sharding.Mongos.Expose.ExposeType)
+		assert.Equal(t, corev1.ServiceTypeClusterIP, spec.Spec.Sharding.Mongos.Expose.ExposeType)
 	})
 }

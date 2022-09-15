@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube/pxc"
@@ -65,6 +66,7 @@ type Client struct {
 	clientset   *kubernetes.Clientset
 	pxcClient   *pxc.PerconaXtraDBClusterClient
 	psmdbClient *psmdb.PerconaServerMongoDBClient
+	mu          *sync.Mutex
 	restConfig  *rest.Config
 	namespace   string
 }
@@ -99,30 +101,23 @@ func (g *configGetter) loadFromString() (*clientcmdapi.Config, error) {
 // running inside a pod running on kubernetes. It will return ErrNotInCluster
 // if called from a process not running in a kubernetes environment.
 func NewFromIncluster() (*Client, error) {
-	c, err := rest.InClusterConfig()
+	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
 	}
-	clientset, err := kubernetes.NewForConfig(c)
+	config.QPS = defaultQPSLimit
+	config.Burst = defaultBurstLimit
+	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
-	pxcClient, err := pxc.NewForConfig(c)
-	if err != nil {
-		return nil, err
+	c := &Client{
+		clientset:  clientset,
+		restConfig: config,
+		mu:         &sync.Mutex{},
 	}
-	namespace := "default"
-	if space := os.Getenv("NAMESPACE"); space != "" {
-		namespace = space
-	}
-	psmdbClient, err := psmdb.NewForConfig(c)
-	if err != nil {
-		return nil, err
-	}
-	// Set PATH variable to make aws-iam-authenticator executable
-	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
-	os.Setenv("PATH", path)
-	return &Client{clientset: clientset, restConfig: c, pxcClient: pxcClient, namespace: namespace, psmdbClient: psmdbClient}, nil
+	err = c.setup()
+	return c, err
 }
 
 // NewFromKubeConfigString creates a new client for the given config string.
@@ -138,22 +133,39 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	c := &Client{
+		clientset:  clientset,
+		restConfig: config,
+		mu:         &sync.Mutex{},
+	}
+	err = c.setup()
+	return c, err
+}
+func (c *Client) setup() error {
 	namespace := "default"
 	if space := os.Getenv("NAMESPACE"); space != "" {
 		namespace = space
 	}
-	pxcClient, err := pxc.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	psmdbClient, err := psmdb.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
 	// Set PATH variable to make aws-iam-authenticator executable
 	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
 	os.Setenv("PATH", path)
-	return &Client{clientset: clientset, restConfig: config, namespace: namespace, pxcClient: pxcClient, psmdbClient: psmdbClient}, nil
+	c.namespace = namespace
+	return c.initOperatorClients()
+}
+func (c *Client) initOperatorClients() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	pxcClient, err := pxc.NewForConfig(c.restConfig)
+	if err != nil {
+		return err
+	}
+	psmdbClient, err := psmdb.NewForConfig(c.restConfig)
+	if err != nil {
+		return err
+	}
+	c.pxcClient = pxcClient
+	c.psmdbClient = psmdbClient
+	return nil
 }
 
 func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) {
