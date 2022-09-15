@@ -377,7 +377,7 @@ func (c *Client) GetStatefulSet(ctx context.Context, name string) (*v1beta1.Stat
 	return c.clientset.AppsV1beta1().StatefulSets(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
 func (c *Client) RestartStatefulSet(ctx context.Context, name string) (*v1beta1.StatefulSet, error) {
-	patchData := fmt.Sprintf(restartTemplate, time.Now().UTC())
+	patchData := fmt.Sprintf(restartTemplate, time.Now().UTC().Format(time.RFC3339))
 	fmt.Println(patchData)
 	return c.clientset.AppsV1beta1().StatefulSets(c.namespace).Patch(ctx, name, types.StrategicMergePatchType, []byte(patchData), metav1.PatchOptions{})
 }
