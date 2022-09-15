@@ -42,8 +42,8 @@ var (
 
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&pxcv1.PerconaXtraDBCluster{},
-		&pxcv1.PerconaXtraDBClusterList{},
+		new(pxcv1.PerconaXtraDBCluster),
+		new(pxcv1.PerconaXtraDBClusterList),
 	)
 
 	metav1.AddToGroupVersion(scheme, pxcv1.SchemeGroupVersion)
@@ -96,7 +96,7 @@ type pxcClient struct {
 }
 
 func (c *pxcClient) List(ctx context.Context, opts metav1.ListOptions) (*pxcv1.PerconaXtraDBClusterList, error) {
-	result := &pxcv1.PerconaXtraDBClusterList{}
+	result := new(pxcv1.PerconaXtraDBClusterList)
 	err := c.restClient.
 		Get().
 		Namespace(c.namespace).
@@ -108,7 +108,7 @@ func (c *pxcClient) List(ctx context.Context, opts metav1.ListOptions) (*pxcv1.P
 }
 
 func (c *pxcClient) Get(ctx context.Context, name string, opts metav1.GetOptions) (*pxcv1.PerconaXtraDBCluster, error) {
-	result := &pxcv1.PerconaXtraDBCluster{}
+	result := new(pxcv1.PerconaXtraDBCluster)
 	err := c.restClient.
 		Get().
 		Namespace(c.namespace).
@@ -121,7 +121,7 @@ func (c *pxcClient) Get(ctx context.Context, name string, opts metav1.GetOptions
 }
 
 func (c *pxcClient) Create(ctx context.Context, spec *pxcv1.PerconaXtraDBCluster) (*pxcv1.PerconaXtraDBCluster, error) {
-	result := &pxcv1.PerconaXtraDBCluster{}
+	result := new(pxcv1.PerconaXtraDBCluster)
 	err := c.restClient.
 		Post().
 		Namespace(c.namespace).
@@ -133,7 +133,7 @@ func (c *pxcClient) Create(ctx context.Context, spec *pxcv1.PerconaXtraDBCluster
 }
 
 func (c *pxcClient) Update(ctx context.Context, spec *pxcv1.PerconaXtraDBCluster) (*pxcv1.PerconaXtraDBCluster, error) {
-	result := &pxcv1.PerconaXtraDBCluster{}
+	result := new(pxcv1.PerconaXtraDBCluster)
 	err := c.restClient.
 		Put().
 		Namespace(c.namespace).

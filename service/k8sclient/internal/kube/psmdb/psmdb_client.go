@@ -42,8 +42,8 @@ var (
 
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&psmdbv1.PerconaServerMongoDB{},
-		&psmdbv1.PerconaServerMongoDBList{},
+		new(psmdbv1.PerconaServerMongoDB),
+		new(psmdbv1.PerconaServerMongoDBList),
 	)
 
 	metav1.AddToGroupVersion(scheme, psmdbv1.SchemeGroupVersion)
@@ -60,7 +60,7 @@ type PerconaServerMongoDBClient struct {
 
 func NewForConfig(c *rest.Config) (*PerconaServerMongoDBClient, error) {
 	config := *c
-	config.ContentConfig.GroupVersion = &psmdbv1.SchemeGroupVersion
+	config.ContentConfig.GroupVersion = new(psmdbv1.SchemeGroupVersion)
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
@@ -96,7 +96,7 @@ type psmdbClient struct {
 }
 
 func (c *psmdbClient) List(ctx context.Context, opts metav1.ListOptions) (*psmdbv1.PerconaServerMongoDBList, error) {
-	result := &psmdbv1.PerconaServerMongoDBList{}
+	result := new(psmdbv1.PerconaServerMongoDBList)
 	err := c.restClient.
 		Get().
 		Namespace(c.namespace).
@@ -108,7 +108,7 @@ func (c *psmdbClient) List(ctx context.Context, opts metav1.ListOptions) (*psmdb
 }
 
 func (c *psmdbClient) Get(ctx context.Context, name string, opts metav1.GetOptions) (*psmdbv1.PerconaServerMongoDB, error) {
-	result := &psmdbv1.PerconaServerMongoDB{}
+	result := new(psmdbv1.PerconaServerMongoDB)
 	err := c.restClient.
 		Get().
 		Namespace(c.namespace).
@@ -121,7 +121,7 @@ func (c *psmdbClient) Get(ctx context.Context, name string, opts metav1.GetOptio
 }
 
 func (c *psmdbClient) Create(ctx context.Context, spec *psmdbv1.PerconaServerMongoDB) (*psmdbv1.PerconaServerMongoDB, error) {
-	result := &psmdbv1.PerconaServerMongoDB{}
+	result := new(psmdbv1.PerconaServerMongoDB)
 	err := c.restClient.
 		Post().
 		Namespace(c.namespace).
@@ -133,7 +133,7 @@ func (c *psmdbClient) Create(ctx context.Context, spec *psmdbv1.PerconaServerMon
 }
 
 func (c *psmdbClient) Update(ctx context.Context, spec *psmdbv1.PerconaServerMongoDB) (*psmdbv1.PerconaServerMongoDB, error) {
-	result := &psmdbv1.PerconaServerMongoDB{}
+	result := new(psmdbv1.PerconaServerMongoDB)
 	err := c.restClient.
 		Put().
 		Namespace(c.namespace).

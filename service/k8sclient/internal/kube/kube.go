@@ -114,7 +114,7 @@ func NewFromIncluster() (*Client, error) {
 	c := &Client{
 		clientset:  clientset,
 		restConfig: config,
-		mu:         &sync.Mutex{},
+		mu:         new(sync.Mutex),
 	}
 	err = c.setup()
 	return c, err
@@ -136,7 +136,7 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	c := &Client{
 		clientset:  clientset,
 		restConfig: config,
-		mu:         &sync.Mutex{},
+		mu:         new(sync.Mutex),
 	}
 	err = c.setup()
 	return c, err

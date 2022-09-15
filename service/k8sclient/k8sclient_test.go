@@ -1004,7 +1004,7 @@ func TestGetPXCClusterState(t *testing.T) {
 			expectedState: ClusterStateInvalid,
 		},
 		{
-			cluster:       &pxcv1.PerconaXtraDBCluster{},
+			cluster:       new(pxcv1.PerconaXtraDBCluster),
 			expectedState: ClusterStateInvalid,
 		},
 		// Initializing.
