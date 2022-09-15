@@ -78,7 +78,7 @@ type componentVersion struct {
 
 type matrix struct {
 	PXCOperator   map[string]componentVersion `json:"pxcOperator,omitempty"`
-	PSMDBOperator map[string]componentVersion `json:"psmdbv1Operator,omitempty"`
+	PSMDBOperator map[string]componentVersion `json:"psmdbOperator,omitempty"`
 }
 
 type Version struct {
