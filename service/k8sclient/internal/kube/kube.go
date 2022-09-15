@@ -24,11 +24,13 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube/psmdb"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube/pxc"
 	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
+	"k8s.io/api/apps/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
 
@@ -38,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	"k8s.io/apimachinery/pkg/types"
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes"
@@ -56,6 +59,18 @@ const (
 	PXCKind            = pxc.PXCKind
 	PSMDBKind          = psmdb.PSMDBKind
 )
+
+var restartTemplate = `{
+    "spec": {
+        "template": {
+            "metadata": {
+                "annotations": {
+                    "kubectl.kubernetes.io/restartedAt": %s
+                }
+            }
+        }
+    }
+}`
 
 // configGetter stores kubeconfig string to convert it to the final object
 type configGetter struct {
@@ -356,6 +371,15 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 		return buf.String(), err
 	}
 	return buf.String(), nil
+}
+
+func (c *Client) GetStatefulSet(ctx context.Context, name string) (*v1beta1.StatefulSet, error) {
+	return c.clientset.AppsV1beta1().StatefulSets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+}
+func (c *Client) RestartStatefulSet(ctx context.Context, name string) (*v1beta1.StatefulSet, error) {
+	patchData := fmt.Sprintf(restartTemplate, time.Now().UTC())
+	fmt.Println(patchData)
+	return c.clientset.AppsV1beta1().StatefulSets(c.namespace).Patch(ctx, name, types.StrategicMergePatchType, []byte(patchData), metav1.PatchOptions{})
 }
 
 func (c *Client) ListPXCClusters(ctx context.Context) (*pxcv1.PerconaXtraDBClusterList, error) {

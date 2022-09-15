@@ -676,8 +676,8 @@ func (c *K8sClient) RestartPXCCluster(ctx context.Context, name string) error {
 	}
 
 	for _, proxy := range []string{"proxysql", "haproxy"} {
-		if _, err := c.kubeCtl.Run(ctx, []string{"get", "statefulset", name + "-" + proxy}, nil); err == nil {
-			_, err = c.kubeCtl.Run(ctx, c.restartDBClusterCmd(name, proxy), nil)
+		if _, err := c.kube.GetStatefulSet(ctx, name+"-"+proxy); err == nil {
+			_, err = c.kube.RestartStatefulSet(ctx, name+"-"+proxy)
 			return err
 		}
 	}
@@ -1069,9 +1069,11 @@ func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
 // RestartPSMDBCluster restarts Percona server for mongodb cluster with provided name.
 // FIXME: https://jira.percona.com/browse/PMM-6980
 func (c *K8sClient) RestartPSMDBCluster(ctx context.Context, name string) error {
-	_, err := c.kubeCtl.Run(ctx, c.restartDBClusterCmd(name, "rs0"), nil)
-
-	return err
+	if _, err := c.kube.GetStatefulSet(ctx, name+"-rs0"); err == nil {
+		_, err = c.kube.RestartStatefulSet(ctx, name+"-rs0")
+		return err
+	}
+	return nil
 }
 
 // GetPSMDBClusterCredentials returns a PSMDB cluster.
