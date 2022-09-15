@@ -30,7 +30,7 @@ import (
 
 const (
 	PSMDBKind    = "PerconaServerMongoDB"
-	psmdbAPIKind = "perconaxtradbclusters"
+	psmdbAPIKind = "perconaservermongodbs"
 )
 
 var (
