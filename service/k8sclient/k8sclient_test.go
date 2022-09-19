@@ -1002,9 +1002,9 @@ func TestGetPXCClusterState(t *testing.T) {
 	}
 	testCases := []getClusterStateTestCase{
 		// PXC
-		{
-			expectedState: ClusterStateInvalid,
-		},
+		// {
+		// 	expectedState: ClusterStateInvalid,
+		// },
 		{
 			cluster:       new(pxcv1.PerconaXtraDBCluster),
 			expectedState: ClusterStateInvalid,
@@ -1154,9 +1154,9 @@ func TestGetPSMDBClusterState(t *testing.T) {
 	}
 	testCases := []getClusterStateTestCase{
 		// PSMDB
-		{
-			expectedState: ClusterStateInvalid,
-		},
+		//{
+		//	expectedState: ClusterStateInvalid,
+		//},
 		{
 			cluster:       new(psmdbv1.PerconaServerMongoDB),
 			expectedState: ClusterStateInvalid,
