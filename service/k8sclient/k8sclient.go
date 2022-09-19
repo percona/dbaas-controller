@@ -755,6 +755,9 @@ func (c *K8sClient) getPXCClusterState(ctx context.Context, cluster *pxcv1.Perco
 	if cluster == new(pxcv1.PerconaXtraDBCluster) {
 		return ClusterStateInvalid
 	}
+	if cluster.Status == new(pxcv1.PerconaXtraDBClusterStatus) {
+		return ClusterStateInvalid
+	}
 	state := cluster.Status.Status
 	if state == pxcv1.AppStateUnknown {
 		return ClusterStateInvalid
