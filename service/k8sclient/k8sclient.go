@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -752,6 +753,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 	return res, nil
 }
 func (c *K8sClient) getPXCClusterState(ctx context.Context, cluster *pxcv1.PerconaXtraDBCluster, crAndPodsMatchFunc func(context.Context, *pxcv1.PerconaXtraDBCluster) (bool, error)) ClusterState {
+	spew.Dump(cluster)
 	if cluster == new(pxcv1.PerconaXtraDBCluster) || cluster == nil {
 		return ClusterStateInvalid
 	}
