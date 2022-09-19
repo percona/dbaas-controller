@@ -27,14 +27,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube/psmdb"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube/pxc"
 	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -49,6 +46,9 @@ import (
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube/psmdb"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube/pxc"
 )
 
 const (
@@ -157,6 +157,7 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	err = c.setup()
 	return c, err
 }
+
 func (c *Client) setup() error {
 	namespace := "default"
 	if space := os.Getenv("NAMESPACE"); space != "" {
@@ -168,6 +169,7 @@ func (c *Client) setup() error {
 	c.namespace = namespace
 	return c.initOperatorClients()
 }
+
 func (c *Client) initOperatorClients() error {
 	pxcClient, err := pxc.NewForConfig(c.restConfig)
 	if err != nil {
@@ -377,6 +379,7 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 func (c *Client) GetStatefulSet(ctx context.Context, name string) (*appsv1.StatefulSet, error) {
 	return c.clientset.AppsV1().StatefulSets(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
+
 func (c *Client) RestartStatefulSet(ctx context.Context, name string) (*appsv1.StatefulSet, error) {
 	patchData := fmt.Sprintf(restartTemplate, time.Now().UTC().Format(time.RFC3339))
 	fmt.Println(patchData)
@@ -386,9 +389,11 @@ func (c *Client) RestartStatefulSet(ctx context.Context, name string) (*appsv1.S
 func (c *Client) ListPXCClusters(ctx context.Context) (*pxcv1.PerconaXtraDBClusterList, error) {
 	return c.pxcClient.PXCClusters(c.namespace).List(ctx, metav1.ListOptions{})
 }
+
 func (c *Client) GetPXCCluster(ctx context.Context, name string) (*pxcv1.PerconaXtraDBCluster, error) {
 	return c.pxcClient.PXCClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
+
 func (c *Client) DeletePXCCluster(ctx context.Context, name string) error {
 	return c.pxcClient.PXCClusters(c.namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
@@ -400,12 +405,15 @@ func (c *Client) PatchPXCCluster(ctx context.Context, name string, pt types.Patc
 func (c *Client) ListPSMDBClusters(ctx context.Context) (*psmdbv1.PerconaServerMongoDBList, error) {
 	return c.psmdbClient.PSMDBClusters(c.namespace).List(ctx, metav1.ListOptions{})
 }
+
 func (c *Client) GetPSMDBCluster(ctx context.Context, name string) (*psmdbv1.PerconaServerMongoDB, error) {
 	return c.psmdbClient.PSMDBClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
+
 func (c *Client) PatchPSMDBCluster(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*psmdbv1.PerconaServerMongoDB, error) {
 	return c.psmdbClient.PSMDBClusters(c.namespace).Patch(ctx, name, pt, data, opts)
 }
+
 func (c *Client) DeletePSMDBCluster(ctx context.Context, name string) error {
 	return c.psmdbClient.PSMDBClusters(c.namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }

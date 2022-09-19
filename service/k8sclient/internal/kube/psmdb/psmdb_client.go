@@ -156,6 +156,7 @@ func (c *psmdbClient) Delete(ctx context.Context, name string, opts metav1.Delet
 		Do(ctx).
 		Error()
 }
+
 func (c *psmdbClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.restClient.

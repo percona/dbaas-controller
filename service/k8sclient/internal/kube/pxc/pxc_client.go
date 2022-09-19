@@ -156,6 +156,7 @@ func (c *pxcClient) Delete(ctx context.Context, name string, opts metav1.DeleteO
 		Do(ctx).
 		Error()
 }
+
 func (c *pxcClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.restClient.

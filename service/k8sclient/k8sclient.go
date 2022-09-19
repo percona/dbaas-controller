@@ -29,18 +29,19 @@ import (
 	"strings"
 	"time"
 
-	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
-	apiErrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/AlekSi/pointer"
 	goversion "github.com/hashicorp/go-version"
+	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
+	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
+	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	pmmversion "github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -52,8 +53,6 @@ import (
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/monitoring"
 	"github.com/percona-platform/dbaas-controller/utils/convertors"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
-	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
-	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 )
 
 // ClusterState represents XtraDB cluster CR state.
@@ -570,7 +569,6 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 	}
 	_, err = c.kube.PatchPXCCluster(ctx, cluster.Name, types.MergePatchType, patch, metav1.PatchOptions{})
 	return err
-
 }
 
 // DeletePXCCluster deletes Percona XtraDB cluster with provided name.
@@ -751,6 +749,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 	}
 	return res, nil
 }
+
 func (c *K8sClient) getPXCClusterState(ctx context.Context, cluster *pxcv1.PerconaXtraDBCluster, crAndPodsMatchFunc func(context.Context, *pxcv1.PerconaXtraDBCluster) (bool, error)) ClusterState {
 	if cluster == new(pxcv1.PerconaXtraDBCluster) || cluster == nil {
 		return ClusterStateInvalid
@@ -1043,6 +1042,7 @@ func (c *K8sClient) changeImageInPXCCluster(cluster *pxcv1.PerconaXtraDBCluster,
 	cluster.Spec.PXC.Image = newImage
 	return nil
 }
+
 func (c *K8sClient) changeImageInCluster(cluster *psmdbv1.PerconaServerMongoDB, newImage string) error {
 	// Check that only tag changed.
 	newImageAndTag := strings.Split(newImage, ":")
@@ -1275,7 +1275,6 @@ func (c *K8sClient) getDeletingPSMDBClusters(ctx context.Context, clusters []PSM
 }
 
 func (c *K8sClient) getCoreComputeResources(resources corev1.ResourceRequirements) *ComputeResources {
-
 	res := new(ComputeResources)
 	cpuLimit, ok := resources.Limits[corev1.ResourceCPU]
 	cpu := (&cpuLimit).String()
@@ -1343,6 +1342,7 @@ func (c *K8sClient) updateCoreComputeResources(res *ComputeResources, podResourc
 	podResources.Limits[corev1.ResourceMemory] = resource.MustParse(res.MemoryBytes)
 	return podResources
 }
+
 func (c *K8sClient) updateComputeResources(res *ComputeResources, podResources *common.PodResources) *common.PodResources {
 	if res == nil {
 		return podResources
@@ -1368,6 +1368,7 @@ func (c *K8sClient) getPXCDiskSize(volumeSpec *pxcv1.VolumeSpec) string {
 	}
 	return quantity.String()
 }
+
 func (c *K8sClient) getPSMDBDiskSize(volumeSpec *psmdbv1.VolumeSpec) string {
 	if volumeSpec == nil || volumeSpec.PersistentVolumeClaim == nil {
 		return "0"
@@ -1378,6 +1379,7 @@ func (c *K8sClient) getPSMDBDiskSize(volumeSpec *psmdbv1.VolumeSpec) string {
 	}
 	return quantity.String()
 }
+
 func (c *K8sClient) getDiskSize(volumeSpec *common.VolumeSpec) string {
 	if volumeSpec == nil || volumeSpec.PersistentVolumeClaim == nil {
 		return "0"
@@ -1400,6 +1402,7 @@ func (c *K8sClient) pxcVolumeSpec(diskSize string) *pxcv1.VolumeSpec {
 		},
 	}
 }
+
 func (c *K8sClient) volumeSpec(diskSize string) *psmdbv1.VolumeSpec {
 	return &psmdbv1.VolumeSpec{
 		PersistentVolumeClaim: &corev1.PersistentVolumeClaimSpec{
