@@ -47,7 +47,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		new(psmdbv1.PerconaServerMongoDBList),
 	)
 
-	metav1.AddToGroupVersion(scheme, psmdbv1.SchemeGroupVersion)
+	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
 }
 

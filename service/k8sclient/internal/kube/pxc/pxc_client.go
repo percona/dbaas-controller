@@ -61,7 +61,7 @@ type PerconaXtraDBClusterClient struct {
 
 func NewForConfig(c *rest.Config) (*PerconaXtraDBClusterClient, error) {
 	config := *c
-	config.ContentConfig.GroupVersion = &pxcv1.SchemeGroupVersion
+	config.ContentConfig.GroupVersion = &SchemeGroupVersion
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
