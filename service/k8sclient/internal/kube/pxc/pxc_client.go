@@ -47,7 +47,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		new(pxcv1.PerconaXtraDBClusterList),
 	)
 
-	metav1.AddToGroupVersion(scheme, pxcv1.SchemeGroupVersion)
+	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
 }
 
