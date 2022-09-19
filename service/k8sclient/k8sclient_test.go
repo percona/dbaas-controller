@@ -996,21 +996,23 @@ func TestGetPXCClusterState(t *testing.T) {
 	}
 	type getClusterStateTestCase struct {
 		matchingError           error
+		name                    string
 		cluster                 *pxcv1.PerconaXtraDBCluster
 		expectedState           ClusterState
 		crAndPodsVersionMatches bool
 	}
 	testCases := []getClusterStateTestCase{
-		// PXC
-		// {
-		// 	expectedState: ClusterStateInvalid,
-		// },
 		{
-			cluster:       new(pxcv1.PerconaXtraDBCluster),
+			name:          "nil cluster should return invalid state",
 			expectedState: ClusterStateInvalid,
 		},
-		// Initializing.
 		{
+			cluster:       new(pxcv1.PerconaXtraDBCluster),
+			name:          "empty cluster should return invalid state",
+			expectedState: ClusterStateInvalid,
+		},
+		{
+			name: "Initializing",
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
@@ -1020,8 +1022,8 @@ func TestGetPXCClusterState(t *testing.T) {
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
-		// Ready.
 		{
+			name: "Ready cluster",
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
@@ -1034,6 +1036,7 @@ func TestGetPXCClusterState(t *testing.T) {
 		// Pausing related states.
 		{
 			// Cluster is being paused, pxc operator <= 1.8.0.
+			name: "pausing related states",
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
@@ -1044,7 +1047,7 @@ func TestGetPXCClusterState(t *testing.T) {
 			expectedState:           ClusterStateChanging,
 		},
 		{
-			// Cluster is being paused, pxc operator >= 1.9.0.
+			name: "Cluster is being paused, pxc operator >= 1.9.0.",
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
@@ -1055,7 +1058,7 @@ func TestGetPXCClusterState(t *testing.T) {
 			expectedState:           ClusterStateChanging,
 		},
 		{
-			// Cluster is paused = no cluster pods.
+			name: "Cluster is paused = no cluster pods.",
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
@@ -1066,7 +1069,7 @@ func TestGetPXCClusterState(t *testing.T) {
 			expectedState:           ClusterStatePaused,
 		},
 		{
-			// Cluster is paused = no cluster pods.
+			name: "Cluster is paused = no cluster pods.",
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
@@ -1077,7 +1080,7 @@ func TestGetPXCClusterState(t *testing.T) {
 			expectedState:           ClusterStatePaused,
 		},
 		{
-			// Cluster just got instructed to resume.
+			name: "Cluster just got instructed to resume.",
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
@@ -1089,7 +1092,7 @@ func TestGetPXCClusterState(t *testing.T) {
 		},
 		// Upgrading.
 		{
-			// No failure during checking cr and pods version.
+			name: "No failure during checking cr and pods version.",
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
@@ -1100,7 +1103,7 @@ func TestGetPXCClusterState(t *testing.T) {
 			expectedState:           ClusterStateUpgrading,
 		},
 		{
-			// Checking cr and pods version failed.
+			name: "Checking cr and pods version failed.",
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
@@ -1112,7 +1115,7 @@ func TestGetPXCClusterState(t *testing.T) {
 			expectedState:           ClusterStateInvalid,
 		},
 		{
-			// Not implemented state of the cluster.
+			name: "Not implemented state of the cluster.",
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
@@ -1135,7 +1138,7 @@ func TestGetPXCClusterState(t *testing.T) {
 			clusterState := c.getPXCClusterState(ctx, tt.cluster, func(context.Context, *pxcv1.PerconaXtraDBCluster) (bool, error) {
 				return tt.crAndPodsVersionMatches, tt.matchingError
 			})
-			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
+			assert.Equal(t, tt.expectedState, clusterState, tt.name)
 		})
 	}
 }
