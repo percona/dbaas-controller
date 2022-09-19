@@ -1203,20 +1203,6 @@ func (c *K8sClient) crVersionMatchesPodsVersion(ctx context.Context, cluster *ps
 	return len(images) == 1 && ok, nil
 }
 
-func getCRVersion(buf []byte) (*goversion.Version, error) {
-	var mols kube.MinimumObjectListSpec
-
-	if err := json.Unmarshal(buf, &mols); err != nil {
-		return nil, errors.Wrap(err, "cannot decode response to get CR version spec")
-	}
-
-	if len(mols.Items) < 1 {
-		return nil, ErrEmptyResponse
-	}
-
-	return goversion.NewVersion(mols.Items[0].Spec.CrVersion)
-}
-
 // getPSMDBClusters returns Percona Server for MongoDB clusters.
 func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error) {
 	list, err := c.kube.ListPSMDBClusters(ctx)
