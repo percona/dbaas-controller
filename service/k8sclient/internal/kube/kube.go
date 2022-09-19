@@ -393,8 +393,13 @@ func (c *Client) ListPXCClusters(ctx context.Context) (*pxcv1.PerconaXtraDBClust
 }
 
 // GetPXCClusters returns PXC clusters by provided name.
-func (c *Client) GetPXCCluster(ctx context.Context, name string) (*pxcv1.PerconaXtraDBCluster, error) {
-	return c.pxcClient.PXCClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
+func (c *Client) GetPXCCluster(ctx context.Context, name string) (*PXCCluster, error) {
+	cluster, err := c.pxcClient.PXCClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	pxc := PXCCluster(*cluster)
+	return &pxc, nil
 }
 
 // PatchPXCCluster patches CR of managed PXC cluster.

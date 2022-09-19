@@ -268,41 +268,6 @@ type PXCCredentials struct {
 	Port     int32
 }
 
-// StorageClass represents a cluster storage class information.
-// We use the Items.Provisioner to detect if we are running against minikube or AWS.
-// Returned value examples:
-// - AWS EKS: kubernetes.io/aws-ebs
-// - Minukube: k8s.io/minikube-hostpath.
-type StorageClass struct {
-	APIVersion string `json:"apiVersion"`
-	Items      []struct {
-		APIVersion string `json:"apiVersion"`
-		Kind       string `json:"kind"`
-		Metadata   struct {
-			Annotations struct {
-				KubectlKubernetesIoLastAppliedConfiguration string `json:"kubectl.kubernetes.io/last-applied-configuration"`
-				StorageclassKubernetesIoIsDefaultClass      string `json:"storageclass.kubernetes.io/is-default-class"`
-			} `json:"annotations"`
-			CreationTimestamp time.Time `json:"creationTimestamp"`
-			Labels            struct {
-				AddonmanagerKubernetesIoMode string `json:"addonmanager.kubernetes.io/mode"`
-			} `json:"labels"`
-			Name            string `json:"name"`
-			ResourceVersion string `json:"resourceVersion"`
-			SelfLink        string `json:"selfLink"`
-			UID             string `json:"uid"`
-		} `json:"metadata"`
-		Provisioner       string `json:"provisioner"`
-		ReclaimPolicy     string `json:"reclaimPolicy"`
-		VolumeBindingMode string `json:"volumeBindingMode"`
-	} `json:"items"`
-	Kind     string `json:"kind"`
-	Metadata struct {
-		ResourceVersion string `json:"resourceVersion"`
-		SelfLink        string `json:"selfLink"`
-	} `json:"metadata"`
-}
-
 type extraCRParams struct {
 	secretName  string
 	secrets     map[string][]byte
@@ -523,7 +488,7 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 	// Only if cluster is paused, allow resuming it. All other modifications are forbinden.
 	if params.Resume && clusterState == ClusterStatePaused {
 		cluster.Spec.Pause = false
-		return c.kube.Apply(ctx, cluster)
+		return c.kube.Apply(ctx, cluster.Original())
 	}
 
 	// This is to prevent concurrent updates
@@ -725,8 +690,9 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 			}
 			val.Message = strings.Join(cluster.Status.Messages, ";")
 		}
+		v := kube.PXCCluster(cluster)
 
-		val.State = c.getPXCClusterState(ctx, &cluster, c.crVersionMatchesPXCPodsVersion)
+		val.State = c.getPXCClusterState(ctx, &v, c.crVersionMatchesPXCPodsVersion)
 
 		if cluster.Spec.ProxySQL != nil {
 			val.ProxySQL = &ProxySQL{
@@ -750,17 +716,17 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 	return res, nil
 }
 
-func (c *K8sClient) getPXCClusterState(ctx context.Context, cluster *pxcv1.PerconaXtraDBCluster, crAndPodsMatchFunc func(context.Context, *pxcv1.PerconaXtraDBCluster) (bool, error)) ClusterState {
-	if cluster == new(pxcv1.PerconaXtraDBCluster) || cluster == nil {
+func (c *K8sClient) getPXCClusterState(ctx context.Context, cluster kube.DBCluster, crAndPodsMatchFunc func(context.Context, kube.DBCluster) (bool, error)) ClusterState {
+	if cluster == nil {
 		return ClusterStateInvalid
 	}
 
-	state := cluster.Status.Status
+	state := cluster.State()
 	if state == pxcv1.AppStateUnknown {
 		return ClusterStateInvalid
 	}
 	// Handle paused state for operator version >= 1.9.0 and for operator version <= 1.8.0.
-	if state == pxcv1.AppStatePaused || (cluster.Spec.Pause && state == pxcv1.AppStateReady) {
+	if state == pxcv1.AppStatePaused || (cluster.Pause() && state == pxcv1.AppStateReady) {
 		return ClusterStatePaused
 	}
 
@@ -1025,13 +991,13 @@ const (
 	updateStrategyRollingUpdate = "RollingUpdate"
 )
 
-func (c *K8sClient) changeImageInPXCCluster(cluster *pxcv1.PerconaXtraDBCluster, newImage string) error {
+func (c *K8sClient) changeImageInPXCCluster(cluster kube.DBCluster, newImage string) error {
 	// Check that only tag changed.
 	newImageAndTag := strings.Split(newImage, ":")
 	if len(newImageAndTag) != 2 {
 		return errors.New("image has to have version tag")
 	}
-	currentImageAndTag := strings.Split(cluster.Spec.PXC.Image, ":")
+	currentImageAndTag := strings.Split(cluster.CRImage(), ":")
 	if currentImageAndTag[0] != newImageAndTag[0] {
 		return errors.Errorf("expected image is %q, %q was given", currentImageAndTag[0], newImageAndTag[0])
 	}
@@ -1039,7 +1005,7 @@ func (c *K8sClient) changeImageInPXCCluster(cluster *pxcv1.PerconaXtraDBCluster,
 		return errors.Errorf("failed to change image: the database version %q is already in use", newImageAndTag[1])
 	}
 
-	cluster.Spec.PXC.Image = newImage
+	cluster.SetImage(newImage)
 	return nil
 }
 
@@ -1139,10 +1105,10 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 	return credentials, nil
 }
 
-func (c *K8sClient) crVersionMatchesPXCPodsVersion(ctx context.Context, cluster *pxcv1.PerconaXtraDBCluster) (bool, error) {
-	podLables := []string{"app.kubernetes.io/instance=" + cluster.Name, "app.kubernetes.io/component=pxc"}
+func (c *K8sClient) crVersionMatchesPXCPodsVersion(ctx context.Context, cluster kube.DBCluster) (bool, error) {
+	podLables := []string{"app.kubernetes.io/instance=" + cluster.GetName(), "app.kubernetes.io/component=pxc"}
 	databaseContainerNames := []string{"pxc"}
-	crImage := cluster.Spec.PXC.Image
+	crImage := cluster.CRImage()
 	pods, err := c.GetPods(ctx, "", strings.Join(podLables, ","))
 	if err != nil {
 		return false, err
