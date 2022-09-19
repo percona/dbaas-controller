@@ -42,6 +42,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
@@ -1135,7 +1136,8 @@ func TestGetPXCClusterState(t *testing.T) {
 		tt := test
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
 			t.Parallel()
-			clusterState := c.getPXCClusterState(ctx, tt.cluster, func(context.Context, *pxcv1.PerconaXtraDBCluster) (bool, error) {
+			ic := kube.PXCCluster(*tt.cluster)
+			clusterState := c.getPXCClusterState(ctx, &ic, func(context.Context, kube.DBCluster) (bool, error) {
 				return tt.crAndPodsVersionMatches, tt.matchingError
 			})
 			assert.Equal(t, tt.expectedState, clusterState, tt.name)
