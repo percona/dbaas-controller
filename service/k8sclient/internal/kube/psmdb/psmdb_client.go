@@ -85,10 +85,8 @@ func (c *PerconaServerMongoDBClient) PSMDBClusters(namespace string) PerconaServ
 type PerconaServerMongoDBInterface interface {
 	List(ctx context.Context, opts metav1.ListOptions) (*psmdbv1.PerconaServerMongoDBList, error)
 	Get(ctx context.Context, name string, options metav1.GetOptions) (*psmdbv1.PerconaServerMongoDB, error)
-	Create(context.Context, *psmdbv1.PerconaServerMongoDB) (*psmdbv1.PerconaServerMongoDB, error)
 	Patch(context.Context, string, types.PatchType, []byte, metav1.PatchOptions) (*psmdbv1.PerconaServerMongoDB, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Delete(ctx context.Context, name string, options metav1.DeleteOptions) error
 }
 
 type psmdbClient struct {
@@ -121,18 +119,6 @@ func (c *psmdbClient) Get(ctx context.Context, name string, opts metav1.GetOptio
 	return result, err
 }
 
-func (c *psmdbClient) Create(ctx context.Context, spec *psmdbv1.PerconaServerMongoDB) (*psmdbv1.PerconaServerMongoDB, error) {
-	result := new(psmdbv1.PerconaServerMongoDB)
-	err := c.restClient.
-		Post().
-		Namespace(c.namespace).
-		Resource(psmdbAPIKind).
-		Body(spec).
-		Do(ctx).
-		Into(result)
-	return result, err
-}
-
 func (c *psmdbClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*psmdbv1.PerconaServerMongoDB, error) {
 	result := new(psmdbv1.PerconaServerMongoDB)
 	err := c.restClient.
@@ -145,16 +131,6 @@ func (c *psmdbClient) Patch(ctx context.Context, name string, pt types.PatchType
 		Do(ctx).
 		Into(result)
 	return result, err
-}
-
-func (c *psmdbClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	return c.restClient.
-		Delete().
-		Namespace(c.namespace).
-		Name(name).
-		Body(&opts).
-		Do(ctx).
-		Error()
 }
 
 func (c *psmdbClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {

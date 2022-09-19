@@ -85,10 +85,8 @@ func (c *PerconaXtraDBClusterClient) PXCClusters(namespace string) PerconaXtraDB
 type PerconaXtraDBClusterInterface interface {
 	List(ctx context.Context, opts metav1.ListOptions) (*pxcv1.PerconaXtraDBClusterList, error)
 	Get(ctx context.Context, name string, options metav1.GetOptions) (*pxcv1.PerconaXtraDBCluster, error)
-	Create(context.Context, *pxcv1.PerconaXtraDBCluster) (*pxcv1.PerconaXtraDBCluster, error)
 	Patch(context.Context, string, types.PatchType, []byte, metav1.PatchOptions) (*pxcv1.PerconaXtraDBCluster, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Delete(ctx context.Context, name string, options metav1.DeleteOptions) error
 }
 
 type pxcClient struct {
@@ -121,18 +119,6 @@ func (c *pxcClient) Get(ctx context.Context, name string, opts metav1.GetOptions
 	return result, err
 }
 
-func (c *pxcClient) Create(ctx context.Context, spec *pxcv1.PerconaXtraDBCluster) (*pxcv1.PerconaXtraDBCluster, error) {
-	result := new(pxcv1.PerconaXtraDBCluster)
-	err := c.restClient.
-		Post().
-		Namespace(c.namespace).
-		Resource(apiKind).
-		Body(spec).
-		Do(ctx).
-		Into(result)
-	return result, err
-}
-
 func (c *pxcClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*pxcv1.PerconaXtraDBCluster, error) {
 	result := new(pxcv1.PerconaXtraDBCluster)
 	err := c.restClient.
@@ -145,16 +131,6 @@ func (c *pxcClient) Patch(ctx context.Context, name string, pt types.PatchType, 
 		Do(ctx).
 		Into(result)
 	return result, err
-}
-
-func (c *pxcClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	return c.restClient.
-		Delete().
-		Namespace(c.namespace).
-		Name(name).
-		Body(&opts).
-		Do(ctx).
-		Error()
 }
 
 func (c *pxcClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
