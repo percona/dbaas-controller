@@ -1150,6 +1150,7 @@ func TestGetPSMDBClusterState(t *testing.T) {
 		t.Skip("skipping because of environment variable")
 	}
 	type getClusterStateTestCase struct {
+		name                    string
 		matchingError           error
 		cluster                 *psmdbv1.PerconaServerMongoDB
 		expectedState           ClusterState
@@ -1157,15 +1158,18 @@ func TestGetPSMDBClusterState(t *testing.T) {
 	}
 	testCases := []getClusterStateTestCase{
 		// PSMDB
-		//{
-		//	expectedState: ClusterStateInvalid,
-		//},
 		{
+			name:          "nil cluster should return invalid state",
+			expectedState: ClusterStateInvalid,
+		},
+		{
+			name:          "empty cluster should return invalid state",
 			cluster:       new(psmdbv1.PerconaServerMongoDB),
 			expectedState: ClusterStateInvalid,
 		},
 		// Initializing.
 		{
+			name: "initializing cluster",
 			cluster: &psmdbv1.PerconaServerMongoDB{
 				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
@@ -1177,6 +1181,7 @@ func TestGetPSMDBClusterState(t *testing.T) {
 		},
 		// Ready.
 		{
+			name: "Ready cluster",
 			cluster: &psmdbv1.PerconaServerMongoDB{
 				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
@@ -1188,7 +1193,7 @@ func TestGetPSMDBClusterState(t *testing.T) {
 		},
 		// Pausing related states.
 		{
-			// Cluster is being paused, pxc operator <= 1.8.0.
+			name: "Cluster is being paused, pxc operator <= 1.8.0.",
 			cluster: &psmdbv1.PerconaServerMongoDB{
 				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: true,
@@ -1199,7 +1204,7 @@ func TestGetPSMDBClusterState(t *testing.T) {
 			expectedState:           ClusterStateChanging,
 		},
 		{
-			// Cluster is being paused, pxc operator >= 1.9.0.
+			name: "Cluster is being paused, pxc operator >= 1.9.0.",
 			cluster: &psmdbv1.PerconaServerMongoDB{
 				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: true,
@@ -1210,7 +1215,7 @@ func TestGetPSMDBClusterState(t *testing.T) {
 			expectedState:           ClusterStateChanging,
 		},
 		{
-			// Cluster is paused = no cluster pods.
+			name: "Cluster is paused = no cluster pods.",
 			cluster: &psmdbv1.PerconaServerMongoDB{
 				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: true,
@@ -1221,7 +1226,7 @@ func TestGetPSMDBClusterState(t *testing.T) {
 			expectedState:           ClusterStatePaused,
 		},
 		{
-			// Cluster is paused = no cluster pods.
+			name: "Cluster is paused = no cluster pods.",
 			cluster: &psmdbv1.PerconaServerMongoDB{
 				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: true,
@@ -1232,7 +1237,7 @@ func TestGetPSMDBClusterState(t *testing.T) {
 			expectedState:           ClusterStatePaused,
 		},
 		{
-			// Cluster just got instructed to resume.
+			name: "Cluster just got instructed to resume.",
 			cluster: &psmdbv1.PerconaServerMongoDB{
 				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
@@ -1244,7 +1249,7 @@ func TestGetPSMDBClusterState(t *testing.T) {
 		},
 		// Upgrading.
 		{
-			// No failure during checking cr and pods version.
+			name: "No failure during checking cr and pods version.",
 			cluster: &psmdbv1.PerconaServerMongoDB{
 				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
@@ -1255,7 +1260,7 @@ func TestGetPSMDBClusterState(t *testing.T) {
 			expectedState:           ClusterStateUpgrading,
 		},
 		{
-			// Checking cr and pods version failed.
+			name: "Checking cr and pods version failed.",
 			cluster: &psmdbv1.PerconaServerMongoDB{
 				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
@@ -1267,7 +1272,7 @@ func TestGetPSMDBClusterState(t *testing.T) {
 			expectedState:           ClusterStateInvalid,
 		},
 		{
-			// Not implemented state of the cluster.
+			name: "Not implemented state of the cluster.",
 			cluster: &psmdbv1.PerconaServerMongoDB{
 				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,

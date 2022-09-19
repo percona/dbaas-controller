@@ -756,6 +756,10 @@ func (c *K8sClient) getPXCClusterState(ctx context.Context, cluster *pxcv1.Perco
 		return ClusterStateInvalid
 	}
 
+	if cluster.Kind == "" {
+		return ClusterStateInvalid
+	}
+
 	state := cluster.Status.Status
 	if state == pxcv1.AppStateUnknown {
 		return ClusterStateInvalid
@@ -787,6 +791,9 @@ func (c *K8sClient) getPXCClusterState(ctx context.Context, cluster *pxcv1.Perco
 
 func (c *K8sClient) getClusterState(ctx context.Context, cluster *psmdbv1.PerconaServerMongoDB, crAndPodsMatchFunc func(context.Context, *psmdbv1.PerconaServerMongoDB) (bool, error)) ClusterState {
 	if cluster == new(psmdbv1.PerconaServerMongoDB) || cluster == nil {
+		return ClusterStateInvalid
+	}
+	if cluster.Kind == "" {
 		return ClusterStateInvalid
 	}
 	state := pxcv1.AppState(cluster.Status.State)
