@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -85,7 +86,7 @@ type PerconaXtraDBClusterInterface interface {
 	List(ctx context.Context, opts metav1.ListOptions) (*pxcv1.PerconaXtraDBClusterList, error)
 	Get(ctx context.Context, name string, options metav1.GetOptions) (*pxcv1.PerconaXtraDBCluster, error)
 	Create(context.Context, *pxcv1.PerconaXtraDBCluster) (*pxcv1.PerconaXtraDBCluster, error)
-	Update(context.Context, *pxcv1.PerconaXtraDBCluster) (*pxcv1.PerconaXtraDBCluster, error)
+	Patch(context.Context, string, types.PatchType, []byte, metav1.PatchOptions) (*pxcv1.PerconaXtraDBCluster, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 	Delete(ctx context.Context, name string, options metav1.DeleteOptions) error
 }
@@ -132,12 +133,15 @@ func (c *pxcClient) Create(ctx context.Context, spec *pxcv1.PerconaXtraDBCluster
 	return result, err
 }
 
-func (c *pxcClient) Update(ctx context.Context, spec *pxcv1.PerconaXtraDBCluster) (*pxcv1.PerconaXtraDBCluster, error) {
+func (c *pxcClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*pxcv1.PerconaXtraDBCluster, error) {
 	result := new(pxcv1.PerconaXtraDBCluster)
 	err := c.restClient.
-		Put().
+		Patch(pt).
 		Namespace(c.namespace).
 		Resource(apiKind).
+		Name(name).
+		Body(data).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Do(ctx).
 		Into(result)
 	return result, err

@@ -31,6 +31,7 @@ import (
 
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/AlekSi/pointer"
 	goversion "github.com/hashicorp/go-version"
@@ -563,7 +564,13 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 		cluster.Spec.HAProxy.Resources = c.updateCoreComputeResources(params.HAProxy.ComputeResources, cluster.Spec.HAProxy.Resources)
 	}
 
-	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, kube.PXCKind, cluster.Name, cluster)
+	patch, err := json.Marshal(cluster)
+	if err != nil {
+		return err
+	}
+	_, err = c.kube.PatchPXCCluster(ctx, cluster.Name, types.MergePatchType, patch, metav1.PatchOptions{})
+	return err
+
 }
 
 // DeletePXCCluster deletes Percona XtraDB cluster with provided name.
@@ -1007,7 +1014,12 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			return err
 		}
 	}
-	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "PerconaServerMongoDB", cluster.Name, cluster)
+	patch, err := json.Marshal(cluster)
+	if err != nil {
+		return err
+	}
+	_, err = c.kube.PatchPSMDBCluster(ctx, cluster.Name, types.MergePatchType, patch, metav1.PatchOptions{})
+	return err
 }
 
 const (
@@ -1779,7 +1791,11 @@ func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVe
 				},
 			},
 		}
-		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaservermongodb", cluster.Name, clusterPatch); err != nil {
+		patch, err := json.Marshal(clusterPatch)
+		if err != nil {
+			return err
+		}
+		if _, err := c.kube.PatchPSMDBCluster(ctx, cluster.Name, types.MergePatchType, patch, metav1.PatchOptions{}); err != nil {
 			return err
 		}
 	}
@@ -1821,9 +1837,14 @@ func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVers
 			}
 		}
 
-		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaxtradbcluster", cluster.Name, clusterPatch); err != nil {
+		patch, err := json.Marshal(clusterPatch)
+		if err != nil {
 			return err
 		}
+		if _, err := c.kube.PatchPXCCluster(ctx, cluster.Name, types.MergePatchType, patch, metav1.PatchOptions{}); err != nil {
+			return err
+		}
+
 	}
 	return nil
 }
@@ -1843,8 +1864,7 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 		}
 	}
 	// Change image inside operator deployment.
-	var deployment common.Deployment
-	err := c.kubeCtl.Get(ctx, "deployment", deploymentName, &deployment)
+	deployment, err := c.kube.GetDeployment(ctx, deploymentName)
 	if err != nil {
 		return errors.Wrap(err, "failed to get operator deployment")
 	}
@@ -1862,7 +1882,7 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 		return errors.Errorf("container image %q does not have any tag", deployment.Spec.Template.Spec.Containers[containerIndex].Image)
 	}
 	deployment.Spec.Template.Spec.Containers[containerIndex].Image = imageAndTag[0] + ":" + version
-	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeStrategic, "deployment", deploymentName, deployment)
+	return c.kube.PatchDeployment(ctx, deploymentName, deployment)
 }
 
 func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {

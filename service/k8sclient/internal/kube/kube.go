@@ -20,6 +20,7 @@ package kube
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -392,14 +393,34 @@ func (c *Client) DeletePXCCluster(ctx context.Context, name string) error {
 	return c.pxcClient.PXCClusters(c.namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
 
+func (c *Client) PatchPXCCluster(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*pxcv1.PerconaXtraDBCluster, error) {
+	return c.pxcClient.PXCClusters(c.namespace).Patch(ctx, name, pt, data, opts)
+}
+
 func (c *Client) ListPSMDBClusters(ctx context.Context) (*psmdbv1.PerconaServerMongoDBList, error) {
 	return c.psmdbClient.PSMDBClusters(c.namespace).List(ctx, metav1.ListOptions{})
 }
 func (c *Client) GetPSMDBCluster(ctx context.Context, name string) (*psmdbv1.PerconaServerMongoDB, error) {
 	return c.psmdbClient.PSMDBClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
+func (c *Client) PatchPSMDBCluster(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*psmdbv1.PerconaServerMongoDB, error) {
+	return c.psmdbClient.PSMDBClusters(c.namespace).Patch(ctx, name, pt, data, opts)
+}
 func (c *Client) DeletePSMDBCluster(ctx context.Context, name string) error {
 	return c.psmdbClient.PSMDBClusters(c.namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+func (c *Client) GetDeployment(ctx context.Context, name string) (*appsv1.Deployment, error) {
+	return c.clientset.AppsV1().Deployments(c.namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
+func (c *Client) PatchDeployment(ctx context.Context, name string, deployment *appsv1.Deployment) error {
+	patch, err := json.Marshal(deployment)
+	if err != nil {
+		return err
+	}
+	_, err = c.clientset.AppsV1().Deployments(c.namespace).Patch(ctx, name, types.StrategicMergePatchType, patch, metav1.PatchOptions{})
+	return err
 }
 
 func (c *Client) retrieveMetaFromObject(obj runtime.Object) (namespace, name string, err error) {

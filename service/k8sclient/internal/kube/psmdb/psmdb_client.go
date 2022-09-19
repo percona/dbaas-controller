@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -85,7 +86,7 @@ type PerconaServerMongoDBInterface interface {
 	List(ctx context.Context, opts metav1.ListOptions) (*psmdbv1.PerconaServerMongoDBList, error)
 	Get(ctx context.Context, name string, options metav1.GetOptions) (*psmdbv1.PerconaServerMongoDB, error)
 	Create(context.Context, *psmdbv1.PerconaServerMongoDB) (*psmdbv1.PerconaServerMongoDB, error)
-	Update(context.Context, *psmdbv1.PerconaServerMongoDB) (*psmdbv1.PerconaServerMongoDB, error)
+	Patch(context.Context, string, types.PatchType, []byte, metav1.PatchOptions) (*psmdbv1.PerconaServerMongoDB, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 	Delete(ctx context.Context, name string, options metav1.DeleteOptions) error
 }
@@ -132,12 +133,15 @@ func (c *psmdbClient) Create(ctx context.Context, spec *psmdbv1.PerconaServerMon
 	return result, err
 }
 
-func (c *psmdbClient) Update(ctx context.Context, spec *psmdbv1.PerconaServerMongoDB) (*psmdbv1.PerconaServerMongoDB, error) {
+func (c *psmdbClient) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*psmdbv1.PerconaServerMongoDB, error) {
 	result := new(psmdbv1.PerconaServerMongoDB)
 	err := c.restClient.
-		Put().
+		Patch(pt).
 		Namespace(c.namespace).
 		Resource(psmdbAPIKind).
+		Name(name).
+		Body(data).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Do(ctx).
 		Into(result)
 	return result, err
