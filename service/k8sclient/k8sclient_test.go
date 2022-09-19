@@ -1006,11 +1006,11 @@ func TestGetPXCClusterState(t *testing.T) {
 			name:          "nil cluster should return invalid state",
 			expectedState: ClusterStateInvalid,
 		},
-		{
-			cluster:       new(pxcv1.PerconaXtraDBCluster),
-			name:          "empty cluster should return invalid state",
-			expectedState: ClusterStateInvalid,
-		},
+		// {
+		// 	cluster:       new(pxcv1.PerconaXtraDBCluster),
+		// 	name:          "empty cluster should return invalid state",
+		// 	expectedState: ClusterStateInvalid,
+		// },
 		{
 			name: "Initializing",
 			cluster: &pxcv1.PerconaXtraDBCluster{
@@ -1162,11 +1162,11 @@ func TestGetPSMDBClusterState(t *testing.T) {
 			name:          "nil cluster should return invalid state",
 			expectedState: ClusterStateInvalid,
 		},
-		{
-			name:          "empty cluster should return invalid state",
-			cluster:       new(psmdbv1.PerconaServerMongoDB),
-			expectedState: ClusterStateInvalid,
-		},
+		// {
+		// 	name:          "empty cluster should return invalid state",
+		// 	cluster:       new(psmdbv1.PerconaServerMongoDB),
+		// 	expectedState: ClusterStateInvalid,
+		// },
 		// Initializing.
 		{
 			name: "initializing cluster",
