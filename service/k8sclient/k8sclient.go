@@ -545,7 +545,7 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 	}
 
 	if params.PXC != nil {
-		cluster.Spec.PXC.Resources = c.updateCoreComputeResources(params.PXC.ComputeResources, cluster.Spec.PXC.Resources)
+		cluster.Spec.PXC.Resources = c.updateComputeResources(params.PXC.ComputeResources, cluster.Spec.PXC.Resources)
 		if params.PXC.Image != "" && params.PXC.Image != cluster.Spec.PXC.Image {
 			// Let's upgrade the cluster.
 			err = c.changeImageInPXCCluster(cluster, params.PXC.Image)
@@ -556,11 +556,11 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 	}
 
 	if params.ProxySQL != nil {
-		cluster.Spec.ProxySQL.Resources = c.updateCoreComputeResources(params.ProxySQL.ComputeResources, cluster.Spec.ProxySQL.Resources)
+		cluster.Spec.ProxySQL.Resources = c.updateComputeResources(params.ProxySQL.ComputeResources, cluster.Spec.ProxySQL.Resources)
 	}
 
 	if params.HAProxy != nil {
-		cluster.Spec.HAProxy.Resources = c.updateCoreComputeResources(params.HAProxy.ComputeResources, cluster.Spec.HAProxy.Resources)
+		cluster.Spec.HAProxy.Resources = c.updateComputeResources(params.HAProxy.ComputeResources, cluster.Spec.HAProxy.Resources)
 	}
 
 	patch, err := json.Marshal(cluster)
@@ -712,7 +712,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 			PXC: &PXC{
 				Image:            cluster.Spec.PXC.Image,
 				DiskSize:         c.getPXCDiskSize(cluster.Spec.PXC.VolumeSpec),
-				ComputeResources: c.getCoreComputeResources(cluster.Spec.PXC.Resources),
+				ComputeResources: c.getComputeResources(cluster.Spec.PXC.Resources),
 			},
 			Pause: cluster.Spec.Pause,
 		}
@@ -731,7 +731,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 		if cluster.Spec.ProxySQL != nil {
 			val.ProxySQL = &ProxySQL{
 				DiskSize:         c.getPXCDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
-				ComputeResources: c.getCoreComputeResources(cluster.Spec.ProxySQL.Resources),
+				ComputeResources: c.getComputeResources(cluster.Spec.ProxySQL.Resources),
 			}
 			val.Exposed = cluster.Spec.ProxySQL.ServiceType != "" &&
 				cluster.Spec.ProxySQL.ServiceType != corev1.ServiceTypeClusterIP
@@ -740,7 +740,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 		}
 		if cluster.Spec.HAProxy != nil {
 			val.HAProxy = &HAProxy{
-				ComputeResources: c.getCoreComputeResources(cluster.Spec.HAProxy.Resources),
+				ComputeResources: c.getComputeResources(cluster.Spec.HAProxy.Resources),
 			}
 			val.Exposed = cluster.Spec.HAProxy.ServiceType != "" &&
 				cluster.Spec.HAProxy.ServiceType != corev1.ServiceTypeClusterIP
@@ -1004,7 +1004,7 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 
 	if params.Replicaset != nil {
-		cluster.Spec.Replsets[0].Resources = c.updateCoreComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
+		cluster.Spec.Replsets[0].Resources = c.updateComputeResources(params.Replicaset.ComputeResources, cluster.Spec.Replsets[0].Resources)
 	}
 	if params.Image != "" && params.Image != cluster.Spec.Image {
 		// We want to upgrade the cluster.
@@ -1218,7 +1218,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 			Pause: cluster.Spec.Pause,
 			Replicaset: &Replicaset{
 				DiskSize:         c.getPSMDBDiskSize(cluster.Spec.Replsets[0].VolumeSpec),
-				ComputeResources: c.getCoreComputeResources(cluster.Spec.Replsets[0].Resources),
+				ComputeResources: c.getComputeResources(cluster.Spec.Replsets[0].Resources),
 			},
 			Exposed: cluster.Spec.Sharding.Mongos.Expose.ExposeType != corev1.ServiceTypeClusterIP,
 			Image:   cluster.Spec.Image,
@@ -1274,7 +1274,7 @@ func (c *K8sClient) getDeletingPSMDBClusters(ctx context.Context, clusters []PSM
 	return pxcClusters, nil
 }
 
-func (c *K8sClient) getCoreComputeResources(resources corev1.ResourceRequirements) *ComputeResources {
+func (c *K8sClient) getComputeResources(resources corev1.ResourceRequirements) *ComputeResources {
 	res := new(ComputeResources)
 	cpuLimit, ok := resources.Limits[corev1.ResourceCPU]
 	cpu := (&cpuLimit).String()
@@ -1289,21 +1289,7 @@ func (c *K8sClient) getCoreComputeResources(resources corev1.ResourceRequirement
 	return res
 }
 
-func (c *K8sClient) getComputeResources(resources *common.PodResources) *ComputeResources {
-	if resources == nil || resources.Limits == nil {
-		return nil
-	}
-	res := new(ComputeResources)
-	if resources.Limits.CPU != "" {
-		res.CPUM = resources.Limits.CPU
-	}
-	if resources.Limits.Memory != "" {
-		res.MemoryBytes = resources.Limits.Memory
-	}
-	return res
-}
-
-func (c *K8sClient) setCoreComputeResources(res *ComputeResources) corev1.ResourceRequirements {
+func (c *K8sClient) setComputeResources(res *ComputeResources) corev1.ResourceRequirements {
 	req := corev1.ResourceRequirements{}
 	if res == nil {
 		return req
@@ -1318,19 +1304,7 @@ func (c *K8sClient) setCoreComputeResources(res *ComputeResources) corev1.Resour
 	return req
 }
 
-func (c *K8sClient) setComputeResources(res *ComputeResources) *common.PodResources {
-	if res == nil {
-		return nil
-	}
-	r := &common.PodResources{
-		Limits: new(common.ResourcesList),
-	}
-	r.Limits.CPU = res.CPUM
-	r.Limits.Memory = res.MemoryBytes
-	return r
-}
-
-func (c *K8sClient) updateCoreComputeResources(res *ComputeResources, podResources corev1.ResourceRequirements) corev1.ResourceRequirements {
+func (c *K8sClient) updateComputeResources(res *ComputeResources, podResources corev1.ResourceRequirements) corev1.ResourceRequirements {
 	if res == nil {
 		return podResources
 	}
@@ -1340,21 +1314,6 @@ func (c *K8sClient) updateCoreComputeResources(res *ComputeResources, podResourc
 
 	podResources.Limits[corev1.ResourceCPU] = resource.MustParse(res.CPUM)
 	podResources.Limits[corev1.ResourceMemory] = resource.MustParse(res.MemoryBytes)
-	return podResources
-}
-
-func (c *K8sClient) updateComputeResources(res *ComputeResources, podResources *common.PodResources) *common.PodResources {
-	if res == nil {
-		return podResources
-	}
-	if podResources == nil || podResources.Limits == nil {
-		podResources = &common.PodResources{
-			Limits: new(common.ResourcesList),
-		}
-	}
-
-	podResources.Limits.CPU = res.CPUM
-	podResources.Limits.Memory = res.MemoryBytes
 	return podResources
 }
 
@@ -2092,7 +2051,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 							MaxUnavailable: &maxUnavailable,
 						},
 						Affinity:  extra.affinity,
-						Resources: c.setCoreComputeResources(params.Replicaset.ComputeResources),
+						Resources: c.setComputeResources(params.Replicaset.ComputeResources),
 					},
 				},
 			},
@@ -2110,8 +2069,8 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 	}
 
 	if params.Replicaset != nil {
-		res.Spec.Replsets[0].Resources = c.setCoreComputeResources(params.Replicaset.ComputeResources)
-		res.Spec.Sharding.Mongos.Resources = c.setCoreComputeResources(params.Replicaset.ComputeResources)
+		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	}
 	if params.PMM != nil {
 		res.Spec.PMM = psmdbv1.PMMSpec{
@@ -2180,7 +2139,7 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 				{
 					Name: "rs0",
 					Size: params.Size,
-					// Resources: c.setCoreComputeResources(params.Replicaset.ComputeResources),
+					// Resources: c.setComputeResources(params.Replicaset.ComputeResources),
 					Arbiter: psmdbv1.Arbiter{
 						Enabled: false,
 						Size:    1,
@@ -2211,8 +2170,8 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 	}
 
 	if params.Replicaset != nil {
-		req.Spec.Replsets[0].Resources = c.setCoreComputeResources(params.Replicaset.ComputeResources)
-		req.Spec.Sharding.Mongos.Resources = c.setCoreComputeResources(params.Replicaset.ComputeResources)
+		req.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+		req.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	}
 	if params.PMM != nil {
 		req.Spec.PMM = psmdbv1.PMMSpec{
@@ -2283,8 +2242,8 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdbv1.PerconaServerMongoDB, params
 	spec.Spec.Image = extra.psmdbImage
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.Sharding.ConfigsvrReplSet.Size = params.Size
-	spec.Spec.Replsets[0].Resources = c.setCoreComputeResources(params.Replicaset.ComputeResources)
-	spec.Spec.Sharding.Mongos.Resources = c.setCoreComputeResources(params.Replicaset.ComputeResources)
+	spec.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+	spec.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	spec.Spec.Sharding.ConfigsvrReplSet.VolumeSpec = c.volumeSpec(params.Replicaset.DiskSize)
 	// FIXME: implement better solution
 	if spec.Spec.Backup.Image == "" {
@@ -2324,7 +2283,7 @@ func (c *K8sClient) overridePXCSpec(spec *pxc.PerconaXtraDBCluster, params *PXCP
 	}
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.PXC.PodSpec.Size = params.Size
-	spec.Spec.PXC.PodSpec.Resources = c.setCoreComputeResources(params.PXC.ComputeResources)
+	spec.Spec.PXC.PodSpec.Resources = c.setComputeResources(params.PXC.ComputeResources)
 	if spec.Spec.PXC.PodSpec.VolumeSpec != nil && spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim != nil && spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.StorageClassName != nil {
 		spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.Resources.Requests = corev1.ResourceList{
 			corev1.ResourceStorage: resource.MustParse(params.PXC.DiskSize),
@@ -2365,11 +2324,11 @@ func (c *K8sClient) overridePXCSpec(spec *pxc.PerconaXtraDBCluster, params *PXCP
 		spec.Spec.PXC.Expose = pxc.ServiceExpose{Enabled: false}
 	}
 	if params.ProxySQL != nil && spec.Spec.ProxySQL != nil {
-		spec.Spec.ProxySQL.Resources = c.setCoreComputeResources(params.ProxySQL.ComputeResources)
+		spec.Spec.ProxySQL.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
 		spec.Spec.ProxySQL.VolumeSpec = c.pxcVolumeSpec(params.ProxySQL.DiskSize)
 	}
 	if params.HAProxy != nil && spec.Spec.HAProxy != nil {
-		spec.Spec.HAProxy.Resources = c.setCoreComputeResources(params.HAProxy.ComputeResources)
+		spec.Spec.HAProxy.Resources = c.setComputeResources(params.HAProxy.ComputeResources)
 		if params.HAProxy.Image != "" {
 			spec.Spec.HAProxy.Image = params.HAProxy.Image
 		}
@@ -2418,7 +2377,7 @@ func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperator
 			PXC: &pxc.PXCSpec{
 				PodSpec: &pxc.PodSpec{
 					Size:            params.Size,
-					Resources:       c.setCoreComputeResources(params.PXC.ComputeResources),
+					Resources:       c.setComputeResources(params.PXC.ComputeResources),
 					Image:           pxcImage,
 					ImagePullPolicy: corev1.PullPolicy(string(pullPolicy)),
 					VolumeSpec:      c.pxcVolumeSpec(params.PXC.DiskSize),
@@ -2477,7 +2436,7 @@ func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperator
 		if params.ProxySQL.Image != "" {
 			spec.Spec.ProxySQL.Image = params.ProxySQL.Image
 		}
-		spec.Spec.ProxySQL.Resources = c.setCoreComputeResources(params.ProxySQL.ComputeResources)
+		spec.Spec.ProxySQL.Resources = c.setComputeResources(params.ProxySQL.ComputeResources)
 		spec.Spec.ProxySQL.VolumeSpec = c.pxcVolumeSpec(params.ProxySQL.DiskSize)
 	} else {
 		spec.Spec.HAProxy = new(pxcv1.HAProxySpec)
@@ -2486,7 +2445,7 @@ func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperator
 		if params.HAProxy.Image != "" {
 			podSpec.Image = params.HAProxy.Image
 		}
-		podSpec.Resources = c.setCoreComputeResources(params.HAProxy.ComputeResources)
+		podSpec.Resources = c.setComputeResources(params.HAProxy.ComputeResources)
 		spec.Spec.HAProxy.PodSpec = podSpec
 	}
 	if len(serviceType) != 0 {
