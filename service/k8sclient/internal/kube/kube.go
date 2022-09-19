@@ -376,51 +376,53 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 	return buf.String(), nil
 }
 
+// GetStatefulSet finds statefulset by name.
 func (c *Client) GetStatefulSet(ctx context.Context, name string) (*appsv1.StatefulSet, error) {
 	return c.clientset.AppsV1().StatefulSets(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
+// RestartStatefulSet finds statefulset by name and restarts it.
 func (c *Client) RestartStatefulSet(ctx context.Context, name string) (*appsv1.StatefulSet, error) {
 	patchData := fmt.Sprintf(restartTemplate, time.Now().UTC().Format(time.RFC3339))
 	return c.clientset.AppsV1().StatefulSets(c.namespace).Patch(ctx, name, types.StrategicMergePatchType, []byte(patchData), metav1.PatchOptions{})
 }
 
+// ListPXCClusters returns list of managed PCX clusters.
 func (c *Client) ListPXCClusters(ctx context.Context) (*pxcv1.PerconaXtraDBClusterList, error) {
 	return c.pxcClient.PXCClusters(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
+// GetPXCClusters returns PXC clusters by provided name.
 func (c *Client) GetPXCCluster(ctx context.Context, name string) (*pxcv1.PerconaXtraDBCluster, error) {
 	return c.pxcClient.PXCClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-func (c *Client) DeletePXCCluster(ctx context.Context, name string) error {
-	return c.pxcClient.PXCClusters(c.namespace).Delete(ctx, name, metav1.DeleteOptions{})
-}
-
+// PatchPXCCluster patches CR of managed PXC cluster.
 func (c *Client) PatchPXCCluster(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*pxcv1.PerconaXtraDBCluster, error) {
 	return c.pxcClient.PXCClusters(c.namespace).Patch(ctx, name, pt, data, opts)
 }
 
+// ListPSMDBClusters returns list of managed PSMDB clusters.
 func (c *Client) ListPSMDBClusters(ctx context.Context) (*psmdbv1.PerconaServerMongoDBList, error) {
 	return c.psmdbClient.PSMDBClusters(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
+// GetPSMDBCluster returns PSMDB cluster by provided name,
 func (c *Client) GetPSMDBCluster(ctx context.Context, name string) (*psmdbv1.PerconaServerMongoDB, error) {
 	return c.psmdbClient.PSMDBClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
+// PAtchPSMDBCluster patches CR of managed PSMDB cluster.
 func (c *Client) PatchPSMDBCluster(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*psmdbv1.PerconaServerMongoDB, error) {
 	return c.psmdbClient.PSMDBClusters(c.namespace).Patch(ctx, name, pt, data, opts)
 }
 
-func (c *Client) DeletePSMDBCluster(ctx context.Context, name string) error {
-	return c.psmdbClient.PSMDBClusters(c.namespace).Delete(ctx, name, metav1.DeleteOptions{})
-}
-
+// GetDeployment finds deployment.
 func (c *Client) GetDeployment(ctx context.Context, name string) (*appsv1.Deployment, error) {
 	return c.clientset.AppsV1().Deployments(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
+// PatchDeployment patches k8s deployment
 func (c *Client) PatchDeployment(ctx context.Context, name string, deployment *appsv1.Deployment) error {
 	patch, err := json.Marshal(deployment)
 	if err != nil {
