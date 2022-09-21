@@ -1700,8 +1700,9 @@ func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVe
 			Spec: kube.Spec{
 				CRVersion: newVersion,
 				Image:     strings.Replace(cluster.Spec.Image, oldVersion, newVersion, 1),
-				Backup: kube.BackupSpec{
-					Image: strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1),
+				UpgradeOptions: kube.UpgradeOptions{
+					Apply:    "recommended",
+					Schedule: "0 4 * * *",
 				},
 			},
 		}
