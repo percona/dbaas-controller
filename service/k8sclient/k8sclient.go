@@ -72,6 +72,13 @@ const (
 	ClusterStatePaused ClusterState = 5
 	// ClusterStateUpgrading represents a state of a cluster that is undergoing an upgrade.
 	ClusterStateUpgrading ClusterState = 6
+
+	appStateUnknown  string = "unknown"
+	appStateInit     string = "initializing"
+	appStatePaused   string = "paused"
+	appStateStopping string = "stopping"
+	appStateReady    string = "ready"
+	appStateError    string = "error"
 )
 
 const (
@@ -278,12 +285,12 @@ type extraCRParams struct {
 }
 
 // clustertatesMap matches pxc and psmdb app states to cluster states.
-var clusterPXCStatesMap = map[pxcv1.AppState]ClusterState{ //nolint:gochecknoglobals
-	pxcv1.AppStateInit:     ClusterStateChanging,
-	pxcv1.AppStateReady:    ClusterStateReady,
-	pxcv1.AppStateError:    ClusterStateFailed,
-	pxcv1.AppStatePaused:   ClusterStatePaused,
-	pxcv1.AppStateStopping: ClusterStateChanging,
+var clusterStatesMap = map[string]ClusterState{ //nolint:gochecknoglobals
+	appStateInit:     ClusterStateChanging,
+	appStateReady:    ClusterStateReady,
+	appStateError:    ClusterStateFailed,
+	appStatePaused:   ClusterStatePaused,
+	appStateStopping: ClusterStateChanging,
 }
 
 var (
@@ -729,7 +736,7 @@ func (c *K8sClient) getPXCClusterState(ctx context.Context, cluster kube.DBClust
 		return ClusterStatePaused
 	}
 
-	clusterState, ok := clusterPXCStatesMap[state]
+	clusterState, ok := clusterStatesMap[string(state)]
 	if !ok {
 		c.l.Warnf("failed to recognize cluster state: %q, setting status to ClusterStateChanging", state)
 		return ClusterStateChanging
@@ -753,16 +760,16 @@ func (c *K8sClient) getClusterState(ctx context.Context, cluster *psmdbv1.Percon
 	if cluster == new(psmdbv1.PerconaServerMongoDB) || cluster == nil {
 		return ClusterStateInvalid
 	}
-	state := pxcv1.AppState(cluster.Status.State)
-	if state == pxcv1.AppStateUnknown {
+	state := string(cluster.Status.State)
+	if state == appStateUnknown {
 		return ClusterStateInvalid
 	}
 	// Handle paused state for operator version >= 1.9.0 and for operator version <= 1.8.0.
-	if state == pxcv1.AppStatePaused || (cluster.Spec.Pause && state == pxcv1.AppStateReady) {
+	if state == appStatePaused || (cluster.Spec.Pause && state == appStateReady) {
 		return ClusterStatePaused
 	}
 
-	clusterState, ok := clusterPXCStatesMap[state]
+	clusterState, ok := clusterStatesMap[string(state)]
 	if !ok {
 		c.l.Warnf("failed to recognize cluster state: %q, setting status to ClusterStateChanging", state)
 		return ClusterStateChanging
@@ -1302,17 +1309,6 @@ func (c *K8sClient) getPSMDBDiskSize(volumeSpec *psmdbv1.VolumeSpec) string {
 		return "0"
 	}
 	return quantity.String()
-}
-
-func (c *K8sClient) getDiskSize(volumeSpec *common.VolumeSpec) string {
-	if volumeSpec == nil || volumeSpec.PersistentVolumeClaim == nil {
-		return "0"
-	}
-	quantity, ok := volumeSpec.PersistentVolumeClaim.Resources.Requests[common.ResourceStorage]
-	if !ok {
-		return "0"
-	}
-	return quantity
 }
 
 func (c *K8sClient) pxcVolumeSpec(diskSize string) *pxcv1.VolumeSpec {
