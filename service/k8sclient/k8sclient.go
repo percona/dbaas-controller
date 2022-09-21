@@ -99,7 +99,7 @@ const (
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
 	pullPolicy              = common.PullIfNotPresent
 	pxcCRFile               = "/srv/dbaas/crs/pxc.cr.yml"
-	psmdbv1CRFile           = "/srv/dbaas/crs/psmdbv1.cr.yml"
+	psmdbCRFile             = "/srv/dbaas/crs/psmdb.cr.yml"
 )
 
 // KubernetesClusterType represents kubernetes cluster type(eg: EKS, Minikube).
@@ -237,7 +237,7 @@ type PXCCluster struct {
 	HAProxy       *HAProxy
 }
 
-// PSMDBCluster contains information related to psmdbv1 cluster.
+// PSMDBCluster contains information related to psmdb cluster.
 type PSMDBCluster struct {
 	Name          string
 	Image         string
@@ -277,7 +277,7 @@ type extraCRParams struct {
 	operators   *Operators
 }
 
-// clustertatesMap matches pxc and psmdbv1 app states to cluster states.
+// clustertatesMap matches pxc and psmdb app states to cluster states.
 var clusterPXCStatesMap = map[pxcv1.AppState]ClusterState{ //nolint:gochecknoglobals
 	pxcv1.AppStateInit:     ClusterStateChanging,
 	pxcv1.AppStateReady:    ClusterStateReady,
@@ -837,7 +837,7 @@ func (c *K8sClient) getDeletingPXCClusters(ctx context.Context, clusters []PXCCl
 	return pxcClusters, nil
 }
 
-// ListPSMDBClusters returns list of psmdbv1 clusters and their statuses.
+// ListPSMDBClusters returns list of psmdb clusters and their statuses.
 func (c *K8sClient) ListPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error) {
 	clusters, err := c.getPSMDBClusters(ctx)
 	if err != nil {
@@ -908,7 +908,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return err
 	}
 
-	psmdbv1OperatorVersion, err := goversion.NewVersion(extra.operators.PsmdbOperatorVersion)
+	psmdbOperatorVersion, err := goversion.NewVersion(extra.operators.PsmdbOperatorVersion)
 	if err != nil {
 		return errors.Wrap(err, "cannot get the PSMDB operator version")
 	}
@@ -931,7 +931,7 @@ func (c *K8sClient) CreatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		extra.secrets["PMM_SERVER_PASSWORD"] = []byte(params.PMM.Password)
 	}
 
-	spec, err := c.createPSMDBSpec(psmdbv1OperatorVersion, params, &extra)
+	spec, err := c.createPSMDBSpec(psmdbOperatorVersion, params, &extra)
 	if err != nil {
 		return err
 	}
@@ -1047,9 +1047,9 @@ func (c *K8sClient) DeletePSMDBCluster(ctx context.Context, name string) error {
 		c.l.Errorf("cannot delete secret for %s: %v", name, err)
 	}
 
-	psmdbv1InternalSecrets := []string{"internal-%s-users", "%s-ssl", "%s-ssl-internal", "%s-mongodb-keyfile", "%s-mongodb-encryption-key"}
+	psmdbInternalSecrets := []string{"internal-%s-users", "%s-ssl", "%s-ssl-internal", "%s-mongodb-keyfile", "%s-mongodb-encryption-key"}
 
-	for _, secretTmpl := range psmdbv1InternalSecrets {
+	for _, secretTmpl := range psmdbInternalSecrets {
 		err = c.deleteSecret(ctx, fmt.Sprintf(secretTmpl, name))
 		if err != nil {
 			c.l.Errorf("cannot delete internal secret for %s: %v", name, err)
@@ -2059,7 +2059,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 
 func (c *K8sClient) createPSMDBSpec(operator *goversion.Version, params *PSMDBParams, extra *extraCRParams) (*psmdbv1.PerconaServerMongoDB, error) {
 	spec := new(psmdbv1.PerconaServerMongoDB)
-	bytes, err := ioutil.ReadFile(psmdbv1CRFile)
+	bytes, err := ioutil.ReadFile(psmdbCRFile)
 	if err == nil {
 		err = c.unmarshalTemplate(bytes, spec)
 		if err != nil {
