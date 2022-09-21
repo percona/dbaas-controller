@@ -48,7 +48,6 @@ import (
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/monitoring"
 	"github.com/percona-platform/dbaas-controller/utils/convertors"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
@@ -312,7 +311,6 @@ var pmmClientImage string
 
 // K8sClient is a client for Kubernetes.
 type K8sClient struct {
-	kubeCtl    *kubectl.KubeCtl
 	kube       *kube.Client
 	l          logger.Logger
 	kubeconfig string
@@ -370,18 +368,13 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "K8sClient")
 
-	kubeCtl, err := kubectl.NewKubeCtl(ctx, kubeconfig)
-	if err != nil {
-		return nil, err
-	}
 	kube, err := kube.NewFromKubeConfigString(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
 	return &K8sClient{
-		kubeCtl: kubeCtl,
-		kube:    kube,
-		l:       l,
+		kube: kube,
+		l:    l,
 		client: &http.Client{
 			Timeout: time.Second * 5,
 			Transport: &http.Transport{
@@ -391,11 +384,6 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 		},
 		kubeconfig: kubeconfig,
 	}, nil
-}
-
-// Cleanup removes temporary files created by that object.
-func (c *K8sClient) Cleanup() error {
-	return c.kubeCtl.Cleanup()
 }
 
 // ListPXCClusters returns list of Percona XtraDB clusters and their statuses.
