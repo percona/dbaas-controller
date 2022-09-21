@@ -1927,7 +1927,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       params.Name,
-			Finalizers: []string{"delete-psmdbv1-pvc"},
+			Finalizers: []string{"delete-psmdb-pvc"},
 		},
 		Spec: psmdbv1.PerconaServerMongoDBSpec{
 			UpdateStrategy: updateStrategyRollingUpdate,
@@ -1935,42 +1935,6 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 			Image:          extra.psmdbImage,
 			Secrets: &psmdbv1.SecretsSpec{
 				Users: extra.secretName,
-			},
-			Mongod: &psmdbv1.MongodSpec{
-				Net: &psmdbv1.MongodSpecNet{
-					Port: 27017,
-				},
-				OperationProfiling: &psmdbv1.MongodSpecOperationProfiling{
-					Mode: psmdbv1.OperationProfilingModeSlowOp,
-				},
-				Security: &psmdbv1.MongodSpecSecurity{
-					RedactClientLogData:  false,
-					EnableEncryption:     pointer.ToBool(true),
-					EncryptionKeySecret:  fmt.Sprintf("%s-mongodb-encryption-key", params.Name),
-					EncryptionCipherMode: psmdbv1.MongodChiperModeCBC,
-				},
-				SetParameter: &psmdbv1.MongodSpecSetParameter{
-					TTLMonitorSleepSecs: 60,
-				},
-				Storage: &psmdbv1.MongodSpecStorage{
-					Engine: psmdbv1.StorageEngineWiredTiger,
-					MMAPv1: &psmdbv1.MongodSpecMMAPv1{
-						NsSize:     16,
-						Smallfiles: false,
-					},
-					WiredTiger: &psmdbv1.MongodSpecWiredTiger{
-						CollectionConfig: &psmdbv1.MongodSpecWiredTigerCollectionConfig{
-							BlockCompressor: &psmdbv1.WiredTigerCompressorSnappy,
-						},
-						EngineConfig: &psmdbv1.MongodSpecWiredTigerEngineConfig{
-							DirectoryForIndexes: false,
-							JournalCompressor:   &psmdbv1.WiredTigerCompressorSnappy,
-						},
-						IndexConfig: &psmdbv1.MongodSpecWiredTigerIndexConfig{
-							PrefixCompression: true,
-						},
-					},
-				},
 			},
 			Sharding: psmdbv1.Sharding{
 				Enabled: true,
@@ -2019,11 +1983,49 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 						Affinity:  extra.affinity,
 						Resources: c.setComputeResources(params.Replicaset.ComputeResources),
 					},
+					Configuration: psmdbv1.MongoConfiguration("      operationProfiling:\n" +
+						"        mode: " + string(psmdbv1.OperationProfilingModeSlowOp) + "\n"),
 				},
 			},
 
 			PMM: psmdbv1.PMMSpec{
 				Enabled: false,
+			},
+			Mongod: &psmdbv1.MongodSpec{
+				Net: &psmdbv1.MongodSpecNet{
+					Port: 27017,
+				},
+				OperationProfiling: &psmdbv1.MongodSpecOperationProfiling{
+					Mode: psmdbv1.OperationProfilingModeSlowOp,
+				},
+				Security: &psmdbv1.MongodSpecSecurity{
+					RedactClientLogData:  false,
+					EnableEncryption:     pointer.ToBool(true),
+					EncryptionKeySecret:  fmt.Sprintf("%s-mongodb-encryption-key", params.Name),
+					EncryptionCipherMode: psmdbv1.MongodChiperModeCBC,
+				},
+				SetParameter: &psmdbv1.MongodSpecSetParameter{
+					TTLMonitorSleepSecs: 60,
+				},
+				Storage: &psmdbv1.MongodSpecStorage{
+					Engine: psmdbv1.StorageEngineWiredTiger,
+					MMAPv1: &psmdbv1.MongodSpecMMAPv1{
+						NsSize:     16,
+						Smallfiles: false,
+					},
+					WiredTiger: &psmdbv1.MongodSpecWiredTiger{
+						CollectionConfig: &psmdbv1.MongodSpecWiredTigerCollectionConfig{
+							BlockCompressor: &psmdbv1.WiredTigerCompressorSnappy,
+						},
+						EngineConfig: &psmdbv1.MongodSpecWiredTigerEngineConfig{
+							DirectoryForIndexes: false,
+							JournalCompressor:   &psmdbv1.WiredTigerCompressorSnappy,
+						},
+						IndexConfig: &psmdbv1.MongodSpecWiredTigerIndexConfig{
+							PrefixCompression: true,
+						},
+					},
+				},
 			},
 
 			Backup: psmdbv1.BackupSpec{
@@ -2055,107 +2057,6 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 	return res
 }
 
-func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams) *psmdbv1.PerconaServerMongoDB { //nolint:funlen
-	maxUnavailable := intstr.FromInt(1)
-	req := &psmdbv1.PerconaServerMongoDB{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: c.getAPIVersionForPSMDBOperator(extra.operators.PsmdbOperatorVersion),
-			Kind:       kube.PSMDBKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       params.Name,
-			Finalizers: []string{"delete-psmdbv1-pvc"},
-		},
-		Spec: psmdbv1.PerconaServerMongoDBSpec{
-			UpdateStrategy: updateStrategyRollingUpdate,
-			CRVersion:      extra.operators.PsmdbOperatorVersion,
-			Image:          extra.psmdbImage,
-			Secrets: &psmdbv1.SecretsSpec{
-				Users: extra.secretName,
-			},
-			Sharding: psmdbv1.Sharding{
-				Enabled: true,
-				ConfigsvrReplSet: &psmdbv1.ReplsetSpec{
-					Size:       3,
-					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
-					Arbiter: psmdbv1.Arbiter{
-						Enabled: false,
-						Size:    1,
-						MultiAZ: psmdbv1.MultiAZ{
-							Affinity: extra.affinity,
-						},
-					},
-					MultiAZ: psmdbv1.MultiAZ{
-						Affinity: extra.affinity,
-					},
-				},
-				Mongos: &psmdbv1.MongosSpec{
-					Size: params.Size,
-					MultiAZ: psmdbv1.MultiAZ{
-						Affinity: extra.affinity,
-					},
-					Expose: psmdbv1.MongosExpose{
-						ExposeType: extra.expose.ExposeType,
-					},
-				},
-			},
-			Replsets: []*psmdbv1.ReplsetSpec{
-				// Note: in case to support single node environments
-				// we need to expose primary mongodb node
-				{
-					Name: "rs0",
-					Size: params.Size,
-					// Resources: c.setComputeResources(params.Replicaset.ComputeResources),
-					Arbiter: psmdbv1.Arbiter{
-						Enabled: false,
-						Size:    1,
-						MultiAZ: psmdbv1.MultiAZ{
-							Affinity: extra.affinity,
-						},
-					},
-					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
-					MultiAZ: psmdbv1.MultiAZ{
-						PodDisruptionBudget: &psmdbv1.PodDisruptionBudgetSpec{
-							MaxUnavailable: &maxUnavailable,
-						},
-						Affinity: extra.affinity,
-					},
-					Configuration: psmdbv1.MongoConfiguration("      operationProfiling:\n" +
-						"        mode: " + string(psmdbv1.OperationProfilingModeSlowOp) + "\n"),
-				},
-			},
-			PMM: psmdbv1.PMMSpec{
-				Enabled: false,
-			},
-			Backup: psmdbv1.BackupSpec{
-				Enabled:            true,
-				Image:              extra.backupImage,
-				ServiceAccountName: "percona-server-mongodb-operator",
-			},
-		},
-	}
-
-	if params.Replicaset != nil {
-		req.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
-		req.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
-	}
-	if params.PMM != nil {
-		req.Spec.PMM = psmdbv1.PMMSpec{
-			Enabled:    true,
-			ServerHost: params.PMM.PublicAddress,
-			Image:      pmmClientImage,
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("300M"),
-					corev1.ResourceCPU:    resource.MustParse("500m"),
-				},
-			},
-		}
-	}
-
-	return req
-}
-
 func (c *K8sClient) createPSMDBSpec(operator *goversion.Version, params *PSMDBParams, extra *extraCRParams) (*psmdbv1.PerconaServerMongoDB, error) {
 	spec := new(psmdbv1.PerconaServerMongoDB)
 	bytes, err := ioutil.ReadFile(psmdbv1CRFile)
@@ -2172,13 +2073,7 @@ func (c *K8sClient) createPSMDBSpec(operator *goversion.Version, params *PSMDBPa
 		}
 		return c.overridePSMDBSpec(spec, params, *extra), nil
 	}
-
-	switch {
-	case operator.GreaterThanOrEqual(v112):
-		return c.getPSMDBSpec112Plus(params, *extra), nil
-	default:
-		return c.getPSMDBSpec(params, *extra), nil
-	}
+	return c.getPSMDBSpec(params, *extra), nil
 }
 
 func (c *K8sClient) createPXCSpecFromParams(params *PXCParams, secretName *string, pxcOperatorVersion, storageName string, serviceType corev1.ServiceType) (*pxcv1.PerconaXtraDBCluster, error) {
