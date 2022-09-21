@@ -68,7 +68,13 @@ func NewKubeCtl(ctx context.Context, kubeconfig string) (*KubeCtl, error) {
 	l = l.WithField("component", "kubectl")
 
 	// Firstly lookup default kubectl to get Kubernetes Server version.
+	// If the KUBECTL_CMD has a value, put it in the top of the list. This enables you
+	// to force using a local kubectl to run tests locally, against EKS clusters.
 	defKubectls := []string{defaultPmmServerKubectl, defaultDevEnvKubectl}
+	if kubectlcmd := os.Getenv("KUBECTL_CMD"); kubectlcmd != "" {
+		defKubectls = append([]string{kubectlcmd}, defKubectls...)
+	}
+
 	defaultKubectl, err := lookupCorrectKubectlCmd(nil, defKubectls)
 	if err != nil {
 		return nil, err
