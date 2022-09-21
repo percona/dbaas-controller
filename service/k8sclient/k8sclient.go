@@ -1696,11 +1696,11 @@ func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVe
 	}
 
 	for _, cluster := range list.Items {
-		clusterPatch := &psmdbv1.PerconaServerMongoDB{
-			Spec: psmdbv1.PerconaServerMongoDBSpec{
+		clusterPatch := &kube.OperatorPatch{
+			Spec: kube.Spec{
 				CRVersion: newVersion,
 				Image:     strings.Replace(cluster.Spec.Image, oldVersion, newVersion, 1),
-				Backup: psmdbv1.BackupSpec{
+				Backup: kube.BackupSpec{
 					Image: strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1),
 				},
 			},

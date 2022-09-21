@@ -73,6 +73,22 @@ var restartTemplate = `{
     }
 }`
 
+type BackupSpec struct {
+	Image string `json:"image"`
+}
+type PXCSpec struct {
+	Image string `json:"image"`
+}
+type Spec struct {
+	CRVersion string     `json:"crVersion"`
+	Image     string     `json:"image"`
+	PXCSpec   PXCSpec    `json:"pxc"`
+	Backup    BackupSpec `json:"backup"`
+}
+type OperatorPatch struct {
+	Spec Spec `json:"spec"`
+}
+
 // configGetter stores kubeconfig string to convert it to the final object
 type configGetter struct {
 	kubeconfig string
