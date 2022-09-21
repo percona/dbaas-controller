@@ -19,11 +19,10 @@ package psmdb
 
 import (
 	"context"
+	"sync"
 
 	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -35,22 +34,6 @@ const (
 	psmdbAPIKind = "perconaservermongodbs"
 )
 
-var (
-	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
-	AddToScheme        = SchemeBuilder.AddToScheme
-	SchemeGroupVersion = schema.GroupVersion{Group: "psmdb.percona.com", Version: "v1"}
-)
-
-func addKnownTypes(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypes(SchemeGroupVersion,
-		new(psmdbv1.PerconaServerMongoDB),
-		new(psmdbv1.PerconaServerMongoDBList),
-	)
-
-	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
-	return nil
-}
-
 type PerconaServerMongoDBClientInterface interface {
 	PSMDBClusters(namespace string) PerconaServerMongoDBInterface
 }
@@ -59,13 +42,19 @@ type PerconaServerMongoDBClient struct {
 	restClient rest.Interface
 }
 
+var addToScheme sync.Once
+
 func NewForConfig(c *rest.Config) (*PerconaServerMongoDBClient, error) {
 	config := *c
-	config.ContentConfig.GroupVersion = &SchemeGroupVersion
+	config.ContentConfig.GroupVersion = &psmdbv1.SchemeGroupVersion
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
-	AddToScheme(scheme.Scheme)
+
+	addToScheme.Do(func() {
+		psmdbv1.SchemeBuilder.AddToScheme(scheme.Scheme)
+		metav1.AddToGroupVersion(scheme.Scheme, psmdbv1.SchemeGroupVersion)
+	})
 
 	client, err := rest.RESTClientFor(&config)
 	if err != nil {

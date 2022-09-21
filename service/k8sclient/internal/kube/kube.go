@@ -26,7 +26,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"sync"
 	"text/tabwriter"
 	"time"
 
@@ -140,7 +139,6 @@ type Client struct {
 	clientset   *kubernetes.Clientset
 	pxcClient   *pxc.PerconaXtraDBClusterClient
 	psmdbClient *psmdb.PerconaServerMongoDBClient
-	mu          *sync.Mutex
 	restConfig  *rest.Config
 	namespace   string
 }
@@ -188,7 +186,6 @@ func NewFromIncluster() (*Client, error) {
 	c := &Client{
 		clientset:  clientset,
 		restConfig: config,
-		mu:         new(sync.Mutex),
 	}
 	err = c.setup()
 	return c, err
@@ -210,7 +207,6 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	c := &Client{
 		clientset:  clientset,
 		restConfig: config,
-		mu:         new(sync.Mutex),
 	}
 	err = c.setup()
 	return c, err

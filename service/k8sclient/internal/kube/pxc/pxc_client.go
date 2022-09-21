@@ -19,11 +19,10 @@ package pxc
 
 import (
 	"context"
+	"sync"
 
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -35,22 +34,6 @@ const (
 	apiKind = "perconaxtradbclusters"
 )
 
-var (
-	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
-	SchemeGroupVersion = schema.GroupVersion{Group: "pxc.percona.com", Version: "v1"}
-	AddToScheme        = SchemeBuilder.AddToScheme
-)
-
-func addKnownTypes(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypes(SchemeGroupVersion,
-		new(pxcv1.PerconaXtraDBCluster),
-		new(pxcv1.PerconaXtraDBClusterList),
-	)
-
-	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
-	return nil
-}
-
 type PerconaXtraDBClusterClientInterface interface {
 	PXCClusters(namespace string) PerconaXtraDBClusterInterface
 }
@@ -59,13 +42,19 @@ type PerconaXtraDBClusterClient struct {
 	restClient rest.Interface
 }
 
+var addToScheme sync.Once
+
 func NewForConfig(c *rest.Config) (*PerconaXtraDBClusterClient, error) {
 	config := *c
-	config.ContentConfig.GroupVersion = &SchemeGroupVersion
+	config.ContentConfig.GroupVersion = &pxcv1.SchemeGroupVersion
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
-	AddToScheme(scheme.Scheme)
+
+	addToScheme.Do(func() {
+		pxcv1.SchemeBuilder.AddToScheme(scheme.Scheme)
+		metav1.AddToGroupVersion(scheme.Scheme, pxcv1.SchemeGroupVersion)
+	})
 
 	client, err := rest.RESTClientFor(&config)
 	if err != nil {
