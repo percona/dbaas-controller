@@ -416,10 +416,12 @@ func (c *Client) GetNodes(ctx context.Context) (*corev1.NodeList, error) {
 
 // GetLogs returns logs for pod
 func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, error) {
+	defaultLogLines := int64(3000)
 	options := new(corev1.PodLogOptions)
 	if container != "" {
 		options.Container = container
 	}
+	options.TailLines = &defaultLogLines
 	buf := new(bytes.Buffer)
 
 	req := c.clientset.CoreV1().Pods(c.namespace).GetLogs(pod, options)

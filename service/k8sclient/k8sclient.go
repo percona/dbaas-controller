@@ -385,6 +385,9 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 		kubeconfig: kubeconfig,
 	}, nil
 }
+func (c *K8sClient) Cleanup() error {
+	return nil
+}
 
 // ListPXCClusters returns list of Percona XtraDB clusters and their statuses.
 func (c *K8sClient) ListPXCClusters(ctx context.Context) ([]PXCCluster, error) {
