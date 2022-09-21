@@ -454,6 +454,8 @@ func (c *K8sClient) CreatePXCCluster(ctx context.Context, params *PXCParams) err
 	// This feature cannot be tested with minikube. Please use EKS for testing.
 	if clusterType := c.GetKubernetesClusterType(ctx); clusterType != MinikubeClusterType && params.Expose {
 		serviceType = corev1.ServiceTypeLoadBalancer
+	} else {
+		serviceType = corev1.ServiceTypeNodePort
 	}
 
 	spec, err := c.createPXCSpecFromParams(params, &secretName, operators.PXCOperatorVersion, storageName, serviceType)
@@ -2268,9 +2270,19 @@ func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperator
 		}
 	}
 
-	var podSpec pxcv1.PodSpec
+	podSpec := pxcv1.PodSpec{
+		Enabled:         true,
+		ImagePullPolicy: corev1.PullPolicy(string(pullPolicy)),
+		Size:            params.Size,
+		Affinity: &pxcv1.PodAffinity{
+			TopologyKey: pointer.ToString(pxcv1.AffinityTopologyKeyOff),
+		},
+	}
+	if len(serviceType) != 0 {
+		podSpec.ServiceType = serviceType
+	}
 	if params.ProxySQL != nil {
-		spec.Spec.ProxySQL = new(pxcv1.PodSpec)
+		spec.Spec.ProxySQL = &podSpec
 		spec.Spec.ProxySQL.Image = fmt.Sprintf(pxcProxySQLDefaultImageTemplate, pxcOperatorVersion)
 		if params.ProxySQL.Image != "" {
 			spec.Spec.ProxySQL.Image = params.ProxySQL.Image
@@ -2279,7 +2291,6 @@ func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperator
 		spec.Spec.ProxySQL.VolumeSpec = c.pxcVolumeSpec(params.ProxySQL.DiskSize)
 	} else {
 		spec.Spec.HAProxy = new(pxcv1.HAProxySpec)
-		podSpec = pxcv1.PodSpec{}
 		podSpec.Image = fmt.Sprintf(pxcHAProxyDefaultImageTemplate, pxcOperatorVersion)
 		if params.HAProxy.Image != "" {
 			podSpec.Image = params.HAProxy.Image
@@ -2287,16 +2298,7 @@ func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperator
 		podSpec.Resources = c.setComputeResources(params.HAProxy.ComputeResources)
 		spec.Spec.HAProxy.PodSpec = podSpec
 	}
-	if len(serviceType) != 0 {
-		podSpec.ServiceType = serviceType
-	}
 
-	podSpec.Enabled = true
-	podSpec.ImagePullPolicy = corev1.PullPolicy(string(pullPolicy))
-	podSpec.Size = params.Size
-	podSpec.Affinity = &pxcv1.PodAffinity{
-		TopologyKey: pointer.ToString(pxcv1.AffinityTopologyKeyOff),
-	}
 	return spec
 }
 
