@@ -18,6 +18,8 @@
 package psmdb
 
 import (
+	"time"
+
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 )
 
@@ -28,9 +30,12 @@ const (
 	PerconaServerMongoDBKind = "PerconaServerMongoDB"
 )
 
+// Ensure it implements the DatabaseCluster interface
+var _ common.DatabaseCluster = (*PerconaServerMongoDB)(nil)
+
 // PerconaServerMongoDB is the Schema for the perconaservermongodbs API.
 type PerconaServerMongoDB struct {
-	common.TypeMeta   // anonymous for embedding
+	common.TypeMeta   `json:",inline"`
 	common.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   *PerconaServerMongoDBSpec   `json:"spec,omitempty"`
@@ -108,11 +113,37 @@ const (
 	platformOpenshift  platform = "openshift"
 )
 
+// ObjectHeader is the kubectl get response header. It is a partial PSMDB object only used to
+// parse the CR version so we can decode the response into the appropriate stuct type.
+type MinimumObjectListSpec struct {
+	APIVersion string `json:"apiVersion"`
+	Items      []struct {
+		APIVersion string `json:"apiVersion"`
+		Kind       string `json:"kind"`
+		Metadata   struct {
+			Annotations struct {
+				KubectlKubernetesIoLastAppliedConfiguration string `json:"kubectl.kubernetes.io/last-applied-configuration"`
+			} `json:"annotations"`
+			CreationTimestamp time.Time `json:"creationTimestamp"`
+			Finalizers        []string  `json:"finalizers"`
+			Generation        int       `json:"generation"`
+			Name              string    `json:"name"`
+			Namespace         string    `json:"namespace"`
+			ResourceVersion   string    `json:"resourceVersion"`
+			UID               string    `json:"uid"`
+		} `json:"metadata"`
+		Spec struct {
+			CrVersion string `json:"crVersion"`
+		} `json:"spec"`
+	} `json:"items"`
+}
+
 type ShardingSpec struct {
 	Enabled            bool                          `json:"enabled"`
 	ConfigsvrReplSet   *ReplsetSpec                  `json:"configsvrReplSet"`
-	Mongos             *ReplsetSpec                  `json:"mongos"`
+	Mongos             *MongosSpec                   `json:"mongos"`
 	OperationProfiling *MongodSpecOperationProfiling `json:"operationProfiling"`
+	Expose             *Expose                       `json:"expose"`
 }
 
 // UpgradeOptions specify how and to what version we update.
@@ -132,6 +163,7 @@ type PerconaServerMongoDBSpec struct {
 	RunUID                  int64                  `json:"runUid,omitempty"`
 	Platform                *platform              `json:"platform,omitempty"`
 	Image                   string                 `json:"image,omitempty"`
+	ImagePullPolicy         string                 `json:"imagePullPolicy,omitempty"`
 	Mongod                  *MongodSpec            `json:"mongod,omitempty"`
 	Replsets                []*ReplsetSpec         `json:"replsets,omitempty"`
 	Secrets                 *SecretsSpec           `json:"secrets,omitempty"`
@@ -224,12 +256,29 @@ type PodAffinity struct {
 
 // Expose holds information about how the cluster is exposed to the worl via ingress.
 type Expose struct {
-	Enabled    bool               `json:"enabled"`
-	ExposeType common.ServiceType `json:"exposeType"`
+	Enabled                  bool               `json:"enabled"`
+	ExposeType               common.ServiceType `json:"exposeType,omitempty"`
+	LoadBalancerSourceRanges []string           `json:"loadBalancerSourceRanges,omitempty"`
+	ServiceAnnotations       map[string]string  `json:"serviceAnnotations,omitempty"`
+}
+type MongosExpose struct {
+	Enabled                  bool               `json:"enabled,omitempty"`
+	ExposeType               common.ServiceType `json:"exposeType,omitempty"`
+	ServicePerPod            bool               `json:"servicePerPod,omitempty"`
+	LoadBalancerSourceRanges []string           `json:"loadBalancerSourceRanges,omitempty"`
+	ServiceAnnotations       map[string]string  `json:"serviceAnnotations,omitempty"`
 }
 
 // ReplsetSpec defines replicaton set specification.
 type ReplsetSpec struct {
+	Affinity  *PodAffinity `json:"affinity,omitempty"`  // Operator 1.12+
+	Nonvoting *Nonvoting   `json:"nonvoting,omitempty"` // Operator 1.12+
+	// ConfigurationOptions options that will be passed as defined in MongoDB configuration file.
+	// See https://github.com/percona/percona-server-mongodb-operator/blob/b304b6c5bb0df2e6e7dac637d23f10fbcbd4800e/pkg/apis/psmdb/v1/psmdb_types.go#L353-L367
+	// It must be a multi line string with indentation to produce a map, like:
+	// operationProfiling:
+	//     mode: slowOp
+	Configuration       string                          `json:"configuration,omitempty"` // Operator 1.12+
 	Expose              Expose                          `json:"expose,omitempty"`
 	Size                int32                           `json:"size"`
 	Arbiter             Arbiter                         `json:"arbiter,omitempty"`
@@ -255,9 +304,20 @@ type SecretsSpec struct {
 
 // MongosSpec defines MongoDB specification.
 type MongosSpec struct {
-	*common.PodResources `json:"resources,omitempty"`
-	Port                 int32 `json:"port,omitempty"`
-	HostPort             int32 `json:"hostPort,omitempty"`
+	MultiAZ `json:",inline"`
+
+	Port                     int32                   `json:"port,omitempty"`
+	HostPort                 int32                   `json:"hostPort,omitempty"`
+	SetParameter             *MongosSpecSetParameter `json:"setParameter,omitempty"`
+	AuditLog                 *MongoSpecAuditLog      `json:"auditLog,omitempty"`
+	Expose                   MongosExpose            `json:"expose,omitempty"`
+	Size                     int32                   `json:"size,omitempty"`
+	ReadinessProbe           map[string]interface{}  `json:"readinessProbe,omitempty"`
+	LivenessProbe            *livenessProbeExtended  `json:"livenessProbe,omitempty"`
+	PodSecurityContext       map[string]interface{}  `json:"podSecurityContext,omitempty"`
+	ContainerSecurityContext map[string]interface{}  `json:"containerSecurityContext,omitempty"`
+	Configuration            MongoConfiguration      `json:"configuration,omitempty"`
+	Resources                *common.PodResources    `json:"resources,omitempty"`
 }
 
 // MongodSpec defines mongod specification.
@@ -468,3 +528,33 @@ type Arbiter struct {
 	Size    int32 `json:"size"`
 	MultiAZ
 }
+
+// Nonvoting Non voting members.
+type Nonvoting struct {
+	Enabled             bool                            `json:"enabled,omitempty"`
+	Size                int                             `json:"size,omitempty"`
+	Affinity            *PodAffinity                    `json:"affinity,omitempty"`
+	PodDisruptionBudget *common.PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+	Resources           common.ResourceRequirements     `json:"resources,omitempty"`
+	VolumeSpec          *common.VolumeSpec              `json:"volumeSpec,omitempty"`
+}
+type AuditLogDestination string
+
+var AuditLogDestinationFile AuditLogDestination = "file"
+
+type AuditLogFormat string
+
+var (
+	AuditLogFormatBSON AuditLogFormat = "BSON"
+	AuditLogFormatJSON AuditLogFormat = "JSON"
+)
+
+type MongoSpecAuditLog struct {
+	Destination AuditLogDestination `json:"destination,omitempty"`
+	Format      AuditLogFormat      `json:"format,omitempty"`
+	Filter      string              `json:"filter,omitempty"`
+}
+type MongosSpecSetParameter struct {
+	CursorTimeoutMillis int `json:"cursorTimeoutMillis,omitempty"`
+}
+type MongoConfiguration string

@@ -70,8 +70,7 @@ const expected = `
         "replsets": [
             {
                 "expose": {
-                    "enabled": false,
-                    "exposeType": ""
+                    "enabled": false
                 },
                 "size": 3,
                 "arbiter": {
@@ -99,9 +98,6 @@ const expected = `
                 },
                 "podDisruptionBudget": {
                     "maxUnavailable": 1
-                },
-                "affinity": {
-                    "antiAffinityTopologyKey": "none"
                 }
             }
         ],

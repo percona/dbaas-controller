@@ -55,7 +55,8 @@ const expected = `
             },
             "affinity": {
                 "antiAffinityTopologyKey": "none"
-            }
+            },
+            "expose": {}
         },
         "proxysql": {
             "size": 3,
@@ -138,26 +139,28 @@ func TestPXCTypesMarshal(t *testing.T) {
 				UpgradeOptions: &common.UpgradeOptions{
 					VersionServiceEndpoint: "https://check.percona.com",
 				},
-				PXC: &PodSpec{
-					Size: &size,
-					Resources: &common.PodResources{
-						Limits: &common.ResourcesList{
-							CPU:    "500m",
-							Memory: "600000000",
+				PXC: &PXCSpec{
+					PodSpec: &PodSpec{
+						Size: &size,
+						Resources: &common.PodResources{
+							Limits: &common.ResourcesList{
+								CPU:    "500m",
+								Memory: "600000000",
+							},
 						},
-					},
-					Image: "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0",
-					VolumeSpec: &common.VolumeSpec{
-						PersistentVolumeClaim: &common.PersistentVolumeClaimSpec{
-							Resources: common.ResourceRequirements{
-								Requests: common.ResourceList{
-									common.ResourceStorage: "1000000000",
+						Image: "percona/percona-xtradb-cluster-operator:1.4.0-pxc8.0",
+						VolumeSpec: &common.VolumeSpec{
+							PersistentVolumeClaim: &common.PersistentVolumeClaimSpec{
+								Resources: common.ResourceRequirements{
+									Requests: common.ResourceList{
+										common.ResourceStorage: "1000000000",
+									},
 								},
 							},
 						},
-					},
-					Affinity: &PodAffinity{
-						TopologyKey: pointer.ToString(AffinityTopologyKeyOff),
+						Affinity: &PodAffinity{
+							TopologyKey: pointer.ToString(AffinityTopologyKeyOff),
+						},
 					},
 				},
 				ProxySQL: &PodSpec{

@@ -60,7 +60,7 @@ release-component-version:
 
 release:                          ## Build dbaas-controller release binaries.
 	env CGO_ENABLED=0 go build -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
-	$(PMM_RELEASE_PATH)/dbaas-controller --version
+	#$(PMM_RELEASE_PATH)/dbaas-controller --version
 
 init:                             ## Install development tools
 	rm -rf ./bin
@@ -84,10 +84,10 @@ install:                          ## Install binaries
 	go build $(PMM_LD_FLAGS) -race -o bin/dbaas-controller ./cmd/dbaas-controller
 
 test:                             ## Run tests
-	go test $(PMM_TEST_FLAGS) -race -timeout=30m ./...
+	go test $(PMM_TEST_FLAGS) -race -p 1 -timeout=30m ./...
 
 test-cover:                       ## Run tests and collect per-package coverage information
-	go test -race -timeout=30m -count=1 -coverprofile=cover.out -covermode=atomic ./...
+	go test -race -timeout=30m -count=1 -p 1 -coverprofile=cover.out -covermode=atomic ./...
 
 test-crosscover:                  ## Run tests and collect cross-package coverage information
 	go test -race -timeout=30m -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
@@ -107,6 +107,15 @@ env-up-start:
 	fi
 	minikube config view
 	minikube start
+local-env-up:
+	if [ $(KUBERNETES_VERSION) ]; then \
+		minikube config set kubernetes-version $(KUBERNETES_VERSION); \
+	fi
+	minikube config view
+	minikube start --nodes=4 --cpus=4 --memory=4200mb --apiserver-names host.docker.internal --kubernetes-version=v1.23.0
+	minikube addons disable storage-provisioner
+	kubectl delete storageclass standard
+	kubectl apply -f kubevirt-hostpath-provisioner.yaml
 
 env-check:
 	# none driver in CI needs to run this under different user permissions
@@ -156,6 +165,6 @@ eks-delete-current-namespace:
 	NAMESPACE=$$(kubectl config view --minify --output 'jsonpath={..namespace}'); \
 	if [ "$$NAMESPACE" != "default" ]; then kubectl delete ns "$$NAMESPACE"; fi
 
-deploy-to-pmm-server:
+deploy-to-pmm-server: release     ## Deploy DBaaS controller to a running ${PMM_CONTAINER} container.
 	docker cp bin/dbaas-controller ${PMM_CONTAINER}:/usr/sbin/dbaas-controller
 	docker exec ${PMM_CONTAINER} supervisorctl restart dbaas-controller
