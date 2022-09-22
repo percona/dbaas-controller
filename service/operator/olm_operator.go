@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"path"
 	"strings"
+	"time"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
@@ -124,7 +125,26 @@ func (o *OLMOperatorService) InstallOLMOperator(ctx context.Context, req *contro
 		return nil, errors.Wrap(err, "error waiting olm deployments")
 	}
 
+	if err := waitForPackageServer(ctx, client, "olm"); err != nil {
+		return nil, errors.Wrap(err, "error waiting olm package server to become ready")
+	}
+
 	return response, nil
+}
+
+func waitForPackageServer(ctx context.Context, client *k8sclient.K8sClient, namespace string) error {
+	var err error
+	var data []byte
+
+	for i := 0; i < 15; i++ {
+		data, err = client.Run(ctx, []string{"get", "csv", "-n", namespace, "packageserver", "-o", "jsonpath='{.status.phase}'"})
+		if err == nil && string(data) == "Succeeded" {
+			break
+		}
+		time.Sleep(5 * time.Second)
+	}
+
+	return err
 }
 
 type configGetter struct {
@@ -157,7 +177,7 @@ func (g *configGetter) loadFromString() (*clientcmdapi.Config, error) {
 
 // AvailableOperators resturns the list of available operators for a given namespace and filter.
 func (o *OLMOperatorService) AvailableOperators(ctx context.Context, name string) (*PackageManifests, error) {
-	data, err := o.client.Run(ctx, []string{"get", "packagemanifest", "-ojson", "--field-selector", "metadata.name=" + name})
+	data, err := o.client.Run(ctx, []string{"get", "packagemanifest", "-ojson", "-n=olm", "--field-selector", "metadata.name=" + name})
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get operators group list")
 	}
