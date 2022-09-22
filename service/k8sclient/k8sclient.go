@@ -949,7 +949,8 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	if err != nil {
 		return err
 	}
-
+	cluster.Kind = kube.PSMDBKind
+	cluster.APIVersion = "psmdb.percona.com/v1"
 	clusterState := c.getClusterState(ctx, cluster, c.crVersionMatchesPodsVersion)
 	if params.Resume && clusterState == ClusterStatePaused {
 		cluster.Spec.Pause = false
