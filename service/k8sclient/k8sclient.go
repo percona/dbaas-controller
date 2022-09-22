@@ -2038,12 +2038,13 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 		// instead of to the mongos.
 		if params.Size == 1 {
 			res.Spec.UnsafeConf = true
-			if !params.Expose {
+			if params.Expose {
 				res.Spec.Replsets[0].Expose.Enabled = true
 				res.Spec.Sharding.Mongos.Expose.ExposeType = common.ServiceTypeClusterIP
 			}
 		}
 	}
+
 	if params.PMM != nil {
 		res.Spec.PMM = &psmdb.PmmSpec{
 			Enabled:    true,
@@ -2150,7 +2151,7 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 		// instead of to the mongos.
 		if params.Size == 1 {
 			req.Spec.UnsafeConf = true
-			if !params.Expose {
+			if params.Expose {
 				req.Spec.Replsets[0].Expose.Enabled = true
 				req.Spec.Sharding.Mongos.Expose.ExposeType = common.ServiceTypeClusterIP
 			}
