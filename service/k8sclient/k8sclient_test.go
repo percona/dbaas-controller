@@ -41,8 +41,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
@@ -222,6 +222,9 @@ func TestK8sClient(t *testing.T) {
 
 	client, err := New(ctx, string(kubeconfig))
 	require.NoError(t, err)
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, string(kubeconfig))
+	require.NoError(t, err)
+	defer kubeCtl.Cleanup()
 
 	t.Cleanup(func() {
 		err := client.Cleanup()
@@ -265,7 +268,7 @@ func TestK8sClient(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
-		_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-xtradb-cluster-operator"}, nil)
+		_, err = kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-xtradb-cluster-operator"}, nil)
 		if err == nil {
 			break
 		}
@@ -273,18 +276,18 @@ func TestK8sClient(t *testing.T) {
 	}
 	require.NoError(t, err)
 	var res interface{}
-	err = client.kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", &res)
+	err = kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", &res)
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
-		_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil)
+		_, err = kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil)
 		if err == nil {
 			break
 		}
 		time.Sleep(3 * time.Second)
 	}
 	require.NoError(t, err)
-	err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
+	err = kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
 	require.NoError(t, err)
 
 	t.Run("CheckOperators", func(t *testing.T) {
@@ -796,6 +799,9 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 
 	client, err := New(ctx, string(kubeconfig))
 	require.NoError(t, err)
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, string(kubeconfig))
+	require.NoError(t, err)
+	defer kubeCtl.Cleanup()
 
 	b := make([]byte, 4)
 	n, err := rand.Read(b)
@@ -804,26 +810,26 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 	consumedResourcesTestNamespace := "consumed-resources-test-" + hex.EncodeToString(b)
 
 	t.Cleanup(func() {
-		_, err := client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil)
+		_, err := kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil)
 		require.NoError(t, err)
 		err = client.Cleanup()
 		require.NoError(t, err)
 	})
 
-	_, err = client.kubeCtl.Run(ctx, []string{"create", "ns", consumedResourcesTestNamespace}, nil)
+	_, err = kubeCtl.Run(ctx, []string{"create", "ns", consumedResourcesTestNamespace}, nil)
 	require.NoError(t, err)
 
 	args := []string{
 		"apply", "-f", consumedResourcesTestPodsManifestPath,
 		"-n" + consumedResourcesTestNamespace,
 	}
-	_, err = client.kubeCtl.Run(ctx, args, nil)
+	_, err = kubeCtl.Run(ctx, args, nil)
 	require.NoError(t, err)
 	args = []string{
 		"wait", "--for=condition=ready", "--timeout=20s",
 		"pods", "hello1", "hello2", "-n" + consumedResourcesTestNamespace,
 	}
-	_, err = client.kubeCtl.Run(ctx, args, nil)
+	_, err = kubeCtl.Run(ctx, args, nil)
 	require.NoError(t, err)
 
 	cpuMillis, memoryBytes, err := client.GetConsumedCPUAndMemory(ctx, consumedResourcesTestNamespace)
@@ -1344,18 +1350,14 @@ func TestCreateVMOperator(t *testing.T) {
 }
 
 func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (int, error) {
-	type deployments struct {
-		Items []common.Deployment `json:"items"`
-	}
-	var deps deployments
-	err := client.kubeCtl.Get(ctx, "deployment", "", &deps)
+	deployments, err := client.kube.ListDeployments(ctx)
 	if err != nil {
 		return -1, err
 	}
 
 	count := 0
 
-	for _, item := range deps.Items {
+	for _, item := range deployments.Items {
 		if strings.Contains(strings.ToLower(item.ObjectMeta.Name), name) {
 			count++
 		}
