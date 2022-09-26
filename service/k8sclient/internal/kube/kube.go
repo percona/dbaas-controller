@@ -45,6 +45,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/duration"
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes/scheme"
 
@@ -247,7 +248,8 @@ func (c *Client) initOperatorClients() error {
 	}
 	c.pxcClient = pxcClient
 	c.psmdbClient = psmdbClient
-	return nil
+	_, err = c.GetServerVersion(context.Background())
+	return err
 }
 
 func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) {
@@ -381,6 +383,9 @@ func (c *Client) GetStorageClasses(ctx context.Context) (*v1.StorageClassList, e
 // GetSecret returns k8s secret by provided name
 func (c *Client) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
 	return c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+}
+func (c *Client) GetServerVersion(ctx context.Context) (*version.Info, error) {
+	return c.clientset.Discovery().ServerVersion()
 }
 
 // GetAPIVersions returns apiversions
