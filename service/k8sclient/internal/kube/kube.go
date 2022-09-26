@@ -106,7 +106,7 @@ func (list SortableEvents) Less(i, j int) bool {
 	return list[i].LastTimestamp.Time.Before(list[j].LastTimestamp.Time)
 }
 
-type BackupSpec struct {
+type ImageSpec struct {
 	Image string `json:"image"`
 }
 type PXCSpec struct {
@@ -124,10 +124,22 @@ type Spec struct {
 	Image          string         `json:"image"`
 	PXCSpec        PXCSpec        `json:"pxc"`
 	UpgradeOptions UpgradeOptions `json:"upgradeOptions"`
-	Backup         BackupSpec     `json:"backup"`
+	Backup         ImageSpec      `json:"backup"`
 }
 type OperatorPatch struct {
 	Spec Spec `json:"spec"`
+}
+
+type PXCOperatorSpec struct {
+	CRVersion string    `json:"crVersion"`
+	PXC       PXCSpec   `json:"image"`
+	Backup    ImageSpec `json:"backup"`
+	HAProxy   ImageSpec `json:"haproxy"`
+	ProxySQL  ImageSpec `json:"proxysql"`
+}
+
+type PXCOperatorPatch struct {
+	Spec PXCOperatorSpec `json:"spec"`
 }
 
 // configGetter stores kubeconfig string to convert it to the final object

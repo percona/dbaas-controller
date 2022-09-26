@@ -1706,28 +1706,24 @@ func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVers
 	}
 
 	for _, cluster := range list.Items {
-		clusterPatch := &pxcv1.PerconaXtraDBCluster{
-			Spec: pxcv1.PerconaXtraDBClusterSpec{
+		clusterPatch := &kube.PXCOperatorPatch{
+			Spec: kube.PXCOperatorSpec{
 				CRVersion: newVersion,
-				PXC: &pxcv1.PXCSpec{
-					PodSpec: &pxcv1.PodSpec{
-						Image: strings.Replace(cluster.Spec.PXC.Image, oldVersion, newVersion, 1),
-					},
+				PXC: kube.PXCSpec{
+					Image: strings.Replace(cluster.Spec.PXC.Image, oldVersion, newVersion, 1),
 				},
-				Backup: &pxcv1.PXCScheduledBackup{
+				Backup: kube.ImageSpec{
 					Image: strings.Replace(cluster.Spec.Backup.Image, oldVersion, newVersion, 1),
 				},
 			},
 		}
 
 		if cluster.Spec.HAProxy != nil {
-			clusterPatch.Spec.HAProxy = &pxcv1.HAProxySpec{
-				PodSpec: pxcv1.PodSpec{
-					Image: strings.Replace(cluster.Spec.HAProxy.Image, oldVersion, newVersion, 1),
-				},
+			clusterPatch.Spec.HAProxy = kube.ImageSpec{
+				Image: strings.Replace(cluster.Spec.HAProxy.Image, oldVersion, newVersion, 1),
 			}
 		} else {
-			cluster.Spec.ProxySQL = &pxcv1.PodSpec{
+			clusterPatch.Spec.ProxySQL = kube.ImageSpec{
 				Image: strings.Replace(cluster.Spec.ProxySQL.Image, oldVersion, newVersion, 1),
 			}
 		}
