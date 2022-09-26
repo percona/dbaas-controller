@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/stretchr/testify/assert"
@@ -110,6 +111,7 @@ func TestInstallOlmOperator(t *testing.T) {
 	client, err := k8sclient.New(ctx, string(kubeconfig))
 	assert.NoError(t, err)
 	t.Cleanup(func() {
+		return
 		// Maintain the order, otherwise the Kubernetes deletetion will stuck in Terminating state.
 		err := client.Delete(ctx, []string{"apiservices.apiregistration.k8s.io", "v1.packages.operators.coreos.com"})
 		assert.NoError(t, err)
@@ -150,17 +152,6 @@ func TestInstallOlmOperator(t *testing.T) {
 	subscriptionNamespace := "my-percona-server-mongodb-operator"
 
 	t.Run("Subscribe", func(t *testing.T) {
-		params := OperatorInstallRequest{
-			Namespace:              subscriptionNamespace,
-			Name:                   subscriptionName,
-			OperatorGroup:          "operatorgroup",
-			CatalogSource:          "operatorhubio-catalog",
-			CatalogSourceNamespace: "olm",
-			Channel:                "stable",
-			InstallPlanApproval:    ApprovalAutomatic,
-			StartingCSV:            "percona-server-mongodb-operator.v1.11.0",
-		}
-
 		kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
 		require.NoError(t, err)
 
@@ -172,15 +163,40 @@ func TestInstallOlmOperator(t *testing.T) {
 
 		olmc := NewOLMOperatorService(client)
 
+		// Install PSMDB Operator
+		params := OperatorInstallRequest{
+			Namespace:              subscriptionNamespace,
+			Name:                   subscriptionName,
+			OperatorGroup:          "operatorgroup",
+			CatalogSource:          "operatorhubio-catalog",
+			CatalogSourceNamespace: "olm",
+			Channel:                "stable",
+			InstallPlanApproval:    ApprovalManual,
+			StartingCSV:            "percona-server-mongodb-operator.v1.11.0",
+		}
+
 		err = olmc.InstallOperator(ctx, client, params)
 		assert.NoError(t, err)
+
+		var installPlans *v1alpha1.InstallPlanList
+		for i := 0; i < 6; i++ {
+			installPlans, err = olmc.GetInstallPlans(ctx, subscriptionNamespace)
+			if len(installPlans.Items) > 0 {
+				break
+			}
+			time.Sleep(10 * time.Second)
+		}
+		assert.NoError(t, err)
+		require.True(t, len(installPlans.Items) > 0)
+
+		olmc.ApproveInstallPlan(ctx, subscriptionNamespace, installPlans.Items[0].ObjectMeta.Name)
 
 		t.Log("Waiting for deployment")
 		// Loop until the deployment exists and THEN we can wait.
 		// Sometimes the test reaches this point too fast and we get an error saying that the
 		// deplyment doesn't exists.
 		for i := 0; i < 5; i++ {
-			_, err = client.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", params.Name, "-n", params.Namespace, "--timeout=180s"})
+			_, err = client.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", params.Name, "-n", params.Namespace, "--timeout=380s"})
 			if err == nil {
 				t.Logf("Deployment ready at try number %d", i)
 				break

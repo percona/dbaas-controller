@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -130,6 +131,34 @@ func (o *OLMOperatorService) InstallOLMOperator(ctx context.Context, req *contro
 	}
 
 	return response, nil
+}
+
+func (o *OLMOperatorService) GetInstallPlans(ctx context.Context, namespace string) (*v1alpha1.InstallPlanList, error) {
+	data, err := o.client.Run(ctx, []string{"get", "installplans", "-ojson", "-n", namespace})
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot get operators group list")
+	}
+
+	var installPlans v1alpha1.InstallPlanList
+	err = json.Unmarshal(data, &installPlans)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot decode install plans from the response")
+	}
+
+	return &installPlans, nil
+}
+
+type approveInstallPlanSpec struct {
+	Approved bool `json:"approved"`
+}
+
+type approveInstallPlan struct {
+	Spec approveInstallPlanSpec `json:"spec"`
+}
+
+func (o *OLMOperatorService) ApproveInstallPlan(ctx context.Context, namespace, resourceName string) error {
+	res := approveInstallPlan{Spec: approveInstallPlanSpec{Approved: true}}
+	return o.client.Patch(ctx, "merge", "installplan", resourceName, namespace, res)
 }
 
 func waitForPackageServer(ctx context.Context, client *k8sclient.K8sClient, namespace string) error {
