@@ -1893,8 +1893,6 @@ func vmAgentSpec(params *PMM, secretName string) *monitoring.VMAgent {
 	}
 }
 
-// CreatePSMDBCluster creates percona server for mongodb cluster with provided parameters.
-// func (c *K8sClient) CreatePSMDBClusterOld(ctx context.Context, params *PSMDBParams) error {
 func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmdbv1.PerconaServerMongoDB {
 	maxUnavailable := intstr.FromInt(1)
 	res := &psmdbv1.PerconaServerMongoDB{

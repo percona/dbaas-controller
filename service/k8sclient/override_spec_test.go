@@ -215,7 +215,7 @@ func TestPSMDBSpec(t *testing.T) {
 		t.Parallel()
 		spec, err := client.createPSMDBSpec(operator, params, &extra)
 		assert.NoError(t, err)
-		defaultSpec := client.getPSMDBSpec112Plus(params, extra)
+		defaultSpec := client.getPSMDBSpec(params, extra)
 		assert.Equal(t, defaultSpec, spec)
 		params.Expose = false
 		spec = client.overridePSMDBSpec(spec, params, extra)
