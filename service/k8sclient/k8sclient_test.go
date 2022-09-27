@@ -801,7 +801,6 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 	require.NoError(t, err)
 	kubeCtl, err := kubectl.NewKubeCtl(ctx, string(kubeconfig))
 	require.NoError(t, err)
-	defer kubeCtl.Cleanup()
 
 	b := make([]byte, 4)
 	n, err := rand.Read(b)
@@ -814,6 +813,7 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 		require.NoError(t, err)
 		err = client.Cleanup()
 		require.NoError(t, err)
+		kubeCtl.Cleanup()
 	})
 
 	_, err = kubeCtl.Run(ctx, []string{"create", "ns", consumedResourcesTestNamespace}, nil)

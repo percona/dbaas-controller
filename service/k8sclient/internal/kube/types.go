@@ -38,3 +38,19 @@ func (c *PXCCluster) Original() *pxcv1.PerconaXtraDBCluster {
 func (c *PSMDBCluster) State() pxcv1.AppState {
 	return pxcv1.AppState(c.Status.State)
 }
+func (c *PSMDBCluster) Pause() bool {
+	return c.Spec.Pause
+}
+func (c *PSMDBCluster) GetName() string {
+	return c.Name
+}
+func (c *PSMDBCluster) CRImage() string {
+	return c.Spec.PXC.Image
+}
+func (c *PSMDBCluster) SetImage(img string) {
+	c.Spec.PXC.Image = img
+}
+func (c *PSMDBCluster) Original() *pxcv1.PerconaXtraDBCluster {
+	v := pxcv1.PerconaXtraDBCluster(*c)
+	return &v
+}
