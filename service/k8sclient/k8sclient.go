@@ -682,7 +682,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 		}
 		if len(cluster.Status.Conditions) != 0 {
 			val.DetailedState = []appStatus{
-				{size: cluster.Status.Size, ready: cluster.Status.Ready},
+				//{size: cluster.Status.Size, ready: cluster.Status.PMM.Status == "ready"},
 				{size: cluster.Status.HAProxy.Size, ready: cluster.Status.HAProxy.Ready},
 				{size: cluster.Status.ProxySQL.Size, ready: cluster.Status.ProxySQL.Ready},
 				{size: cluster.Status.PXC.Size, ready: cluster.Status.PXC.Ready},
