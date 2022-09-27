@@ -244,7 +244,7 @@ func TestK8sClient(t *testing.T) {
 	require.NoError(t, err)
 	t.Log(versionServiceURL)
 	t.Log(latestPMMVersion.String())
-	pxcOperator, psmdbv1Operator, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
+	pxcOperator, psmdbOperator, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
 	require.NoError(t, err)
 
 	// There is an error with Operator version 1.12
@@ -253,18 +253,18 @@ func TestK8sClient(t *testing.T) {
 	if value := os.Getenv("PERCONA_TEST_PXC_OPERATOR_VERSION"); value != "" {
 		pxcVersion = value
 	}
-	psmdbv1Version := psmdbv1Operator.String()
+	psmdbVersion := psmdbOperator.String()
 	if value := os.Getenv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); value != "" {
-		psmdbv1Version = value
-		psmdbv1Operator, _ = goversion.NewVersion(value)
+		psmdbVersion = value
+		psmdbOperator, _ = goversion.NewVersion(value)
 	}
 
 	t.Log(pxcVersion)
 	err = client.ApplyOperator(ctx, pxcVersion, app.DefaultPXCOperatorURLTemplate)
 	require.NoError(t, err)
 
-	t.Log(psmdbv1Version)
-	err = client.ApplyOperator(ctx, psmdbv1Version, app.DefaultPSMDBOperatorURLTemplate)
+	t.Log(psmdbVersion)
+	err = client.ApplyOperator(ctx, psmdbVersion, app.DefaultPSMDBOperatorURLTemplate)
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
@@ -303,7 +303,7 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("Get non-existing clusters", func(t *testing.T) {
 		t.Parallel()
-		_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdbv1")
+		_, err := client.GetPSMDBClusterCredentials(ctx, "d0ca1166b638c-psmdb")
 		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
 		_, err = client.GetPXCClusterCredentials(ctx, "871f766d43f8e-pxc")
 		assert.EqualError(t, errors.Cause(err), ErrNotFound.Error())
@@ -569,10 +569,10 @@ func TestK8sClient(t *testing.T) {
 
 	t.Run("PSMDB", func(t *testing.T) {
 		t.Parallel()
-		if perconaTestOperator != "psmdbv1" && perconaTestOperator != "" {
+		if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
 		}
-		name := "test-cluster-psmdbv1"
+		name := "test-cluster-psmdb"
 		_ = client.DeletePSMDBCluster(ctx, name)
 
 		assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
@@ -582,7 +582,7 @@ func TestK8sClient(t *testing.T) {
 		// Starting with operator 1.12, the image for the backup container comes from the components service.
 		// To not to instantiate the components service and the dependencies, use this image name.
 		var backupImage string
-		if psmdbv1Operator.GreaterThanOrEqual(v112) {
+		if psmdbOperator.GreaterThanOrEqual(v112) {
 			backupImage = "percona/percona-backup-mongodb:1.7.0"
 		}
 
@@ -1154,7 +1154,7 @@ func TestGetPXCClusterState(t *testing.T) {
 func TestGetPSMDBClusterState(t *testing.T) {
 	t.Parallel()
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
-	if perconaTestOperator != "psmdbv1" && perconaTestOperator != "" {
+	if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
 		t.Skip("skipping because of environment variable")
 	}
 	type getClusterStateTestCase struct {
