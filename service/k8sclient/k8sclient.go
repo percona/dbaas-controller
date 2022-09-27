@@ -2005,7 +2005,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 
 			Backup: psmdbv1.BackupSpec{
 				Enabled:            true,
-				Image:              fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion),
+				Image:              extra.backupImage,
 				ServiceAccountName: "percona-server-mongodb-operator",
 			},
 		},
@@ -2085,12 +2085,12 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdbv1.PerconaServerMongoDB, params
 	if spec.Spec.Backup.Image == "" {
 		spec.Spec.Backup = psmdbv1.BackupSpec{
 			Enabled:            true,
-			Image:              fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion),
+			Image:              extra.backupImage,
 			ServiceAccountName: "percona-server-mongodb-operator",
 		}
 	}
 	if spec.Spec.Backup.Image == "" {
-		spec.Spec.Backup.Image = fmt.Sprintf(psmdbBackupImageTemplate, extra.operators.PsmdbOperatorVersion)
+		spec.Spec.Backup.Image = extra.backupImage
 	}
 	if !params.Expose {
 		spec.Spec.Sharding.Mongos.Expose.ExposeType = corev1.ServiceTypeClusterIP
