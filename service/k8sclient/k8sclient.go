@@ -512,10 +512,11 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 		cluster.Spec.PXC.Resources = c.updateComputeResources(params.PXC.ComputeResources, cluster.Spec.PXC.Resources)
 		if params.PXC.Image != "" && params.PXC.Image != cluster.Spec.PXC.Image {
 			// Let's upgrade the cluster.
-			err = c.changeImageInPXCCluster(cluster, params.PXC.Image)
+			err = c.validateImage(cluster.Spec.CRVersion, params.PXC.Image)
 			if err != nil {
 				return err
 			}
+			cluster.Spec.PXC.Image = params.PXC.Image
 		}
 	}
 
@@ -974,10 +975,11 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 	if params.Image != "" && params.Image != cluster.Spec.Image {
 		// We want to upgrade the cluster.
-		err = c.changeImageInCluster(cluster, params.Image)
+		err = c.validateImage(cluster.Spec.CRVersion, params.Image)
 		if err != nil {
 			return err
 		}
+		cluster.Spec.Image = params.Image
 	}
 	patch, err := json.Marshal(cluster)
 	if err != nil {
@@ -991,13 +993,13 @@ const (
 	updateStrategyRollingUpdate = "RollingUpdate"
 )
 
-func (c *K8sClient) changeImageInPXCCluster(cluster kube.DBCluster, newImage string) error {
+func (c *K8sClient) validateImage(crImage, newImage string) error {
 	// Check that only tag changed.
 	newImageAndTag := strings.Split(newImage, ":")
 	if len(newImageAndTag) != 2 {
 		return errors.New("image has to have version tag")
 	}
-	currentImageAndTag := strings.Split(cluster.CRImage(), ":")
+	currentImageAndTag := strings.Split(crImage, ":")
 	if currentImageAndTag[0] != newImageAndTag[0] {
 		return errors.Errorf("expected image is %q, %q was given", currentImageAndTag[0], newImageAndTag[0])
 	}
@@ -1005,25 +1007,6 @@ func (c *K8sClient) changeImageInPXCCluster(cluster kube.DBCluster, newImage str
 		return errors.Errorf("failed to change image: the database version %q is already in use", newImageAndTag[1])
 	}
 
-	cluster.SetImage(newImage)
-	return nil
-}
-
-func (c *K8sClient) changeImageInCluster(cluster *psmdbv1.PerconaServerMongoDB, newImage string) error {
-	// Check that only tag changed.
-	newImageAndTag := strings.Split(newImage, ":")
-	if len(newImageAndTag) != 2 {
-		return errors.New("image has to have version tag")
-	}
-	currentImageAndTag := strings.Split(cluster.Spec.Image, ":")
-	if currentImageAndTag[0] != newImageAndTag[0] {
-		return errors.Errorf("expected image is %q, %q was given", currentImageAndTag[0], newImageAndTag[0])
-	}
-	if currentImageAndTag[1] == newImageAndTag[1] {
-		return errors.Errorf("failed to change image: the database version %q is already in use", newImageAndTag[1])
-	}
-
-	cluster.Spec.Image = newImage
 	return nil
 }
 
