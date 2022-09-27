@@ -45,12 +45,12 @@ func (c *PSMDBCluster) GetName() string {
 	return c.Name
 }
 func (c *PSMDBCluster) CRImage() string {
-	return c.Spec.PXC.Image
+	return c.Spec.Image
 }
 func (c *PSMDBCluster) SetImage(img string) {
-	c.Spec.PXC.Image = img
+	c.Spec.Image = img
 }
-func (c *PSMDBCluster) Original() *pxcv1.PerconaXtraDBCluster {
-	v := pxcv1.PerconaXtraDBCluster(*c)
+func (c *PSMDBCluster) Original() *psmdbv1.PerconaServerMongoDB {
+	v := psmdbv1.PerconaServerMongoDB(*c)
 	return &v
 }
