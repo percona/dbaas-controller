@@ -2,6 +2,7 @@ apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMServiceScrape
 metadata:
   name: kube-state-metrics
+  namespace: default
 spec:
   jobLabel: app.kubernetes.io/name
   namespaceSelector: {}

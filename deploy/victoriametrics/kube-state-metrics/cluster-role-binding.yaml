@@ -13,3 +13,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: kube-state-metrics
+  namespace: default
