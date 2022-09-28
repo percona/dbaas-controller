@@ -15,7 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Package operator contains logic related to kubernetes operators.
-package operator
+package olm
 
 import "time"
 

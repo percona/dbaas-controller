@@ -15,7 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Package operator contains logic related to kubernetes operators.
-package operator
+package olm
 
 import (
 	"context"
@@ -26,10 +26,10 @@ import (
 
 	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 

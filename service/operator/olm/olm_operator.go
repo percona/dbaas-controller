@@ -15,7 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Package operator contains logic related to kubernetes operators.
-package operator
+package olm
 
 import (
 	"context"
@@ -27,7 +27,9 @@ import (
 	"strings"
 	"time"
 
+	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
 	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	operators "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apis/operators"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -35,10 +37,10 @@ import (
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 const (
@@ -205,13 +207,13 @@ func (g *configGetter) loadFromString() (*clientcmdapi.Config, error) {
 }
 
 // AvailableOperators resturns the list of available operators for a given namespace and filter.
-func (o *OLMOperatorService) AvailableOperators(ctx context.Context, name string) (*PackageManifests, error) {
+func (o *OLMOperatorService) AvailableOperators(ctx context.Context, name string) (*operators.PackageManifestList, error) {
 	data, err := o.client.Run(ctx, []string{"get", "packagemanifest", "-ojson", "-n=olm", "--field-selector", "metadata.name=" + name})
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get operators group list")
 	}
 
-	var manifestList PackageManifests
+	var manifestList operators.PackageManifestList
 	err = json.Unmarshal(data, &manifestList)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot decode package manifest list response")
@@ -264,7 +266,7 @@ func isInstalled(ctx context.Context, client *k8sclient.K8sClient, namespace str
 }
 
 func (o *OLMOperatorService) operatorGroupExists(ctx context.Context, client *k8sclient.K8sClient, namespace, name string) (bool, error) {
-	var operatorGroupList OperatorGroupList
+	var operatorGroupList operatorsv1.OperatorGroupList
 
 	data, err := client.Run(ctx, []string{"get", "operatorgroups", "-ojson", "--field-selector", "metadata.name=" + name})
 	if err != nil {
