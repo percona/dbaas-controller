@@ -1344,7 +1344,7 @@ func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (in
 		Items []common.Deployment `json:"items"`
 	}
 	var deps deployments
-	err := client.kubeCtl.Get(ctx, "deployment", "", &deps)
+	_, err := client.kubeCtl.Run(ctx, []string{"get", "deployment", "-A"}, &deps)
 	if err != nil {
 		return -1, err
 	}
