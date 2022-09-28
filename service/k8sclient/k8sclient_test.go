@@ -33,6 +33,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	goversion "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -1350,6 +1351,7 @@ func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (in
 	}
 
 	count := 0
+	spew.Dump(deps)
 
 	for _, item := range deps.Items {
 		if strings.Contains(strings.ToLower(item.ObjectMeta.Name), name) {
