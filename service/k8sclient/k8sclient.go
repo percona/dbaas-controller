@@ -446,18 +446,18 @@ func (c *K8sClient) Cleanup() error {
 }
 
 // GetKubeconfig generates kubeconfig compatible with kubectl for incluster created clients.
-func (c *K8sClient) GetKubeconfig(ctx context.Context) string {
+func (c *K8sClient) GetKubeconfig(ctx context.Context) (string, error) {
 	secret, err := c.kube.GetSecretsForServiceAccount(ctx, "pmm-service-account")
 	if err != nil {
 		c.l.Errorf("failed getting service account: %v", err)
-		return ""
+		return "", err
 	}
 	kubeConfig, err := c.kube.GenerateKubeConfig(secret)
 	if err != nil {
 		c.l.Errorf("failed generating kubeconfig: %v", err)
-		return ""
+		return "", err
 	}
-	return string(kubeConfig)
+	return string(kubeConfig), nil
 }
 
 // ListPXCClusters returns list of Percona XtraDB clusters and their statuses.
