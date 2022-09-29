@@ -43,7 +43,7 @@ func TestGetLatestVersion(t *testing.T) {
 	assert.NoError(t, err)
 	defer client.Cleanup() //nolint:errcheck
 
-	olmOperatorService := NewOLMOperatorService(client)
+	olmOperatorService := NewOperatorService(client)
 
 	latest, err := olmOperatorService.getLatestVersion(ctx, olmRepo)
 	assert.NoError(t, err)
@@ -58,7 +58,7 @@ func TestSubscribe(t *testing.T) {
 		CatalogSource:          "operatorhubio-catalog",
 		CatalogSourceNamespace: "olm",
 		Channel:                "stable",
-		InstallPlanApproval:    ApprovalAutomatic,
+		InstallPlanApproval:    v1alpha1.ApprovalAutomatic,
 		StartingCSV:            "percona-server-mongodb-operator.v1.11.0",
 	}
 
@@ -71,9 +71,9 @@ func TestSubscribe(t *testing.T) {
 	assert.NoError(t, err)
 	defer client.Cleanup() //nolint:errcheck
 
-	olmc := NewOLMOperatorService(client)
+	olmc := NewOperatorService(client)
 
-	err = olmc.InstallOperator(ctx, client, params)
+	err = olmc.InstallOperator(ctx, params)
 	assert.NoError(t, err)
 
 	t.Log("Waiting for deployment")
@@ -110,6 +110,7 @@ func TestInstallOlmOperator(t *testing.T) {
 
 	client, err := k8sclient.New(ctx, string(kubeconfig))
 	assert.NoError(t, err)
+
 	t.Cleanup(func() {
 		return
 		// Maintain the order, otherwise the Kubernetes deletetion will stuck in Terminating state.
@@ -130,13 +131,14 @@ func TestInstallOlmOperator(t *testing.T) {
 
 		_ = client.Cleanup()
 	})
+
 	req := &controllerv1beta1.InstallOLMOperatorRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: string(kubeconfig),
 		},
 	}
 
-	olms := NewOLMOperatorService(client)
+	olms := NewOperatorService(client)
 	_, err = olms.InstallOLMOperator(ctx, req)
 	assert.NoError(t, err)
 
@@ -161,8 +163,6 @@ func TestInstallOlmOperator(t *testing.T) {
 		assert.NoError(t, err)
 		defer client.Cleanup() //nolint:errcheck
 
-		olmc := NewOLMOperatorService(client)
-
 		// Install PSMDB Operator
 		params := OperatorInstallRequest{
 			Namespace:              subscriptionNamespace,
@@ -171,25 +171,25 @@ func TestInstallOlmOperator(t *testing.T) {
 			CatalogSource:          "operatorhubio-catalog",
 			CatalogSourceNamespace: "olm",
 			Channel:                "stable",
-			InstallPlanApproval:    ApprovalManual,
+			InstallPlanApproval:    v1alpha1.ApprovalManual,
 			StartingCSV:            "percona-server-mongodb-operator.v1.11.0",
 		}
 
-		err = olmc.InstallOperator(ctx, client, params)
+		err = olms.InstallOperator(ctx, params)
 		assert.NoError(t, err)
 
 		var installPlans *v1alpha1.InstallPlanList
 		for i := 0; i < 6; i++ {
-			installPlans, err = olmc.GetInstallPlans(ctx, subscriptionNamespace)
+			installPlans, err = olms.GetInstallPlans(ctx, subscriptionNamespace)
 			if len(installPlans.Items) > 0 {
 				break
 			}
-			time.Sleep(10 * time.Second)
+			time.Sleep(30 * time.Second)
 		}
 		assert.NoError(t, err)
 		require.True(t, len(installPlans.Items) > 0)
 
-		olmc.ApproveInstallPlan(ctx, subscriptionNamespace, installPlans.Items[0].ObjectMeta.Name)
+		olms.ApproveInstallPlan(ctx, subscriptionNamespace, installPlans.Items[0].ObjectMeta.Name)
 
 		t.Log("Waiting for deployment")
 		// Loop until the deployment exists and THEN we can wait.

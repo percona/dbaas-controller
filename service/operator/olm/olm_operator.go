@@ -28,14 +28,15 @@ import (
 	"time"
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
-	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	v1 "github.com/operator-framework/api/pkg/operators/v1"
+	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	operators "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apis/operators"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
@@ -53,33 +54,35 @@ const (
 	// It doesn't work for offline installation.
 	latestOLMVersion  = "latest"
 	defaultOLMVersion = ""
+
+	APIVersionCoreosV1 = "operators.coreos.com/v1"
 )
 
 // ErrEmptyVersionTag Got an empty version tag from GitHub API.
 var ErrEmptyVersionTag = errors.New("got an empty version tag from Github")
 
-// OLMOperatorService holds methods to handle the OLM operator.
-type OLMOperatorService struct {
+// OperatorService holds methods to handle the OLM operator.
+type OperatorService struct {
 	kubeConfig string
 	client     *k8sclient.K8sClient
 }
 
-// NewOLMOperatorService returns new OLMOperatorService instance.
-func NewOLMOperatorService(client *k8sclient.K8sClient) *OLMOperatorService {
-	return &OLMOperatorService{
+// NewOperatorService returns new OperatorService instance.
+func NewOperatorService(client *k8sclient.K8sClient) *OperatorService {
+	return &OperatorService{
 		client: client,
 	} //nolint:exhaustruct
 }
 
-// NewOLMOperatorServiceFromConfig returns new OLMOperatorService instance and intializes the config.
-func NewOLMOperatorServiceFromConfig(kubeConfig string) *OLMOperatorService {
-	return &OLMOperatorService{ //nolint:exhaustruct
+// NewOperatorServiceFromConfig returns new OperatorService instance and intializes the config.
+func NewOperatorServiceFromConfig(kubeConfig string) *OperatorService {
+	return &OperatorService{ //nolint:exhaustruct
 		kubeConfig: kubeConfig,
 	}
 }
 
 // InstallOLMOperator installs the OLM in the Kubernetes cluster.
-func (o *OLMOperatorService) InstallOLMOperator(ctx context.Context, req *controllerv1beta1.InstallOLMOperatorRequest) (*controllerv1beta1.InstallOLMOperatorResponse, error) {
+func (o *OperatorService) InstallOLMOperator(ctx context.Context, req *controllerv1beta1.InstallOLMOperatorRequest) (*controllerv1beta1.InstallOLMOperatorResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -135,13 +138,13 @@ func (o *OLMOperatorService) InstallOLMOperator(ctx context.Context, req *contro
 	return response, nil
 }
 
-func (o *OLMOperatorService) GetInstallPlans(ctx context.Context, namespace string) (*v1alpha1.InstallPlanList, error) {
+func (o *OperatorService) GetInstallPlans(ctx context.Context, namespace string) (*operatorsv1alpha1.InstallPlanList, error) {
 	data, err := o.client.Run(ctx, []string{"get", "installplans", "-ojson", "-n", namespace})
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get operators group list")
 	}
 
-	var installPlans v1alpha1.InstallPlanList
+	var installPlans operatorsv1alpha1.InstallPlanList
 	err = json.Unmarshal(data, &installPlans)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot decode install plans from the response")
@@ -158,7 +161,7 @@ type approveInstallPlan struct {
 	Spec approveInstallPlanSpec `json:"spec"`
 }
 
-func (o *OLMOperatorService) ApproveInstallPlan(ctx context.Context, namespace, resourceName string) error {
+func (o *OperatorService) ApproveInstallPlan(ctx context.Context, namespace, resourceName string) error {
 	res := approveInstallPlan{Spec: approveInstallPlanSpec{Approved: true}}
 	return o.client.Patch(ctx, "merge", "installplan", resourceName, namespace, res)
 }
@@ -207,7 +210,7 @@ func (g *configGetter) loadFromString() (*clientcmdapi.Config, error) {
 }
 
 // AvailableOperators resturns the list of available operators for a given namespace and filter.
-func (o *OLMOperatorService) AvailableOperators(ctx context.Context, name string) (*operators.PackageManifestList, error) {
+func (o *OperatorService) AvailableOperators(ctx context.Context, name string) (*operators.PackageManifestList, error) {
 	data, err := o.client.Run(ctx, []string{"get", "packagemanifest", "-ojson", "-n=olm", "--field-selector", "metadata.name=" + name})
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get operators group list")
@@ -229,33 +232,33 @@ type OperatorInstallRequest struct {
 	CatalogSource          string
 	CatalogSourceNamespace string
 	Channel                string
-	InstallPlanApproval    Approval
+	InstallPlanApproval    operatorsv1alpha1.Approval
 	StartingCSV            string
 }
 
-func (o *OLMOperatorService) InstallOperator(ctx context.Context, client *k8sclient.K8sClient, params OperatorInstallRequest) error {
-	exists, err := namespaceExists(ctx, client, params.Namespace)
+func (o *OperatorService) InstallOperator(ctx context.Context, params OperatorInstallRequest) error {
+	exists, err := namespaceExists(ctx, o.client, params.Namespace)
 	if err != nil {
 		return errors.Wrapf(err, "cannot determine is the namespace %q exists", params.Namespace)
 	}
 	if !exists {
-		if _, err := client.Run(ctx, []string{"create", "namespace", params.Namespace}); err != nil {
+		if _, err := o.client.Run(ctx, []string{"create", "namespace", params.Namespace}); err != nil {
 			return errors.Wrap(err, "cannot create namespace for subscription")
 		}
 	}
 
-	ogExists, err := o.operatorGroupExists(ctx, client, params.Namespace, params.OperatorGroup)
+	ogExists, err := o.operatorGroupExists(ctx, o.client, params.Namespace, params.OperatorGroup)
 	if err != nil {
 		return errors.Wrap(err, "cannot check if oprator group exists")
 	}
 
 	if !ogExists {
-		if err := o.createOperatorGroup(ctx, client, params.Namespace, params.OperatorGroup); err != nil {
+		if err := o.createOperatorGroup(ctx, params.Namespace, params.OperatorGroup); err != nil {
 			return errors.Wrapf(err, "cannot create operator group %q", params.OperatorGroup)
 		}
 	}
 
-	return createSubscription(ctx, client, params)
+	return o.createSubscription(ctx, params)
 }
 
 func isInstalled(ctx context.Context, client *k8sclient.K8sClient, namespace string) bool {
@@ -265,7 +268,7 @@ func isInstalled(ctx context.Context, client *k8sclient.K8sClient, namespace str
 	return false
 }
 
-func (o *OLMOperatorService) operatorGroupExists(ctx context.Context, client *k8sclient.K8sClient, namespace, name string) (bool, error) {
+func (o *OperatorService) operatorGroupExists(ctx context.Context, client *k8sclient.K8sClient, namespace, name string) (bool, error) {
 	var operatorGroupList operatorsv1.OperatorGroupList
 
 	data, err := client.Run(ctx, []string{"get", "operatorgroups", "-ojson", "--field-selector", "metadata.name=" + name})
@@ -284,52 +287,66 @@ func (o *OLMOperatorService) operatorGroupExists(ctx context.Context, client *k8
 	return false, nil
 }
 
-func (o *OLMOperatorService) createOperatorGroup(ctx context.Context, client *k8sclient.K8sClient, namespace, name string) error {
-	op := &OperatorGroup{
-		APIVersion: APIVersionCoreosV1,
-		Kind:       ObjectKindOperatorGroup,
+func (o *OperatorService) createOperatorGroup(ctx context.Context, namespace, name string) error {
+	op := &v1.OperatorGroup{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: APIVersionCoreosV1,
+			Kind:       operatorsv1.OperatorGroupKind,
+		},
 
-		Metadata: OperatorGroupMetadata{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: OperatorGroupSpec{
+		Spec: v1.OperatorGroupSpec{
 			TargetNamespaces: []string{namespace},
 		},
+		Status: v1.OperatorGroupStatus{
+			LastUpdated: &metav1.Time{
+				Time: time.Now(),
+			},
+		},
 	}
 
-	payload, err := yaml.Marshal(op)
+	payload, err := json.Marshal(op)
 	if err != nil {
 		return errors.Wrap(err, "cannot encode subscription payload as yaml")
 	}
-	return client.Create(ctx, payload)
+
+	return o.client.Create(ctx, payload)
 }
 
-func createSubscription(ctx context.Context, client *k8sclient.K8sClient, req OperatorInstallRequest) error {
-	subs := Subscription{
-		APIVersion: APIVersionCoreosV1Alpha1,
-		Kind:       ObjectKindSubscription,
-		Metadata: SubscriptionMetadata{
-			Name:      "my-" + req.Name,
-			Namespace: req.Namespace,
+func (o *OperatorService) createSubscription(ctx context.Context, req OperatorInstallRequest) error {
+	subscription := &operatorsv1alpha1.Subscription{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       operatorsv1alpha1.SubscriptionKind,
+			APIVersion: operatorsv1alpha1.SubscriptionCRDAPIVersion,
 		},
-		Spec: SubscriptionSpec{
-			Channel:             req.Channel,
-			Name:                req.Name,
-			Source:              req.CatalogSource,
-			SourceNamespace:     req.CatalogSourceNamespace,
-			InstallPlanApproval: req.InstallPlanApproval,
-			// Only used to test a specific operator version.
-			// StartingCSV:         req.StartingCSV,
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: req.Namespace,
+			Name:      "my-" + req.Name,
+		},
+		Spec: &operatorsv1alpha1.SubscriptionSpec{
+			CatalogSource:          req.CatalogSource,
+			CatalogSourceNamespace: req.CatalogSourceNamespace,
+			Channel:                req.Channel,
+			Package:                req.Name,
+			InstallPlanApproval:    req.InstallPlanApproval,
+			StartingCSV:            req.StartingCSV,
+		},
+		Status: operatorsv1alpha1.SubscriptionStatus{
+			LastUpdated: metav1.Time{
+				Time: time.Now(),
+			},
 		},
 	}
 
-	payload, err := yaml.Marshal(subs)
+	payload, err := json.Marshal(subscription)
 	if err != nil {
 		return errors.Wrap(err, "cannot encode subscription payload as yaml")
 	}
 
-	return client.Create(ctx, payload)
+	return o.client.Create(ctx, payload)
 }
 
 func namespaceExists(ctx context.Context, client *k8sclient.K8sClient, namespace string) (bool, error) {
@@ -363,7 +380,7 @@ func waitForDeployments(ctx context.Context, client *k8sclient.K8sClient, namesp
 	return nil
 }
 
-func (o OLMOperatorService) getLatestVersion(ctx context.Context, repo string) (string, error) {
+func (o OperatorService) getLatestVersion(ctx context.Context, repo string) (string, error) {
 	url := fmt.Sprintf(githubAPIURLTemplate, repo)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
