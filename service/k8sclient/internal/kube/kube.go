@@ -25,6 +25,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
@@ -37,6 +38,7 @@ import (
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes"
+
 	// load all auth plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
@@ -325,11 +327,14 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 
 // GetSecretsForServiceAccount returns secret by given service account name
 func (c *Client) GetSecretsForServiceAccount(ctx context.Context, accountName string) (*corev1.Secret, error) {
-	serviceAccount, err := c.clientset.CoreV1().ServiceAccounts("default").Get(ctx, accountName, metav1.GetOptions{})
+	serviceAccount, err := c.clientset.CoreV1().ServiceAccounts(c.namespace).Get(ctx, accountName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return c.clientset.CoreV1().Secrets("default").Get(
+	if len(serviceAccount.Secrets) == 0 {
+		return nil, errors.Errorf("no secrets available for namespace %s", c.namespace)
+	}
+	return c.clientset.CoreV1().Secrets(c.namespace).Get(
 		ctx,
 		serviceAccount.Secrets[0].Name,
 		metav1.GetOptions{},
