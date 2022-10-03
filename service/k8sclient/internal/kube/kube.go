@@ -107,7 +107,14 @@ func NewFromIncluster() (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{clientset: clientset, restConfig: c}, nil
+	namespace := "default"
+	if space := os.Getenv("NAMESPACE"); space != "" {
+		namespace = space
+	}
+	// Set PATH variable to make aws-iam-authenticator executable
+	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
+	os.Setenv("PATH", path)
+	return &Client{clientset: clientset, restConfig: c, namespace: namespace}, nil
 }
 
 // NewFromKubeConfigString creates a new client for the given config string.
