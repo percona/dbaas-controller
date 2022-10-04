@@ -28,3 +28,5 @@ spec:
     target_label: node_name
     regex: (.+);(.+)
     replacement: $1-$2
+  extraArgs:
+    promscrape.noStaleMarkers: true
