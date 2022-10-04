@@ -1341,10 +1341,18 @@ func TestCreateVMOperator(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
 
+	count, err = getDeploymentCount(ctx, client, "kube-state-metrics")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count)
+
 	err = client.RemoveVMOperator(ctx)
 	assert.NoError(t, err)
 
 	count, err = getDeploymentCount(ctx, client, "vmagent")
+	assert.NoError(t, err)
+	assert.Equal(t, 0, count)
+
+	count, err = getDeploymentCount(ctx, client, "kube-state-metrics")
 	assert.NoError(t, err)
 	assert.Equal(t, 0, count)
 }
