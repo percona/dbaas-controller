@@ -481,13 +481,19 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 	if err != nil {
 		return err
 	}
+	var clusterState ClusterState
+	if cluster == nil {
+		clusterState = ClusterStateInvalid
+	}
 
-	clusterState := c.getPXCClusterState(ctx, cluster, c.crVersionMatchesPXCPodsVersion)
+	clusterInfo := kube.NewDBClusterInfoFromPXC(cluster)
+
+	clusterState = c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
 
 	// Only if cluster is paused, allow resuming it. All other modifications are forbinden.
 	if params.Resume && clusterState == ClusterStatePaused {
 		cluster.Spec.Pause = false
-		return c.kube.Apply(ctx, cluster.Original())
+		return c.kube.Apply(ctx, cluster)
 	}
 
 	// This is to prevent concurrent updates
@@ -589,7 +595,13 @@ func (c *K8sClient) GetPXCClusterCredentials(ctx context.Context, name string) (
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
 	}
 
-	clusterState := c.getPXCClusterState(ctx, cluster, c.crVersionMatchesPXCPodsVersion)
+	var clusterState ClusterState
+	if cluster == nil {
+		clusterState = ClusterStateInvalid
+	}
+
+	clusterInfo := kube.NewDBClusterInfoFromPXC(cluster)
+	clusterState = c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
 	if clusterState != ClusterStateReady && clusterState != ClusterStateChanging {
 		return nil, errors.Wrapf(
 			errors.Wrap(ErrPXCClusterStateUnexpected,
@@ -690,10 +702,10 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 			}
 			val.Message = strings.Join(cluster.Status.Messages, ";")
 		}
-		v := kube.PXCCluster(cluster)
 
-		val.State = c.getPXCClusterState(ctx, &v, c.crVersionMatchesPXCPodsVersion)
+		clusterInfo := kube.NewDBClusterInfoFromPXC(&cluster)
 
+		val.State = c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
 		if cluster.Spec.ProxySQL != nil {
 			val.ProxySQL = &ProxySQL{
 				DiskSize:         c.getPXCDiskSize(cluster.Spec.ProxySQL.VolumeSpec),
@@ -716,50 +728,14 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 	return res, nil
 }
 
-func (c *K8sClient) getPXCClusterState(ctx context.Context, cluster kube.DBCluster, crAndPodsMatchFunc func(context.Context, kube.DBCluster) (bool, error)) ClusterState {
-	if cluster == nil {
-		return ClusterStateInvalid
-	}
+func (c *K8sClient) getClusterState(ctx context.Context, cluster kube.DBCluster, crAndPodsMatchFunc func(context.Context, kube.DBCluster) (bool, error)) ClusterState {
 
-	state := cluster.State()
-	if state == pxcv1.AppStateUnknown {
-		return ClusterStateInvalid
-	}
-	// Handle paused state for operator version >= 1.9.0 and for operator version <= 1.8.0.
-	if state == pxcv1.AppStatePaused || (cluster.Pause() && state == pxcv1.AppStateReady) {
-		return ClusterStatePaused
-	}
-
-	clusterState, ok := clusterStatesMap[string(state)]
-	if !ok {
-		c.l.Warnf("failed to recognize cluster state: %q, setting status to ClusterStateChanging", state)
-		return ClusterStateChanging
-	}
-	if clusterState == ClusterStateChanging {
-		// Check if cr and pods version matches.
-		match, err := crAndPodsMatchFunc(ctx, cluster)
-		if err != nil {
-			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.GetName(), err)
-			return ClusterStateInvalid
-		}
-		if match {
-			return ClusterStateChanging
-		}
-		return ClusterStateUpgrading
-	}
-	return clusterState
-}
-
-func (c *K8sClient) getClusterState(ctx context.Context, cluster *psmdbv1.PerconaServerMongoDB, crAndPodsMatchFunc func(context.Context, *psmdbv1.PerconaServerMongoDB) (bool, error)) ClusterState {
-	if cluster == new(psmdbv1.PerconaServerMongoDB) || cluster == nil {
-		return ClusterStateInvalid
-	}
-	state := string(cluster.Status.State)
+	state := cluster.State
 	if state == appStateUnknown {
 		return ClusterStateInvalid
 	}
 	// Handle paused state for operator version >= 1.9.0 and for operator version <= 1.8.0.
-	if state == appStatePaused || (cluster.Spec.Pause && state == appStateReady) {
+	if state == appStatePaused || (cluster.Pause && state == appStateReady) {
 		return ClusterStatePaused
 	}
 
@@ -772,7 +748,7 @@ func (c *K8sClient) getClusterState(ctx context.Context, cluster *psmdbv1.Percon
 		// Check if cr and pods version matches.
 		match, err := crAndPodsMatchFunc(ctx, cluster)
 		if err != nil {
-			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.GetName(), err)
+			c.l.Warnf("failed to check if cluster %q is upgrading: %v", cluster.Name, err)
 			return ClusterStateInvalid
 		}
 		if match {
@@ -952,7 +928,8 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 	cluster.Kind = kube.PSMDBKind
 	cluster.APIVersion = "psmdb.percona.com/v1"
-	clusterState := c.getClusterState(ctx, cluster, c.crVersionMatchesPodsVersion)
+	clusterInfo := kube.NewDBClusterInfoFromPSMDB(cluster)
+	clusterState := c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
 	if params.Resume && clusterState == ClusterStatePaused {
 		cluster.Spec.Pause = false
 		return c.kube.Apply(ctx, cluster)
@@ -1063,7 +1040,9 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
 
-	clusterState := c.getClusterState(ctx, cluster, c.crVersionMatchesPodsVersion)
+	clusterInfo := kube.NewDBClusterInfoFromPSMDB(cluster)
+
+	clusterState := c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
 	if clusterState != ClusterStateReady {
 		return nil, errors.Wrap(ErrPSMDBClusterNotReady, fmt.Sprintf(canNotGetCredentialsErrTemplate, "PSMDB"))
 	}
@@ -1088,10 +1067,8 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 	return credentials, nil
 }
 
-func (c *K8sClient) crVersionMatchesPXCPodsVersion(ctx context.Context, cluster kube.DBCluster) (bool, error) {
-	podLables := []string{"app.kubernetes.io/instance=" + cluster.GetName(), "app.kubernetes.io/component=pxc"}
-	databaseContainerNames := []string{"pxc"}
-	crImage := cluster.CRImage()
+func (c *K8sClient) crVersionMatchesPodsVersion(ctx context.Context, cluster kube.DBCluster) (bool, error) {
+	podLables := []string{"app.kubernetes.io/instance=" + cluster.Name, "app.kubernetes.io/component=pxc"}
 	pods, err := c.GetPods(ctx, "", strings.Join(podLables, ","))
 	if err != nil {
 		return false, err
@@ -1102,7 +1079,7 @@ func (c *K8sClient) crVersionMatchesPXCPodsVersion(ctx context.Context, cluster 
 	}
 	images := make(map[string]struct{})
 	for _, p := range pods.Items {
-		for _, containerName := range databaseContainerNames {
+		for _, containerName := range cluster.ContainerNames {
 			var imageName string
 			for _, c := range p.Spec.Containers {
 				if c.Name == containerName {
@@ -1116,39 +1093,7 @@ func (c *K8sClient) crVersionMatchesPXCPodsVersion(ctx context.Context, cluster 
 			images[imageName] = struct{}{}
 		}
 	}
-	_, ok := images[crImage]
-	return len(images) == 1 && ok, nil
-}
-
-func (c *K8sClient) crVersionMatchesPodsVersion(ctx context.Context, cluster *psmdbv1.PerconaServerMongoDB) (bool, error) {
-	podLables := []string{"app.kubernetes.io/instance=" + cluster.Name, "app.kubernetes.io/part-of=percona-server-mongodb"}
-	databaseContainerNames := []string{"mongos", "mongod"}
-	crImage := cluster.Spec.Image
-	pods, err := c.GetPods(ctx, "", strings.Join(podLables, ","))
-	if err != nil {
-		return false, err
-	}
-	if len(pods.Items) == 0 {
-		// Avoid stating it versions don't match when there are no pods to check.
-		return true, nil
-	}
-	images := make(map[string]struct{})
-	for _, p := range pods.Items {
-		for _, containerName := range databaseContainerNames {
-			var imageName string
-			for _, c := range p.Spec.Containers {
-				if c.Name == containerName {
-					imageName = c.Image
-				}
-			}
-			if imageName == "" {
-				c.l.Debugf("failed to check pods for container image: %v", err)
-				continue
-			}
-			images[imageName] = struct{}{}
-		}
-	}
-	_, ok := images[crImage]
+	_, ok := images[cluster.CRImage]
 	return len(images) == 1 && ok, nil
 }
 
@@ -1192,7 +1137,8 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 			val.Message = message
 		}
 
-		val.State = c.getClusterState(ctx, &cluster, c.crVersionMatchesPodsVersion)
+		clusterInfo := kube.NewDBClusterInfoFromPSMDB(&cluster)
+		val.State = c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
 		res[i] = val
 	}
 	return res, nil

@@ -5,52 +5,29 @@ import (
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 )
 
-type DBCluster interface {
-	State() pxcv1.AppState
-	Pause() bool
-	GetName() string
-	CRImage() string
-	SetImage(string)
+type DBCluster struct {
+	State          string
+	Pause          bool
+	Name           string
+	CRImage        string
+	ContainerNames []string
 }
 
-type PXCCluster pxcv1.PerconaXtraDBCluster
-type PSMDBCluster psmdbv1.PerconaServerMongoDB
-
-func (c *PXCCluster) State() pxcv1.AppState {
-	return c.Status.Status
+func NewDBClusterInfoFromPXC(cluster *pxcv1.PerconaXtraDBCluster) DBCluster {
+	return DBCluster{
+		CRImage:        cluster.Spec.PXC.Image,
+		State:          string(cluster.Status.Status),
+		Pause:          cluster.Spec.Pause,
+		Name:           cluster.Name,
+		ContainerNames: []string{"pxc"},
+	}
 }
-func (c *PXCCluster) Pause() bool {
-	return c.Spec.Pause
-}
-func (c *PXCCluster) GetName() string {
-	return c.Name
-}
-func (c *PXCCluster) CRImage() string {
-	return c.Spec.PXC.Image
-}
-func (c *PXCCluster) SetImage(img string) {
-	c.Spec.PXC.Image = img
-}
-func (c *PXCCluster) Original() *pxcv1.PerconaXtraDBCluster {
-	v := pxcv1.PerconaXtraDBCluster(*c)
-	return &v
-}
-func (c *PSMDBCluster) State() pxcv1.AppState {
-	return pxcv1.AppState(c.Status.State)
-}
-func (c *PSMDBCluster) Pause() bool {
-	return c.Spec.Pause
-}
-func (c *PSMDBCluster) GetName() string {
-	return c.Name
-}
-func (c *PSMDBCluster) CRImage() string {
-	return c.Spec.Image
-}
-func (c *PSMDBCluster) SetImage(img string) {
-	c.Spec.Image = img
-}
-func (c *PSMDBCluster) Original() *psmdbv1.PerconaServerMongoDB {
-	v := psmdbv1.PerconaServerMongoDB(*c)
-	return &v
+func NewDBClusterInfoFromPSMDB(cluster *psmdbv1.PerconaServerMongoDB) DBCluster {
+	return DBCluster{
+		CRImage:        cluster.Spec.Image,
+		State:          string(cluster.Status.State),
+		Pause:          cluster.Spec.Pause,
+		Name:           cluster.Name,
+		ContainerNames: []string{"pxc"},
+	}
 }
