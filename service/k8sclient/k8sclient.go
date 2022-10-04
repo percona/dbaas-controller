@@ -481,6 +481,8 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 	if err != nil {
 		return err
 	}
+	cluster.Kind = kube.PXCKind
+	cluster.APIVersion = "pxc.percona.com/v1"
 	var clusterState ClusterState
 	if cluster == nil {
 		clusterState = ClusterStateInvalid
@@ -518,7 +520,7 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 		cluster.Spec.PXC.Resources = c.updateComputeResources(params.PXC.ComputeResources, cluster.Spec.PXC.Resources)
 		if params.PXC.Image != "" && params.PXC.Image != cluster.Spec.PXC.Image {
 			// Let's upgrade the cluster.
-			err = c.validateImage(cluster.Spec.CRVersion, params.PXC.Image)
+			err = c.validateImage(cluster.Spec.PXC.Image, params.PXC.Image)
 			if err != nil {
 				return err
 			}
@@ -598,20 +600,21 @@ func (c *K8sClient) GetPXCClusterCredentials(ctx context.Context, name string) (
 	var clusterState ClusterState
 	if cluster == nil {
 		clusterState = ClusterStateInvalid
-	}
+	} else {
 
-	clusterInfo := kube.NewDBClusterInfoFromPXC(cluster)
-	clusterState = c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
-	if clusterState != ClusterStateReady && clusterState != ClusterStateChanging {
-		return nil, errors.Wrapf(
-			errors.Wrap(ErrPXCClusterStateUnexpected,
-				fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
-			),
-			"cluster state is state %v, %v or %v is expected",
-			clusterState,
-			ClusterStateReady,
-			ClusterStateChanging,
-		)
+		clusterInfo := kube.NewDBClusterInfoFromPXC(cluster)
+		clusterState = c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
+		if clusterState != ClusterStateReady && clusterState != ClusterStateChanging {
+			return nil, errors.Wrapf(
+				errors.Wrap(ErrPXCClusterStateUnexpected,
+					fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
+				),
+				"cluster state is state %v, %v or %v is expected",
+				clusterState,
+				ClusterStateReady,
+				ClusterStateChanging,
+			)
+		}
 	}
 
 	secret, err := c.kube.GetSecret(ctx, fmt.Sprintf(pxcSecretNameTmpl, name))
@@ -952,7 +955,7 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 	}
 	if params.Image != "" && params.Image != cluster.Spec.Image {
 		// We want to upgrade the cluster.
-		err = c.validateImage(cluster.Spec.CRVersion, params.Image)
+		err = c.validateImage(cluster.Spec.Image, params.Image)
 		if err != nil {
 			return err
 		}
@@ -1203,7 +1206,7 @@ func (c *K8sClient) updateComputeResources(res *ComputeResources, podResources c
 	if res == nil {
 		return podResources
 	}
-	if (&podResources).Size() != 0 {
+	if (&podResources).Size() == 0 {
 		podResources = corev1.ResourceRequirements{}
 	}
 
