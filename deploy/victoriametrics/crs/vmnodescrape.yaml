@@ -30,4 +30,4 @@ spec:
     replacement: $1-$2
   extraArgs:
     promscrape.noStaleMarkers: true
-    minStalenessInterval: 0s
+    minStalenessInterval: 1s
