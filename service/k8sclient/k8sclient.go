@@ -1799,6 +1799,12 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 		"deploy/victoriametrics/crs/vmagent_rbac.yaml",
 		"deploy/victoriametrics/crs/vmnodescrape.yaml",
 		"deploy/victoriametrics/crs/vmpodscrape.yaml",
+		"deploy/victoriametrics/kube-state-metrics/service-account.yaml",
+		"deploy/victoriametrics/kube-state-metrics/cluster-role.yaml",
+		"deploy/victoriametrics/kube-state-metrics/cluster-role-binding.yaml",
+		"deploy/victoriametrics/kube-state-metrics/deployment.yaml",
+		"deploy/victoriametrics/kube-state-metrics/service.yaml",
+		"deploy/victoriametrics/kube-state-metrics.yaml",
 	}
 	for _, path := range files {
 		file, err := dbaascontroller.DeployDir.ReadFile(path)
@@ -1832,6 +1838,12 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 // RemoveVMOperator deletes the VM Operator installed when the cluster was registered.
 func (c *K8sClient) RemoveVMOperator(ctx context.Context) error {
 	files := []string{
+		"deploy/victoriametrics/kube-state-metrics.yaml",
+		"deploy/victoriametrics/kube-state-metrics/cluster-role-binding.yaml",
+		"deploy/victoriametrics/kube-state-metrics/cluster-role.yaml",
+		"deploy/victoriametrics/kube-state-metrics/deployment.yaml",
+		"deploy/victoriametrics/kube-state-metrics/service-account.yaml",
+		"deploy/victoriametrics/kube-state-metrics/service.yaml",
 		"deploy/victoriametrics/crds/crd.yaml",
 		"deploy/victoriametrics/operator/manager.yaml",
 	}
