@@ -78,7 +78,6 @@ const (
 	pxcBackupImageTemplate          = "percona/percona-xtradb-cluster-operator:%s-pxc8.0-backup"
 	pxcDefaultImage                 = "percona/percona-xtradb-cluster:8.0.20-11.1"
 	pxcBackupStorageName            = "pxc-backup-storage-%s"
-	pxcAPINamespace                 = "pxc.percona.com"
 	pxcAPIVersionTemplate           = pxcAPINamespace + "/v%s"
 	pxcProxySQLDefaultImageTemplate = "percona/percona-xtradb-cluster-operator:%s-proxysql"
 	pxcHAProxyDefaultImageTemplate  = "percona/percona-xtradb-cluster-operator:%s-haproxy"
@@ -87,10 +86,15 @@ const (
 
 	psmdbBackupImageTemplate = "percona/percona-server-mongodb-operator:%s-backup"
 	psmdbDefaultImage        = "percona/percona-server-mongodb:4.2.8-8"
-	psmdbAPINamespace        = "psmdb.percona.com"
-	psmdbAPIVersionTemplate  = psmdbAPINamespace + "/v%s"
-	psmdbSecretNameTmpl      = "dbaas-%s-psmdb-secrets" //nolint:gosec
-	stabePMMClientImage      = "percona/pmm-client:2"
+
+	olmAPINamespace   = "operators.coreos.com"
+	psmdbAPINamespace = "psmdb.percona.com"
+	pxcAPINamespace   = "pxc.percona.com"
+	vmAPINamespace    = "operator.victoriametrics.com"
+
+	psmdbAPIVersionTemplate = psmdbAPINamespace + "/v%s"
+	psmdbSecretNameTmpl     = "dbaas-%s-psmdb-secrets" //nolint:gosec
+	stabePMMClientImage     = "percona/pmm-client:2"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
@@ -133,8 +137,10 @@ type Operator struct {
 // Operators contains versions of installed operators.
 // If version is empty, operator is not installed.
 type Operators struct {
-	PXCOperatorVersion   string
-	PsmdbOperatorVersion string
+	PXCOperatorVersion             string
+	PsmdbOperatorVersion           string
+	OLMOperatorVersion             string
+	VictoriaMetricsOperatorVersion string
 }
 
 // ComputeResources represents container computer resources requests or limits.
@@ -1364,8 +1370,10 @@ func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 	}
 
 	return &Operators{
-		PXCOperatorVersion:   c.getLatestOperatorAPIVersion(apiVersions, pxcAPINamespace),
-		PsmdbOperatorVersion: c.getLatestOperatorAPIVersion(apiVersions, psmdbAPINamespace),
+		PXCOperatorVersion:             c.getLatestOperatorAPIVersion(apiVersions, pxcAPINamespace),
+		PsmdbOperatorVersion:           c.getLatestOperatorAPIVersion(apiVersions, psmdbAPINamespace),
+		OLMOperatorVersion:             c.getLatestOperatorAPIVersion(apiVersions, olmAPINamespace),
+		VictoriaMetricsOperatorVersion: c.getLatestOperatorAPIVersion(apiVersions, vmAPINamespace),
 	}, nil
 }
 
@@ -1380,11 +1388,15 @@ func (c *K8sClient) getLatestOperatorAPIVersion(installedVersions []string, apiP
 		if !strings.HasPrefix(apiVersion, apiPrefix) {
 			continue
 		}
+
+		// versions could be in these forms:
+		// pxc.percona.com/v1-8-0                 -> 1.8.0
+		// operators.coreos.com/v2                -> 2.0.0
+		// operators.coreos.com/v1alpha2          -> 1.0.0-alpha2
+		// operator.victoriametrics.com/v1beta1   -> 1.0.0-beta1
+
 		v := strings.Split(apiVersion, "/")[1]
 		versionParts := strings.Split(v, "-")
-		if len(versionParts) != 3 {
-			continue
-		}
 		v = strings.Join(versionParts, ".")
 		newVersion, err := goversion.NewVersion(v)
 		if err != nil {
@@ -1809,10 +1821,10 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 
 func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 	files := []string{
-		"deploy/victoriametrics/crds/crd.yaml",
-		"deploy/victoriametrics/operator/manager.yaml",
-		"deploy/victoriametrics/operator/rbac.yaml",
-		"deploy/victoriametrics/crs/vmagent_rbac.yaml",
+		// 	"deploy/victoriametrics/crds/crd.yaml",
+		// 	"deploy/victoriametrics/operator/manager.yaml",
+		// 	"deploy/victoriametrics/operator/rbac.yaml",
+		// 	"deploy/victoriametrics/crs/vmagent_rbac.yaml",
 		"deploy/victoriametrics/crs/vmnodescrape.yaml",
 		"deploy/victoriametrics/crs/vmpodscrape.yaml",
 	}
