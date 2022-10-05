@@ -29,5 +29,4 @@ spec:
     regex: (.+);(.+)
     replacement: $1-$2
   extraArgs:
-    promscrape.noStaleMarkers: true
     minStalenessInterval: 1s
