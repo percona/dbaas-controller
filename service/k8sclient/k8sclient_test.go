@@ -1142,8 +1142,8 @@ func TestGetPXCClusterState(t *testing.T) {
 		tt := test
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
 			t.Parallel()
-			ic := kube.PXCCluster(*tt.cluster)
-			clusterState := c.getPXCClusterState(ctx, &ic, func(context.Context, kube.DBCluster) (bool, error) {
+			cInfo := kube.NewDBClusterInfoFromPXC(tt.cluster)
+			clusterState := c.getClusterState(ctx, cInfo, func(context.Context, kube.DBCluster) (bool, error) {
 				return tt.crAndPodsVersionMatches, tt.matchingError
 			})
 			assert.Equal(t, tt.expectedState, clusterState, tt.name)
@@ -1301,7 +1301,8 @@ func TestGetPSMDBClusterState(t *testing.T) {
 		tt := test
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
 			t.Parallel()
-			clusterState := c.getClusterState(ctx, tt.cluster, func(context.Context, *psmdbv1.PerconaServerMongoDB) (bool, error) {
+			cInfo := kube.NewDBClusterInfoFromPSMDB(tt.cluster)
+			clusterState := c.getClusterState(ctx, cInfo, func(context.Context, kube.DBCluster) (bool, error) {
 				return tt.crAndPodsVersionMatches, tt.matchingError
 			})
 			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
