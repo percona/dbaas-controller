@@ -1405,10 +1405,18 @@ func TestCreateVMOperator(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
 
+	count, err = getDeploymentCount(ctx, client, "kube-state-metrics")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count)
+
 	err = client.RemoveVMOperator(ctx)
 	assert.NoError(t, err)
 
 	count, err = getDeploymentCount(ctx, client, "vmagent")
+	assert.NoError(t, err)
+	assert.Equal(t, 0, count)
+
+	count, err = getDeploymentCount(ctx, client, "kube-state-metrics")
 	assert.NoError(t, err)
 	assert.Equal(t, 0, count)
 }
@@ -1418,7 +1426,7 @@ func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (in
 		Items []common.Deployment `json:"items"`
 	}
 	var deps deployments
-	err := client.kubeCtl.Get(ctx, "deployment", "", &deps)
+	err := client.kubeCtl.Get(ctx, "deployment", "-A", &deps)
 	if err != nil {
 		return -1, err
 	}
