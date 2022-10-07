@@ -46,6 +46,7 @@ type RunDebugServerOpts struct {
 
 // RunDebugServer runs debug server with given options until ctx is canceled.
 // All errors cause panic.
+//
 //nolint:funlen
 func RunDebugServer(ctx context.Context, opts *RunDebugServerOpts) {
 	if opts == nil {
