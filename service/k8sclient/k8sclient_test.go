@@ -1019,6 +1019,11 @@ func TestGetPXCClusterState(t *testing.T) {
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
 				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
@@ -1030,6 +1035,11 @@ func TestGetPXCClusterState(t *testing.T) {
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
 				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateReady},
 			},
@@ -1043,6 +1053,11 @@ func TestGetPXCClusterState(t *testing.T) {
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
 				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
@@ -1054,6 +1069,11 @@ func TestGetPXCClusterState(t *testing.T) {
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
 				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateStopping},
 			},
@@ -1065,6 +1085,11 @@ func TestGetPXCClusterState(t *testing.T) {
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
 				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateReady},
 			},
@@ -1076,6 +1101,11 @@ func TestGetPXCClusterState(t *testing.T) {
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
 				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStatePaused},
 			},
@@ -1087,6 +1117,11 @@ func TestGetPXCClusterState(t *testing.T) {
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
 				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
@@ -1099,6 +1134,11 @@ func TestGetPXCClusterState(t *testing.T) {
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
 				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
@@ -1110,6 +1150,11 @@ func TestGetPXCClusterState(t *testing.T) {
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
 				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
@@ -1122,6 +1167,11 @@ func TestGetPXCClusterState(t *testing.T) {
 			cluster: &pxcv1.PerconaXtraDBCluster{
 				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
 				Status: pxcv1.PerconaXtraDBClusterStatus{Status: "notimplemented"},
 			},

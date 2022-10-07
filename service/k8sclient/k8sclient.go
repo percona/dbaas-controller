@@ -483,14 +483,10 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 	}
 	cluster.Kind = kube.PXCKind
 	cluster.APIVersion = "pxc.percona.com/v1"
-	var clusterState ClusterState
-	if cluster == nil {
-		clusterState = ClusterStateInvalid
-	}
 
 	clusterInfo := kube.NewDBClusterInfoFromPXC(cluster)
 
-	clusterState = c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
+	clusterState := c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
 
 	// Only if cluster is paused, allow resuming it. All other modifications are forbinden.
 	if params.Resume && clusterState == ClusterStatePaused {
@@ -597,24 +593,18 @@ func (c *K8sClient) GetPXCClusterCredentials(ctx context.Context, name string) (
 		return nil, errors.Wrap(err, fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"))
 	}
 
-	var clusterState ClusterState
-	if cluster == nil {
-		clusterState = ClusterStateInvalid
-	} else {
-
-		clusterInfo := kube.NewDBClusterInfoFromPXC(cluster)
-		clusterState = c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
-		if clusterState != ClusterStateReady && clusterState != ClusterStateChanging {
-			return nil, errors.Wrapf(
-				errors.Wrap(ErrPXCClusterStateUnexpected,
-					fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
-				),
-				"cluster state is state %v, %v or %v is expected",
-				clusterState,
-				ClusterStateReady,
-				ClusterStateChanging,
-			)
-		}
+	clusterInfo := kube.NewDBClusterInfoFromPXC(cluster)
+	clusterState := c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
+	if clusterState != ClusterStateReady && clusterState != ClusterStateChanging {
+		return nil, errors.Wrapf(
+			errors.Wrap(ErrPXCClusterStateUnexpected,
+				fmt.Sprintf(canNotGetCredentialsErrTemplate, "XtraDb"),
+			),
+			"cluster state is state %v, %v or %v is expected",
+			clusterState,
+			ClusterStateReady,
+			ClusterStateChanging,
+		)
 	}
 
 	secret, err := c.kube.GetSecret(ctx, fmt.Sprintf(pxcSecretNameTmpl, name))

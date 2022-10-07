@@ -29,6 +29,11 @@ type DBCluster struct {
 }
 
 func NewDBClusterInfoFromPXC(cluster *pxcv1.PerconaXtraDBCluster) DBCluster {
+	if cluster == nil || cluster.Spec.PXC == nil {
+		return DBCluster{
+			State: string(pxcv1.AppStateUnknown),
+		}
+	}
 	return DBCluster{
 		CRImage:        cluster.Spec.PXC.Image,
 		State:          string(cluster.Status.Status),
@@ -38,6 +43,11 @@ func NewDBClusterInfoFromPXC(cluster *pxcv1.PerconaXtraDBCluster) DBCluster {
 	}
 }
 func NewDBClusterInfoFromPSMDB(cluster *psmdbv1.PerconaServerMongoDB) DBCluster {
+	if cluster == nil || cluster == new(psmdbv1.PerconaServerMongoDB) || cluster.Status.State == "" {
+		return DBCluster{
+			State: string(pxcv1.AppStateUnknown),
+		}
+	}
 	return DBCluster{
 		CRImage:        cluster.Spec.Image,
 		State:          string(cluster.Status.State),
