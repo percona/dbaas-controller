@@ -521,7 +521,7 @@ func (c *Client) GetEvents(ctx context.Context, name string) (string, error) {
 			FieldSelector: selector.String(),
 			Limit:         defaultChunkSize,
 		}
-		events := &corev1.EventList{}
+		events := new(corev1.EventList)
 		err2 := resource.FollowContinue(&initialOpts,
 			func(options metav1.ListOptions) (runtime.Object, error) {
 				newList, err := eventsInterface.List(ctx, options)
@@ -532,7 +532,7 @@ func (c *Client) GetEvents(ctx context.Context, name string) (string, error) {
 				return newList, nil
 			})
 
-		if err2 == nil && len(events.Items) > 0 {
+		if err2 == nil && len(events.Items) != 0 {
 			return tabbedString(func(out io.Writer) error {
 				w := NewPrefixWriter(out)
 				w.Write(0, "Pod '%v': error '%v', but found events.\n", name, err)
@@ -563,7 +563,7 @@ func (c *Client) GetEvents(ctx context.Context, name string) (string, error) {
 }
 func tabbedString(f func(io.Writer) error) (string, error) {
 	out := new(tabwriter.Writer)
-	buf := &bytes.Buffer{}
+	buf := new(bytes.Buffer)
 	out.Init(buf, 0, 8, 2, ' ', 0)
 
 	err := f(out)
@@ -632,7 +632,7 @@ func searchEvents(client corev1client.EventsGetter, objOrRef runtime.Object, lim
 	e := client.Events(ref.Namespace)
 	fieldSelector := e.GetFieldSelector(&ref.Name, &ref.Namespace, refKind, refUID)
 	initialOpts := metav1.ListOptions{FieldSelector: fieldSelector.String(), Limit: limit}
-	eventList := &corev1.EventList{}
+	eventList := new(corev1.EventList)
 	err = resource.FollowContinue(&initialOpts,
 		func(options metav1.ListOptions) (runtime.Object, error) {
 			newEvents, err := e.List(context.TODO(), options)

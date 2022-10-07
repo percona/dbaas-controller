@@ -35,7 +35,7 @@ type prefixWriter struct {
 	out io.Writer
 }
 
-var _ PrefixWriter = &prefixWriter{}
+var _ PrefixWriter = new(prefixWriter)
 
 // NewPrefixWriter creates a new PrefixWriter.
 func NewPrefixWriter(out io.Writer) PrefixWriter {
