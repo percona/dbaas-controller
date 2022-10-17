@@ -496,7 +496,7 @@ func (c *Client) PatchPSMDBCluster(ctx context.Context, name string, pt types.Pa
 
 // GetDeployment finds deployment.
 func (c *Client) GetDeployment(ctx context.Context, name string) (*appsv1.Deployment, error) {
-	return c.clientset.AppsV1().Deployments(c.namespace).Get(ctx, name, metav1.GetOptions{})
+	return c.clientset.AppsV1().Deployments("").Get(ctx, name, metav1.GetOptions{})
 }
 func (c *Client) ListDeployments(ctx context.Context) (*appsv1.DeploymentList, error) {
 	return c.clientset.AppsV1().Deployments(c.namespace).List(ctx, metav1.ListOptions{})
