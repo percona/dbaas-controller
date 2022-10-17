@@ -488,7 +488,7 @@ func (c *Client) GetPSMDBCluster(ctx context.Context, name string) (*psmdbv1.Per
 	return c.psmdbClient.PSMDBClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-// PAtchPSMDBCluster patches CR of managed PSMDB cluster.
+// PatchPSMDBCluster patches CR of managed PSMDB cluster.
 func (c *Client) PatchPSMDBCluster(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*psmdbv1.PerconaServerMongoDB, error) {
 	return c.psmdbClient.PSMDBClusters(c.namespace).Patch(ctx, name, pt, data, opts)
 }
