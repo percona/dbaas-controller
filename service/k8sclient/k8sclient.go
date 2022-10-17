@@ -385,6 +385,7 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 		kubeconfig: kubeconfig,
 	}, nil
 }
+
 func (c *K8sClient) Cleanup() error {
 	return nil
 }
@@ -722,7 +723,6 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 }
 
 func (c *K8sClient) getClusterState(ctx context.Context, cluster kube.DBCluster, crAndPodsMatchFunc func(context.Context, kube.DBCluster) (bool, error)) ClusterState {
-
 	state := cluster.State
 	if state == appStateUnknown {
 		return ClusterStateInvalid

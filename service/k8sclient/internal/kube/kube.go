@@ -33,8 +33,6 @@ import (
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
-
 	v1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,9 +45,9 @@ import (
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/cli-runtime/pkg/resource"
-	"k8s.io/client-go/kubernetes/scheme"
-
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
@@ -384,6 +382,7 @@ func (c *Client) GetStorageClasses(ctx context.Context) (*v1.StorageClassList, e
 func (c *Client) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
 	return c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
+
 func (c *Client) GetServerVersion(ctx context.Context) (*version.Info, error) {
 	return c.clientset.Discovery().ServerVersion()
 }
@@ -498,6 +497,7 @@ func (c *Client) PatchPSMDBCluster(ctx context.Context, name string, pt types.Pa
 func (c *Client) GetDeployment(ctx context.Context, name string) (*appsv1.Deployment, error) {
 	return c.clientset.AppsV1().Deployments(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
+
 func (c *Client) ListDeployments(ctx context.Context) (*appsv1.DeploymentList, error) {
 	return c.clientset.AppsV1().Deployments("").List(ctx, metav1.ListOptions{})
 }
@@ -559,8 +559,8 @@ func (c *Client) GetEvents(ctx context.Context, name string) (string, error) {
 		DescribeEvents(events, w)
 		return nil
 	})
-
 }
+
 func tabbedString(f func(io.Writer) error) (string, error) {
 	out := new(tabwriter.Writer)
 	buf := new(bytes.Buffer)
@@ -575,6 +575,7 @@ func tabbedString(f func(io.Writer) error) (string, error) {
 	str := string(buf.String())
 	return str, nil
 }
+
 func DescribeEvents(el *corev1.EventList, w PrefixWriter) {
 	if len(el.Items) == 0 {
 		w.Write(LEVEL_0, "Events:\t<none>\n")

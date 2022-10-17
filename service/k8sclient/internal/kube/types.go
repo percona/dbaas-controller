@@ -42,6 +42,7 @@ func NewDBClusterInfoFromPXC(cluster *pxcv1.PerconaXtraDBCluster) DBCluster {
 		ContainerNames: []string{"pxc"},
 	}
 }
+
 func NewDBClusterInfoFromPSMDB(cluster *psmdbv1.PerconaServerMongoDB) DBCluster {
 	if cluster == nil || cluster == new(psmdbv1.PerconaServerMongoDB) || cluster.Status.State == "" {
 		return DBCluster{
