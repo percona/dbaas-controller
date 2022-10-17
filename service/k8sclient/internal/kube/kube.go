@@ -26,6 +26,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"text/tabwriter"
 	"time"
 
@@ -147,6 +148,7 @@ type configGetter struct {
 }
 
 type Client struct {
+	mu          *sync.Mutex
 	clientset   *kubernetes.Clientset
 	pxcClient   *pxc.PerconaXtraDBClusterClient
 	psmdbClient *psmdb.PerconaServerMongoDBClient
@@ -197,6 +199,7 @@ func NewFromIncluster() (*Client, error) {
 	c := &Client{
 		clientset:  clientset,
 		restConfig: config,
+		mu:         &sync.Mutex{},
 	}
 	err = c.setup()
 	return c, err
@@ -218,6 +221,7 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	c := &Client{
 		clientset:  clientset,
 		restConfig: config,
+		mu:         &sync.Mutex{},
 	}
 	err = c.setup()
 	return c, err
@@ -264,6 +268,9 @@ func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) 
 
 // Delete deletes object from the k8s cluster
 func (c *Client) Delete(ctx context.Context, obj runtime.Object) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
 	if err != nil {
 		return err
