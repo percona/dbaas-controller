@@ -255,6 +255,12 @@ func (k *KubeCtl) Apply(ctx context.Context, res interface{}) error {
 	return err
 }
 
+// ApplyServerSide executes `kubectl apply --server-side` with given resource.
+func (k *KubeCtl) ApplyServerSide(ctx context.Context, res interface{}) error {
+	_, err := run(ctx, k.cmd, []string{"apply", "--server-side", "-f", "-"}, res)
+	return err
+}
+
 // Patch executes `kubectl patch` on given resource.
 func (k *KubeCtl) Patch(ctx context.Context, patchType PatchType, resourceType, resourceName string, res interface{}) error {
 	patch, err := json.Marshal(res)

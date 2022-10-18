@@ -1684,7 +1684,7 @@ func (c *K8sClient) ApplyOperator(ctx context.Context, version string, manifests
 	if err != nil {
 		return errors.Wrap(err, "failed to install operator")
 	}
-	return c.kubeCtl.Apply(ctx, bundle)
+	return c.kubeCtl.ApplyServerSide(ctx, bundle)
 }
 
 // PatchAllPSMDBClusters replaces images versions and CrVersion after update of the operator to match version
@@ -1763,7 +1763,7 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 		if err != nil {
 			return errors.Wrap(err, "failed to update operator")
 		}
-		err = c.kubeCtl.Apply(ctx, manifest)
+		err = c.kubeCtl.ApplyServerSide(ctx, manifest)
 		if err != nil {
 			return errors.Wrap(err, "failed to update operator")
 		}
