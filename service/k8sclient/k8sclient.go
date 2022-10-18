@@ -483,7 +483,7 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 		return err
 	}
 	cluster.Kind = kube.PXCKind
-	cluster.APIVersion = "pxc.percona.com/v1"
+	cluster.APIVersion = c.getAPIVersionForPXCOperator(cluster.Spec.CRVersion)
 
 	clusterInfo := kube.NewDBClusterInfoFromPXC(cluster)
 
@@ -920,7 +920,7 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 		return err
 	}
 	cluster.Kind = kube.PSMDBKind
-	cluster.APIVersion = "psmdb.percona.com/v1"
+	cluster.APIVersion = c.getAPIVersionForPSMDBOperator(cluster.Spec.CRVersion)
 	clusterInfo := kube.NewDBClusterInfoFromPSMDB(cluster)
 	clusterState := c.getClusterState(ctx, clusterInfo, c.crVersionMatchesPodsVersion)
 	if params.Resume && clusterState == ClusterStatePaused {
