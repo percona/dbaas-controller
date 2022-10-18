@@ -1904,8 +1904,10 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 				Net: &psmdbv1.MongodSpecNet{
 					Port: 27017,
 				},
-				OperationProfiling: &psmdbv1.MongodSpecOperationProfiling{
-					Mode: psmdbv1.OperationProfilingModeSlowOp,
+				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
+					Mode:              psmdbv1.OperationProfilingModeSlowOp,
+					SlowOpThresholdMs: 100,
+					RateLimit:         100,
 				},
 				Security: &psmdbv1.MongodSpecSecurity{
 					RedactClientLogData:  false,
