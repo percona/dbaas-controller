@@ -1099,7 +1099,7 @@ func (c *K8sClient) GetPSMDBClusterCredentials(ctx context.Context, name string)
 }
 
 func (c *K8sClient) crVersionMatchesPodsVersion(ctx context.Context, cluster kube.DBCluster) (bool, error) {
-	podLables := []string{"app.kubernetes.io/instance=" + cluster.Name, "app.kubernetes.io/component=pxc"}
+	podLables := cluster.PodLabels
 	pods, err := c.GetPods(ctx, "", strings.Join(podLables, ","))
 	if err != nil {
 		return false, err

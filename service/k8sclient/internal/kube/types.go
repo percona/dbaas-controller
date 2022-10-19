@@ -26,6 +26,7 @@ type DBCluster struct {
 	Name           string
 	CRImage        string
 	ContainerNames []string
+	PodLabels      []string
 }
 
 func NewDBClusterInfoFromPXC(cluster *pxcv1.PerconaXtraDBCluster) DBCluster {
@@ -34,13 +35,15 @@ func NewDBClusterInfoFromPXC(cluster *pxcv1.PerconaXtraDBCluster) DBCluster {
 			State: string(pxcv1.AppStateUnknown),
 		}
 	}
-	return DBCluster{
+	db := DBCluster{
 		CRImage:        cluster.Spec.PXC.Image,
 		State:          string(cluster.Status.Status),
 		Pause:          cluster.Spec.Pause,
 		Name:           cluster.Name,
 		ContainerNames: []string{"pxc"},
 	}
+	db.PodLabels = []string{"app.kubernetes.io/instance=" + db.Name, "app.kubernetes.io/component=pxc"}
+	return db
 }
 
 func NewDBClusterInfoFromPSMDB(cluster *psmdbv1.PerconaServerMongoDB) DBCluster {
@@ -49,11 +52,13 @@ func NewDBClusterInfoFromPSMDB(cluster *psmdbv1.PerconaServerMongoDB) DBCluster 
 			State: string(pxcv1.AppStateUnknown),
 		}
 	}
-	return DBCluster{
+	db := DBCluster{
 		CRImage:        cluster.Spec.Image,
 		State:          string(cluster.Status.State),
 		Pause:          cluster.Spec.Pause,
 		Name:           cluster.Name,
 		ContainerNames: []string{"mongos", "mongod"},
 	}
+	db.PodLabels = []string{"app.kubernetes.io/instance=" + db.Name, "app.kubernetes.io/part-of=percona-server-mongodb"}
+	return db
 }
