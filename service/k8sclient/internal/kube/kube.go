@@ -32,6 +32,8 @@ import (
 
 	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
+	"github.com/pkg/errors"
+	yaml3 "gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
@@ -40,7 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	yamlSerializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/duration"
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
@@ -49,6 +51,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+
+	// load all auth plugins
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
@@ -68,6 +73,9 @@ const (
 	PXCKind            = pxc.PXCKind
 	PSMDBKind          = psmdb.PSMDBKind
 	defaultChunkSize   = 500
+	configKind         = "Config"
+	apiVersion         = "v1"
+	defaultName        = "default"
 )
 
 // Each level has 2 spaces for PrefixWriter
@@ -365,7 +373,7 @@ func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
 			break
 		}
 
-		obj, _, err := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(rawObj.Raw, nil, nil)
+		obj, _, err := yamlSerializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(rawObj.Raw, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -651,6 +659,72 @@ func searchEvents(client corev1client.EventsGetter, objOrRef runtime.Object, lim
 			return newEvents, nil
 		})
 	return eventList, err
+}
+
+// GetSecretsForServiceAccount returns secret by given service account name
+func (c *Client) GetSecretsForServiceAccount(ctx context.Context, accountName string) (*corev1.Secret, error) {
+	serviceAccount, err := c.clientset.CoreV1().ServiceAccounts(c.namespace).Get(ctx, accountName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	if len(serviceAccount.Secrets) == 0 {
+		return nil, errors.Errorf("no secrets available for namespace %s", c.namespace)
+	}
+	return c.clientset.CoreV1().Secrets(c.namespace).Get(
+		ctx,
+		serviceAccount.Secrets[0].Name,
+		metav1.GetOptions{},
+	)
+}
+
+// GenerateKubeConfig generates kubeconfig
+func (c *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
+	conf := &Config{
+		Kind:           configKind,
+		APIVersion:     apiVersion,
+		CurrentContext: defaultName,
+	}
+	conf.Clusters = []ClusterInfo{
+		{
+			Name: defaultName,
+			Cluster: Cluster{
+				CertificateAuthorityData: secret.Data["ca.crt"],
+				Server:                   c.restConfig.Host,
+			},
+		},
+	}
+	conf.Contexts = []ContextInfo{
+		{
+			Name: defaultName,
+			Context: Context{
+				Cluster:   defaultName,
+				User:      "pmm-service-account",
+				Namespace: defaultName,
+			},
+		},
+	}
+	conf.Users = []UserInfo{
+		{
+			Name: "pmm-service-account",
+			User: User{
+				Token: string(secret.Data["token"]),
+			},
+		},
+	}
+	return c.marshalKubeConfig(conf)
+}
+
+func (c *Client) marshalKubeConfig(conf *Config) ([]byte, error) {
+	config, err := json.Marshal(&conf)
+	if err != nil {
+		return nil, err
+	}
+	var jsonObj interface{}
+	err = yaml3.Unmarshal(config, &jsonObj)
+	if err != nil {
+		return nil, err
+	}
+	return yaml3.Marshal(jsonObj)
 }
 
 func (c *Client) retrieveMetaFromObject(obj runtime.Object) (namespace, name string, err error) {

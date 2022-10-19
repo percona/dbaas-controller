@@ -386,8 +386,46 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	}, nil
 }
 
+// NewIncluster returns new K8Client object.
+func NewIncluster(ctx context.Context) (*K8sClient, error) {
+	l := logger.Get(ctx)
+	l = l.WithField("component", "K8sClient")
+
+	kube, err := kube.NewFromIncluster()
+	if err != nil {
+		return nil, err
+	}
+	return &K8sClient{
+		kube: kube,
+		l:    l,
+		client: &http.Client{
+			Timeout: time.Second * 5,
+			Transport: &http.Transport{
+				MaxIdleConns:    1,
+				IdleConnTimeout: 10 * time.Second,
+			},
+		},
+	}, nil
+}
+
+// Cleanup removes temporary files created by that object.
 func (c *K8sClient) Cleanup() error {
 	return nil
+}
+
+// GetKubeconfig generates kubeconfig compatible with kubectl for incluster created clients.
+func (c *K8sClient) GetKubeconfig(ctx context.Context) (string, error) {
+	secret, err := c.kube.GetSecretsForServiceAccount(ctx, "pmm-service-account")
+	if err != nil {
+		c.l.Errorf("failed getting service account: %v", err)
+		return "", err
+	}
+	kubeConfig, err := c.kube.GenerateKubeConfig(secret)
+	if err != nil {
+		c.l.Errorf("failed generating kubeconfig: %v", err)
+		return "", err
+	}
+	return string(kubeConfig), nil
 }
 
 // ListPXCClusters returns list of Percona XtraDB clusters and their statuses.
