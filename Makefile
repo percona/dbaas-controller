@@ -72,7 +72,7 @@ ci-init:                ## Initialize CI environment
 format:                           ## Format source code
 	bin/gofumpt -l -w .
 	bin/goimports -local github.com/percona-platform/dbaas-controller -l -w .
-	bin/gci write --Section Standard --Section Default --Section "Prefix(github.com/percona-platform/dbaas-controller)" .
+	bin/gci write --section Standard --section Default --section "Prefix(github.com/percona-platform/dbaas-controller)" .
 
 check:                            ## Run checks/linters for the whole project
 	bin/check-license
