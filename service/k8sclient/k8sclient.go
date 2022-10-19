@@ -1978,7 +1978,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 			},
 
 			Backup: psmdbv1.BackupSpec{
-				Enabled:            false,
+				Enabled:            true,
 				Image:              extra.backupImage,
 				ServiceAccountName: "percona-server-mongodb-operator",
 			},

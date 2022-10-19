@@ -54,6 +54,6 @@ func NewDBClusterInfoFromPSMDB(cluster *psmdbv1.PerconaServerMongoDB) DBCluster 
 		State:          string(cluster.Status.State),
 		Pause:          cluster.Spec.Pause,
 		Name:           cluster.Name,
-		ContainerNames: []string{"pxc"},
+		ContainerNames: []string{"mongos", "mongod"},
 	}
 }
