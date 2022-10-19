@@ -1886,7 +1886,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 			Sharding: psmdbv1.Sharding{
 				Enabled: true,
 				ConfigsvrReplSet: &psmdbv1.ReplsetSpec{
-					Size:       3,
+					Size:       params.Size,
 					VolumeSpec: c.volumeSpec(params.Replicaset.DiskSize),
 					Arbiter: psmdbv1.Arbiter{
 						Enabled: false,
@@ -1978,7 +1978,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 			},
 
 			Backup: psmdbv1.BackupSpec{
-				Enabled:            true,
+				Enabled:            false,
 				Image:              extra.backupImage,
 				ServiceAccountName: "percona-server-mongodb-operator",
 			},
