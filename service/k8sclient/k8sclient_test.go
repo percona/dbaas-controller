@@ -582,8 +582,9 @@ func TestK8sClient(t *testing.T) {
 
 		l.Info("No PSMDB Clusters running")
 		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name: name,
-			Size: 3,
+			Image: "percona/percona-server-mongodb:4.4.5-7",
+			Name:  name,
+			Size:  3,
 			Replicaset: &Replicaset{
 				DiskSize: "1000000000",
 			},
@@ -1307,10 +1308,18 @@ func TestCreateVMOperator(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
 
+	count, err = getDeploymentCount(ctx, client, "kube-state-metrics")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count)
+
 	err = client.RemoveVMOperator(ctx)
 	assert.NoError(t, err)
 
 	count, err = getDeploymentCount(ctx, client, "vmagent")
+	assert.NoError(t, err)
+	assert.Equal(t, 0, count)
+
+	count, err = getDeploymentCount(ctx, client, "kube-state-metrics")
 	assert.NoError(t, err)
 	assert.Equal(t, 0, count)
 }
@@ -1320,7 +1329,7 @@ func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (in
 		Items []common.Deployment `json:"items"`
 	}
 	var deps deployments
-	err := client.kubeCtl.Get(ctx, "deployment", "", &deps)
+	err := client.kubeCtl.Get(ctx, "deployment", "-A", &deps)
 	if err != nil {
 		return -1, err
 	}

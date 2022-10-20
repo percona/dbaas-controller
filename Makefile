@@ -60,6 +60,7 @@ release-component-version:
 
 release:                          ## Build dbaas-controller release binaries.
 	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
+	#$(PMM_RELEASE_PATH)/dbaas-controller --version
 
 init:                             ## Install development tools
 	rm -rf ./bin
@@ -71,7 +72,7 @@ ci-init:                ## Initialize CI environment
 format:                           ## Format source code
 	bin/gofumpt -l -w .
 	bin/goimports -local github.com/percona-platform/dbaas-controller -l -w .
-	bin/gci write --Section Standard --Section Default --Section "Prefix(github.com/percona-platform/dbaas-controller)" .
+	bin/gci write --section Standard --section Default --section "Prefix(github.com/percona-platform/dbaas-controller)" .
 
 check:                            ## Run checks/linters for the whole project
 	bin/check-license
@@ -111,8 +112,8 @@ local-env-up:
 		minikube config set kubernetes-version $(KUBERNETES_VERSION); \
 	fi
 	minikube config view
-	minikube start --nodes=4 --cpus=3 --memory=2200mb
-	minikube addons enable storage-provisioner
+	minikube start --nodes=4 --cpus=4 --memory=4200mb --apiserver-names host.docker.internal --kubernetes-version=v1.23.0
+	minikube addons disable storage-provisioner
 	kubectl delete storageclass standard
 	kubectl apply -f kubevirt-hostpath-provisioner.yaml
 

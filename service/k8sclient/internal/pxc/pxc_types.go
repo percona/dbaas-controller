@@ -37,7 +37,7 @@ type PerconaXtraDBClusterSpec struct { //nolint:maligned
 	SSLSecretName         string                 `json:"sslSecretName,omitempty"`
 	SSLInternalSecretName string                 `json:"sslInternalSecretName,omitempty"`
 	TLS                   *TLSSpec               `json:"tls,omitempty"`
-	PXC                   *PodSpec               `json:"pxc,omitempty"`
+	PXC                   *PXCSpec               `json:"pxc,omitempty"`
 	ProxySQL              *PodSpec               `json:"proxysql,omitempty"`
 	HAProxy               *PodSpec               `json:"haproxy,omitempty"`
 	PMM                   *PMMSpec               `json:"pmm,omitempty"`
@@ -123,7 +123,7 @@ func (p *PerconaXtraDBCluster) SetDatabaseImage(image string) {
 		p.Spec = new(PerconaXtraDBClusterSpec)
 	}
 	if p.Spec.PXC == nil {
-		p.Spec.PXC = new(PodSpec)
+		p.Spec.PXC = new(PXCSpec)
 	}
 	p.Spec.PXC.Image = image
 }
@@ -207,6 +207,44 @@ type PodSpec struct { //nolint:maligned
 	ServiceType                   common.ServiceType              `json:"serviceType,omitempty"`
 }
 
+// PXCSpec hold PXC's exported fields representing the pxc configuration.
+type PXCSpec struct {
+	AutoRecovery        *bool                `json:"autoRecovery,omitempty"`
+	ReplicationChannels []ReplicationChannel `json:"replicationChannels,omitempty"`
+	Expose              ServiceExpose        `json:"expose,omitempty"`
+	*PodSpec            `json:",inline"`
+}
+
+// ServiceExpose hold exported fields representing the PXC exposing on managed services.
+type ServiceExpose struct {
+	Enabled                  bool               `json:"enabled,omitempty"`
+	Type                     common.ServiceType `json:"type,omitempty"`
+	LoadBalancerSourceRanges []string           `json:"loadBalancerSourceRanges,omitempty"`
+	Annotations              map[string]string  `json:"annotations,omitempty"`
+	TrafficPolicy            string             `json:"trafficPolicy,omitempty"`
+}
+
+// ReplicationChannel hold exported fields representing the PXC replication channels.
+type ReplicationChannel struct {
+	Name        string                    `json:"name,omitempty"`
+	IsSource    bool                      `json:"isSource,omitempty"`
+	SourcesList []ReplicationSource       `json:"sourcesList,omitempty"`
+	Config      *ReplicationChannelConfig `json:"configuration,omitempty"`
+}
+
+// ReplicationChannelConfig hold exported fields representing the PXC replication channel configuration.
+type ReplicationChannelConfig struct {
+	SourceRetryCount   uint `json:"sourceRetryCount,omitempty"`
+	SourceConnectRetry uint `json:"sourceConnectRetry,omitempty"`
+}
+
+// Replication source represents PXC replication source.
+type ReplicationSource struct {
+	Host   string `json:"host,omitempty"`
+	Port   int    `json:"port,omitempty"`
+	Weight int    `json:"weight,omitempty"`
+}
+
 // PodAffinity POD's affinity.
 type PodAffinity struct {
 	TopologyKey *string `json:"antiAffinityTopologyKey,omitempty"`
@@ -214,12 +252,17 @@ type PodAffinity struct {
 
 // PMMSpec hold exported fields representing PMM specs.
 type PMMSpec struct {
-	Enabled         bool                 `json:"enabled,omitempty"`
-	ServerHost      string               `json:"serverHost,omitempty"`
-	Image           string               `json:"image,omitempty"`
-	ServerUser      string               `json:"serverUser,omitempty"`
-	Resources       *common.PodResources `json:"resources,omitempty"`
-	ImagePullPolicy common.PullPolicy    `json:"imagePullPolicy,omitempty"`
+	Enabled                  bool                   `json:"enabled,omitempty"`
+	ServerHost               string                 `json:"serverHost,omitempty"`
+	Image                    string                 `json:"image,omitempty"`
+	ServerUser               string                 `json:"serverUser,omitempty"`
+	PxcParams                string                 `json:"pxcParams,omitempty"`
+	ProxysqlParams           string                 `json:"proxysqlParams,omitempty"`
+	Resources                *common.PodResources   `json:"resources,omitempty"`
+	ContainerSecurityContext map[string]interface{} `json:"containerSecurityContext,omitempty"`
+
+	ImagePullPolicy  common.PullPolicy `json:"imagePullPolicy,omitempty"`
+	RuntimeClassName *string           `json:"runtimeClassName,omitempty"`
 }
 
 // BackupStorageSpec holds backup's storage specs.

@@ -29,8 +29,9 @@ import (
 	"github.com/percona-platform/dbaas-controller/utils/convertors"
 )
 
-//nolint:gochecknoglobals
 // dbClusterStatesMap matches pxc app states to cluster states.
+//
+//nolint:gochecknoglobals
 var dbClusterStatesMap = map[k8sclient.ClusterState]controllerv1beta1.DBClusterState{
 	k8sclient.ClusterStateInvalid:   controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_INVALID,
 	k8sclient.ClusterStateChanging:  controllerv1beta1.DBClusterState_DB_CLUSTER_STATE_CHANGING,

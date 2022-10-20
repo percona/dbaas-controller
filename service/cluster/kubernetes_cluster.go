@@ -160,3 +160,15 @@ func (k KubernetesClusterService) StopMonitoring(ctx context.Context, req *contr
 
 	return new(controllerv1beta1.StopMonitoringResponse), nil
 }
+
+// GetKubeconfig initializes incluster client and generates and returns its kubeconfig
+func (k KubernetesClusterService) GetKubeconfig(ctx context.Context, req *controllerv1beta1.GetKubeconfigRequest) (*controllerv1beta1.GetKubeconfigResponse, error) {
+	client, err := k8sclient.NewIncluster(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: %s", err)
+	}
+	kubeConfig, err := client.GetKubeconfig(ctx)
+	return &controllerv1beta1.GetKubeconfigResponse{
+		Kubeconfig: kubeConfig,
+	}, err
+}
