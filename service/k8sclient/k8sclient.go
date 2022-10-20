@@ -1294,7 +1294,7 @@ func (c *K8sClient) buildPSMDBDBItem110(ctx context.Context, buf []byte) (*PSMDB
 }
 
 func (c *K8sClient) buildPSMDBDBItem112(ctx context.Context, buf []byte) (*PSMDBCluster, error) {
-	var cluster psmdb.PerconaServerMongoDB112
+	var cluster psmdb.PerconaServerMongoDB
 
 	if err := json.Unmarshal(buf, &cluster); err != nil {
 		return nil, err
@@ -1314,24 +1314,6 @@ func (c *K8sClient) buildPSMDBDBItem112(ctx context.Context, buf []byte) (*PSMDB
 		Exposed: exposed,
 		Image:   cluster.Spec.Image,
 	}
-		if cluster.Status != nil {
-			message := cluster.Status.Message
-			conditions := cluster.Status.Conditions
-			if message == "" && len(conditions) != 0 {
-				message = conditions[len(conditions)-1].Message
-			}
-
-			status := make([]appStatus, 0, len(cluster.Status.Replsets)+1)
-			for _, rs := range cluster.Status.Replsets {
-				status = append(status, appStatus{rs.Size, rs.Ready})
-			}
-			status = append(status, appStatus{
-				size:  cluster.Status.Mongos.Size,
-				ready: cluster.Status.Mongos.Ready,
-			})
-			val.DetailedState = status
-			val.Message = message
-		}
 
 	if cluster.Status != nil {
 		message := cluster.Status.Message
