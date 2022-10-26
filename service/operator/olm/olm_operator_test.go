@@ -19,11 +19,13 @@ package olm
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/k0kubun/pp"
 	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/stretchr/testify/assert"
@@ -118,6 +120,9 @@ func TestInstallOlmOperator(t *testing.T) {
 
 		// Install PSMDB Operator
 		params := &controllerv1beta1.InstallOperatorRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: string(kubeconfig),
+			},
 			Namespace:              subscriptionNamespace,
 			Name:                   subscriptionName,
 			OperatorGroup:          "operatorgroup",
@@ -135,6 +140,7 @@ func TestInstallOlmOperator(t *testing.T) {
 		for i := 0; i < 6; i++ {
 			installPlans, err = olms.GetInstallPlans(ctx, client, subscriptionNamespace)
 			if len(installPlans.Items) > 0 {
+				pp.Println(installPlans)
 				break
 			}
 			time.Sleep(30 * time.Second)
@@ -158,6 +164,17 @@ func TestInstallOlmOperator(t *testing.T) {
 		}
 		assert.NoError(t, err)
 
+		fmt.Println("====================================================================================================")
+		for i := 0; i < 6; i++ {
+			installPlans, err = olms.GetInstallPlans(ctx, client, subscriptionNamespace)
+			if len(installPlans.Items) > 0 {
+				pp.Println(installPlans)
+				break
+			}
+			time.Sleep(30 * time.Second)
+		}
+		assert.NoError(t, err)
+		require.True(t, len(installPlans.Items) > 0)
 		err = client.Delete(ctx, []string{"subscription", params.Namespace, "-n", params.Namespace})
 		assert.NoError(t, err)
 		err = client.Delete(ctx, []string{"operatorgroup", params.OperatorGroup, "-n", params.Namespace})
