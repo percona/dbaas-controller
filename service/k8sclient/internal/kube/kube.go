@@ -20,10 +20,13 @@ package kube
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -31,10 +34,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	yamlSerializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes"
+	// load all auth plugins
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
@@ -47,6 +52,9 @@ const (
 	defaultQPSLimit    = 100
 	defaultBurstLimit  = 150
 	dbaasToolPath      = "/opt/dbaas-tools/bin"
+	configKind         = "Config"
+	apiVersion         = "v1"
+	defaultName        = "default"
 )
 
 // configGetter stores kubeconfig string to convert it to the final object
@@ -98,7 +106,14 @@ func NewFromIncluster() (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{clientset: clientset, restConfig: c}, nil
+	namespace := "default"
+	if space := os.Getenv("NAMESPACE"); space != "" {
+		namespace = space
+	}
+	// Set PATH variable to make aws-iam-authenticator executable
+	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
+	os.Setenv("PATH", path)
+	return &Client{clientset: clientset, restConfig: c, namespace: namespace}, nil
 }
 
 // NewFromKubeConfigString creates a new client for the given config string.
@@ -232,7 +247,7 @@ func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
 			break
 		}
 
-		obj, _, err := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(rawObj.Raw, nil, nil)
+		obj, _, err := yamlSerializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(rawObj.Raw, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -314,6 +329,72 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 		return buf.String(), err
 	}
 	return buf.String(), nil
+}
+
+// GetSecretsForServiceAccount returns secret by given service account name
+func (c *Client) GetSecretsForServiceAccount(ctx context.Context, accountName string) (*corev1.Secret, error) {
+	serviceAccount, err := c.clientset.CoreV1().ServiceAccounts(c.namespace).Get(ctx, accountName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	if len(serviceAccount.Secrets) == 0 {
+		return nil, errors.Errorf("no secrets available for namespace %s", c.namespace)
+	}
+	return c.clientset.CoreV1().Secrets(c.namespace).Get(
+		ctx,
+		serviceAccount.Secrets[0].Name,
+		metav1.GetOptions{},
+	)
+}
+
+// GenerateKubeConfig generates kubeconfig
+func (c *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
+	conf := &Config{
+		Kind:           configKind,
+		APIVersion:     apiVersion,
+		CurrentContext: defaultName,
+	}
+	conf.Clusters = []ClusterInfo{
+		{
+			Name: defaultName,
+			Cluster: Cluster{
+				CertificateAuthorityData: secret.Data["ca.crt"],
+				Server:                   c.restConfig.Host,
+			},
+		},
+	}
+	conf.Contexts = []ContextInfo{
+		{
+			Name: defaultName,
+			Context: Context{
+				Cluster:   defaultName,
+				User:      "pmm-service-account",
+				Namespace: defaultName,
+			},
+		},
+	}
+	conf.Users = []UserInfo{
+		{
+			Name: "pmm-service-account",
+			User: User{
+				Token: string(secret.Data["token"]),
+			},
+		},
+	}
+	return c.marshalKubeConfig(conf)
+}
+
+func (c *Client) marshalKubeConfig(conf *Config) ([]byte, error) {
+	config, err := json.Marshal(&conf)
+	if err != nil {
+		return nil, err
+	}
+	var jsonObj interface{}
+	err = yaml.Unmarshal(config, &jsonObj)
+	if err != nil {
+		return nil, err
+	}
+	return yaml.Marshal(jsonObj)
 }
 
 func (c *Client) retrieveMetaFromObject(obj runtime.Object) (namespace, name string, err error) {
