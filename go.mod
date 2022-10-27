@@ -18,7 +18,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-version v1.6.0
-	github.com/percona-platform/dbaas-api v0.0.0-20221019084503-3649d46509df
+	github.com/percona-platform/dbaas-api v0.0.0-20221027145211-fb1338a70391
 	github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871
 	github.com/percona/pmm v2.15.1-0.20210318204615-bbf8e9314afd+incompatible
 	github.com/pkg/errors v0.9.1

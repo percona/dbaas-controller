@@ -447,6 +447,8 @@ github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/9
 github.com/pelletier/go-toml v1.9.3/go.mod h1:u1nR/EPcESfeI/szUZKdtJ0xRNbUoANCkoOuaOx1Y+c=
 github.com/percona-platform/dbaas-api v0.0.0-20221019084503-3649d46509df h1:CodeejNzVTI7j8sHfYfaxRW0YkMif66FS0x6RK4RGcc=
 github.com/percona-platform/dbaas-api v0.0.0-20221019084503-3649d46509df/go.mod h1:/jgle33awfHq1va/T6NnNS5wWAETSnl6wUZ1bew+CJ0=
+github.com/percona-platform/dbaas-api v0.0.0-20221027145211-fb1338a70391 h1:MLd03cbivtFWD+HAQNuUTi7aedEHJ1HpG90xFfM4k6k=
+github.com/percona-platform/dbaas-api v0.0.0-20221027145211-fb1338a70391/go.mod h1:/jgle33awfHq1va/T6NnNS5wWAETSnl6wUZ1bew+CJ0=
 github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871 h1:ZZ0kr0qHypQwWUdxkZU+FNcbxr3XEoeONGOTNAxHvkg=
 github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871/go.mod h1:FrPTFbFWkDaTwvfjRCsaqC5UYgBar+BUOJUzbQl1q5c=
 github.com/percona/pmm v2.15.1-0.20210318204615-bbf8e9314afd+incompatible h1:Jgfznlzuy1RTUjb4ooEt8fzHjkqRDSHZ2U1rFnqa7fA=
