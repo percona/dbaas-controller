@@ -107,12 +107,13 @@ env-up-start:
 	fi
 	minikube config view
 	minikube start
-local-env-up:
+
+local-env-up:                     ## Configure and starts minikube
 	if [ $(KUBERNETES_VERSION) ]; then \
 		minikube config set kubernetes-version $(KUBERNETES_VERSION); \
 	fi
 	minikube config view
-	minikube start --nodes=4 --cpus=4 --memory=4200mb --apiserver-names host.docker.internal --kubernetes-version=v1.23.0
+	minikube start --nodes=1 --cpus=2 --memory=4g --apiserver-names host.docker.internal --kubernetes-version=v1.23.6
 	minikube addons disable storage-provisioner
 	kubectl delete storageclass standard
 	kubectl apply -f kubevirt-hostpath-provisioner.yaml

@@ -64,7 +64,6 @@ func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *con
 
 		return new(controllerv1beta1.InstallPSMDBOperatorResponse), nil
 	}
-	req.Version = "1.11.0"
 
 	err = client.ApplyOperator(ctx, req.Version, x.manifestsURLTemplate)
 	if err != nil {

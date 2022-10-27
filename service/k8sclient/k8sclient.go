@@ -2084,7 +2084,19 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 	if params.Replicaset != nil {
 		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+		// For single node clusters, the operator creates a single instance replicaset.
+		// This is an unsafe configuration and the expose config should be applied to the replicaset
+		// instead of to the mongos.
+		if params.Size == 1 {
+			res.Spec.UnsafeConf = true
+			res.Spec.Sharding.Enabled = false
+			if params.Expose {
+				res.Spec.Replsets[0].Expose.Enabled = true
+				res.Spec.Sharding.Mongos.Expose.ExposeType = common.ServiceTypeClusterIP
+			}
+		}
 	}
+
 	if params.PMM != nil {
 		res.Spec.PMM = &psmdb.PmmSpec{
 			Enabled:    true,
@@ -2186,7 +2198,19 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 	if params.Replicaset != nil {
 		req.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 		req.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
+		// For single node clusters, the operator creates a single instance replicaset.
+		// This is an unsafe configuration and the expose config should be applied to the replicaset
+		// instead of to the mongos.
+		if params.Size == 1 {
+			req.Spec.UnsafeConf = true
+			req.Spec.Sharding.Enabled = false
+			if params.Expose {
+				req.Spec.Replsets[0].Expose.Enabled = true
+				req.Spec.Sharding.Mongos.Expose.ExposeType = common.ServiceTypeClusterIP
+			}
+		}
 	}
+
 	if params.PMM != nil {
 		req.Spec.PMM = &psmdb.PmmSpec{
 			Enabled:    true,
@@ -2256,6 +2280,7 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *
 	spec.Spec.Image = extra.psmdbImage
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.Sharding.ConfigsvrReplSet.Size = params.Size
+
 	spec.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	spec.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	spec.Spec.Sharding.ConfigsvrReplSet.VolumeSpec = c.volumeSpec(params.Replicaset.DiskSize)
@@ -2272,6 +2297,15 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *
 	if !params.Expose {
 		spec.Spec.Sharding.Mongos.Expose.Enabled = false
 		spec.Spec.Sharding.Mongos.Expose.ExposeType = common.ServiceTypeClusterIP
+	}
+
+	if params.Size == 1 {
+		spec.Spec.UnsafeConf = true
+		if params.Expose {
+			spec.Spec.Replsets[0].Expose.Enabled = true
+			spec.Spec.Replsets[0].Expose.ExposeType = common.ServiceTypeClusterIP
+			spec.Spec.Sharding.Enabled = false
+		}
 	}
 	// Always override PMM spec
 	if params.PMM != nil {
