@@ -191,6 +191,7 @@ type PXCParams struct {
 	ProxySQL          *ProxySQL
 	PMM               *PMM
 	HAProxy           *HAProxy
+	Configuration     string
 }
 
 // Cluster contains common information related to cluster.
@@ -210,6 +211,7 @@ type PSMDBParams struct {
 	Expose            bool
 	Replicaset        *Replicaset
 	PMM               *PMM
+	Configuration     string
 }
 
 type appStatus struct {
@@ -2434,6 +2436,7 @@ func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperator
 					PodDisruptionBudget: &common.PodDisruptionBudgetSpec{
 						MaxUnavailable: pointer.ToInt(1),
 					},
+					Configuration: params.Configuration,
 				},
 			},
 

@@ -166,6 +166,7 @@ func (s *PXCClusterService) CreatePXCCluster(ctx context.Context, req *controlle
 		},
 		Expose:            req.Expose,
 		VersionServiceURL: req.Params.VersionServiceUrl,
+		Configuration:     req.Params.Pxc.Configuration,
 	}
 	if req.Params.Proxysql != nil {
 		params.ProxySQL = &k8sclient.ProxySQL{

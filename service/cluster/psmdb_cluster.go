@@ -112,6 +112,7 @@ func (s *PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *contr
 		},
 		Expose:            req.Expose,
 		VersionServiceURL: req.Params.VersionServiceUrl,
+		Configuration:     req.Params.Configuration,
 	}
 
 	if req.Pmm != nil {
