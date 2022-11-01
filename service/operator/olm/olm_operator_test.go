@@ -19,19 +19,16 @@ package olm
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/k0kubun/pp"
 	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
@@ -45,9 +42,7 @@ func TestGetLatestVersion(t *testing.T) {
 	assert.NoError(t, err)
 	defer client.Cleanup() //nolint:errcheck
 
-	olmOperatorService := NewOperatorService()
-
-	latest, err := olmOperatorService.getLatestVersion(ctx, olmRepo)
+	latest, err := getLatestVersion(ctx, olmRepo)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, latest)
 }
@@ -61,26 +56,26 @@ func TestInstallOlmOperator(t *testing.T) {
 	client, err := k8sclient.New(ctx, string(kubeconfig))
 	assert.NoError(t, err)
 
-	t.Cleanup(func() {
-		return
-		// Maintain the order, otherwise the Kubernetes deletetion will stuck in Terminating state.
-		err := client.Delete(ctx, []string{"apiservices.apiregistration.k8s.io", "v1.packages.operators.coreos.com"})
-		assert.NoError(t, err)
-		files := []string{
-			"deploy/olm/crds.yaml",
-			"deploy/olm/olm.yaml",
-		}
+	// t.Cleanup(func() {
+	// 	return
+	// 	// Maintain the order, otherwise the Kubernetes deletetion will stuck in Terminating state.
+	// 	err := client.Delete(ctx, []string{"apiservices.apiregistration.k8s.io", "v1.packages.operators.coreos.com"})
+	// 	assert.NoError(t, err)
+	// 	files := []string{
+	// 		"deploy/olm/crds.yaml",
+	// 		"deploy/olm/olm.yaml",
+	// 	}
 
-		for _, file := range files {
-			t.Logf("deleting %q\n", file)
-			yamlFile, _ := dbaascontroller.DeployDir.ReadFile(file)
-			// When deleting, some resources might be already deleted by the previous file so the returned error
-			// should be considered only as a warning.
-			_ = client.Delete(ctx, yamlFile)
-		}
+	// 	for _, file := range files {
+	// 		t.Logf("deleting %q\n", file)
+	// 		yamlFile, _ := dbaascontroller.DeployDir.ReadFile(file)
+	// 		// When deleting, some resources might be already deleted by the previous file so the returned error
+	// 		// should be considered only as a warning.
+	// 		_ = client.Delete(ctx, yamlFile)
+	// 	}
 
-		_ = client.Cleanup()
-	})
+	// 	_ = client.Cleanup()
+	// })
 
 	req := &controllerv1beta1.InstallOLMOperatorRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
@@ -107,6 +102,7 @@ func TestInstallOlmOperator(t *testing.T) {
 
 	subscriptionName := "percona-server-mongodb-operator"
 	subscriptionNamespace := "my-percona-server-mongodb-operator"
+	subscriptionNamespace = "default"
 
 	t.Run("Subscribe", func(t *testing.T) {
 		kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -138,9 +134,8 @@ func TestInstallOlmOperator(t *testing.T) {
 
 		var installPlans *v1alpha1.InstallPlanList
 		for i := 0; i < 6; i++ {
-			installPlans, err = olms.GetInstallPlans(ctx, client, subscriptionNamespace)
+			installPlans, err = getInstallPlans(ctx, client, "")
 			if len(installPlans.Items) > 0 {
-				pp.Println(installPlans)
 				break
 			}
 			time.Sleep(30 * time.Second)
@@ -148,7 +143,16 @@ func TestInstallOlmOperator(t *testing.T) {
 		assert.NoError(t, err)
 		require.True(t, len(installPlans.Items) > 0)
 
-		olms.ApproveInstallPlan(ctx, client, subscriptionNamespace, installPlans.Items[0].ObjectMeta.Name)
+		approveRequest := &controllerv1beta1.ApproveInstallPlanRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: string(kubeconfig),
+			},
+			Namespace: installPlans.Items[0].ObjectMeta.Namespace,
+			Name:      installPlans.Items[0].ObjectMeta.Name,
+		}
+
+		_, err = olms.ApproveInstallPlan(ctx, approveRequest)
+		assert.NoError(t, err)
 
 		t.Log("Waiting for deployment")
 		// Loop until the deployment exists and THEN we can wait.
@@ -164,24 +168,30 @@ func TestInstallOlmOperator(t *testing.T) {
 		}
 		assert.NoError(t, err)
 
-		fmt.Println("====================================================================================================")
-		for i := 0; i < 6; i++ {
-			installPlans, err = olms.GetInstallPlans(ctx, client, subscriptionNamespace)
-			if len(installPlans.Items) > 0 {
-				pp.Println(installPlans)
-				break
-			}
-			time.Sleep(30 * time.Second)
+		// We installed PSMDB operator 1.11 but in the catalog, 1.12 is already available.
+		// There must be a new and unapproved install plan to upgrade the operator to 1.12.
+		ipListReq := &controllerv1beta1.ListInstallPlansRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: string(kubeconfig),
+			},
+			Namespace:       subscriptionNamespace,
+			Name:            subscriptionName,
+			NotApprovedOnly: true,
 		}
+		installPlansForUpgrade, err := olms.ListInstallPlans(ctx, ipListReq)
 		assert.NoError(t, err)
-		require.True(t, len(installPlans.Items) > 0)
-		err = client.Delete(ctx, []string{"subscription", params.Namespace, "-n", params.Namespace})
-		assert.NoError(t, err)
-		err = client.Delete(ctx, []string{"operatorgroup", params.OperatorGroup, "-n", params.Namespace})
-		assert.NoError(t, err)
-		err = client.Delete(ctx, []string{"deployment", params.Name, "-n", params.Namespace})
-		assert.NoError(t, err)
-		err = client.Delete(ctx, []string{"namespace", params.Namespace})
-		assert.NoError(t, err)
+		assert.True(t, len(installPlansForUpgrade.Items) > 0)
+
+		// err = client.Delete(ctx, []string{"subscription", subscriptionName, "-n", params.Namespace})
+		// assert.NoError(t, err)
+		// err = client.Delete(ctx, []string{"operatorgroup", params.OperatorGroup, "-n", params.Namespace})
+		// assert.NoError(t, err)
+		// err = client.Delete(ctx, []string{"deployment", params.Name, "-n", params.Namespace})
+		// assert.NoError(t, err)
+
+		// if params.Namespace != "default" {
+		// 	err = client.Delete(ctx, []string{"namespace", params.Namespace})
+		// 	assert.NoError(t, err)
+		// }
 	})
 }

@@ -730,6 +730,10 @@ github.com/percona-platform/dbaas-api v0.0.0-20220915093952-ee93e3782bd8 h1:nioF
 github.com/percona-platform/dbaas-api v0.0.0-20220915093952-ee93e3782bd8/go.mod h1:/jgle33awfHq1va/T6NnNS5wWAETSnl6wUZ1bew+CJ0=
 github.com/percona-platform/dbaas-api v0.0.0-20221003132607-342974f7ea05 h1:XOPXIDTcohq7Y6sH5za9PRJH/lSN70ugpQaQhsybQus=
 github.com/percona-platform/dbaas-api v0.0.0-20221003132607-342974f7ea05/go.mod h1:/jgle33awfHq1va/T6NnNS5wWAETSnl6wUZ1bew+CJ0=
+github.com/percona-platform/dbaas-api v0.0.0-20221027160239-a5e8fbc6c54e h1:M+Nx2HR+6YC/cHQzGvQWZtT4NjVirbF6ver9OkA1Q+Y=
+github.com/percona-platform/dbaas-api v0.0.0-20221027160239-a5e8fbc6c54e/go.mod h1:/jgle33awfHq1va/T6NnNS5wWAETSnl6wUZ1bew+CJ0=
+github.com/percona-platform/dbaas-api v0.0.0-20221028174156-63d3677a3825 h1:rUqznIzccPOpx5oZ10+xnnl3BaUlQsylRwXN1HgMoms=
+github.com/percona-platform/dbaas-api v0.0.0-20221028174156-63d3677a3825/go.mod h1:/jgle33awfHq1va/T6NnNS5wWAETSnl6wUZ1bew+CJ0=
 github.com/percona-platform/saas v0.0.0-20220427162947-f9d246ad0f16 h1:0fx16uGtl4MwrBwm9/VSoNEhjL0cXYxS0quEhLthGcc=
 github.com/percona-platform/saas v0.0.0-20220427162947-f9d246ad0f16/go.mod h1:gFUwaFp6Ugu5qsBwiOVJYbDlzgZ77tmXdXGO7tG5xVI=
 github.com/percona/pmm v2.18.0+incompatible h1:zfrJCPrV4fPausJ0kE5Tr3RANUbck1kEoaR04YJChls=

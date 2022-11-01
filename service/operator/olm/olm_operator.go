@@ -98,7 +98,7 @@ func (o *OperatorService) InstallOLMOperator(ctx context.Context, req *controlle
 
 	switch strings.ToLower(req.Version) {
 	case latestOLMVersion:
-		latestVersion, err := o.getLatestVersion(ctx, olmRepo)
+		latestVersion, err := getLatestVersion(ctx, olmRepo)
 		if err != nil {
 			return nil, err
 		}
@@ -137,8 +137,62 @@ func (o *OperatorService) InstallOLMOperator(ctx context.Context, req *controlle
 	return response, nil
 }
 
-func (o *OperatorService) GetInstallPlans(ctx context.Context, client *k8sclient.K8sClient, namespace string) (*operatorsv1alpha1.InstallPlanList, error) {
-	data, err := client.Run(ctx, []string{"get", "installplans", "-ojson", "-n", namespace})
+// InstallOLMOperator installs the OLM in the Kubernetes cluster.
+func (o *OperatorService) ListInstallPlans(ctx context.Context, req *controllerv1beta1.ListInstallPlansRequest) (*controllerv1beta1.ListInstallPlansResponse, error) {
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	plans, err := getInstallPlans(ctx, client, req.Namespace)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot get install plans")
+	}
+
+	response := &controllerv1beta1.ListInstallPlansResponse{
+		Items: []*controllerv1beta1.ListInstallPlansResponse_InstallPlan{},
+	}
+
+	for _, item := range plans.Items {
+		csv := ""
+		if len(item.Spec.ClusterServiceVersionNames) > 0 {
+			csv = item.Spec.ClusterServiceVersionNames[0]
+		}
+
+		if req.NotApprovedOnly && item.Spec.Approved {
+			continue
+		}
+
+		if req.Name != "" {
+			if !strings.HasPrefix(strings.ToLower(csv), strings.ToLower(req.Name)) {
+				continue
+			}
+		}
+
+		installPlan := &controllerv1beta1.ListInstallPlansResponse_InstallPlan{
+			Namespace: item.ObjectMeta.Namespace,
+			Name:      item.ObjectMeta.Name,
+			Csv:       csv,
+			Approval:  string(item.Spec.Approval),
+			Approved:  item.Spec.Approved,
+		}
+
+		response.Items = append(response.Items, installPlan)
+	}
+
+	return response, nil
+}
+
+func getInstallPlans(ctx context.Context, client *k8sclient.K8sClient, namespace string) (*operatorsv1alpha1.InstallPlanList, error) {
+	cmd := []string{"get", "installplans", "-ojson"}
+	if namespace != "" {
+		cmd = append(cmd, []string{"-n", namespace}...)
+	} else {
+		cmd = append(cmd, "-A")
+	}
+
+	data, err := client.Run(ctx, cmd)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get operators group list")
 	}
@@ -156,28 +210,26 @@ type approveInstallPlanSpec struct {
 	Approved bool `json:"approved"`
 }
 
-type approveInstallPlan struct {
+type approveInstallPlanReq struct {
 	Spec approveInstallPlanSpec `json:"spec"`
 }
 
-func (o *OperatorService) ApproveInstallPlan(ctx context.Context, client *k8sclient.K8sClient, namespace, resourceName string) error {
-	res := approveInstallPlan{Spec: approveInstallPlanSpec{Approved: true}}
-	return client.Patch(ctx, "merge", "installplan", resourceName, namespace, res)
-}
+func (o *OperatorService) ApproveInstallPlan(ctx context.Context, req *controllerv1beta1.ApproveInstallPlanRequest) (*controllerv1beta1.ApproveInstallPlanResponse, error) {
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
 
-func waitForPackageServer(ctx context.Context, client *k8sclient.K8sClient, namespace string) error {
-	var err error
-	var data []byte
+	res := approveInstallPlanReq{Spec: approveInstallPlanSpec{Approved: true}}
 
-	for i := 0; i < 15; i++ {
-		data, err = client.Run(ctx, []string{"get", "csv", "-n", namespace, "packageserver", "-o", "jsonpath='{.status.phase}'"})
-		if err == nil && string(data) == "Succeeded" {
-			break
-		}
-		time.Sleep(5 * time.Second)
+	if err := client.Patch(ctx, "merge", "installplan", req.Name, req.Namespace, res); err != nil {
+		return nil, errors.Wrap(err, "cannot approve the install plan")
 	}
 
-	return err
+	resp := &controllerv1beta1.ApproveInstallPlanResponse{}
+
+	return resp, nil
 }
 
 type configGetter struct {
@@ -343,7 +395,7 @@ func (o *OperatorService) createSubscription(ctx context.Context, client *k8scli
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: req.Namespace,
-			Name:      "my-" + req.Name,
+			Name:      req.Name,
 		},
 		Spec: &operatorsv1alpha1.SubscriptionSpec{
 			CatalogSource:          req.CatalogSource,
@@ -387,19 +439,10 @@ func namespaceExists(ctx context.Context, client *k8sclient.K8sClient, namespace
 	return false, nil
 }
 
-func waitForDeployments(ctx context.Context, client *k8sclient.K8sClient, namespace string) error {
-	if _, err := client.Run(ctx, []string{"rollout", "status", "-w", "deployment/olm-operator", "--namespace", namespace}); err != nil {
-		return errors.Wrap(err, "error while waiting for olm component deployment")
-	}
-
-	if _, err := client.Run(ctx, []string{"rollout", "status", "-w", "deployment/catalog-operator", "--namespace", namespace}); err != nil {
-		return errors.Wrap(err, "error while waiting for olm component deployment")
-	}
-
-	return nil
-}
-
-func (o OperatorService) getLatestVersion(ctx context.Context, repo string) (string, error) {
+/*
+   Helpers
+*/
+func getLatestVersion(ctx context.Context, repo string) (string, error) {
 	url := fmt.Sprintf(githubAPIURLTemplate, repo)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -432,4 +475,31 @@ func (o OperatorService) getLatestVersion(ctx context.Context, repo string) (str
 	}
 
 	return "", ErrEmptyVersionTag
+}
+
+func waitForDeployments(ctx context.Context, client *k8sclient.K8sClient, namespace string) error {
+	if _, err := client.Run(ctx, []string{"rollout", "status", "-w", "deployment/olm-operator", "--namespace", namespace}); err != nil {
+		return errors.Wrap(err, "error while waiting for olm component deployment")
+	}
+
+	if _, err := client.Run(ctx, []string{"rollout", "status", "-w", "deployment/catalog-operator", "--namespace", namespace}); err != nil {
+		return errors.Wrap(err, "error while waiting for olm component deployment")
+	}
+
+	return nil
+}
+
+func waitForPackageServer(ctx context.Context, client *k8sclient.K8sClient, namespace string) error {
+	var err error
+	var data []byte
+
+	for i := 0; i < 15; i++ {
+		data, err = client.Run(ctx, []string{"get", "csv", "-n", namespace, "packageserver", "-o", "jsonpath='{.status.phase}'"})
+		if err == nil && string(data) == "Succeeded" {
+			break
+		}
+		time.Sleep(5 * time.Second)
+	}
+
+	return err
 }

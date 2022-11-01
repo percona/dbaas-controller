@@ -21,7 +21,7 @@ require (
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/operator-framework/api v0.16.0
 	github.com/operator-framework/operator-lifecycle-manager v0.22.0
-	github.com/percona-platform/dbaas-api v0.0.0-20221003132607-342974f7ea05
+	github.com/percona-platform/dbaas-api v0.0.0-20221028174156-63d3677a3825
 	github.com/percona-platform/saas v0.0.0-20220427162947-f9d246ad0f16
 	github.com/percona/pmm v2.18.0+incompatible
 	github.com/pkg/errors v0.9.1
