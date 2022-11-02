@@ -38,7 +38,8 @@ import (
 const (
 	dbaasToolPath           = "/opt/dbaas-tools/bin"
 	defaultPmmServerKubectl = dbaasToolPath + "/kubectl-1.23"
-	defaultDevEnvKubectl    = "minikube kubectl --"
+	// defaultDevEnvKubectl    = "minikube kubectl --"
+	defaultDevEnvKubectl = "kubectl"
 )
 
 // PatchType tells what kind of patch we want to perform.
@@ -256,7 +257,7 @@ func (k *KubeCtl) Apply(ctx context.Context, res interface{}) error {
 }
 
 // Patch executes `kubectl patch` on given resource.
-func (k *KubeCtl) Patch(ctx context.Context, patchType PatchType, resourceType, resourceName string, res interface{}) error {
+func (k *KubeCtl) Patch(ctx context.Context, patchType PatchType, resourceType, resourceName, namespace string, res interface{}) error {
 	patch, err := json.Marshal(res)
 	if err != nil {
 		return err
@@ -264,13 +265,34 @@ func (k *KubeCtl) Patch(ctx context.Context, patchType PatchType, resourceType, 
 	if patchType == "" {
 		patchType = PatchTypeStrategic
 	}
-	_, err = run(ctx, k.cmd, []string{"patch", resourceType, resourceName, "--type", string(patchType), "--patch", string(patch)}, nil)
+
+	cmd := []string{"patch", resourceType, resourceName, "--type", string(patchType), "--patch", string(patch)}
+	if namespace != "" {
+		cmd = append(cmd, []string{"--namespace", namespace}...)
+	}
+
+	_, err = run(ctx, k.cmd, cmd, nil)
 	return err
 }
 
 // Delete executes `kubectl delete` with given resource.
 func (k *KubeCtl) Delete(ctx context.Context, res interface{}) error {
-	_, err := run(ctx, k.cmd, []string{"delete", "-f", "-"}, res)
+	var err error
+
+	switch it := res.(type) {
+	case []byte:
+		_, err = run(ctx, k.cmd, []string{"delete", "-f", "-"}, it)
+	case []string:
+		params := []string{"delete"}
+		if len(it) == 1 {
+			if _, err := os.Stat(it[0]); err == nil || strings.HasPrefix(it[0], "http") {
+				params = append(params, "-f")
+			}
+		}
+		params = append(params, it...)
+		_, err = run(ctx, k.cmd, params, nil)
+	}
+
 	return err
 }
 

@@ -445,6 +445,22 @@ func (c *K8sClient) Cleanup() error {
 	return c.kubeCtl.Cleanup()
 }
 
+func (c *K8sClient) Run(ctx context.Context, params []string) ([]byte, error) {
+	return c.kubeCtl.Run(ctx, params, nil)
+}
+
+func (c *K8sClient) Apply(ctx context.Context, res interface{}) error {
+	return c.kubeCtl.Apply(ctx, res)
+}
+
+func (c *K8sClient) Patch(ctx context.Context, patchType kubectl.PatchType, resourceType, resourceName, namespace string, res interface{}) error {
+	return c.kubeCtl.Patch(ctx, patchType, resourceType, resourceName, namespace, res)
+}
+
+func (c *K8sClient) Delete(ctx context.Context, res interface{}) error {
+	return c.kubeCtl.Delete(ctx, res)
+}
+
 // GetKubeconfig generates kubeconfig compatible with kubectl for incluster created clients.
 func (c *K8sClient) GetKubeconfig(ctx context.Context) (string, error) {
 	secret, err := c.kube.GetSecretsForServiceAccount(ctx, "pmm-service-account")
@@ -598,7 +614,7 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 		cluster.Spec.HAProxy.Resources = c.updateComputeResources(params.HAProxy.ComputeResources, cluster.Spec.HAProxy.Resources)
 	}
 
-	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(&cluster).CRDName(), common.DatabaseCluster(&cluster).GetName(), cluster)
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(&cluster).CRDName(), common.DatabaseCluster(&cluster).GetName(), "", cluster)
 }
 
 // DeletePXCCluster deletes Percona XtraDB cluster with provided name.
@@ -1015,7 +1031,7 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			return err
 		}
 	}
-	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(&cluster).CRDName(), common.DatabaseCluster(&cluster).GetName(), cluster)
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(&cluster).CRDName(), common.DatabaseCluster(&cluster).GetName(), "", cluster)
 }
 
 const (
@@ -1743,7 +1759,7 @@ func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVe
 				},
 			},
 		}
-		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaservermongodb", cluster.Name, clusterPatch); err != nil {
+		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaservermongodb", cluster.Name, "", clusterPatch); err != nil {
 			return err
 		}
 	}
@@ -1784,7 +1800,7 @@ func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVers
 			}
 		}
 
-		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaxtradbcluster", cluster.Name, clusterPatch); err != nil {
+		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaxtradbcluster", cluster.Name, "", clusterPatch); err != nil {
 			return err
 		}
 	}
@@ -1825,7 +1841,7 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 		return errors.Errorf("container image %q does not have any tag", deployment.Spec.Template.Spec.Containers[containerIndex].Image)
 	}
 	deployment.Spec.Template.Spec.Containers[containerIndex].Image = imageAndTag[0] + ":" + version
-	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeStrategic, "deployment", deploymentName, deployment)
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeStrategic, "deployment", deploymentName, "", deployment)
 }
 
 func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
