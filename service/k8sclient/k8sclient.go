@@ -1914,6 +1914,42 @@ func (c *K8sClient) RemoveVMOperator(ctx context.Context) error {
 	return nil
 }
 
+// Create the resource from the specs.
+func (c *K8sClient) Create(ctx context.Context, resource interface{}) error {
+	var err error
+
+	switch res := resource.(type) {
+	case string:
+		_, err = c.kubeCtl.Run(ctx, []string{"create", "-f", res}, nil)
+	case []byte:
+		_, err = c.kubeCtl.Run(ctx, []string{"create", "-f", "-"}, res)
+	}
+	if err != nil {
+		return errors.Wrap(err, "cannot create resource")
+	}
+
+	return nil
+}
+
+// WaitForCondition waits until the condition is met for the specified resource.
+func (c *K8sClient) WaitForCondition(ctx context.Context, condition string, resource interface{}) error {
+	var err error
+
+	condition = "--for=condition=" + condition
+
+	switch res := resource.(type) {
+	case string:
+		_, err = c.kubeCtl.Run(ctx, []string{"wait", "-f", res}, nil)
+	case []byte:
+		_, err = c.kubeCtl.Run(ctx, []string{"wait", "-f", "-"}, res)
+	}
+	if err != nil {
+		return errors.Wrapf(err, "error while waiting for condition %q", condition)
+	}
+
+	return nil
+}
+
 func vmAgentSpec(params *PMM, secretName string) *monitoring.VMAgent {
 	return &monitoring.VMAgent{
 		TypeMeta: metav1.TypeMeta{

@@ -26,6 +26,7 @@ import (
 
 	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -56,26 +57,26 @@ func TestInstallOlmOperator(t *testing.T) {
 	client, err := k8sclient.New(ctx, string(kubeconfig))
 	assert.NoError(t, err)
 
-	// t.Cleanup(func() {
-	// 	return
-	// 	// Maintain the order, otherwise the Kubernetes deletetion will stuck in Terminating state.
-	// 	err := client.Delete(ctx, []string{"apiservices.apiregistration.k8s.io", "v1.packages.operators.coreos.com"})
-	// 	assert.NoError(t, err)
-	// 	files := []string{
-	// 		"deploy/olm/crds.yaml",
-	// 		"deploy/olm/olm.yaml",
-	// 	}
+	t.Cleanup(func() {
+		return
+		// Maintain the order, otherwise the Kubernetes deletetion will stuck in Terminating state.
+		err := client.Delete(ctx, []string{"apiservices.apiregistration.k8s.io", "v1.packages.operators.coreos.com"})
+		assert.NoError(t, err)
+		files := []string{
+			"deploy/olm/crds.yaml",
+			"deploy/olm/olm.yaml",
+		}
 
-	// 	for _, file := range files {
-	// 		t.Logf("deleting %q\n", file)
-	// 		yamlFile, _ := dbaascontroller.DeployDir.ReadFile(file)
-	// 		// When deleting, some resources might be already deleted by the previous file so the returned error
-	// 		// should be considered only as a warning.
-	// 		_ = client.Delete(ctx, yamlFile)
-	// 	}
+		for _, file := range files {
+			t.Logf("deleting %q\n", file)
+			yamlFile, _ := dbaascontroller.DeployDir.ReadFile(file)
+			// When deleting, some resources might be already deleted by the previous file so the returned error
+			// should be considered only as a warning.
+			_ = client.Delete(ctx, yamlFile)
+		}
 
-	// 	_ = client.Cleanup()
-	// })
+		_ = client.Cleanup()
+	})
 
 	req := &controllerv1beta1.InstallOLMOperatorRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
@@ -182,16 +183,16 @@ func TestInstallOlmOperator(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, len(installPlansForUpgrade.Items) > 0)
 
-		// err = client.Delete(ctx, []string{"subscription", subscriptionName, "-n", params.Namespace})
-		// assert.NoError(t, err)
-		// err = client.Delete(ctx, []string{"operatorgroup", params.OperatorGroup, "-n", params.Namespace})
-		// assert.NoError(t, err)
-		// err = client.Delete(ctx, []string{"deployment", params.Name, "-n", params.Namespace})
-		// assert.NoError(t, err)
+		err = client.Delete(ctx, []string{"subscription", subscriptionName, "-n", params.Namespace})
+		assert.NoError(t, err)
+		err = client.Delete(ctx, []string{"operatorgroup", params.OperatorGroup, "-n", params.Namespace})
+		assert.NoError(t, err)
+		err = client.Delete(ctx, []string{"deployment", params.Name, "-n", params.Namespace})
+		assert.NoError(t, err)
 
-		// if params.Namespace != "default" {
-		// 	err = client.Delete(ctx, []string{"namespace", params.Namespace})
-		// 	assert.NoError(t, err)
-		// }
+		if params.Namespace != "default" {
+			err = client.Delete(ctx, []string{"namespace", params.Namespace})
+			assert.NoError(t, err)
+		}
 	})
 }
