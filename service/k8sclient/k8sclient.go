@@ -78,6 +78,7 @@ const (
 	pxcBackupImageTemplate          = "percona/percona-xtradb-cluster-operator:%s-pxc8.0-backup"
 	pxcDefaultImage                 = "percona/percona-xtradb-cluster:8.0.20-11.1"
 	pxcBackupStorageName            = "pxc-backup-storage-%s"
+	pxcAPINamespace                 = "pxc.percona.com"
 	pxcAPIVersionTemplate           = pxcAPINamespace + "/v%s"
 	pxcProxySQLDefaultImageTemplate = "percona/percona-xtradb-cluster-operator:%s-proxysql"
 	pxcHAProxyDefaultImageTemplate  = "percona/percona-xtradb-cluster-operator:%s-haproxy"
@@ -86,15 +87,10 @@ const (
 
 	psmdbBackupImageTemplate = "percona/percona-server-mongodb-operator:%s-backup"
 	psmdbDefaultImage        = "percona/percona-server-mongodb:4.2.8-8"
-
-	olmAPINamespace   = "operators.coreos.com"
-	psmdbAPINamespace = "psmdb.percona.com"
-	pxcAPINamespace   = "pxc.percona.com"
-	vmAPINamespace    = "operator.victoriametrics.com"
-
-	psmdbAPIVersionTemplate = psmdbAPINamespace + "/v%s"
-	psmdbSecretNameTmpl     = "dbaas-%s-psmdb-secrets" //nolint:gosec
-	stabePMMClientImage     = "percona/pmm-client:2"
+	psmdbAPINamespace        = "psmdb.percona.com"
+	psmdbAPIVersionTemplate  = psmdbAPINamespace + "/v%s"
+	psmdbSecretNameTmpl      = "dbaas-%s-psmdb-secrets" //nolint:gosec
+	stabePMMClientImage      = "percona/pmm-client:2"
 
 	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
 	maxVolumeSizeEBS uint64 = 16 * 1024 * 1024 * 1024 * 1024
@@ -137,10 +133,8 @@ type Operator struct {
 // Operators contains versions of installed operators.
 // If version is empty, operator is not installed.
 type Operators struct {
-	PXCOperatorVersion             string
-	PsmdbOperatorVersion           string
-	OLMOperatorVersion             string
-	VictoriaMetricsOperatorVersion string
+	PXCOperatorVersion   string
+	PsmdbOperatorVersion string
 }
 
 // ComputeResources represents container computer resources requests or limits.
@@ -424,25 +418,46 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	}, nil
 }
 
+// NewIncluster returns new K8Client object.
+func NewIncluster(ctx context.Context) (*K8sClient, error) {
+	l := logger.Get(ctx)
+	l = l.WithField("component", "K8sClient")
+
+	kube, err := kube.NewFromIncluster()
+	if err != nil {
+		return nil, err
+	}
+	return &K8sClient{
+		kube: kube,
+		l:    l,
+		client: &http.Client{
+			Timeout: time.Second * 5,
+			Transport: &http.Transport{
+				MaxIdleConns:    1,
+				IdleConnTimeout: 10 * time.Second,
+			},
+		},
+	}, nil
+}
+
 // Cleanup removes temporary files created by that object.
 func (c *K8sClient) Cleanup() error {
 	return c.kubeCtl.Cleanup()
 }
 
-func (c *K8sClient) Run(ctx context.Context, params []string) ([]byte, error) {
-	return c.kubeCtl.Run(ctx, params, nil)
-}
-
-func (c *K8sClient) Apply(ctx context.Context, res interface{}) error {
-	return c.kubeCtl.Apply(ctx, res)
-}
-
-func (c *K8sClient) Patch(ctx context.Context, patchType kubectl.PatchType, resourceType, resourceName, namespace string, res interface{}) error {
-	return c.kubeCtl.Patch(ctx, patchType, resourceType, resourceName, namespace, res)
-}
-
-func (c *K8sClient) Delete(ctx context.Context, res interface{}) error {
-	return c.kubeCtl.Delete(ctx, res)
+// GetKubeconfig generates kubeconfig compatible with kubectl for incluster created clients.
+func (c *K8sClient) GetKubeconfig(ctx context.Context) (string, error) {
+	secret, err := c.kube.GetSecretsForServiceAccount(ctx, "pmm-service-account")
+	if err != nil {
+		c.l.Errorf("failed getting service account: %v", err)
+		return "", err
+	}
+	kubeConfig, err := c.kube.GenerateKubeConfig(secret)
+	if err != nil {
+		c.l.Errorf("failed generating kubeconfig: %v", err)
+		return "", err
+	}
+	return string(kubeConfig), nil
 }
 
 // ListPXCClusters returns list of Percona XtraDB clusters and their statuses.
@@ -583,7 +598,7 @@ func (c *K8sClient) UpdatePXCCluster(ctx context.Context, params *PXCParams) err
 		cluster.Spec.HAProxy.Resources = c.updateComputeResources(params.HAProxy.ComputeResources, cluster.Spec.HAProxy.Resources)
 	}
 
-	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(&cluster).CRDName(), common.DatabaseCluster(&cluster).GetName(), "", cluster)
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(&cluster).CRDName(), common.DatabaseCluster(&cluster).GetName(), cluster)
 }
 
 // DeletePXCCluster deletes Percona XtraDB cluster with provided name.
@@ -1000,7 +1015,7 @@ func (c *K8sClient) UpdatePSMDBCluster(ctx context.Context, params *PSMDBParams)
 			return err
 		}
 	}
-	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(&cluster).CRDName(), common.DatabaseCluster(&cluster).GetName(), "", cluster)
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, common.DatabaseCluster(&cluster).CRDName(), common.DatabaseCluster(&cluster).GetName(), cluster)
 }
 
 const (
@@ -1370,10 +1385,8 @@ func (c *K8sClient) CheckOperators(ctx context.Context) (*Operators, error) {
 	}
 
 	return &Operators{
-		PXCOperatorVersion:             c.getLatestOperatorAPIVersion(apiVersions, pxcAPINamespace),
-		PsmdbOperatorVersion:           c.getLatestOperatorAPIVersion(apiVersions, psmdbAPINamespace),
-		OLMOperatorVersion:             c.getLatestOperatorAPIVersion(apiVersions, olmAPINamespace),
-		VictoriaMetricsOperatorVersion: c.getLatestOperatorAPIVersion(apiVersions, vmAPINamespace),
+		PXCOperatorVersion:   c.getLatestOperatorAPIVersion(apiVersions, pxcAPINamespace),
+		PsmdbOperatorVersion: c.getLatestOperatorAPIVersion(apiVersions, psmdbAPINamespace),
 	}, nil
 }
 
@@ -1388,15 +1401,11 @@ func (c *K8sClient) getLatestOperatorAPIVersion(installedVersions []string, apiP
 		if !strings.HasPrefix(apiVersion, apiPrefix) {
 			continue
 		}
-
-		// versions could be in these forms:
-		// pxc.percona.com/v1-8-0                 -> 1.8.0
-		// operators.coreos.com/v2                -> 2.0.0
-		// operators.coreos.com/v1alpha2          -> 1.0.0-alpha2
-		// operator.victoriametrics.com/v1beta1   -> 1.0.0-beta1
-
 		v := strings.Split(apiVersion, "/")[1]
 		versionParts := strings.Split(v, "-")
+		if len(versionParts) != 3 {
+			continue
+		}
 		v = strings.Join(versionParts, ".")
 		newVersion, err := goversion.NewVersion(v)
 		if err != nil {
@@ -1734,7 +1743,7 @@ func (c *K8sClient) PatchAllPSMDBClusters(ctx context.Context, oldVersion, newVe
 				},
 			},
 		}
-		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaservermongodb", cluster.Name, "", clusterPatch); err != nil {
+		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaservermongodb", cluster.Name, clusterPatch); err != nil {
 			return err
 		}
 	}
@@ -1775,7 +1784,7 @@ func (c *K8sClient) PatchAllPXCClusters(ctx context.Context, oldVersion, newVers
 			}
 		}
 
-		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaxtradbcluster", cluster.Name, "", clusterPatch); err != nil {
+		if err := c.kubeCtl.Patch(ctx, kubectl.PatchTypeMerge, "perconaxtradbcluster", cluster.Name, clusterPatch); err != nil {
 			return err
 		}
 	}
@@ -1816,15 +1825,15 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 		return errors.Errorf("container image %q does not have any tag", deployment.Spec.Template.Spec.Containers[containerIndex].Image)
 	}
 	deployment.Spec.Template.Spec.Containers[containerIndex].Image = imageAndTag[0] + ":" + version
-	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeStrategic, "deployment", deploymentName, "", deployment)
+	return c.kubeCtl.Patch(ctx, kubectl.PatchTypeStrategic, "deployment", deploymentName, deployment)
 }
 
 func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 	files := []string{
-		// 	"deploy/victoriametrics/crds/crd.yaml",
-		// 	"deploy/victoriametrics/operator/manager.yaml",
-		// 	"deploy/victoriametrics/operator/rbac.yaml",
-		// 	"deploy/victoriametrics/crs/vmagent_rbac.yaml",
+		"deploy/victoriametrics/crds/crd.yaml",
+		"deploy/victoriametrics/operator/manager.yaml",
+		"deploy/victoriametrics/operator/rbac.yaml",
+		"deploy/victoriametrics/crs/vmagent_rbac.yaml",
 		"deploy/victoriametrics/crs/vmnodescrape.yaml",
 		"deploy/victoriametrics/crs/vmpodscrape.yaml",
 		"deploy/victoriametrics/kube-state-metrics/service-account.yaml",
@@ -1861,42 +1870,6 @@ func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 
 	vmagent := vmAgentSpec(params, secretName)
 	return c.kube.Apply(ctx, vmagent)
-}
-
-// Create the resource from the specs.
-func (c *K8sClient) Create(ctx context.Context, resource interface{}) error {
-	var err error
-
-	switch res := resource.(type) {
-	case string:
-		_, err = c.kubeCtl.Run(ctx, []string{"create", "-f", res}, nil)
-	case []byte:
-		_, err = c.kubeCtl.Run(ctx, []string{"create", "-f", "-"}, res)
-	}
-	if err != nil {
-		return errors.Wrap(err, "cannot create resource")
-	}
-
-	return nil
-}
-
-// WaitForCondition waits until the condition is met for the specified resource.
-func (c *K8sClient) WaitForCondition(ctx context.Context, condition string, resource interface{}) error {
-	var err error
-
-	condition = "--for=condition=" + condition
-
-	switch res := resource.(type) {
-	case string:
-		_, err = c.kubeCtl.Run(ctx, []string{"wait", "-f", res}, nil)
-	case []byte:
-		_, err = c.kubeCtl.Run(ctx, []string{"wait", "-f", "-"}, res)
-	}
-	if err != nil {
-		return errors.Wrapf(err, "error while waiting for condition %q", condition)
-	}
-
-	return nil
 }
 
 // RemoveVMOperator deletes the VM Operator installed when the cluster was registered.
@@ -2008,7 +1981,9 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 					Port: 27017,
 				},
 				OperationProfiling: &psmdb.MongodSpecOperationProfiling{
-					Mode: psmdb.OperationProfilingModeSlowOp,
+					Mode:              psmdb.OperationProfilingModeSlowOp,
+					SlowOpThresholdMs: 100,
+					RateLimit:         100,
 				},
 				Security: &psmdb.MongodSpecSecurity{
 					RedactClientLogData:  false,
@@ -2109,18 +2084,7 @@ func (c *K8sClient) getPSMDBSpec(params *PSMDBParams, extra extraCRParams) *psmd
 	if params.Replicaset != nil {
 		res.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 		res.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
-		// For single node clusters, the operator creates a single instance replicaset.
-		// This is an unsafe configuration and the expose config should be applied to the replicaset
-		// instead of to the mongos.
-		if params.Size == 1 {
-			res.Spec.UnsafeConf = true
-			if params.Expose {
-				res.Spec.Replsets[0].Expose.Enabled = true
-				res.Spec.Sharding.Mongos.Expose.ExposeType = common.ServiceTypeClusterIP
-			}
-		}
 	}
-
 	if params.PMM != nil {
 		res.Spec.PMM = &psmdb.PmmSpec{
 			Enabled:    true,
@@ -2222,18 +2186,7 @@ func (c *K8sClient) getPSMDBSpec112Plus(params *PSMDBParams, extra extraCRParams
 	if params.Replicaset != nil {
 		req.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 		req.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
-		// For single node clusters, the operator creates a single instance replicaset.
-		// This is an unsafe configuration and the expose config should be applied to the replicaset
-		// instead of to the mongos.
-		if params.Size == 1 {
-			req.Spec.UnsafeConf = true
-			if params.Expose {
-				req.Spec.Replsets[0].Expose.Enabled = true
-				req.Spec.Sharding.Mongos.Expose.ExposeType = common.ServiceTypeClusterIP
-			}
-		}
 	}
-
 	if params.PMM != nil {
 		req.Spec.PMM = &psmdb.PmmSpec{
 			Enabled:    true,
@@ -2303,7 +2256,6 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *
 	spec.Spec.Image = extra.psmdbImage
 	spec.ObjectMeta.Name = params.Name
 	spec.Spec.Sharding.ConfigsvrReplSet.Size = params.Size
-
 	spec.Spec.Replsets[0].Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	spec.Spec.Sharding.Mongos.Resources = c.setComputeResources(params.Replicaset.ComputeResources)
 	spec.Spec.Sharding.ConfigsvrReplSet.VolumeSpec = c.volumeSpec(params.Replicaset.DiskSize)
@@ -2320,14 +2272,6 @@ func (c *K8sClient) overridePSMDBSpec(spec *psmdb.PerconaServerMongoDB, params *
 	if !params.Expose {
 		spec.Spec.Sharding.Mongos.Expose.Enabled = false
 		spec.Spec.Sharding.Mongos.Expose.ExposeType = common.ServiceTypeClusterIP
-	}
-
-	if params.Size == 1 {
-		spec.Spec.UnsafeConf = true
-		if params.Expose {
-			spec.Spec.Replsets[0].Expose.Enabled = true
-			spec.Spec.Replsets[0].Expose.ExposeType = common.ServiceTypeClusterIP
-		}
 	}
 	// Always override PMM spec
 	if params.PMM != nil {
