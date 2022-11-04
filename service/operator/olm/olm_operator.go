@@ -14,23 +14,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package operator contains logic related to kubernetes operators.
+// Package olm contains logic related to kubernetes operators.
 package olm
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"path"
 	"strings"
 	"time"
 
 	operatorsv1 "github.com/operator-framework/api/pkg/operators/v1"
-	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
-	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	operators "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apis/operators"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
@@ -104,7 +102,7 @@ func (o *OperatorService) InstallOLMOperator(ctx context.Context, req *controlle
 		}
 		crdFile = "https://" + path.Join(baseDownloadURL, latestVersion, "crds.yaml")
 		olmFile = "https://" + path.Join(baseDownloadURL, latestVersion, "olm.yaml")
-	case defaultOLMVersion:
+	case defaultOLMVersion: // empty string
 		crdFile, err = dbaascontroller.DeployDir.ReadFile("deploy/olm/crds.yaml")
 		if err != nil {
 			return nil, err
@@ -137,7 +135,7 @@ func (o *OperatorService) InstallOLMOperator(ctx context.Context, req *controlle
 	return response, nil
 }
 
-// InstallOLMOperator installs the OLM in the Kubernetes cluster.
+// ListInstallPlans gets the list of all available install plans.
 func (o *OperatorService) ListInstallPlans(ctx context.Context, req *controllerv1beta1.ListInstallPlansRequest) (*controllerv1beta1.ListInstallPlansResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
@@ -151,7 +149,7 @@ func (o *OperatorService) ListInstallPlans(ctx context.Context, req *controllerv
 	}
 
 	response := &controllerv1beta1.ListInstallPlansResponse{
-		Items: []*controllerv1beta1.ListInstallPlansResponse_InstallPlan{},
+		Items: []*controllerv1beta1.ListInstallPlansResponse_InstallPlan{}, //nolint:nosnakecase
 	}
 
 	for _, item := range plans.Items {
@@ -170,7 +168,7 @@ func (o *OperatorService) ListInstallPlans(ctx context.Context, req *controllerv
 			}
 		}
 
-		installPlan := &controllerv1beta1.ListInstallPlansResponse_InstallPlan{
+		installPlan := &controllerv1beta1.ListInstallPlansResponse_InstallPlan{ //nolint:nosnakecase
 			Namespace: item.ObjectMeta.Namespace,
 			Name:      item.ObjectMeta.Name,
 			Csv:       csv,
@@ -184,7 +182,7 @@ func (o *OperatorService) ListInstallPlans(ctx context.Context, req *controllerv
 	return response, nil
 }
 
-func getInstallPlans(ctx context.Context, client *k8sclient.K8sClient, namespace string) (*operatorsv1alpha1.InstallPlanList, error) {
+func getInstallPlans(ctx context.Context, client *k8sclient.K8sClient, namespace string) (*v1alpha1.InstallPlanList, error) {
 	cmd := []string{"get", "installplans", "-ojson"}
 	if namespace != "" {
 		cmd = append(cmd, []string{"-n", namespace}...)
@@ -197,7 +195,7 @@ func getInstallPlans(ctx context.Context, client *k8sclient.K8sClient, namespace
 		return nil, errors.Wrap(err, "cannot get operators group list")
 	}
 
-	var installPlans operatorsv1alpha1.InstallPlanList
+	var installPlans v1alpha1.InstallPlanList
 	err = json.Unmarshal(data, &installPlans)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot decode install plans from the response")
@@ -292,7 +290,7 @@ type OperatorInstallRequest struct {
 	CatalogSource          string
 	CatalogSourceNamespace string
 	Channel                string
-	InstallPlanApproval    operatorsv1alpha1.Approval
+	InstallPlanApproval    v1alpha1.Approval
 	StartingCSV            string
 }
 
@@ -359,7 +357,7 @@ func (o *OperatorService) operatorGroupExists(ctx context.Context, client *k8scl
 }
 
 func (o *OperatorService) createOperatorGroup(ctx context.Context, client *k8sclient.K8sClient, namespace, name string) error {
-	op := &v1.OperatorGroup{
+	op := &operatorsv1.OperatorGroup{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: APIVersionCoreosV1,
 			Kind:       operatorsv1.OperatorGroupKind,
@@ -369,10 +367,10 @@ func (o *OperatorService) createOperatorGroup(ctx context.Context, client *k8scl
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1.OperatorGroupSpec{
+		Spec: operatorsv1.OperatorGroupSpec{
 			TargetNamespaces: []string{namespace},
 		},
-		Status: v1.OperatorGroupStatus{
+		Status: operatorsv1.OperatorGroupStatus{
 			LastUpdated: &metav1.Time{
 				Time: time.Now(),
 			},
@@ -388,16 +386,16 @@ func (o *OperatorService) createOperatorGroup(ctx context.Context, client *k8scl
 }
 
 func (o *OperatorService) createSubscription(ctx context.Context, client *k8sclient.K8sClient, req *controllerv1beta1.InstallOperatorRequest) error {
-	subscription := &operatorsv1alpha1.Subscription{
+	subscription := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       operatorsv1alpha1.SubscriptionKind,
-			APIVersion: operatorsv1alpha1.SubscriptionCRDAPIVersion,
+			Kind:       v1alpha1.SubscriptionKind,
+			APIVersion: v1alpha1.SubscriptionCRDAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: req.Namespace,
 			Name:      req.Name,
 		},
-		Spec: &operatorsv1alpha1.SubscriptionSpec{
+		Spec: &v1alpha1.SubscriptionSpec{
 			CatalogSource:          req.CatalogSource,
 			CatalogSourceNamespace: req.CatalogSourceNamespace,
 			Channel:                req.Channel,
@@ -405,7 +403,7 @@ func (o *OperatorService) createSubscription(ctx context.Context, client *k8scli
 			InstallPlanApproval:    v1alpha1.Approval(req.InstallPlanApproval),
 			StartingCSV:            req.StartingCsv,
 		},
-		Status: operatorsv1alpha1.SubscriptionStatus{
+		Status: v1alpha1.SubscriptionStatus{
 			LastUpdated: metav1.Time{
 				Time: time.Now(),
 			},
@@ -440,7 +438,7 @@ func namespaceExists(ctx context.Context, client *k8sclient.K8sClient, namespace
 }
 
 /*
-   Helpers
+Helpers
 */
 func getLatestVersion(ctx context.Context, repo string) (string, error) {
 	url := fmt.Sprintf(githubAPIURLTemplate, repo)
@@ -457,11 +455,11 @@ func getLatestVersion(ctx context.Context, repo string) (string, error) {
 	defer response.Body.Close() //nolint:errcheck
 
 	type jsonResponse struct {
-		TagName string `json:"tag_name"` // nolint:tagliatelle
+		TagName string `json:"tag_name"` //nolint:tagliatelle
 	}
 	var resp *jsonResponse
 
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return "", errors.Wrap(err, "cannot read OLM latest version response")
 	}
