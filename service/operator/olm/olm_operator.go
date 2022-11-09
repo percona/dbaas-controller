@@ -41,6 +41,8 @@ import (
 
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -63,7 +65,6 @@ var ErrEmptyVersionTag = errors.New("got an empty version tag from Github")
 // OperatorService holds methods to handle the OLM operator.
 type OperatorService struct {
 	kubeConfig string
-	// client     *k8sclient.K8sClient
 }
 
 // NewOperatorService returns new OperatorService instance.
@@ -119,17 +120,19 @@ func (o *OperatorService) InstallOLMOperator(ctx context.Context, req *controlle
 	}
 	client.WaitForCondition(ctx, "Established", crdFile)
 
+	// Since we don't create these files, sometimes there are resources that were already created
+	// by other file. We shouldn't stop on those errors because all other steps are correct.
 	if err := client.Create(ctx, olmFile); err != nil {
 		// TODO: revert applied files before return
-		return nil, errors.Wrapf(err, "cannot apply %q file", olmFile)
+		log.Errorf("cannot create %q file: %s", olmFile, err)
 	}
 
 	if err := waitForDeployments(ctx, client, "olm"); err != nil {
-		return nil, errors.Wrap(err, "error waiting olm deployments")
+		log.Errorf("error waiting olm deployments: %s", err)
 	}
 
 	if err := waitForPackageServer(ctx, client, "olm"); err != nil {
-		return nil, errors.Wrap(err, "error waiting olm package server to become ready")
+		log.Errorf("error waiting olm package server to become ready: %s", err)
 	}
 
 	return response, nil
@@ -180,6 +183,44 @@ func (o *OperatorService) ListInstallPlans(ctx context.Context, req *controllerv
 	}
 
 	return response, nil
+}
+
+func (o *OperatorService) ListSubscriptions(ctx context.Context, req *controllerv1beta1.ListSubscriptionsRequest) (*controllerv1beta1.ListSubscriptionsResponse, error) {
+	resp := &controllerv1beta1.ListSubscriptionsResponse{
+		Items: []*controllerv1beta1.ListSubscriptionsResponse_Subscription{},
+	}
+
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	cmd := []string{"get", "subscriptions", "-A", "-ojson"}
+	data, err := client.Run(ctx, cmd)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot get subscriptions list")
+	}
+
+	var susbcriptions v1alpha1.SubscriptionList
+	err = json.Unmarshal(data, &susbcriptions)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot decode install plans from the response")
+	}
+
+	for _, item := range susbcriptions.Items {
+		resp.Items = append(resp.Items, &controllerv1beta1.ListSubscriptionsResponse_Subscription{
+			Namespace:    item.ObjectMeta.Namespace,
+			Name:         item.ObjectMeta.Name,
+			Package:      item.Spec.Package,
+			Source:       item.Spec.CatalogSource,
+			Channel:      item.Spec.Channel,
+			CurrentCsv:   item.Status.CurrentCSV,
+			InstalledCsv: item.Status.InstalledCSV,
+		})
+	}
+
+	return resp, nil
 }
 
 func getInstallPlans(ctx context.Context, client *k8sclient.K8sClient, namespace string) (*v1alpha1.InstallPlanList, error) {
