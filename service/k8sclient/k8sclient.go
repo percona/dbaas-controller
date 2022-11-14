@@ -1233,7 +1233,7 @@ func (c *K8sClient) buildPSMDBDBList110(ctx context.Context, buf []byte) ([]PSMD
 		if cluster.Status != nil {
 			message := cluster.Status.Message
 			conditions := cluster.Status.Conditions
-			if message == "" && len(conditions) != 0 {
+			if message == "" && len(conditions) > 0 {
 				message = conditions[len(conditions)-1].Message
 			}
 
@@ -1264,7 +1264,6 @@ func (c *K8sClient) buildPSMDBDBList112(ctx context.Context, buf []byte) ([]PSMD
 
 	res := make([]PSMDBCluster, len(list.Items))
 	for i, cluster := range list.Items {
-
 		exposed := cluster.Spec.Sharding.Mongos.Expose.ExposeType == common.ServiceTypeLoadBalancer ||
 			cluster.Spec.Sharding.Mongos.Expose.ExposeType == common.ServiceTypeExternalName
 
@@ -1282,7 +1281,7 @@ func (c *K8sClient) buildPSMDBDBList112(ctx context.Context, buf []byte) ([]PSMD
 		if cluster.Status != nil {
 			message := cluster.Status.Message
 			conditions := cluster.Status.Conditions
-			if message == "" && len(conditions) != 0 {
+			if message == "" && len(conditions) > 0 {
 				message = conditions[len(conditions)-1].Message
 			}
 
@@ -2513,7 +2512,7 @@ func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperator
 		}
 		podSpec.Resources = c.setComputeResources(params.HAProxy.ComputeResources)
 	}
-	if len(serviceType) != 0 {
+	if len(serviceType) > 0 {
 		podSpec.ServiceType = serviceType
 	}
 

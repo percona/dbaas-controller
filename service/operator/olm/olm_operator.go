@@ -32,6 +32,7 @@ import (
 	operators "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apis/operators"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
@@ -41,8 +42,6 @@ import (
 
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -60,7 +59,7 @@ const (
 )
 
 // ErrEmptyVersionTag Got an empty version tag from GitHub API.
-var ErrEmptyVersionTag = errors.New("got an empty version tag from Github")
+var ErrEmptyVersionTag error = errors.New("got an empty version tag from Github")
 
 // OperatorService holds methods to handle the OLM operator.
 type OperatorService struct {
@@ -69,7 +68,7 @@ type OperatorService struct {
 
 // NewOperatorService returns new OperatorService instance.
 func NewOperatorService() *OperatorService {
-	return &OperatorService{} //nolint:exhaustruct
+	return new(OperatorService) //nolint:exhaustruct
 }
 
 // NewOperatorServiceFromConfig returns new OperatorService instance and intializes the config.
@@ -87,7 +86,7 @@ func (o *OperatorService) InstallOLMOperator(ctx context.Context, req *controlle
 	}
 	defer client.Cleanup() //nolint:errcheck
 
-	response := &controllerv1beta1.InstallOLMOperatorResponse{}
+	response := new(controllerv1beta1.InstallOLMOperatorResponse)
 
 	if isInstalled(ctx, client, olmNamespace) {
 		return response, nil // No error, already installed.
@@ -266,7 +265,7 @@ func (o *OperatorService) ApproveInstallPlan(ctx context.Context, req *controlle
 		return nil, errors.Wrap(err, "cannot approve the install plan")
 	}
 
-	resp := &controllerv1beta1.ApproveInstallPlanResponse{}
+	resp := new(controllerv1beta1.ApproveInstallPlanResponse)
 
 	return resp, nil
 }
@@ -368,7 +367,7 @@ func (o *OperatorService) InstallOperator(ctx context.Context, req *controllerv1
 		return nil, errors.Wrap(err, "cannot create a susbcription to install the operator")
 	}
 
-	return &controllerv1beta1.InstallOperatorResponse{}, nil
+	return new(controllerv1beta1.InstallOperatorResponse), nil
 }
 
 func isInstalled(ctx context.Context, client *k8sclient.K8sClient, namespace string) bool {
