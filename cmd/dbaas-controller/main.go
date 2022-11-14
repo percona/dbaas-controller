@@ -26,8 +26,7 @@ import (
 
 	"github.com/percona-platform/dbaas-controller/service/cluster"
 	"github.com/percona-platform/dbaas-controller/service/logs"
-	"github.com/percona-platform/dbaas-controller/service/operator"
-	"github.com/percona-platform/dbaas-controller/service/operator/olm"
+	"github.com/percona-platform/dbaas-controller/service/olm"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 	"github.com/percona-platform/dbaas-controller/utils/servers"
@@ -71,8 +70,8 @@ func main() {
 	controllerv1beta1.RegisterPSMDBClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewPSMDBClusterService())
 	controllerv1beta1.RegisterKubernetesClusterAPIServer(gRPCServer.GetUnderlyingServer(), cluster.NewKubernetesClusterService())
 	controllerv1beta1.RegisterLogsAPIServer(gRPCServer.GetUnderlyingServer(), logs.NewService())
-	controllerv1beta1.RegisterPXCOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewPXCOperatorService(flags.PXCOperatorURLTemplate))
-	controllerv1beta1.RegisterPSMDBOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewPSMDBOperatorService(flags.PSMDBOperatorURLTemplate))
+	// controllerv1beta1.RegisterPXCOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewPXCOperatorService(flags.PXCOperatorURLTemplate))
+	// controllerv1beta1.RegisterPSMDBOperatorAPIServer(gRPCServer.GetUnderlyingServer(), operator.NewPSMDBOperatorService(flags.PSMDBOperatorURLTemplate))
 	controllerv1beta1.RegisterOLMOperatorAPIServer(gRPCServer.GetUnderlyingServer(), olm.NewOperatorService())
 
 	go servers.RunDebugServer(ctx, &servers.RunDebugServerOpts{
