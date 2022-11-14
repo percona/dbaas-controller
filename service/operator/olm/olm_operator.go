@@ -37,8 +37,6 @@ import (
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
@@ -55,6 +53,7 @@ const (
 	latestOLMVersion  = "latest"
 	defaultOLMVersion = ""
 
+	// APIVersionCoreosV1 constant for some API requests.
 	APIVersionCoreosV1 = "operators.coreos.com/v1"
 )
 
@@ -184,6 +183,7 @@ func (o *OperatorService) ListInstallPlans(ctx context.Context, req *controllerv
 	return response, nil
 }
 
+// ListSubscriptions list all available subscriptions.
 func (o *OperatorService) ListSubscriptions(ctx context.Context, req *controllerv1beta1.ListSubscriptionsRequest) (*controllerv1beta1.ListSubscriptionsResponse, error) {
 	resp := &controllerv1beta1.ListSubscriptionsResponse{
 		Items: []*controllerv1beta1.ListSubscriptionsResponse_Subscription{},
@@ -252,6 +252,7 @@ type approveInstallPlanReq struct {
 	Spec approveInstallPlanSpec `json:"spec"`
 }
 
+// ApproveInstallPlan patches an existing install plan to set it to approved.
 func (o *OperatorService) ApproveInstallPlan(ctx context.Context, req *controllerv1beta1.ApproveInstallPlanRequest) (*controllerv1beta1.ApproveInstallPlanResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
@@ -268,34 +269,6 @@ func (o *OperatorService) ApproveInstallPlan(ctx context.Context, req *controlle
 	resp := new(controllerv1beta1.ApproveInstallPlanResponse)
 
 	return resp, nil
-}
-
-type configGetter struct {
-	kubeconfig string
-}
-
-func NewConfigGetter(kubeconfig string) *configGetter {
-	return &configGetter{kubeconfig: kubeconfig}
-}
-
-// loadFromString takes a kubeconfig and deserializes the contents into Config object.
-func (g *configGetter) loadFromString() (*clientcmdapi.Config, error) {
-	config, err := clientcmd.Load([]byte(g.kubeconfig))
-	if err != nil {
-		return nil, err
-	}
-
-	if config.AuthInfos == nil {
-		config.AuthInfos = make(map[string]*clientcmdapi.AuthInfo)
-	}
-	if config.Clusters == nil {
-		config.Clusters = make(map[string]*clientcmdapi.Cluster)
-	}
-	if config.Contexts == nil {
-		config.Contexts = make(map[string]*clientcmdapi.Context)
-	}
-
-	return config, nil
 }
 
 // AvailableOperators resturns the list of available operators for a given namespace and filter.
@@ -323,6 +296,7 @@ func (o *OperatorService) AvailableOperators(ctx context.Context, client *k8scli
 	return &manifestList, nil
 }
 
+// OperatorInstallRequest holds the fields to make an operator install request.
 type OperatorInstallRequest struct {
 	Namespace              string
 	Name                   string
@@ -334,6 +308,7 @@ type OperatorInstallRequest struct {
 	StartingCSV            string
 }
 
+// InstallOperator installs an operator via OLM.
 func (o *OperatorService) InstallOperator(ctx context.Context, req *controllerv1beta1.InstallOperatorRequest) (*controllerv1beta1.InstallOperatorResponse, error) {
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
 	if err != nil {
