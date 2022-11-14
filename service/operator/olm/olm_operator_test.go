@@ -58,7 +58,6 @@ func TestInstallOlmOperator(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Cleanup(func() {
-		return
 		// Maintain the order, otherwise the Kubernetes deletetion will stuck in Terminating state.
 		err := client.Delete(ctx, []string{"apiservices.apiregistration.k8s.io", "v1.packages.operators.coreos.com"})
 		assert.NoError(t, err)
@@ -142,7 +141,7 @@ func TestInstallOlmOperator(t *testing.T) {
 			time.Sleep(30 * time.Second)
 		}
 		assert.NoError(t, err)
-		require.True(t, len(installPlans.Items) > 0)
+		assert.True(t, len(installPlans.Items) > 0)
 
 		approveRequest := &controllerv1beta1.ApproveInstallPlanRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
