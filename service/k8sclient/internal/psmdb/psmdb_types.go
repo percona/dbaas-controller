@@ -261,6 +261,7 @@ type Expose struct {
 	LoadBalancerSourceRanges []string           `json:"loadBalancerSourceRanges,omitempty"`
 	ServiceAnnotations       map[string]string  `json:"serviceAnnotations,omitempty"`
 }
+
 type MongosExpose struct {
 	Enabled                  bool               `json:"enabled,omitempty"`
 	ExposeType               common.ServiceType `json:"exposeType,omitempty"`
@@ -554,6 +555,7 @@ type MongoSpecAuditLog struct {
 	Format      AuditLogFormat      `json:"format,omitempty"`
 	Filter      string              `json:"filter,omitempty"`
 }
+
 type MongosSpecSetParameter struct {
 	CursorTimeoutMillis int `json:"cursorTimeoutMillis,omitempty"`
 }

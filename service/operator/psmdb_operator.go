@@ -57,7 +57,6 @@ func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *con
 		// TODO: If operator is installed, try to upgrade it?
 		return new(controllerv1beta1.InstallPSMDBOperatorResponse), nil
 	}
-	req.Version = "1.11.0"
 
 	yamlFile, err := dbaascontroller.DeployDir.ReadFile("deploy/olm/psmdb/percona-server-mongodb-operator.yaml")
 	if err != nil {
