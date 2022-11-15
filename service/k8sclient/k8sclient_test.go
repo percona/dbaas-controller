@@ -702,6 +702,42 @@ func TestK8sClient(t *testing.T) {
 			return cluster == nil
 		})
 		l.Info("PSMDB Cluster is deleted")
+
+		t.Run("Single Node Cluster", func(t *testing.T) {
+			name := "single-node-cluster"
+			err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
+				Image: "percona/percona-server-mongodb:4.4.5-7",
+				Name:  name,
+				Size:  1,
+				Replicaset: &Replicaset{
+					DiskSize: "1000000000",
+				},
+				Expose:      true,
+				PMM:         pmm,
+				BackupImage: backupImage,
+			})
+
+			require.NoError(t, err)
+
+			l.Info("Single PSMDB Cluster is created")
+
+			assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+				return cluster != nil && cluster.State != ClusterStateInvalid
+			})
+			t.Run("Make sure PSMDB cluster is in changing state right after creation", func(t *testing.T) {
+				cluster, err := getPSMDBCluster(ctx, client, name)
+				require.NoError(t, err)
+				assert.Equal(t, ClusterStateChanging, cluster.State)
+			})
+
+			err = client.DeletePSMDBCluster(ctx, name)
+			require.NoError(t, err)
+
+			assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+				return cluster == nil
+			})
+			l.Info("PSMDB Cluster is deleted")
+		})
 	})
 }
 
