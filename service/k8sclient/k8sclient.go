@@ -1160,10 +1160,12 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 			for _, rs := range cluster.Status.Replsets {
 				status = append(status, appStatus{rs.Size, rs.Ready})
 			}
-			status = append(status, appStatus{
-				size:  int32(cluster.Status.Mongos.Size),
-				ready: int32(cluster.Status.Mongos.Ready),
-			})
+			if val.Size != 1 {
+				status = append(status, appStatus{
+					size:  int32(cluster.Status.Mongos.Size),
+					ready: int32(cluster.Status.Mongos.Ready),
+				})
+			}
 			val.DetailedState = status
 			val.Message = message
 		}
