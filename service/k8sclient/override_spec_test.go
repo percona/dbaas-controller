@@ -23,12 +23,13 @@ import (
 	"testing"
 
 	goversion "github.com/hashicorp/go-version"
+	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
+	pxc "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 )
 
@@ -171,8 +172,8 @@ spec:
 		params.Expose = true
 		spec = client.overridePXCSpec(spec, params, "pxc-backup-storage-cns", "1.11.0")
 		assert.Equal(t, mysqlConfig, spec.Spec.PXC.Configuration)
-		assert.Equal(t, "gp2-enc", spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.StorageClassName)
-		assert.Equal(t, common.ResourceList{common.ResourceStorage: "1000000000"}, spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.Resources.Requests)
+		assert.Equal(t, "gp2-enc", *spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.StorageClassName)
+		assert.Equal(t, corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1000000000")}, spec.Spec.PXC.PodSpec.VolumeSpec.PersistentVolumeClaim.Resources.Requests)
 		assert.True(t, spec.Spec.PXC.Expose.Enabled)
 		assert.NotEqual(t, 0, len(spec.Spec.PXC.Expose.Annotations))
 		params.Expose = false
@@ -200,9 +201,9 @@ func TestPSMDBSpec(t *testing.T) {
 		BackupImage: "percona/percona-backup-mongodb:1.7.0",
 	}
 	extra := extraCRParams{
-		expose: psmdb.Expose{
+		expose: psmdbv1.Expose{
 			Enabled:    true,
-			ExposeType: common.ServiceTypeLoadBalancer,
+			ExposeType: corev1.ServiceTypeLoadBalancer,
 		},
 	}
 	operator, _ := goversion.NewVersion("1.12.0")
@@ -214,11 +215,10 @@ func TestPSMDBSpec(t *testing.T) {
 		t.Parallel()
 		spec, err := client.createPSMDBSpec(operator, params, &extra)
 		assert.NoError(t, err)
-		defaultSpec := client.getPSMDBSpec112Plus(params, extra)
+		defaultSpec := client.getPSMDBSpec(params, extra)
 		assert.Equal(t, defaultSpec, spec)
 		params.Expose = false
 		spec = client.overridePSMDBSpec(spec, params, extra)
-		assert.False(t, spec.Spec.Sharding.Mongos.Expose.Enabled)
-		assert.Equal(t, common.ServiceTypeClusterIP, spec.Spec.Sharding.Mongos.Expose.ExposeType)
+		assert.Equal(t, corev1.ServiceTypeClusterIP, spec.Spec.Sharding.Mongos.Expose.ExposeType)
 	})
 }
