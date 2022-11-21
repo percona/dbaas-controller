@@ -163,7 +163,7 @@ func TestInstallOlmOperator(t *testing.T) {
 				t.Logf("Deployment ready at try number %d", i)
 				break
 			}
-			time.Sleep(5 * time.Second)
+			time.Sleep(30 * time.Second)
 		}
 		assert.NoError(t, err)
 
