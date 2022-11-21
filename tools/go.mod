@@ -3,7 +3,7 @@ module github.com/percona-platform/dbaas-controller/tools
 go 1.18
 
 require (
-	github.com/daixiang0/gci v0.8.0
+	github.com/daixiang0/gci v0.8.5
 	github.com/golangci/golangci-lint v1.50.0
 	github.com/quasilyte/go-consistent v0.0.0-20200404105227-766526bf1e96
 	github.com/reviewdog/reviewdog v0.14.1
