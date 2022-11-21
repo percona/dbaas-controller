@@ -101,7 +101,7 @@ func TestInstallOlmOperator(t *testing.T) {
 	assert.Equal(t, 1, len(manifests.Items))
 
 	subscriptionName := "percona-server-mongodb-operator"
-	subscriptionNamespace := "default"
+	subscriptionNamespace := "my-test-ns"
 
 	t.Run("Subscribe", func(t *testing.T) {
 		kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
