@@ -28,10 +28,10 @@ import (
 
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient"
 )
 
@@ -104,7 +104,8 @@ func TestInstallOlmOperator(t *testing.T) {
 
 	subscriptionName := "percona-server-mongodb-operator"
 	subscriptionNamespace := fmt.Sprintf("test-namespace-%04d", rand.Int63n(9999))
-	operatorGroup := fmt.Sprintf("operatorgroup-%04d", rand.Int63n(9999))
+	subscriptionNamespace = "default"
+	operatorGroup := "percona-operators-group"
 
 	t.Run("Subscribe", func(t *testing.T) {
 		kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -134,23 +135,22 @@ func TestInstallOlmOperator(t *testing.T) {
 		_, err = olms.InstallOperator(ctx, params)
 		assert.NoError(t, err)
 
-		var installPlans *v1alpha1.InstallPlanList
-		for i := 0; i < 6; i++ {
-			installPlans, err = getInstallPlans(ctx, client, "")
-			if len(installPlans.Items) > 0 {
-				break
-			}
-			time.Sleep(30 * time.Second)
-		}
-		assert.NoError(t, err)
-		assert.True(t, len(installPlans.Items) > 0)
+		var subscription *controllerv1beta1.GetSubscriptionResponse
+
+		subscription, err = olms.GetSubscription(ctx, &controllerv1beta1.GetSubscriptionRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: string(kubeconfig),
+			},
+			Name:      subscriptionName,
+			Namespace: subscriptionNamespace,
+		})
 
 		approveRequest := &controllerv1beta1.ApproveInstallPlanRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: string(kubeconfig),
 			},
-			Namespace: installPlans.Items[0].ObjectMeta.Namespace,
-			Name:      installPlans.Items[0].ObjectMeta.Name,
+			Namespace: subscriptionNamespace,
+			Name:      subscription.Subscription.InstallPlanName,
 		}
 
 		_, err = olms.ApproveInstallPlan(ctx, approveRequest)

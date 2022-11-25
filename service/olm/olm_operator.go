@@ -186,7 +186,7 @@ func (o *OperatorService) ListInstallPlans(ctx context.Context, req *controllerv
 // ListSubscriptions list all available subscriptions.
 func (o *OperatorService) ListSubscriptions(ctx context.Context, req *controllerv1beta1.ListSubscriptionsRequest) (*controllerv1beta1.ListSubscriptionsResponse, error) {
 	resp := &controllerv1beta1.ListSubscriptionsResponse{
-		Items: []*controllerv1beta1.ListSubscriptionsResponse_Subscription{},
+		Items: []*controllerv1beta1.Subscription{},
 	}
 
 	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
@@ -208,15 +208,65 @@ func (o *OperatorService) ListSubscriptions(ctx context.Context, req *controller
 	}
 
 	for _, item := range susbcriptions.Items {
-		resp.Items = append(resp.Items, &controllerv1beta1.ListSubscriptionsResponse_Subscription{
-			Namespace:    item.ObjectMeta.Namespace,
-			Name:         item.ObjectMeta.Name,
-			Package:      item.Spec.Package,
-			Source:       item.Spec.CatalogSource,
-			Channel:      item.Spec.Channel,
-			CurrentCsv:   item.Status.CurrentCSV,
-			InstalledCsv: item.Status.InstalledCSV,
+		resp.Items = append(resp.Items, &controllerv1beta1.Subscription{
+			Namespace:       item.ObjectMeta.Namespace,
+			Name:            item.ObjectMeta.Name,
+			Package:         item.Spec.Package,
+			Source:          item.Spec.CatalogSource,
+			Channel:         item.Spec.Channel,
+			CurrentCsv:      item.Status.CurrentCSV,
+			InstalledCsv:    item.Status.InstalledCSV,
+			InstallPlanName: item.Status.Install.Name,
 		})
+	}
+
+	return resp, nil
+}
+
+// GetSubscription list all available subscriptions.
+func (o *OperatorService) GetSubscription(ctx context.Context, req *controllerv1beta1.GetSubscriptionRequest) (*controllerv1beta1.GetSubscriptionResponse, error) {
+	client, err := k8sclient.New(ctx, req.KubeAuth.Kubeconfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer client.Cleanup() //nolint:errcheck
+
+	var subscription v1alpha1.Subscription
+
+	for i := 0; i < 6; i++ {
+		cmd := []string{"get", "subscription", req.Name, "--namespace", req.Namespace, "-ojson"}
+		data, err := client.Run(ctx, cmd)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot get subscription %q in namespace %q", req.Name, req.Namespace)
+		}
+
+		err = json.Unmarshal(data, &subscription)
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot decode install plans from the response")
+		}
+
+		// Retry until we have an install plan.
+		if subscription.Status.Install != nil {
+			break
+		}
+
+		time.Sleep(5 * time.Second)
+	}
+
+	resp := &controllerv1beta1.GetSubscriptionResponse{
+		Subscription: &controllerv1beta1.Subscription{
+			Namespace:    subscription.ObjectMeta.Namespace,
+			Name:         subscription.ObjectMeta.Name,
+			Package:      subscription.Spec.Package,
+			Source:       subscription.Spec.CatalogSource,
+			Channel:      subscription.Spec.Channel,
+			CurrentCsv:   subscription.Status.CurrentCSV,
+			InstalledCsv: subscription.Status.InstalledCSV,
+		},
+	}
+
+	if subscription.Status.Install != nil {
+		resp.Subscription.InstallPlanName = subscription.Status.Install.Name
 	}
 
 	return resp, nil
