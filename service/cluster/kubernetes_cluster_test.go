@@ -59,6 +59,6 @@ func TestKubernetesClusterServiceCheckConnection(t *testing.T) {
 			KubeAuth: &controllerv1beta1.KubeAuth{Kubeconfig: kubeConfig},
 		})
 		require.Error(t, err)
-		testutil.AssertGRPCErrorRE(t, codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: exit status 1", err)
+		testutil.AssertGRPCErrorRE(t, codes.FailedPrecondition, "Unable to connect to Kubernetes cluster: Get \"https://1.2.3.4:8443/version\": dial tcp 1.2.3.4:8443: i/o timeout", err)
 	})
 }

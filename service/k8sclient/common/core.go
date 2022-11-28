@@ -22,27 +22,34 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Extracted from https://pkg.go.dev/k8s.io/api/core/v1
-
-// HostPathVolumeSource represents a host path mapped into a pod.
-// Host path volumes do not support ownership management or SELinux relabeling.
-//
-// https://pkg.go.dev/k8s.io/api/core/v1#HostPathVolumeSource
-type HostPathVolumeSource struct {
-	// Path of the directory on the host.
-	// If the path is a symlink, it will follow the link to the real path.
-	// More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
-	Path string `json:"path"`
+// NodeSummaryNode holds information about Node inside Node's summary.
+type NodeSummaryNode struct {
+	FileSystem NodeFileSystemSummary `json:"fs,omitempty"`
 }
 
-// EmptyDirVolumeSource represents an empty directory for a pod.
-// Empty directory volumes support ownership management and SELinux relabeling.
-//
-// https://pkg.go.dev/k8s.io/api/core/v1#EmptyDirVolumeSource
-type EmptyDirVolumeSource struct{}
+// NodeSummary holds summary of the Node.
+// One gets this by requesting Kubernetes API endpoint:
+// /v1/nodes/<node-name>/proxy/stats/summary.
+type NodeSummary struct {
+	Node NodeSummaryNode `json:"node,omitempty"`
+}
 
-// PodVolumePersistentVolumeClaim represents PVC of volume mounted to a pod.
-type PodVolumePersistentVolumeClaim struct{}
+// NodeFileSystemSummary holds a summary of Node's filesystem.
+type NodeFileSystemSummary struct {
+	UsedBytes uint64 `json:"usedBytes,omitempty"`
+}
+
+// PullPolicy describes a policy for if/when to pull a container image.
+type PullPolicy string
+
+const (
+	// PullAlways means that kubelet always attempts to pull the latest image. Container will fail If the pull fails.
+	PullAlways PullPolicy = "Always"
+	// PullNever means that kubelet never pulls an image, but only uses a local image. Container will fail if the image isn't present.
+	PullNever PullPolicy = "Never"
+	// PullIfNotPresent means that kubelet pulls if the image isn't present on disk. Container will fail if the image isn't present and the pull fails.
+	PullIfNotPresent PullPolicy = "IfNotPresent"
+)
 
 // ContainerState describes container's state - waiting, running, terminated.
 type ContainerState string
@@ -74,25 +81,6 @@ func IsContainerInState(containerStatuses []corev1.ContainerStatus, state Contai
 	return false
 }
 
-// DeploymentTemplate is a template for creating pods.
-type DeploymentTemplate struct {
-	ObjectMeta `json:"metadata,omitempty"`
-	Spec       PodSpec `json:"spec,omitempty"`
-}
-
-// DeploymentSpec details deployment specification.
-type DeploymentSpec struct {
-	Selector LabelSelector      `json:"selector,omitempty"`
-	Template DeploymentTemplate `json:"template,omitempty"`
-}
-
-// Deployment is a higher abstraction based on pods. It's basically a group of pods.
-type Deployment struct {
-	TypeMeta
-	ObjectMeta `json:"metadata,omitempty"`
-	Spec       DeploymentSpec `json:"spec,omitempty"`
-}
-
 // IsNodeInCondition returns true if node's condition given as an argument has
 // status "True". Otherwise it returns false.
 func IsNodeInCondition(node corev1.Node, conditionType corev1.NodeConditionType) bool {
@@ -102,62 +90,4 @@ func IsNodeInCondition(node corev1.Node, conditionType corev1.NodeConditionType)
 		}
 	}
 	return false
-}
-
-// Image holds continaer image names and image size.
-type Image struct {
-	Names     []string `json:"names,omitempty"`
-	SizeBytes int64    `json:"sizeBytes,omitempty"`
-}
-
-// PersistentVolumeCapacity holds string representation of storage size.
-type PersistentVolumeCapacity struct {
-	// Storage size as string.
-	Storage string `json:"storage,omitempty"`
-}
-
-// PersistentVolumeSpec holds PV specs.
-type PersistentVolumeSpec struct {
-	// Capacity of the volume.
-	Capacity PersistentVolumeCapacity `json:"capacity,omitempty"`
-}
-
-// PersistentVolume holds information about PV.
-type PersistentVolume struct {
-	TypeMeta
-	// Specification of the volume.
-	Spec PersistentVolumeSpec `json:"spec,omitempty"`
-}
-
-// PodSpec is a description of a pod.
-type PodSpec struct {
-	// NodeName is a request to schedule this pod onto a specific node. If it is non-empty,
-	// the scheduler simply schedules this pod onto that node, assuming that it fits resource
-	// requirements.
-	NodeName string `json:"nodeName,omitempty"`
-
-	// Specifies the hostname of the Pod
-	// If not specified, the pod's hostname will be set to a system-defined value.
-	Hostname string `json:"hostname,omitempty"`
-
-	// List of containers.
-	Containers []ContainerSpec `json:"containers,omitempty"`
-
-	// List of init containers.
-	InitContainers []ContainerSpec `json:"initContainers,omitempty"`
-
-	// Volumes stores list of volumes used by pod.
-	Volumes []PodVolume `json:"volumes,omitempty"`
-}
-
-// ContainerSpec represents a container definition.
-type ContainerSpec struct {
-	Name      string               `json:"name,omitempty"`
-	Image     string               `json:"image,omitempty"`
-	Resources ResourceRequirements `json:"resources,omitempty"`
-}
-
-// PodVolume holds info about volume attached to pod.
-type PodVolume struct {
-	PersistentVolumeClaim *PodVolumePersistentVolumeClaim `json:"persistentVolumeClaim,omitempty"`
 }
