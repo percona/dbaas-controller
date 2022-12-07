@@ -104,8 +104,8 @@ func TestInstallOlmOperator(t *testing.T) {
 
 	subscriptionName := "percona-server-mongodb-operator"
 	subscriptionNamespace := fmt.Sprintf("test-namespace-%04d", rand.Int63n(9999))
-	subscriptionNamespace = "default"
-	operatorGroup := "percona-operators-group"
+	// subscriptionNamespace = "default"
+	operatorGroup := fmt.Sprintf("percona-operators-group-%04d", rand.Int63n(9999))
 
 	t.Run("Subscribe", func(t *testing.T) {
 		kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
