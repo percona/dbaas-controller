@@ -36,6 +36,7 @@ import (
 )
 
 func TestGetLatestVersion(t *testing.T) {
+	t.Parallel()
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
 	require.NoError(t, err)
 
@@ -51,6 +52,7 @@ func TestGetLatestVersion(t *testing.T) {
 }
 
 func TestInstallOlmOperator(t *testing.T) {
+	t.Parallel()
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
 	require.NoError(t, err)
 
@@ -108,7 +110,6 @@ func TestInstallOlmOperator(t *testing.T) {
 	operatorGroup := fmt.Sprintf("percona-operators-group-%04d", rand.Int63n(9999))
 
 	t.Run("Subscribe", func(t *testing.T) {
-		t.Parallel()
 		kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
 		require.NoError(t, err)
 
