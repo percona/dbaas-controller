@@ -418,7 +418,7 @@ func NewIncluster(ctx context.Context) (*K8sClient, error) {
 
 // Cleanup removes temporary files created by that object.
 func (c *K8sClient) Cleanup() error {
-	return nil
+	return c.kubeCtl.Cleanup()
 }
 
 func (c *K8sClient) Run(ctx context.Context, params []string) ([]byte, error) {
