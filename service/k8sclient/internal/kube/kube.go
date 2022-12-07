@@ -20,10 +20,21 @@ package kube
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"sort"
+	"strings"
+	"sync"
+	"text/tabwriter"
+	"time"
 
+	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
+	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
+	"github.com/pkg/errors"
+	yaml3 "gopkg.in/yaml.v3"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -31,14 +42,26 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	yamlSerializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/duration"
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+
+	// load all auth plugins
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/tools/reference"
+
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube/psmdb"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube/pxc"
 )
 
 const (
@@ -47,7 +70,85 @@ const (
 	defaultQPSLimit    = 100
 	defaultBurstLimit  = 150
 	dbaasToolPath      = "/opt/dbaas-tools/bin"
+	PXCKind            = pxc.PXCKind
+	PSMDBKind          = psmdb.PSMDBKind
+	defaultChunkSize   = 500
+	configKind         = "Config"
+	apiVersion         = "v1"
+	defaultName        = "default"
 )
+
+// Each level has 2 spaces for PrefixWriter
+const (
+	LEVEL_0 = iota
+	LEVEL_1
+	LEVEL_2
+	LEVEL_3
+	LEVEL_4
+)
+
+var restartTemplate = `{
+    "spec": {
+        "template": {
+            "metadata": {
+                "annotations": {
+                    "kubectl.kubernetes.io/restartedAt": "%s"
+                }
+            }
+        }
+    }
+}`
+
+// SortableEvents implements sort.Interface for []api.Event based on the Timestamp field
+type SortableEvents []corev1.Event
+
+func (list SortableEvents) Len() int {
+	return len(list)
+}
+
+func (list SortableEvents) Swap(i, j int) {
+	list[i], list[j] = list[j], list[i]
+}
+
+func (list SortableEvents) Less(i, j int) bool {
+	return list[i].LastTimestamp.Time.Before(list[j].LastTimestamp.Time)
+}
+
+type ImageSpec struct {
+	Image string `json:"image"`
+}
+type PXCSpec struct {
+	Image string `json:"image"`
+}
+type UpgradeOptions struct {
+	VersionServiceEndpoint string `json:"versionServiceEndpoint,omitempty"`
+	Apply                  string `json:"apply,omitempty"`
+	Schedule               string `json:"schedule,omitempty"`
+	SetFCV                 bool   `json:"setFCV,omitempty"`
+}
+
+type Spec struct {
+	CRVersion      string         `json:"crVersion"`
+	Image          string         `json:"image"`
+	PXCSpec        PXCSpec        `json:"pxc"`
+	UpgradeOptions UpgradeOptions `json:"upgradeOptions"`
+	Backup         ImageSpec      `json:"backup"`
+}
+type OperatorPatch struct {
+	Spec Spec `json:"spec"`
+}
+
+type PXCOperatorSpec struct {
+	CRVersion string    `json:"crVersion"`
+	PXC       PXCSpec   `json:"image"`
+	Backup    ImageSpec `json:"backup"`
+	HAProxy   ImageSpec `json:"haproxy"`
+	ProxySQL  ImageSpec `json:"proxysql"`
+}
+
+type PXCOperatorPatch struct {
+	Spec PXCOperatorSpec `json:"spec"`
+}
 
 // configGetter stores kubeconfig string to convert it to the final object
 type configGetter struct {
@@ -55,9 +156,12 @@ type configGetter struct {
 }
 
 type Client struct {
-	clientset  *kubernetes.Clientset
-	restConfig *rest.Config
-	namespace  string
+	mu          *sync.Mutex
+	clientset   *kubernetes.Clientset
+	pxcClient   *pxc.PerconaXtraDBClusterClient
+	psmdbClient *psmdb.PerconaServerMongoDBClient
+	restConfig  *rest.Config
+	namespace   string
 }
 
 // NewConfigGetter creates a new configGetter struct
@@ -90,15 +194,23 @@ func (g *configGetter) loadFromString() (*clientcmdapi.Config, error) {
 // running inside a pod running on kubernetes. It will return ErrNotInCluster
 // if called from a process not running in a kubernetes environment.
 func NewFromIncluster() (*Client, error) {
-	c, err := rest.InClusterConfig()
+	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
 	}
-	clientset, err := kubernetes.NewForConfig(c)
+	config.QPS = defaultQPSLimit
+	config.Burst = defaultBurstLimit
+	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
-	return &Client{clientset: clientset, restConfig: c}, nil
+	c := &Client{
+		clientset:  clientset,
+		restConfig: config,
+		mu:         new(sync.Mutex),
+	}
+	err = c.setup()
+	return c, err
 }
 
 // NewFromKubeConfigString creates a new client for the given config string.
@@ -114,6 +226,16 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	c := &Client{
+		clientset:  clientset,
+		restConfig: config,
+		mu:         new(sync.Mutex),
+	}
+	err = c.setup()
+	return c, err
+}
+
+func (c *Client) setup() error {
 	namespace := "default"
 	if space := os.Getenv("NAMESPACE"); space != "" {
 		namespace = space
@@ -121,7 +243,23 @@ func NewFromKubeConfigString(kubeconfig string) (*Client, error) {
 	// Set PATH variable to make aws-iam-authenticator executable
 	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
 	os.Setenv("PATH", path)
-	return &Client{clientset: clientset, restConfig: config, namespace: namespace}, nil
+	c.namespace = namespace
+	return c.initOperatorClients()
+}
+
+func (c *Client) initOperatorClients() error {
+	pxcClient, err := pxc.NewForConfig(c.restConfig)
+	if err != nil {
+		return err
+	}
+	psmdbClient, err := psmdb.NewForConfig(c.restConfig)
+	if err != nil {
+		return err
+	}
+	c.pxcClient = pxcClient
+	c.psmdbClient = psmdbClient
+	_, err = c.GetServerVersion(context.Background())
+	return err
 }
 
 func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) {
@@ -138,6 +276,9 @@ func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) 
 
 // Delete deletes object from the k8s cluster
 func (c *Client) Delete(ctx context.Context, obj runtime.Object) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
 	if err != nil {
 		return err
@@ -232,7 +373,7 @@ func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
 			break
 		}
 
-		obj, _, err := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(rawObj.Raw, nil, nil)
+		obj, _, err := yamlSerializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(rawObj.Raw, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -255,6 +396,10 @@ func (c *Client) GetStorageClasses(ctx context.Context) (*v1.StorageClassList, e
 // GetSecret returns k8s secret by provided name
 func (c *Client) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
 	return c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
+func (c *Client) GetServerVersion(ctx context.Context) (*version.Info, error) {
+	return c.clientset.Discovery().ServerVersion()
 }
 
 // GetAPIVersions returns apiversions
@@ -298,10 +443,12 @@ func (c *Client) GetNodes(ctx context.Context) (*corev1.NodeList, error) {
 
 // GetLogs returns logs for pod
 func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, error) {
+	defaultLogLines := int64(3000)
 	options := new(corev1.PodLogOptions)
 	if container != "" {
 		options.Container = container
 	}
+	options.TailLines = &defaultLogLines
 	buf := new(bytes.Buffer)
 
 	req := c.clientset.CoreV1().Pods(c.namespace).GetLogs(pod, options)
@@ -314,6 +461,270 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 		return buf.String(), err
 	}
 	return buf.String(), nil
+}
+
+// GetStatefulSet finds statefulset by name.
+func (c *Client) GetStatefulSet(ctx context.Context, name string) (*appsv1.StatefulSet, error) {
+	return c.clientset.AppsV1().StatefulSets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
+// RestartStatefulSet finds statefulset by name and restarts it.
+func (c *Client) RestartStatefulSet(ctx context.Context, name string) (*appsv1.StatefulSet, error) {
+	patchData := fmt.Sprintf(restartTemplate, time.Now().UTC().Format(time.RFC3339))
+	return c.clientset.AppsV1().StatefulSets(c.namespace).Patch(ctx, name, types.StrategicMergePatchType, []byte(patchData), metav1.PatchOptions{})
+}
+
+// ListPXCClusters returns list of managed PCX clusters.
+func (c *Client) ListPXCClusters(ctx context.Context) (*pxcv1.PerconaXtraDBClusterList, error) {
+	return c.pxcClient.PXCClusters(c.namespace).List(ctx, metav1.ListOptions{})
+}
+
+// GetPXCClusters returns PXC clusters by provided name.
+func (c *Client) GetPXCCluster(ctx context.Context, name string) (*pxcv1.PerconaXtraDBCluster, error) {
+	cluster, err := c.pxcClient.PXCClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return cluster, nil
+}
+
+// PatchPXCCluster patches CR of managed PXC cluster.
+func (c *Client) PatchPXCCluster(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*pxcv1.PerconaXtraDBCluster, error) {
+	return c.pxcClient.PXCClusters(c.namespace).Patch(ctx, name, pt, data, opts)
+}
+
+// ListPSMDBClusters returns list of managed PSMDB clusters.
+func (c *Client) ListPSMDBClusters(ctx context.Context) (*psmdbv1.PerconaServerMongoDBList, error) {
+	return c.psmdbClient.PSMDBClusters(c.namespace).List(ctx, metav1.ListOptions{})
+}
+
+// GetPSMDBCluster returns PSMDB cluster by provided name,
+func (c *Client) GetPSMDBCluster(ctx context.Context, name string) (*psmdbv1.PerconaServerMongoDB, error) {
+	return c.psmdbClient.PSMDBClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
+// PatchPSMDBCluster patches CR of managed PSMDB cluster.
+func (c *Client) PatchPSMDBCluster(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*psmdbv1.PerconaServerMongoDB, error) {
+	return c.psmdbClient.PSMDBClusters(c.namespace).Patch(ctx, name, pt, data, opts)
+}
+
+// GetDeployment finds deployment.
+func (c *Client) GetDeployment(ctx context.Context, name string) (*appsv1.Deployment, error) {
+	return c.clientset.AppsV1().Deployments(c.namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
+func (c *Client) ListDeployments(ctx context.Context) (*appsv1.DeploymentList, error) {
+	return c.clientset.AppsV1().Deployments("").List(ctx, metav1.ListOptions{})
+}
+
+// PatchDeployment patches k8s deployment
+func (c *Client) PatchDeployment(ctx context.Context, name string, deployment *appsv1.Deployment) error {
+	patch, err := json.Marshal(deployment)
+	if err != nil {
+		return err
+	}
+	_, err = c.clientset.AppsV1().Deployments(c.namespace).Patch(ctx, name, types.StrategicMergePatchType, patch, metav1.PatchOptions{})
+	return err
+}
+
+func (c *Client) GetEvents(ctx context.Context, name string) (string, error) {
+	pod, err := c.clientset.CoreV1().Pods(c.namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		eventsInterface := c.clientset.CoreV1().Events(c.namespace)
+		selector := eventsInterface.GetFieldSelector(&name, &c.namespace, nil, nil)
+		initialOpts := metav1.ListOptions{
+			FieldSelector: selector.String(),
+			Limit:         defaultChunkSize,
+		}
+		events := new(corev1.EventList)
+		err2 := resource.FollowContinue(&initialOpts,
+			func(options metav1.ListOptions) (runtime.Object, error) {
+				newList, err := eventsInterface.List(ctx, options)
+				if err != nil {
+					return nil, resource.EnhanceListError(err, options, "events")
+				}
+				events.Items = append(events.Items, newList.Items...)
+				return newList, nil
+			})
+
+		if err2 == nil && len(events.Items) != 0 {
+			return tabbedString(func(out io.Writer) error {
+				w := NewPrefixWriter(out)
+				w.Write(0, "Pod '%v': error '%v', but found events.\n", name, err)
+				DescribeEvents(events, w)
+				return nil
+			})
+		}
+		return "", err
+	}
+
+	var events *corev1.EventList
+	if ref, err := reference.GetReference(scheme.Scheme, pod); err != nil {
+		fmt.Printf("Unable to construct reference to '%#v': %v", pod, err)
+	} else {
+		ref.Kind = ""
+		if _, isMirrorPod := pod.Annotations[corev1.MirrorPodAnnotationKey]; isMirrorPod {
+			ref.UID = types.UID(pod.Annotations[corev1.MirrorPodAnnotationKey])
+		}
+		events, _ = searchEvents(c.clientset.CoreV1(), ref, defaultChunkSize)
+	}
+	return tabbedString(func(out io.Writer) error {
+		w := NewPrefixWriter(out)
+		w.Write(LEVEL_0, name+" ")
+		DescribeEvents(events, w)
+		return nil
+	})
+}
+
+func tabbedString(f func(io.Writer) error) (string, error) {
+	out := new(tabwriter.Writer)
+	buf := new(bytes.Buffer)
+	out.Init(buf, 0, 8, 2, ' ', 0)
+
+	err := f(out)
+	if err != nil {
+		return "", err
+	}
+
+	out.Flush()
+	str := string(buf.String())
+	return str, nil
+}
+
+func DescribeEvents(el *corev1.EventList, w PrefixWriter) {
+	if len(el.Items) == 0 {
+		w.Write(LEVEL_0, "Events:\t<none>\n")
+		return
+	}
+	w.Flush()
+	sort.Sort(SortableEvents(el.Items))
+	w.Write(LEVEL_0, "Events:\n  Type\tReason\tAge\tFrom\tMessage\n")
+	w.Write(LEVEL_1, "----\t------\t----\t----\t-------\n")
+	for _, e := range el.Items {
+		var interval string
+		firstTimestampSince := translateMicroTimestampSince(e.EventTime)
+		if e.EventTime.IsZero() {
+			firstTimestampSince = translateTimestampSince(e.FirstTimestamp)
+		}
+		if e.Series != nil {
+			interval = fmt.Sprintf("%s (x%d over %s)", translateMicroTimestampSince(e.Series.LastObservedTime), e.Series.Count, firstTimestampSince)
+		} else if e.Count > 1 {
+			interval = fmt.Sprintf("%s (x%d over %s)", translateTimestampSince(e.LastTimestamp), e.Count, firstTimestampSince)
+		} else {
+			interval = firstTimestampSince
+		}
+		source := e.Source.Component
+		if source == "" {
+			source = e.ReportingController
+		}
+		w.Write(LEVEL_1, "%v\t%v\t%s\t%v\t%v\n",
+			e.Type,
+			e.Reason,
+			interval,
+			source,
+			strings.TrimSpace(e.Message),
+		)
+	}
+}
+
+// searchEvents finds events about the specified object.
+// It is very similar to CoreV1.Events.Search, but supports the Limit parameter.
+func searchEvents(client corev1client.EventsGetter, objOrRef runtime.Object, limit int64) (*corev1.EventList, error) {
+	ref, err := reference.GetReference(scheme.Scheme, objOrRef)
+	if err != nil {
+		return nil, err
+	}
+	stringRefKind := string(ref.Kind)
+	var refKind *string
+	if len(stringRefKind) > 0 {
+		refKind = &stringRefKind
+	}
+	stringRefUID := string(ref.UID)
+	var refUID *string
+	if len(stringRefUID) > 0 {
+		refUID = &stringRefUID
+	}
+
+	e := client.Events(ref.Namespace)
+	fieldSelector := e.GetFieldSelector(&ref.Name, &ref.Namespace, refKind, refUID)
+	initialOpts := metav1.ListOptions{FieldSelector: fieldSelector.String(), Limit: limit}
+	eventList := new(corev1.EventList)
+	err = resource.FollowContinue(&initialOpts,
+		func(options metav1.ListOptions) (runtime.Object, error) {
+			newEvents, err := e.List(context.TODO(), options)
+			if err != nil {
+				return nil, resource.EnhanceListError(err, options, "events")
+			}
+			eventList.Items = append(eventList.Items, newEvents.Items...)
+			return newEvents, nil
+		})
+	return eventList, err
+}
+
+// GetSecretsForServiceAccount returns secret by given service account name
+func (c *Client) GetSecretsForServiceAccount(ctx context.Context, accountName string) (*corev1.Secret, error) {
+	serviceAccount, err := c.clientset.CoreV1().ServiceAccounts(c.namespace).Get(ctx, accountName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	if len(serviceAccount.Secrets) == 0 {
+		return nil, errors.Errorf("no secrets available for namespace %s", c.namespace)
+	}
+	return c.clientset.CoreV1().Secrets(c.namespace).Get(
+		ctx,
+		serviceAccount.Secrets[0].Name,
+		metav1.GetOptions{},
+	)
+}
+
+// GenerateKubeConfig generates kubeconfig
+func (c *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
+	conf := &Config{
+		Kind:           configKind,
+		APIVersion:     apiVersion,
+		CurrentContext: defaultName,
+	}
+	conf.Clusters = []ClusterInfo{
+		{
+			Name: defaultName,
+			Cluster: Cluster{
+				CertificateAuthorityData: secret.Data["ca.crt"],
+				Server:                   c.restConfig.Host,
+			},
+		},
+	}
+	conf.Contexts = []ContextInfo{
+		{
+			Name: defaultName,
+			Context: Context{
+				Cluster:   defaultName,
+				User:      "pmm-service-account",
+				Namespace: defaultName,
+			},
+		},
+	}
+	conf.Users = []UserInfo{
+		{
+			Name: "pmm-service-account",
+			User: User{
+				Token: string(secret.Data["token"]),
+			},
+		},
+	}
+	return c.marshalKubeConfig(conf)
+}
+
+func (c *Client) marshalKubeConfig(conf *Config) ([]byte, error) {
+	config, err := json.Marshal(&conf)
+	if err != nil {
+		return nil, err
+	}
+	var jsonObj interface{}
+	err = yaml3.Unmarshal(config, &jsonObj)
+	if err != nil {
+		return nil, err
+	}
+	return yaml3.Marshal(jsonObj)
 }
 
 func (c *Client) retrieveMetaFromObject(obj runtime.Object) (namespace, name string, err error) {
@@ -354,4 +765,24 @@ func deleteObject(helper *resource.Helper, namespace, name string) error {
 		}
 	}
 	return nil
+}
+
+// translateMicroTimestampSince returns the elapsed time since timestamp in
+// human-readable approximation.
+func translateMicroTimestampSince(timestamp metav1.MicroTime) string {
+	if timestamp.IsZero() {
+		return "<unknown>"
+	}
+
+	return duration.HumanDuration(time.Since(timestamp.Time))
+}
+
+// translateTimestampSince returns the elapsed time since timestamp in
+// human-readable approximation.
+func translateTimestampSince(timestamp metav1.Time) string {
+	if timestamp.IsZero() {
+		return "<unknown>"
+	}
+
+	return duration.HumanDuration(time.Since(timestamp.Time))
 }

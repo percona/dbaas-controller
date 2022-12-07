@@ -60,7 +60,7 @@ release-component-version:
 
 release:                          ## Build dbaas-controller release binaries.
 	env CGO_ENABLED=0 go build -mod=readonly -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/dbaas-controller ./cmd/dbaas-controller
-	$(PMM_RELEASE_PATH)/dbaas-controller --version
+	#$(PMM_RELEASE_PATH)/dbaas-controller --version
 
 init:                             ## Install development tools
 	rm -rf ./bin
@@ -72,7 +72,7 @@ ci-init:                ## Initialize CI environment
 format:                           ## Format source code
 	bin/gofumpt -l -w .
 	bin/goimports -local github.com/percona-platform/dbaas-controller -l -w .
-	bin/gci write --Section Standard --Section Default --Section "Prefix(github.com/percona-platform/dbaas-controller)" .
+	bin/gci write --section Standard --section Default --section "Prefix(github.com/percona-platform/dbaas-controller)" .
 
 check:                            ## Run checks/linters for the whole project
 	bin/check-license
@@ -107,12 +107,13 @@ env-up-start:
 	fi
 	minikube config view
 	minikube start
-local-env-up:
+
+local-env-up:                     ## Configure and starts minikube
 	if [ $(KUBERNETES_VERSION) ]; then \
 		minikube config set kubernetes-version $(KUBERNETES_VERSION); \
 	fi
 	minikube config view
-	minikube start --nodes=4 --cpus=3 --memory=2200mb
+	minikube start --nodes=1 --cpus=2 --memory=4g --apiserver-names host.docker.internal --kubernetes-version=v1.23.6
 	minikube addons disable storage-provisioner
 	kubectl delete storageclass standard
 	kubectl apply -f kubevirt-hostpath-provisioner.yaml
@@ -165,6 +166,6 @@ eks-delete-current-namespace:
 	NAMESPACE=$$(kubectl config view --minify --output 'jsonpath={..namespace}'); \
 	if [ "$$NAMESPACE" != "default" ]; then kubectl delete ns "$$NAMESPACE"; fi
 
-deploy-to-pmm-server: install     ## Deploy DBaaS controller to a running ${PMM_CONTAINER} container.
+deploy-to-pmm-server: release     ## Deploy DBaaS controller to a running ${PMM_CONTAINER} container.
 	docker cp bin/dbaas-controller ${PMM_CONTAINER}:/usr/sbin/dbaas-controller
 	docker exec ${PMM_CONTAINER} supervisorctl restart dbaas-controller

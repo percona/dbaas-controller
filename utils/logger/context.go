@@ -21,6 +21,7 @@ import (
 )
 
 // key is unexported to prevent collisions - it is different from any other type in other packages
+//
 //nolint:gochecknoglobals
 var key = struct{}{}
 

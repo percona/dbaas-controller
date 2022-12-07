@@ -3,7 +3,7 @@ name: Cleanup
 on:
   schedule:
     # run every Saturday
-    - cron: "0 12 * * 6"
+    - cron: "0 11 * * 6"
   workflow_dispatch:
 
 jobs:

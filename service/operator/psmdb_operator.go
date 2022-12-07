@@ -43,8 +43,6 @@ func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *con
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	defer client.Cleanup() //nolint:errcheck
-
 	// Try to get operator versions to see if we should upgrade or install.
 	operators, err := client.CheckOperators(ctx)
 	if err != nil {
@@ -64,7 +62,6 @@ func (x PSMDBOperatorService) InstallPSMDBOperator(ctx context.Context, req *con
 
 		return new(controllerv1beta1.InstallPSMDBOperatorResponse), nil
 	}
-	req.Version = "1.11.0"
 
 	err = client.ApplyOperator(ctx, req.Version, x.manifestsURLTemplate)
 	if err != nil {

@@ -34,14 +34,15 @@ import (
 	"time"
 
 	goversion "github.com/hashicorp/go-version"
+	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
+	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/psmdb"
-	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/pxc"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/utils/app"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
 )
@@ -221,6 +222,9 @@ func TestK8sClient(t *testing.T) {
 
 	client, err := New(ctx, string(kubeconfig))
 	require.NoError(t, err)
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, string(kubeconfig))
+	require.NoError(t, err)
+	defer kubeCtl.Cleanup()
 
 	t.Cleanup(func() {
 		err := client.Cleanup()
@@ -238,6 +242,8 @@ func TestK8sClient(t *testing.T) {
 	require.NoError(t, err)
 	latestPMMVersion, err := latestProduct(pmmVersions.Versions)
 	require.NoError(t, err)
+	t.Log(versionServiceURL)
+	t.Log(latestPMMVersion.String())
 	pxcOperator, psmdbOperator, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
 	require.NoError(t, err)
 
@@ -262,7 +268,7 @@ func TestK8sClient(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
-		_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-xtradb-cluster-operator"}, nil)
+		_, err = kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-xtradb-cluster-operator"}, nil)
 		if err == nil {
 			break
 		}
@@ -270,18 +276,18 @@ func TestK8sClient(t *testing.T) {
 	}
 	require.NoError(t, err)
 	var res interface{}
-	err = client.kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", &res)
+	err = kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", &res)
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
-		_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil)
+		_, err = kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil)
 		if err == nil {
 			break
 		}
 		time.Sleep(3 * time.Second)
 	}
 	require.NoError(t, err)
-	err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
+	err = kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
 	require.NoError(t, err)
 
 	t.Run("CheckOperators", func(t *testing.T) {
@@ -582,8 +588,9 @@ func TestK8sClient(t *testing.T) {
 
 		l.Info("No PSMDB Clusters running")
 		err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
-			Name: name,
-			Size: 3,
+			Image: "percona/percona-server-mongodb:4.4.5-7",
+			Name:  name,
+			Size:  3,
 			Replicaset: &Replicaset{
 				DiskSize: "1000000000",
 			},
@@ -695,6 +702,42 @@ func TestK8sClient(t *testing.T) {
 			return cluster == nil
 		})
 		l.Info("PSMDB Cluster is deleted")
+
+		t.Run("Single Node Cluster", func(t *testing.T) {
+			name := "single-node-cluster"
+			err = client.CreatePSMDBCluster(ctx, &PSMDBParams{
+				Image: "percona/percona-server-mongodb:4.4.5-7",
+				Name:  name,
+				Size:  1,
+				Replicaset: &Replicaset{
+					DiskSize: "1000000000",
+				},
+				Expose:      true,
+				PMM:         pmm,
+				BackupImage: backupImage,
+			})
+
+			require.NoError(t, err)
+
+			l.Info("Single PSMDB Cluster is created")
+
+			assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+				return cluster != nil && cluster.State != ClusterStateInvalid
+			})
+			t.Run("Make sure PSMDB cluster is in changing state right after creation", func(t *testing.T) {
+				cluster, err := getPSMDBCluster(ctx, client, name)
+				require.NoError(t, err)
+				assert.Equal(t, ClusterStateChanging, cluster.State)
+			})
+
+			err = client.DeletePSMDBCluster(ctx, name)
+			require.NoError(t, err)
+
+			assertListPSMDBCluster(ctx, t, client, name, func(cluster *PSMDBCluster) bool {
+				return cluster == nil
+			})
+			l.Info("PSMDB Cluster is deleted")
+		})
 	})
 }
 
@@ -792,6 +835,8 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 
 	client, err := New(ctx, string(kubeconfig))
 	require.NoError(t, err)
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, string(kubeconfig))
+	require.NoError(t, err)
 
 	b := make([]byte, 4)
 	n, err := rand.Read(b)
@@ -800,26 +845,27 @@ func TestGetConsumedCPUAndMemory(t *testing.T) {
 	consumedResourcesTestNamespace := "consumed-resources-test-" + hex.EncodeToString(b)
 
 	t.Cleanup(func() {
-		_, err := client.kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil)
+		_, err := kubeCtl.Run(ctx, []string{"delete", "ns", consumedResourcesTestNamespace}, nil)
 		require.NoError(t, err)
 		err = client.Cleanup()
 		require.NoError(t, err)
+		kubeCtl.Cleanup()
 	})
 
-	_, err = client.kubeCtl.Run(ctx, []string{"create", "ns", consumedResourcesTestNamespace}, nil)
+	_, err = kubeCtl.Run(ctx, []string{"create", "ns", consumedResourcesTestNamespace}, nil)
 	require.NoError(t, err)
 
 	args := []string{
 		"apply", "-f", consumedResourcesTestPodsManifestPath,
 		"-n" + consumedResourcesTestNamespace,
 	}
-	_, err = client.kubeCtl.Run(ctx, args, nil)
+	_, err = kubeCtl.Run(ctx, args, nil)
 	require.NoError(t, err)
 	args = []string{
 		"wait", "--for=condition=ready", "--timeout=20s",
 		"pods", "hello1", "hello2", "-n" + consumedResourcesTestNamespace,
 	}
-	_, err = client.kubeCtl.Run(ctx, args, nil)
+	_, err = kubeCtl.Run(ctx, args, nil)
 	require.NoError(t, err)
 
 	cpuMillis, memoryBytes, err := client.GetConsumedCPUAndMemory(ctx, consumedResourcesTestNamespace)
@@ -993,37 +1039,45 @@ func TestGetPXCClusterState(t *testing.T) {
 	}
 	type getClusterStateTestCase struct {
 		matchingError           error
-		cluster                 common.DatabaseCluster
+		name                    string
+		cluster                 *pxcv1.PerconaXtraDBCluster
 		expectedState           ClusterState
 		crAndPodsVersionMatches bool
 	}
 	testCases := []getClusterStateTestCase{
-		// PXC
 		{
+			cluster:       new(pxcv1.PerconaXtraDBCluster),
+			name:          "empty cluster should return invalid state",
 			expectedState: ClusterStateInvalid,
 		},
 		{
-			cluster:       common.DatabaseCluster(nil),
-			expectedState: ClusterStateInvalid,
-		},
-		// Initializing.
-		{
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			name: "Initializing",
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
-		// Ready.
 		{
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			name: "Ready cluster",
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateReady},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateReady},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateReady,
@@ -1031,90 +1085,131 @@ func TestGetPXCClusterState(t *testing.T) {
 		// Pausing related states.
 		{
 			// Cluster is being paused, pxc operator <= 1.8.0.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			name: "pausing related states",
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		{
-			// Cluster is being paused, pxc operator >= 1.9.0.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			name: "Cluster is being paused, pxc operator >= 1.9.0.",
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateStopping},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateStopping},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		{
-			// Cluster is paused = no cluster pods.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			name: "Cluster is paused = no cluster pods.",
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateReady},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateReady},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStatePaused,
 		},
 		{
-			// Cluster is paused = no cluster pods.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			name: "Cluster is paused = no cluster pods.",
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: true,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStatePaused},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStatePaused},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStatePaused,
 		},
 		{
-			// Cluster just got instructed to resume.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			name: "Cluster just got instructed to resume.",
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		// Upgrading.
 		{
-			// No failure during checking cr and pods version.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			name: "No failure during checking cr and pods version.",
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: false,
 			expectedState:           ClusterStateUpgrading,
 		},
 		{
-			// Checking cr and pods version failed.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			name: "Checking cr and pods version failed.",
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: common.AppStateInit},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: pxcv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: false,
 			matchingError:           errors.New("example error"),
 			expectedState:           ClusterStateInvalid,
 		},
 		{
-			// Not implemented state of the cluster.
-			cluster: &pxc.PerconaXtraDBCluster{
-				Spec: &pxc.PerconaXtraDBClusterSpec{
+			name: "Not implemented state of the cluster.",
+			cluster: &pxcv1.PerconaXtraDBCluster{
+				Spec: pxcv1.PerconaXtraDBClusterSpec{
 					Pause: false,
+					PXC: &pxcv1.PXCSpec{
+						PodSpec: &pxcv1.PodSpec{
+							Image: "",
+						},
+					},
 				},
-				Status: &pxc.PerconaXtraDBClusterStatus{Status: "notimplemented"},
+				Status: pxcv1.PerconaXtraDBClusterStatus{Status: "notimplemented"},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -1129,10 +1224,11 @@ func TestGetPXCClusterState(t *testing.T) {
 		tt := test
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
 			t.Parallel()
-			clusterState := c.getClusterState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
+			cInfo := kube.NewDBClusterInfoFromPXC(tt.cluster)
+			clusterState := c.getClusterState(ctx, cInfo, func(context.Context, kube.DBCluster) (bool, error) {
 				return tt.crAndPodsVersionMatches, tt.matchingError
 			})
-			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
+			assert.Equal(t, tt.expectedState, clusterState, tt.name)
 		})
 	}
 }
@@ -1144,129 +1240,130 @@ func TestGetPSMDBClusterState(t *testing.T) {
 		t.Skip("skipping because of environment variable")
 	}
 	type getClusterStateTestCase struct {
+		name                    string
 		matchingError           error
-		cluster                 common.DatabaseCluster
+		cluster                 *psmdbv1.PerconaServerMongoDB
 		expectedState           ClusterState
 		crAndPodsVersionMatches bool
 	}
 	testCases := []getClusterStateTestCase{
 		// PSMDB
 		{
-			expectedState: ClusterStateInvalid,
-		},
-		{
-			cluster:       new(psmdb.PerconaServerMongoDB),
+			name:          "empty cluster should return invalid state",
+			cluster:       new(psmdbv1.PerconaServerMongoDB),
 			expectedState: ClusterStateInvalid,
 		},
 		// Initializing.
 		{
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			name: "initializing cluster",
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+				Status: psmdbv1.PerconaServerMongoDBStatus{State: psmdbv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		// Ready.
 		{
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			name: "Ready cluster",
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateReady},
+				Status: psmdbv1.PerconaServerMongoDBStatus{State: psmdbv1.AppStateReady},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateReady,
 		},
 		// Pausing related states.
 		{
-			// Cluster is being paused, pxc operator <= 1.8.0.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			name: "Cluster is being paused, pxc operator <= 1.8.0.",
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: true,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+				Status: psmdbv1.PerconaServerMongoDBStatus{State: psmdbv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		{
-			// Cluster is being paused, pxc operator >= 1.9.0.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			name: "Cluster is being paused, pxc operator >= 1.9.0.",
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: true,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateStopping},
+				Status: psmdbv1.PerconaServerMongoDBStatus{State: psmdbv1.AppStateStopping},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		{
-			// Cluster is paused = no cluster pods.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			name: "Cluster is paused = no cluster pods.",
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: true,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateReady},
+				Status: psmdbv1.PerconaServerMongoDBStatus{State: psmdbv1.AppStateReady},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStatePaused,
 		},
 		{
-			// Cluster is paused = no cluster pods.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			name: "Cluster is paused = no cluster pods.",
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: true,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStatePaused},
+				Status: psmdbv1.PerconaServerMongoDBStatus{State: psmdbv1.AppStatePaused},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStatePaused,
 		},
 		{
-			// Cluster just got instructed to resume.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			name: "Cluster just got instructed to resume.",
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+				Status: psmdbv1.PerconaServerMongoDBStatus{State: psmdbv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
 		},
 		// Upgrading.
 		{
-			// No failure during checking cr and pods version.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			name: "No failure during checking cr and pods version.",
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+				Status: psmdbv1.PerconaServerMongoDBStatus{State: psmdbv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: false,
 			expectedState:           ClusterStateUpgrading,
 		},
 		{
-			// Checking cr and pods version failed.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			name: "Checking cr and pods version failed.",
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: common.AppStateInit},
+				Status: psmdbv1.PerconaServerMongoDBStatus{State: psmdbv1.AppStateInit},
 			},
 			crAndPodsVersionMatches: false,
 			matchingError:           errors.New("example error"),
 			expectedState:           ClusterStateInvalid,
 		},
 		{
-			// Not implemented state of the cluster.
-			cluster: &psmdb.PerconaServerMongoDB{
-				Spec: &psmdb.PerconaServerMongoDBSpec{
+			name: "Not implemented state of the cluster.",
+			cluster: &psmdbv1.PerconaServerMongoDB{
+				Spec: psmdbv1.PerconaServerMongoDBSpec{
 					Pause: false,
 				},
-				Status: &psmdb.PerconaServerMongoDBStatus{Status: "notimplemented"},
+				Status: psmdbv1.PerconaServerMongoDBStatus{State: "notimplemented"},
 			},
 			crAndPodsVersionMatches: true,
 			expectedState:           ClusterStateChanging,
@@ -1282,7 +1379,8 @@ func TestGetPSMDBClusterState(t *testing.T) {
 		tt := test
 		t.Run(fmt.Sprintf("Test case number %v", i), func(t *testing.T) {
 			t.Parallel()
-			clusterState := c.getClusterState(ctx, tt.cluster, func(context.Context, common.DatabaseCluster) (bool, error) {
+			cInfo := kube.NewDBClusterInfoFromPSMDB(tt.cluster)
+			clusterState := c.getClusterState(ctx, cInfo, func(context.Context, kube.DBCluster) (bool, error) {
 				return tt.crAndPodsVersionMatches, tt.matchingError
 			})
 			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
@@ -1322,27 +1420,31 @@ func TestCreateVMOperator(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
 
+	count, err = getDeploymentCount(ctx, client, "kube-state-metrics")
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count)
+
 	err = client.RemoveVMOperator(ctx)
 	assert.NoError(t, err)
 
 	count, err = getDeploymentCount(ctx, client, "vmagent")
 	assert.NoError(t, err)
 	assert.Equal(t, 0, count)
+
+	count, err = getDeploymentCount(ctx, client, "kube-state-metrics")
+	assert.NoError(t, err)
+	assert.Equal(t, 0, count)
 }
 
 func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (int, error) {
-	type deployments struct {
-		Items []common.Deployment `json:"items"`
-	}
-	var deps deployments
-	err := client.kubeCtl.Get(ctx, "deployment", "", &deps)
+	deployments, err := client.kube.ListDeployments(ctx)
 	if err != nil {
 		return -1, err
 	}
 
 	count := 0
 
-	for _, item := range deps.Items {
+	for _, item := range deployments.Items {
 		if strings.Contains(strings.ToLower(item.ObjectMeta.Name), name) {
 			count++
 		}
