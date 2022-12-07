@@ -104,6 +104,7 @@ func TestInstallOlmOperator(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(manifests.Items))
 
+	rand.Seed(time.Now().UnixNano())
 	subscriptionName := "percona-server-mongodb-operator"
 	subscriptionNamespace := fmt.Sprintf("test-namespace-%04d", rand.Int63n(9999))
 	// subscriptionNamespace = "default"
