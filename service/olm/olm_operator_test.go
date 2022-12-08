@@ -19,7 +19,6 @@ package olm
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -106,9 +105,12 @@ func TestInstallOlmOperator(t *testing.T) {
 
 	rand.Seed(time.Now().UnixNano())
 	subscriptionName := "percona-server-mongodb-operator"
-	subscriptionNamespace := fmt.Sprintf("test-namespace-%04d", rand.Int63n(9999))
-	// subscriptionNamespace = "default"
-	operatorGroup := fmt.Sprintf("percona-operators-group-%04d", rand.Int63n(9999))
+	subscriptionNamespace := "default"
+	if namespace := os.Getenv("NAMESPACE"); namespace != "" {
+		subscriptionNamespace = namespace
+	}
+
+	operatorGroup := "opgroup-" + subscriptionNamespace
 
 	t.Run("Subscribe", func(t *testing.T) {
 		kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
