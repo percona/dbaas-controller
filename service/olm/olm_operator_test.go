@@ -20,7 +20,6 @@ package olm
 import (
 	"context"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -35,6 +34,7 @@ import (
 )
 
 func TestGetLatestVersion(t *testing.T) {
+	t.Skip("testing")
 	t.Parallel()
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
 	if perconaTestOperator != "" {
@@ -64,7 +64,27 @@ func TestInstallOlmOperator(t *testing.T) {
 	client, err := k8sclient.New(ctx, string(kubeconfig))
 	assert.NoError(t, err)
 
+	subscriptionName := "percona-server-mongodb-operator"
+	subscriptionNamespace := "default"
+	if namespace := os.Getenv("NAMESPACE"); namespace != "" {
+		subscriptionNamespace = namespace
+	}
+	catalosSourceNamespace := "olm"
+	operatorName := "percona-server-mongodb-operator"
+	operatorGroup := "opgroup-" + subscriptionNamespace
+
 	t.Cleanup(func() {
+		err = client.Delete(ctx, []string{"subscription", subscriptionName, "-n", subscriptionNamespace})
+		assert.NoError(t, err)
+		err = client.Delete(ctx, []string{"operatorgroup", operatorGroup, "-n", subscriptionNamespace})
+		assert.NoError(t, err)
+		err = client.Delete(ctx, []string{"deployment", operatorName, "-n", subscriptionNamespace})
+		assert.NoError(t, err)
+
+		if subscriptionNamespace != "default" {
+			err = client.Delete(ctx, []string{"namespace", subscriptionNamespace})
+			assert.NoError(t, err)
+		}
 		// Maintain the order, otherwise the Kubernetes deletetion will stuck in Terminating state.
 		err := client.Delete(ctx, []string{"apiservices.apiregistration.k8s.io", "v1.packages.operators.coreos.com"})
 		assert.NoError(t, err)
@@ -100,21 +120,9 @@ func TestInstallOlmOperator(t *testing.T) {
 	_, err = client.Run(ctx, []string{"rollout", "status", "-w", "deployment/catalog-operator", "-n", "olm"})
 	assert.NoError(t, err)
 
-	catalosSourceNamespace := "olm"
-	operatorName := "percona-server-mongodb-operator"
-
 	manifests, err := olms.AvailableOperators(ctx, client, catalosSourceNamespace, operatorName)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(manifests.Items))
-
-	rand.Seed(time.Now().UnixNano())
-	subscriptionName := "percona-server-mongodb-operator"
-	subscriptionNamespace := "default"
-	if namespace := os.Getenv("NAMESPACE"); namespace != "" {
-		subscriptionNamespace = namespace
-	}
-
-	operatorGroup := "opgroup-" + subscriptionNamespace
 
 	t.Run("Subscribe", func(t *testing.T) {
 		kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
@@ -189,20 +197,19 @@ func TestInstallOlmOperator(t *testing.T) {
 			Name:            subscriptionName,
 			NotApprovedOnly: true,
 		}
-		installPlansForUpgrade, err := olms.ListInstallPlans(ctx, ipListReq)
-		assert.NoError(t, err)
-		assert.True(t, len(installPlansForUpgrade.Items) > 0)
-
-		err = client.Delete(ctx, []string{"subscription", subscriptionName, "-n", params.Namespace})
-		assert.NoError(t, err)
-		err = client.Delete(ctx, []string{"operatorgroup", params.OperatorGroup, "-n", params.Namespace})
-		assert.NoError(t, err)
-		err = client.Delete(ctx, []string{"deployment", params.Name, "-n", params.Namespace})
-		assert.NoError(t, err)
-
-		if params.Namespace != "default" {
-			err = client.Delete(ctx, []string{"namespace", params.Namespace})
-			assert.NoError(t, err)
+		installPlansCount := -1
+		for i := 0; i < 5; i++ {
+			installPlansForUpgrade, err := olms.ListInstallPlans(ctx, ipListReq)
+			if err != nil {
+				break
+			}
+			if len(installPlansForUpgrade.Items) > 0 {
+				installPlansCount = len(installPlansForUpgrade.Items)
+				break
+			}
+			time.Sleep(10 * time.Second)
 		}
+		assert.NoError(t, err)
+		assert.True(t, installPlansCount > 0)
 	})
 }
