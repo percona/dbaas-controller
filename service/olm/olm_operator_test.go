@@ -34,7 +34,6 @@ import (
 )
 
 func TestGetLatestVersion(t *testing.T) {
-	t.Skip("testing")
 	t.Parallel()
 	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
 	if perconaTestOperator != "" {
@@ -56,6 +55,10 @@ func TestGetLatestVersion(t *testing.T) {
 
 func TestInstallOlmOperator(t *testing.T) {
 	t.Parallel()
+	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
+	if perconaTestOperator != "" {
+		t.Skip("skipping because of environment variable")
+	}
 	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
 	require.NoError(t, err)
 

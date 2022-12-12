@@ -650,7 +650,6 @@ func TestK8sClient(t *testing.T) {
 	})
 
 	t.Run("PSMDB", func(t *testing.T) {
-		t.Skip("To debug failing tests")
 		t.Parallel()
 		if perconaTestOperator != "psmdb" && perconaTestOperator != "" {
 			t.Skip("skipping because of environment variable")
