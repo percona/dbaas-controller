@@ -158,7 +158,7 @@ eks-cleanup-namespace:
 
 eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage.
 	# Delete the PXC operator
-	kubectl ${KUBECTL_ARGS} delete deployment percona-xtradb-cluster-operator
+	if [ "$(PERCONA_TEST_DBAAS_OPERATOR)" != "olm" ]; kubectl ${KUBECTL_ARGS} delete deployment percona-xtradb-cluster-operator; fi
 	# Delete the PSMDB operator
 	if [ "$(PERCONA_TEST_DBAAS_OPERATOR)" != "olm" ]; then kubectl ${KUBECTL_ARGS} delete deployment percona-server-mongodb-operator; fi
 
