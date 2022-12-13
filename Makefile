@@ -160,7 +160,7 @@ eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run t
 	# Delete the PXC operator
 	kubectl ${KUBECTL_ARGS} delete deployment percona-xtradb-cluster-operator
 	# Delete the PSMDB operator
-	if [ $(PERCONA_TEST_DBAAS_OPERATOR) != "olm" ]; then kubectl ${KUBECTL_ARGS} delete deployment percona-server-mongodb-operator; fi
+	if [ "$(PERCONA_TEST_DBAAS_OPERATOR)" != "olm" ]; then kubectl ${KUBECTL_ARGS} delete deployment percona-server-mongodb-operator; fi
 
 eks-delete-current-namespace:
 	NAMESPACE=$$(kubectl config view --minify --output 'jsonpath={..namespace}'); \
