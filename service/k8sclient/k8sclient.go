@@ -308,7 +308,7 @@ var (
 	v112, _ = goversion.NewVersion("1.12") //nolint:gochecknoglobals
 )
 
-var pmmClientImage string
+var pmmClientImage string //nolint:gochecknoglobals
 
 // K8sClient is a client for Kubernetes.
 type K8sClient struct {
@@ -332,7 +332,7 @@ func init() {
 		return
 	}
 
-	v, err := goversion.NewVersion(pmmversion.PMMVersion) // nolint: varnamelen
+	v, err := goversion.NewVersion(pmmversion.PMMVersion) //nolint: varnamelen
 	if err != nil {
 		logger.Get(context.Background()).Warnf("failed to decide what version of pmm-client to use: %s", err)
 		logger.Get(context.Background()).Warnf("Using %q for pmm client image", pmmClientImage)
@@ -749,7 +749,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 			},
 			Pause: cluster.Spec.Pause,
 		}
-		if len(cluster.Status.Conditions) != 0 {
+		if len(cluster.Status.Conditions) > 0 {
 			val.DetailedState = []appStatus{
 				//{size: cluster.Status.Size, ready: cluster.Status.PMM.Status == "ready"},
 				{size: cluster.Status.HAProxy.Size, ready: cluster.Status.HAProxy.Ready},
@@ -1173,7 +1173,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 			Image:   cluster.Spec.Image,
 		}
 
-		if len(cluster.Status.Conditions) != 0 {
+		if len(cluster.Status.Conditions) > 0 {
 			message := cluster.Status.Message
 			conditions := cluster.Status.Conditions
 			if message == "" && len(conditions) > 0 {
@@ -2331,7 +2331,7 @@ func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperator
 			TopologyKey: pointer.ToString(pxcv1.AffinityTopologyKeyOff),
 		},
 	}
-	if len(serviceType) != 0 {
+	if len(serviceType) > 0 {
 		podSpec.ServiceType = serviceType
 	}
 	if params.ProxySQL != nil {

@@ -164,6 +164,7 @@ func TestInstallOlmOperator(t *testing.T) {
 			Name:      subscriptionName,
 			Namespace: subscriptionNamespace,
 		})
+		assert.NoError(t, err)
 
 		approveRequest := &controllerv1beta1.ApproveInstallPlanRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
