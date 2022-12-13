@@ -84,10 +84,6 @@ func TestInstallOlmOperator(t *testing.T) {
 		err = client.Delete(ctx, []string{"deployment", operatorName, "-n", subscriptionNamespace})
 		assert.NoError(t, err)
 
-		if subscriptionNamespace != "default" {
-			err = client.Delete(ctx, []string{"namespace", subscriptionNamespace})
-			assert.NoError(t, err)
-		}
 		// Maintain the order, otherwise the Kubernetes deletetion will stuck in Terminating state.
 		err := client.Delete(ctx, []string{"apiservices.apiregistration.k8s.io", "v1.packages.operators.coreos.com"})
 		assert.NoError(t, err)

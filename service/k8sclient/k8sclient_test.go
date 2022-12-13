@@ -243,7 +243,7 @@ func TestDebugCluster(t *testing.T) {
 	psmdbVersion := psmdbOperator.String()
 	if value := os.Getenv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); value != "" {
 		psmdbVersion = value
-		psmdbOperator, _ = goversion.NewVersion(value)
+		psmdbOperator, _ = goversion.NewVersion(value) //nolint:staticcheck
 	}
 
 	t.Log(pxcVersion)
