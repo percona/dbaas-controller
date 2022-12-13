@@ -48,6 +48,7 @@ import (
 	dbaascontroller "github.com/percona-platform/dbaas-controller"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/common"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kube"
+	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/kubectl"
 	"github.com/percona-platform/dbaas-controller/service/k8sclient/internal/monitoring"
 	"github.com/percona-platform/dbaas-controller/utils/convertors"
 	"github.com/percona-platform/dbaas-controller/utils/logger"
@@ -307,10 +308,11 @@ var (
 	v112, _ = goversion.NewVersion("1.12") //nolint:gochecknoglobals
 )
 
-var pmmClientImage string
+var pmmClientImage string //nolint:gochecknoglobals
 
 // K8sClient is a client for Kubernetes.
 type K8sClient struct {
+	kubeCtl    *kubectl.KubeCtl
 	kube       *kube.Client
 	l          logger.Logger
 	kubeconfig string
@@ -330,7 +332,7 @@ func init() {
 		return
 	}
 
-	v, err := goversion.NewVersion(pmmversion.PMMVersion) // nolint: varnamelen
+	v, err := goversion.NewVersion(pmmversion.PMMVersion) //nolint: varnamelen
 	if err != nil {
 		logger.Get(context.Background()).Warnf("failed to decide what version of pmm-client to use: %s", err)
 		logger.Get(context.Background()).Warnf("Using %q for pmm client image", pmmClientImage)
@@ -368,13 +370,19 @@ func New(ctx context.Context, kubeconfig string) (*K8sClient, error) {
 	l := logger.Get(ctx)
 	l = l.WithField("component", "K8sClient")
 
+	kubeCtl, err := kubectl.NewKubeCtl(ctx, kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
 	kube, err := kube.NewFromKubeConfigString(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
 	return &K8sClient{
-		kube: kube,
-		l:    l,
+		kube:    kube,
+		kubeCtl: kubeCtl,
+		l:       l,
 		client: &http.Client{
 			Timeout: time.Second * 5,
 			Transport: &http.Transport{
@@ -410,7 +418,23 @@ func NewIncluster(ctx context.Context) (*K8sClient, error) {
 
 // Cleanup removes temporary files created by that object.
 func (c *K8sClient) Cleanup() error {
-	return nil
+	return c.kubeCtl.Cleanup()
+}
+
+func (c *K8sClient) Run(ctx context.Context, params []string) ([]byte, error) {
+	return c.kubeCtl.Run(ctx, params, nil)
+}
+
+func (c *K8sClient) Apply(ctx context.Context, res interface{}) error {
+	return c.kubeCtl.Apply(ctx, res)
+}
+
+func (c *K8sClient) Patch(ctx context.Context, patchType kubectl.PatchType, resourceType, resourceName, namespace string, res interface{}) error {
+	return c.kubeCtl.Patch(ctx, patchType, resourceType, resourceName, namespace, res)
+}
+
+func (c *K8sClient) Delete(ctx context.Context, res interface{}) error {
+	return c.kubeCtl.Delete(ctx, res)
 }
 
 // GetKubeconfig generates kubeconfig compatible with kubectl for incluster created clients.
@@ -725,7 +749,7 @@ func (c *K8sClient) getPerconaXtraDBClusters(ctx context.Context) ([]PXCCluster,
 			},
 			Pause: cluster.Spec.Pause,
 		}
-		if len(cluster.Status.Conditions) != 0 {
+		if len(cluster.Status.Conditions) > 0 {
 			val.DetailedState = []appStatus{
 				//{size: cluster.Status.Size, ready: cluster.Status.PMM.Status == "ready"},
 				{size: cluster.Status.HAProxy.Size, ready: cluster.Status.HAProxy.Ready},
@@ -1149,10 +1173,10 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 			Image:   cluster.Spec.Image,
 		}
 
-		if len(cluster.Status.Conditions) != 0 {
+		if len(cluster.Status.Conditions) > 0 {
 			message := cluster.Status.Message
 			conditions := cluster.Status.Conditions
-			if message == "" && len(conditions) != 0 {
+			if message == "" && len(conditions) > 0 {
 				message = conditions[len(conditions)-1].Message
 			}
 
@@ -1808,6 +1832,42 @@ func (c *K8sClient) RemoveVMOperator(ctx context.Context) error {
 	return nil
 }
 
+// Create the resource from the specs.
+func (c *K8sClient) Create(ctx context.Context, resource interface{}) error {
+	var err error
+
+	switch res := resource.(type) {
+	case string:
+		_, err = c.kubeCtl.Run(ctx, []string{"create", "-f", res}, nil)
+	case []byte:
+		_, err = c.kubeCtl.Run(ctx, []string{"create", "-f", "-"}, res)
+	}
+	if err != nil {
+		return errors.Wrap(err, "cannot create resource")
+	}
+
+	return nil
+}
+
+// WaitForCondition waits until the condition is met for the specified resource.
+func (c *K8sClient) WaitForCondition(ctx context.Context, condition string, resource interface{}) error {
+	var err error
+
+	condition = "--for=condition=" + condition
+
+	switch res := resource.(type) {
+	case string:
+		_, err = c.kubeCtl.Run(ctx, []string{"wait", "-f", res}, nil)
+	case []byte:
+		_, err = c.kubeCtl.Run(ctx, []string{"wait", "-f", "-"}, res)
+	}
+	if err != nil {
+		return errors.Wrapf(err, "error while waiting for condition %q", condition)
+	}
+
+	return nil
+}
+
 func vmAgentSpec(params *PMM, secretName string) *monitoring.VMAgent {
 	return &monitoring.VMAgent{
 		TypeMeta: metav1.TypeMeta{
@@ -2271,7 +2331,7 @@ func (c *K8sClient) getDefaultPXCSpec(params *PXCParams, secretName, pxcOperator
 			TopologyKey: pointer.ToString(pxcv1.AffinityTopologyKeyOff),
 		},
 	}
-	if len(serviceType) != 0 {
+	if len(serviceType) > 0 {
 		podSpec.ServiceType = serviceType
 	}
 	if params.ProxySQL != nil {

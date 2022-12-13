@@ -204,7 +204,7 @@ jobs:
         go-version:
           - 1.18.x
         build_tags: [""]
-        test_operator: ["pxc", "haproxy-pxc", "psmdb"]
+        test_operator: ["pxc", "haproxy-pxc", "psmdb", "olm"]
         os: [ubuntu-latest]
         may-fail: [false]
         version_service_url: ["https://check.percona.com/versions/v1"]

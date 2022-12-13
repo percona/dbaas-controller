@@ -72,7 +72,7 @@ ci-init:                ## Initialize CI environment
 format:                           ## Format source code
 	bin/gofumpt -l -w .
 	bin/goimports -local github.com/percona-platform/dbaas-controller -l -w .
-	bin/gci write --section Standard --section Default --section "Prefix(github.com/percona-platform/dbaas-controller)" .
+	bin/gci write --skip-generated --section "standard,default,prefix(github.com/percona-platform/dbaas-controller)" .
 
 check:                            ## Run checks/linters for the whole project
 	bin/check-license
@@ -158,13 +158,13 @@ eks-cleanup-namespace:
 
 eks-delete-operators:             ## Delete Kubernetes operators from EKS. Run this before deleting the cluster to not to leave garbage.
 	# Delete the PXC operator
-	kubectl ${KUBECTL_ARGS} delete deployment percona-xtradb-cluster-operator
+	if [ "$(PERCONA_TEST_DBAAS_OPERATOR)" != "olm" ]; then kubectl ${KUBECTL_ARGS} delete deployment percona-xtradb-cluster-operator; fi
 	# Delete the PSMDB operator
-	kubectl ${KUBECTL_ARGS} delete deployment percona-server-mongodb-operator
+	if [ "$(PERCONA_TEST_DBAAS_OPERATOR)" != "olm" ]; then kubectl ${KUBECTL_ARGS} delete deployment percona-server-mongodb-operator; fi
 
 eks-delete-current-namespace:
 	NAMESPACE=$$(kubectl config view --minify --output 'jsonpath={..namespace}'); \
-	if [ "$$NAMESPACE" != "default" ]; then kubectl delete ns "$$NAMESPACE"; fi
+	if [ "$(NAMESPACE)" != "default" ]; then kubectl delete ns "$$NAMESPACE"; fi
 
 deploy-to-pmm-server: release     ## Deploy DBaaS controller to a running ${PMM_CONTAINER} container.
 	docker cp bin/dbaas-controller ${PMM_CONTAINER}:/usr/sbin/dbaas-controller
