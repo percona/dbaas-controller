@@ -47,6 +47,7 @@ const (
 	githubAPIURLTemplate = "https://api.github.com/repos/operator-framework/%s/releases/latest"
 	baseDownloadURL      = "github.com/operator-framework/operator-lifecycle-manager/releases/download"
 	olmNamespace         = "olm"
+	perconaCatalog       = "https://raw.githubusercontent.com/percona/dbaas-catalog/percona-platform/percona-dbaas-catalog.yaml"
 
 	// If version is not set, DBaaS controller will choose the latest from the repo.
 	// It doesn't work for offline installation.
@@ -127,6 +128,10 @@ func (o *OperatorService) InstallOLMOperator(ctx context.Context, req *controlle
 
 	if err := waitForDeployments(ctx, client, "olm"); err != nil {
 		log.Errorf("error waiting olm deployments: %s", err)
+	}
+
+	if err := client.Create(ctx, perconaCatalog); err != nil {
+		log.Errorf("cannot apply %q file: %s", perconaCatalog, err)
 	}
 
 	if err := waitForPackageServer(ctx, client, "olm"); err != nil {
