@@ -394,7 +394,9 @@ func (o *OperatorService) InstallOperator(ctx context.Context, req *controllerv1
 
 	err = o.createSubscription(ctx, client, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create a susbcription to install the operator")
+		if !strings.Contains(err.Error(), "AlreadyExists") {
+			return nil, errors.Wrap(err, "cannot create a susbcription to install the operator")
+		}
 	}
 
 	return new(controllerv1beta1.InstallOperatorResponse), nil
