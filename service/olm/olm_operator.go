@@ -213,16 +213,19 @@ func (o *OperatorService) ListSubscriptions(ctx context.Context, req *controller
 	}
 
 	for _, item := range susbcriptions.Items {
-		resp.Items = append(resp.Items, &controllerv1beta1.Subscription{
-			Namespace:       item.ObjectMeta.Namespace,
-			Name:            item.ObjectMeta.Name,
-			Package:         item.Spec.Package,
-			Source:          item.Spec.CatalogSource,
-			Channel:         item.Spec.Channel,
-			CurrentCsv:      item.Status.CurrentCSV,
-			InstalledCsv:    item.Status.InstalledCSV,
-			InstallPlanName: item.Status.Install.Name,
-		})
+		sub := &controllerv1beta1.Subscription{
+			Namespace:    item.ObjectMeta.Namespace,
+			Name:         item.ObjectMeta.Name,
+			Package:      item.Spec.Package,
+			Source:       item.Spec.CatalogSource,
+			Channel:      item.Spec.Channel,
+			CurrentCsv:   item.Status.CurrentCSV,
+			InstalledCsv: item.Status.InstalledCSV,
+		}
+		if item.Status.Install != nil {
+			sub.InstallPlanName = item.Status.Install.Name
+		}
+		resp.Items = append(resp.Items, sub)
 	}
 
 	return resp, nil
