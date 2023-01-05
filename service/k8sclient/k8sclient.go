@@ -323,7 +323,7 @@ func init() {
 	pmmClientImage = "perconalab/pmm-client:dev-latest"
 
 	pmmClientImageEnv, ok := os.LookupEnv("PERCONA_TEST_DBAAS_PMM_CLIENT")
-	if ok {
+	if ok && pmmClientImageEnv != "" {
 		pmmClientImage = pmmClientImageEnv
 		return
 	}
@@ -1184,7 +1184,7 @@ func (c *K8sClient) getPSMDBClusters(ctx context.Context) ([]PSMDBCluster, error
 			for _, rs := range cluster.Status.Replsets {
 				status = append(status, appStatus{rs.Size, rs.Ready})
 			}
-			if val.Size != 1 {
+			if val.Size != 1 && cluster.Status.Mongos != nil {
 				status = append(status, appStatus{
 					size:  int32(cluster.Status.Mongos.Size),
 					ready: int32(cluster.Status.Mongos.Ready),
@@ -1764,9 +1764,6 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 
 func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 	files := []string{
-		"deploy/victoriametrics/crds/crd.yaml",
-		"deploy/victoriametrics/operator/manager.yaml",
-		"deploy/victoriametrics/operator/rbac.yaml",
 		"deploy/victoriametrics/crs/vmagent_rbac.yaml",
 		"deploy/victoriametrics/crs/vmnodescrape.yaml",
 		"deploy/victoriametrics/crs/vmpodscrape.yaml",
