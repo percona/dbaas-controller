@@ -47,6 +47,7 @@ const (
 	githubAPIURLTemplate = "https://api.github.com/repos/operator-framework/%s/releases/latest"
 	baseDownloadURL      = "github.com/operator-framework/operator-lifecycle-manager/releases/download"
 	olmNamespace         = "olm"
+	perconaCatalog       = "https://raw.githubusercontent.com/percona/dbaas-catalog/percona-platform/percona-dbaas-catalog.yaml"
 
 	// If version is not set, DBaaS controller will choose the latest from the repo.
 	// It doesn't work for offline installation.
@@ -129,6 +130,10 @@ func (o *OperatorService) InstallOLMOperator(ctx context.Context, req *controlle
 		log.Errorf("error waiting olm deployments: %s", err)
 	}
 
+	if err := client.Create(ctx, perconaCatalog); err != nil {
+		log.Errorf("cannot apply %q file: %s", perconaCatalog, err)
+	}
+
 	if err := waitForPackageServer(ctx, client, "olm"); err != nil {
 		log.Errorf("error waiting olm package server to become ready: %s", err)
 	}
@@ -208,16 +213,19 @@ func (o *OperatorService) ListSubscriptions(ctx context.Context, req *controller
 	}
 
 	for _, item := range susbcriptions.Items {
-		resp.Items = append(resp.Items, &controllerv1beta1.Subscription{
-			Namespace:       item.ObjectMeta.Namespace,
-			Name:            item.ObjectMeta.Name,
-			Package:         item.Spec.Package,
-			Source:          item.Spec.CatalogSource,
-			Channel:         item.Spec.Channel,
-			CurrentCsv:      item.Status.CurrentCSV,
-			InstalledCsv:    item.Status.InstalledCSV,
-			InstallPlanName: item.Status.Install.Name,
-		})
+		sub := &controllerv1beta1.Subscription{
+			Namespace:    item.ObjectMeta.Namespace,
+			Name:         item.ObjectMeta.Name,
+			Package:      item.Spec.Package,
+			Source:       item.Spec.CatalogSource,
+			Channel:      item.Spec.Channel,
+			CurrentCsv:   item.Status.CurrentCSV,
+			InstalledCsv: item.Status.InstalledCSV,
+		}
+		if item.Status.Install != nil {
+			sub.InstallPlanName = item.Status.Install.Name
+		}
+		resp.Items = append(resp.Items, sub)
 	}
 
 	return resp, nil
@@ -389,7 +397,9 @@ func (o *OperatorService) InstallOperator(ctx context.Context, req *controllerv1
 
 	err = o.createSubscription(ctx, client, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create a susbcription to install the operator")
+		if !strings.Contains(err.Error(), "AlreadyExists") {
+			return nil, errors.Wrap(err, "cannot create a susbcription to install the operator")
+		}
 	}
 
 	return new(controllerv1beta1.InstallOperatorResponse), nil
