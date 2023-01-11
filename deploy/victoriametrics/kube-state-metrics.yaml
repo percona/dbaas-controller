@@ -10,7 +10,13 @@ spec:
     - scheme: http
       port: http-metrics
       honorLabels: true
-
+      metricRelabelConfigs:
+        - source_labels:
+          - namespace
+          - pod
+          target_label: node_name
+          regex: (.+);(.+)
+          replacement: $1-$2
   selector:
     matchLabels:
       app.kubernetes.io/name: kube-state-metrics
