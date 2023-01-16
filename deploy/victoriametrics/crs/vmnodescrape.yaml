@@ -6,7 +6,7 @@ spec:
   scheme: "https"
   interval: "10s"
   honorLabels: true
-  scrapeTimeout: "2s"
+  scrapeTimeout: "5s"
   selector: {}
   tlsConfig:
     insecureSkipVerify: true
