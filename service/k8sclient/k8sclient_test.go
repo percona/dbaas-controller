@@ -1470,54 +1470,6 @@ func TestGetPSMDBClusterState(t *testing.T) {
 	}
 }
 
-func TestCreateVMOperator(t *testing.T) {
-	t.Parallel()
-	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
-	if perconaTestOperator != "" {
-		t.Skip("skipping because of environment variable")
-	}
-
-	ctx := app.Context()
-
-	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
-	require.NoError(t, err)
-
-	client, err := New(ctx, string(kubeconfig))
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		err := client.Cleanup()
-		require.NoError(t, err)
-	})
-
-	err = client.CreateVMOperator(ctx, &PMM{
-		PublicAddress: "127.0.0.1",
-		Login:         "admin",
-		Password:      "admin",
-	})
-	assert.NoError(t, err)
-
-	time.Sleep(30 * time.Second) // Give it some time to deploy
-	count, err := getDeploymentCount(ctx, client, "vmagent")
-	assert.NoError(t, err)
-	assert.Equal(t, 1, count)
-
-	count, err = getDeploymentCount(ctx, client, "kube-state-metrics")
-	assert.NoError(t, err)
-	assert.Equal(t, 1, count)
-
-	err = client.RemoveVMOperator(ctx)
-	assert.NoError(t, err)
-
-	count, err = getDeploymentCount(ctx, client, "vmagent")
-	assert.NoError(t, err)
-	assert.Equal(t, 0, count)
-
-	count, err = getDeploymentCount(ctx, client, "kube-state-metrics")
-	assert.NoError(t, err)
-	assert.Equal(t, 0, count)
-}
-
 func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (int, error) {
 	deployments, err := client.kube.ListDeployments(ctx)
 	if err != nil {

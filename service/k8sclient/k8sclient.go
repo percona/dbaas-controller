@@ -1764,9 +1764,6 @@ func (c *K8sClient) UpdateOperator(ctx context.Context, version, deploymentName,
 
 func (c *K8sClient) CreateVMOperator(ctx context.Context, params *PMM) error {
 	files := []string{
-		"deploy/victoriametrics/crds/crd.yaml",
-		"deploy/victoriametrics/operator/manager.yaml",
-		"deploy/victoriametrics/operator/rbac.yaml",
 		"deploy/victoriametrics/crs/vmagent_rbac.yaml",
 		"deploy/victoriametrics/crs/vmnodescrape.yaml",
 		"deploy/victoriametrics/crs/vmpodscrape.yaml",
@@ -1815,8 +1812,9 @@ func (c *K8sClient) RemoveVMOperator(ctx context.Context) error {
 		"deploy/victoriametrics/kube-state-metrics/deployment.yaml",
 		"deploy/victoriametrics/kube-state-metrics/service-account.yaml",
 		"deploy/victoriametrics/kube-state-metrics/service.yaml",
-		"deploy/victoriametrics/crds/crd.yaml",
-		"deploy/victoriametrics/operator/manager.yaml",
+		"deploy/victoriametrics/crs/vmagent_rbac.yaml",
+		"deploy/victoriametrics/crs/vmnodescrape.yaml",
+		"deploy/victoriametrics/crs/vmpodscrape.yaml",
 	}
 	for _, path := range files {
 		file, err := dbaascontroller.DeployDir.ReadFile(path)
