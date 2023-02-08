@@ -90,7 +90,7 @@ jobs:
   #          echo "GO_VERSION=$(go version)" >> $GITHUB_ENV
 
   #      - name: Check out code into the Go module directory
-  #        uses: percona-platform/checkout@v2
+  #        uses: percona-platform/checkout@v3
 
   #      # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
   #      # https://minikube.sigs.k8s.io/docs/drivers/none/
@@ -258,7 +258,7 @@ jobs:
           echo "GO_VERSION=$(go version)" >> $GITHUB_ENV
 
       - name: Check out code into the Go module directory
-        uses: percona-platform/checkout@v2
+        uses: percona-platform/checkout@v3
 
       - name: Enable Go modules cache
         uses: percona-platform/cache@v2
@@ -400,7 +400,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Check out code into the Go module directory
-        uses: percona-platform/checkout@v2
+        uses: percona-platform/checkout@v3
         with:
           lfs: true
 
