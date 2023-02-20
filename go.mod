@@ -20,7 +20,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/operator-framework/api v0.17.1
 	github.com/operator-framework/operator-lifecycle-manager v0.22.0
-	github.com/percona-platform/dbaas-api v0.0.0-20221214134301-b6a331250826
+	github.com/percona-platform/dbaas-api v0.0.0-20230103182808-d79c449a9f4c
 	github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871
 	github.com/percona/percona-server-mongodb-operator v1.12.0
 	github.com/percona/percona-xtradb-cluster-operator v1.12.0
