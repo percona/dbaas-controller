@@ -1470,6 +1470,16 @@ func TestGetPSMDBClusterState(t *testing.T) {
 	}
 }
 
+func TestImageExists(t *testing.T) {
+	exists, err := imageExists(context.Background(), "percona/pmm-server:2.30")
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	exists, err = imageExists(context.Background(), "percona/pmm-server-fake:2.30")
+	assert.NoError(t, err)
+	assert.False(t, exists)
+}
+
 func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (int, error) {
 	deployments, err := client.kube.ListDeployments(ctx)
 	if err != nil {

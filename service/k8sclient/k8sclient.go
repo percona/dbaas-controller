@@ -30,6 +30,8 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
+	dockerTypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	goversion "github.com/hashicorp/go-version"
 	psmdbv1 "github.com/percona/percona-server-mongodb-operator/pkg/apis/psmdb/v1"
 	pxcv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
@@ -79,6 +81,9 @@ const (
 	appStateStopping string = "stopping"
 	appStateReady    string = "ready"
 	appStateError    string = "error"
+
+	// Dev-latest docker image.
+	devLatest = "perconalab/pmm-client:dev-latest"
 )
 
 const (
@@ -320,7 +325,7 @@ type K8sClient struct {
 }
 
 func init() {
-	pmmClientImage = "perconalab/pmm-client:dev-latest"
+	pmmClientImage = devLatest
 
 	pmmClientImageEnv, ok := os.LookupEnv("PERCONA_TEST_DBAAS_PMM_CLIENT")
 	if ok {
@@ -346,6 +351,34 @@ func init() {
 	}
 
 	pmmClientImage = "percona/pmm-client:" + v.Core().String()
+
+	exists, err := imageExists(context.Background(), pmmClientImage)
+
+	// if !exists or there was an error while checking if the image exists, use dev-latest as default.
+	if !exists || err != nil {
+		pmmClientImage = devLatest
+	}
+}
+
+func imageExists(ctx context.Context, image string) (bool, error) {
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		panic(err)
+	}
+	defer cli.Close() //nolint
+
+	reader, err := cli.ImagePull(ctx, image, dockerTypes.ImagePullOptions{})
+	if err != nil {
+		if client.IsErrNotFound(err) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	reader.Close() //nolint
+
+	return true, nil
 }
 
 // CountReadyPods returns number of pods that are ready and belong to the
