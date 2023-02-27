@@ -610,10 +610,10 @@ github.com/percona-platform/dbaas-api v0.0.0-20230103182808-d79c449a9f4c h1:1JyS
 github.com/percona-platform/dbaas-api v0.0.0-20230103182808-d79c449a9f4c/go.mod h1:/jgle33awfHq1va/T6NnNS5wWAETSnl6wUZ1bew+CJ0=
 github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871 h1:ZZ0kr0qHypQwWUdxkZU+FNcbxr3XEoeONGOTNAxHvkg=
 github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871/go.mod h1:FrPTFbFWkDaTwvfjRCsaqC5UYgBar+BUOJUzbQl1q5c=
-github.com/percona/percona-backup-mongodb v1.7.0 h1:1VJdj+9iAM7OSH2bIbrQdJNwFXnW2R8mCnyRhcMNYR0=
-github.com/percona/percona-backup-mongodb v1.7.0/go.mod h1:KcY2y93p+gcYF1iMJgcxbsWEpZdUJWsDA59aAL3zqPY=
-github.com/percona/percona-server-mongodb-operator v1.12.0 h1:/kOzrGljwJrJLb+vhiHEDPXLF2pm6SZylaKOBlxx9ZQ=
-github.com/percona/percona-server-mongodb-operator v1.12.0/go.mod h1:fVD/xEr6iJCdNmer/I6kYL4rrRUC9fqBrNDeUU98hWI=
+github.com/percona/percona-backup-mongodb v1.8.1 h1:Fc2DzIh2N+ioNgBlNg0wAJw8yRt3IoXOKQcQAFbPt6g=
+github.com/percona/percona-backup-mongodb v1.8.1/go.mod h1:KcY2y93p+gcYF1iMJgcxbsWEpZdUJWsDA59aAL3zqPY=
+github.com/percona/percona-server-mongodb-operator v1.13.0 h1:ZSBHy5naqrBDJUB64EMVMltoCw6F3rzVA/7Ja3Ys1xI=
+github.com/percona/percona-server-mongodb-operator v1.13.0/go.mod h1:kJQ0Zxkk6vOEH+FOpCanOKXkqDlZnTFppZiBdoMWIOw=
 github.com/percona/percona-xtradb-cluster-operator v1.12.0 h1:oboyh5IYt50jZOg3c6qxO8ZQVNsEKQpZ7edqtMX8UKE=
 github.com/percona/percona-xtradb-cluster-operator v1.12.0/go.mod h1:fc2EwWZDtCTKYV+6JFMDVabk2tO2ngwlFRwDSO2zJVY=
 github.com/percona/pmm v2.15.1-0.20210318204615-bbf8e9314afd+incompatible h1:Jgfznlzuy1RTUjb4ooEt8fzHjkqRDSHZ2U1rFnqa7fA=

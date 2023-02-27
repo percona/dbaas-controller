@@ -20,7 +20,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/percona-platform/dbaas-api v0.0.0-20230103182808-d79c449a9f4c
 	github.com/percona-platform/saas v0.0.0-20201127072600-f1ffa53f7871
-	github.com/percona/percona-server-mongodb-operator v1.12.0
+	github.com/percona/percona-server-mongodb-operator v1.13.0
 	github.com/percona/percona-xtradb-cluster-operator v1.12.0
 	github.com/percona/pmm v2.15.1-0.20210318204615-bbf8e9314afd+incompatible
 	github.com/pkg/errors v0.9.1
@@ -89,7 +89,7 @@ require (
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mwitkow/go-proto-validators v0.3.2 // indirect
-	github.com/percona/percona-backup-mongodb v1.7.0 // indirect
+	github.com/percona/percona-backup-mongodb v1.8.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
