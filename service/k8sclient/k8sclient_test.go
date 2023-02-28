@@ -207,6 +207,88 @@ type pod struct {
 	containers []string
 }
 
+func TestDebugCluster(t *testing.T) {
+	ctx := app.Context()
+
+	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
+	require.NoError(t, err)
+
+	client, err := New(ctx, string(kubeconfig))
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err := client.Cleanup()
+		require.NoError(t, err)
+	})
+
+	versionServiceURL := "https://check-dev.percona.com/versions/v1"
+	if value := os.Getenv("PERCONA_TEST_VERSION_SERVICE_URL"); value != "" {
+		versionServiceURL = value
+	}
+	versionService := NewVersionServiceClient(versionServiceURL)
+
+	pmmVersions, err := versionService.Matrix(ctx, componentsParams{product: "pmm-server"})
+	require.NoError(t, err)
+	latestPMMVersion, err := latestProduct(pmmVersions.Versions)
+	require.NoError(t, err)
+	pxcOperator, psmdbOperator, err := versionService.LatestOperatorVersion(ctx, latestPMMVersion.String())
+	require.NoError(t, err)
+
+	// There is an error with Operator version 1.12
+	// See https://jira.percona.com/browse/PMM-10012
+	pxcVersion := pxcOperator.String()
+	if value := os.Getenv("PERCONA_TEST_PXC_OPERATOR_VERSION"); value != "" {
+		pxcVersion = value
+	}
+	psmdbVersion := psmdbOperator.String()
+	if value := os.Getenv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); value != "" {
+		psmdbVersion = value
+		psmdbOperator, _ = goversion.NewVersion(value) //nolint:staticcheck
+	}
+
+	t.Log(pxcVersion)
+	err = client.ApplyOperator(ctx, pxcVersion, app.DefaultPXCOperatorURLTemplate)
+	require.NoError(t, err)
+
+	t.Log(psmdbVersion)
+	err = client.ApplyOperator(ctx, psmdbVersion, app.DefaultPSMDBOperatorURLTemplate)
+	require.NoError(t, err)
+
+	for i := 0; i < 5; i++ {
+		_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-xtradb-cluster-operator"}, nil)
+		if err == nil {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+	require.NoError(t, err)
+	var res interface{}
+	err = client.kubeCtl.Get(ctx, "deployment", "percona-xtradb-cluster-operator", &res)
+	require.NoError(t, err)
+
+	for i := 0; i < 5; i++ {
+		_, err = client.kubeCtl.Run(ctx, []string{"wait", "--for=condition=Available", "deployment", "percona-server-mongodb-operator"}, nil)
+		if err == nil {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+	require.NoError(t, err)
+	err = client.kubeCtl.Get(ctx, "deployment", "percona-server-mongodb-operator", &res)
+	require.NoError(t, err)
+
+	t.Run("CheckOperators", func(t *testing.T) {
+		t.Parallel()
+		operators, err := client.CheckOperators(ctx)
+		require.NoError(t, err)
+		require.NotNil(t, operators)
+		_, err = goversion.NewVersion(operators.PsmdbOperatorVersion)
+		require.NoError(t, err)
+		_, err = goversion.NewVersion(operators.PXCOperatorVersion)
+		require.NoError(t, err)
+	})
+}
+
 func TestK8sClient(t *testing.T) {
 	var (
 		pxcImage        = "percona/percona-xtradb-cluster:8.0.23-14.1"
@@ -256,7 +338,7 @@ func TestK8sClient(t *testing.T) {
 	psmdbVersion := psmdbOperator.String()
 	if value := os.Getenv("PERCONA_TEST_PSMDB_OPERATOR_VERSION"); value != "" {
 		psmdbVersion = value
-		psmdbOperator, _ = goversion.NewVersion(value)
+		psmdbOperator, _ = goversion.NewVersion(value) //nolint
 	}
 
 	t.Log(pxcVersion)
@@ -1386,54 +1468,6 @@ func TestGetPSMDBClusterState(t *testing.T) {
 			assert.Equal(t, tt.expectedState, clusterState, "state was not expected")
 		})
 	}
-}
-
-func TestCreateVMOperator(t *testing.T) {
-	t.Parallel()
-	perconaTestOperator := os.Getenv("PERCONA_TEST_DBAAS_OPERATOR")
-	if perconaTestOperator != "" {
-		t.Skip("skipping because of environment variable")
-	}
-
-	ctx := app.Context()
-
-	kubeconfig, err := ioutil.ReadFile(os.Getenv("HOME") + "/.kube/config")
-	require.NoError(t, err)
-
-	client, err := New(ctx, string(kubeconfig))
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		err := client.Cleanup()
-		require.NoError(t, err)
-	})
-
-	err = client.CreateVMOperator(ctx, &PMM{
-		PublicAddress: "127.0.0.1",
-		Login:         "admin",
-		Password:      "admin",
-	})
-	assert.NoError(t, err)
-
-	time.Sleep(30 * time.Second) // Give it some time to deploy
-	count, err := getDeploymentCount(ctx, client, "vmagent")
-	assert.NoError(t, err)
-	assert.Equal(t, 1, count)
-
-	count, err = getDeploymentCount(ctx, client, "kube-state-metrics")
-	assert.NoError(t, err)
-	assert.Equal(t, 1, count)
-
-	err = client.RemoveVMOperator(ctx)
-	assert.NoError(t, err)
-
-	count, err = getDeploymentCount(ctx, client, "vmagent")
-	assert.NoError(t, err)
-	assert.Equal(t, 0, count)
-
-	count, err = getDeploymentCount(ctx, client, "kube-state-metrics")
-	assert.NoError(t, err)
-	assert.Equal(t, 0, count)
 }
 
 func getDeploymentCount(ctx context.Context, client *K8sClient, name string) (int, error) {

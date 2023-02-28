@@ -51,7 +51,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
-
 	// load all auth plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
@@ -117,9 +116,11 @@ func (list SortableEvents) Less(i, j int) bool {
 type ImageSpec struct {
 	Image string `json:"image"`
 }
+
 type PXCSpec struct {
 	Image string `json:"image"`
 }
+
 type UpgradeOptions struct {
 	VersionServiceEndpoint string `json:"versionServiceEndpoint,omitempty"`
 	Apply                  string `json:"apply,omitempty"`
@@ -134,6 +135,7 @@ type Spec struct {
 	UpgradeOptions UpgradeOptions `json:"upgradeOptions"`
 	Backup         ImageSpec      `json:"backup"`
 }
+
 type OperatorPatch struct {
 	Spec Spec `json:"spec"`
 }
@@ -547,7 +549,7 @@ func (c *Client) GetEvents(ctx context.Context, name string) (string, error) {
 				return newList, nil
 			})
 
-		if err2 == nil && len(events.Items) != 0 {
+		if err2 == nil && len(events.Items) > 0 {
 			return tabbedString(func(out io.Writer) error {
 				w := NewPrefixWriter(out)
 				w.Write(0, "Pod '%v': error '%v', but found events.\n", name, err)
