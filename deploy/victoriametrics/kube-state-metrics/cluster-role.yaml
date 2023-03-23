@@ -4,7 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/component: exporter
     app.kubernetes.io/name: kube-state-metrics
-    app.kubernetes.io/version: 2.5.0
+    app.kubernetes.io/version: 2.8.2
   name: kube-state-metrics
 rules:
 - apiGroups:
@@ -104,6 +104,13 @@ rules:
   - coordination.k8s.io
   resources:
   - leases
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - psmdb.percona.com
+  resources:
+  - perconaservermongodbs
   verbs:
   - list
   - watch
