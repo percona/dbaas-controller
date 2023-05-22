@@ -11,7 +11,7 @@ go 1.17
 require (
 	github.com/percona-platform/dbaas-api v0.0.0-20211221135741-2b281cf414aa
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.2
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/sys v0.5.0
 	google.golang.org/grpc v1.49.0
