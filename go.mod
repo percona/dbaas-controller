@@ -27,7 +27,7 @@ require (
 	github.com/prometheus/client_golang v1.13.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.2
-	go.uber.org/zap v1.23.0
+	go.uber.org/zap v1.25.0
 	golang.org/x/sys v0.5.0
 	google.golang.org/grpc v1.53.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
@@ -103,8 +103,7 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.mongodb.org/mongo-driver v1.10.3 // indirect
 	go.starlark.net v0.0.0-20201014215153-dff0ae5b4820 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.7.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.0.0-20220924013350-4ba4fb4dd9e7 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.7.0 // indirect
