@@ -3,7 +3,7 @@ module github.com/percona-platform/dbaas-controller/tools
 go 1.18
 
 require (
-	github.com/daixiang0/gci v0.9.1
+	github.com/daixiang0/gci v0.11.0
 	github.com/golangci/golangci-lint v1.51.2
 	github.com/quasilyte/go-consistent v0.0.0-20200404105227-766526bf1e96
 	github.com/reviewdog/reviewdog v0.14.1
@@ -199,7 +199,7 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	go.uber.org/zap v1.19.0 // indirect
+	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/build v0.0.0-20220414174336-7bdebbcdc1e3 // indirect
 	golang.org/x/crypto v0.5.0 // indirect
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
